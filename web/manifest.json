@@ -1,0 +1,10 @@
+{
+  "name": "NUZL",
+  "short_name": "NUZL",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#0F6B5B",
+  "description": "NUZL.AE — real-estate operating platform",
+  "orientation": "portrait-primary"
+}
