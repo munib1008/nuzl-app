@@ -77,3 +77,13 @@ Flutter Web compiles to static files. Recommended setup that keeps **one origin*
 - **Respond / Save** on feed cards are placeholders pending the respond/save endpoints wiring.
 - **Theme toggle** entry exists in Profile; persisting to `PATCH /users/me/theme` is a small follow-up (currently follows system).
 - **Flutter version:** structured for **Flutter 3.24+ / Dart 3.4+**. On very new Flutter (3.32+), if you hit type errors on `cardTheme`/`appBarTheme`/`inputDecorationTheme`, rename the value classes to their `...Data` variants (`CardThemeData`, `AppBarThemeData`, `InputDecorationThemeData`) — the values are identical, only the class names changed.
+
+## Branding (logo + app icon)
+- The flowing-"n" logo is wired into the **login and register screens** via `lib/core/widgets/nuzl_logo.dart` (mark + "nuzl" wordmark in Poppins, auto-tinted for light/dark).
+- Logo asset: `assets/logo/nuzl_mark.svg`. Master brand sheet: `../docs/nuzl-logo.svg`.
+- **App icon:** `assets/icon/nuzl_icon.png` (1024×1024). Generate all platform sizes with one command after `flutter pub get`:
+  ```bash
+  dart run flutter_launcher_icons
+  ```
+  This creates Android, iOS, and web icons automatically (config is in `pubspec.yaml`).
+- Colors live in `lib/core/theme/app_colors.dart` (emerald `#0F6B5B`, deep `#0A4D42`, teal `#1E9C85`, gold `#C8A45D`). Fonts: Poppins (headings/logo) + Inter (body).
