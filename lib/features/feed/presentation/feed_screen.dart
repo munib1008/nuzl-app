@@ -7,6 +7,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../data/feed_repository.dart';
 import '../domain/feed_item.dart';
+import '../../shell/app_shell.dart';
 
 class FeedScreen extends ConsumerWidget {
   const FeedScreen({super.key});
@@ -15,7 +16,8 @@ class FeedScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final feed = ref.watch(feedProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Opportunities')),
+      appBar: const NuzlAppBar(title: 'Opportunities'),
+      drawer: const NuzlDrawer(),
       body: RefreshIndicator(
         onRefresh: () async => ref.refresh(feedProvider.future),
         child: AsyncView<List<FeedItem>>(
