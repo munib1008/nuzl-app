@@ -7,6 +7,7 @@ import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../data/mortgage_repository.dart';
 import '../domain/mortgage.dart';
+import '../../shell/app_shell.dart';
 
 /// INSIDE tracker — list of the user's saved mortgages + progress.
 class MortgageListScreen extends ConsumerWidget {
@@ -16,16 +17,14 @@ class MortgageListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mortgages = ref.watch(mortgagesProvider);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mortgages'),
-        actions: [
-          IconButton(
-            tooltip: 'Calculator',
-            icon: const Icon(Icons.calculate_outlined),
-            onPressed: () => context.push('/calculator'),
-          ),
-        ],
-      ),
+      appBar: NuzlAppBar(title: 'Mortgages', actions: [
+        IconButton(
+          tooltip: 'Calculator',
+          icon: const Icon(Icons.calculate_outlined),
+          onPressed: () => context.push('/calculator'),
+        ),
+      ]),
+      drawer: const NuzlDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/mortgages/new'),
         icon: const Icon(Icons.add),
