@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../application/auth_controller.dart';
+import '../../../core/widgets/nuzl_logo.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -44,9 +45,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text('NUZL', style: t.displayLarge?.copyWith(color: Theme.of(context).colorScheme.primary)),
-                  const SizedBox(height: AppSpacing.x8),
-                  Text('Sign in to your workspace', style: t.bodyLarge),
+                  const Center(child: NuzlLogo(size: 56)),
+                  const SizedBox(height: AppSpacing.x16),
+                  Center(child: Text('Sign in to your workspace', style: t.bodyLarge)),
                   const SizedBox(height: AppSpacing.x32),
                   TextFormField(
                     controller: _email,
