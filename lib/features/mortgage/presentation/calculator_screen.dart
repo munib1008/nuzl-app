@@ -4,13 +4,13 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/util/mortgage_math.dart';
 
-/// PUBLIC mortgage calculator — no login required.
-/// Reachable at /calculator (e.g. from the login screen).
+/// Mortgage calculator.
+/// - Standalone screen at /calculator (its own Scaffold + scroll).
+/// - Embedded (e.g. on the landing page) it renders as a plain Column so it
+///   flows inside the parent's scroll view (no nested scrolling).
 class CalculatorScreen extends StatefulWidget {
   const CalculatorScreen({super.key, this.embedded = false});
-  /// When embedded (inside a logged-in tab) we hide the back button/app bar chrome.
   final bool embedded;
-
   @override
   State<CalculatorScreen> createState() => _CalculatorScreenState();
 }
@@ -31,20 +31,28 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final content = _content(context);
+    if (widget.embedded) {
+      return Padding(padding: const EdgeInsets.all(AppSpacing.x16), child: content);
+    }
+    return Scaffold(
+      appBar: AppBar(title: const Text('Calculator')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Center(
+          child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 560), child: content),
+        ),
+      ),
+    );
+  }
+
+  Widget _content(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final c = Theme.of(context).colorScheme;
-
-    final body = ListView(
-      padding: const EdgeInsets.all(AppSpacing.x16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        if (!widget.embedded) ...[
-          Text('Mortgage calculator', style: t.headlineMedium),
-          const SizedBox(height: AppSpacing.x4),
-          Text('Estimate your monthly payment. UAE expat down payment is typically 20%+.',
-              style: t.bodySmall),
-          const SizedBox(height: AppSpacing.x24),
-        ],
-        // Result card
         Card(
           color: c.primary,
           child: Padding(
@@ -53,8 +61,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
               Text('Estimated monthly payment',
                   style: t.bodySmall?.copyWith(color: Colors.white70)),
               const SizedBox(height: AppSpacing.x4),
-              Text(_aed.format(monthly),
-                  style: t.displayLarge?.copyWith(color: Colors.white)),
+              Text(_aed.format(monthly), style: t.displayLarge?.copyWith(color: Colors.white)),
               const SizedBox(height: AppSpacing.x12),
               Row(children: [
                 _miniStat('Loan', _aed.format(loan), t),
@@ -73,31 +80,24 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         _slider('Term', '$years years', years.toDouble(), 5, 30, 1,
             (v) => setState(() => years = v.round())),
         const SizedBox(height: AppSpacing.x16),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.x16),
-            child: Column(children: [
-              _row('Loan amount', _aed.format(loan), t),
-              _row('Term', '$years years ($months payments)', t),
-              _row('Total of payments', _aed.format(totalPaid), t),
-              _row('Total interest', _aed.format(totalInterest), t),
-            ]),
-          ),
-        ),
+        Card(child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.x16),
+          child: Column(children: [
+            _row('Loan amount', _aed.format(loan), t),
+            _row('Term', '$years years ($months payments)', t),
+            _row('Total of payments', _aed.format(totalPaid), t),
+            _row('Total interest', _aed.format(totalInterest), t),
+          ]),
+        )),
         if (!widget.embedded) ...[
           const SizedBox(height: AppSpacing.x24),
-          Text('Want to track real payments against a mortgage?', style: t.bodySmall),
-          const SizedBox(height: AppSpacing.x8),
           FilledButton(
-            onPressed: () => context.go('/login'),
-            child: const Text('Sign in to track payments'),
+            onPressed: () => context.go('/register'),
+            child: const Text('Sign up to track real payments'),
           ),
         ],
       ],
     );
-
-    if (widget.embedded) return body;
-    return Scaffold(appBar: AppBar(title: const Text('Calculator')), body: body);
   }
 
   Widget _miniStat(String label, String value, TextTheme t) => Expanded(
@@ -110,8 +110,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
   Widget _row(String k, String v, TextTheme t) => Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(k, style: t.bodyMedium),
-          Text(v, style: t.titleMedium),
+          Text(k, style: t.bodyMedium), Text(v, style: t.titleMedium),
         ]),
       );
 
