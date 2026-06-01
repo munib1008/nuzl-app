@@ -7,6 +7,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../data/leads_repository.dart';
 import '../domain/lead.dart';
+import '../../shell/app_shell.dart';
 
 class LeadsScreen extends ConsumerWidget {
   const LeadsScreen({super.key});
@@ -15,7 +16,8 @@ class LeadsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final leads = ref.watch(leadsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Leads')),
+      appBar: const NuzlAppBar(title: 'Leads'),
+      drawer: const NuzlDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {},
         icon: const Icon(Icons.person_add_alt),
