@@ -7,6 +7,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../data/listings_repository.dart';
 import '../domain/listing.dart';
+import '../../shell/app_shell.dart';
 
 class ListingsScreen extends ConsumerWidget {
   const ListingsScreen({super.key});
@@ -15,7 +16,8 @@ class ListingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final listings = ref.watch(listingsProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Properties')),
+      appBar: const NuzlAppBar(title: 'Properties'),
+      drawer: const NuzlDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {},
         icon: const Icon(Icons.add),
