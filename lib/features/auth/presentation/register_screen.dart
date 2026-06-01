@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../application/auth_controller.dart';
+import '../../../core/widgets/nuzl_logo.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -45,6 +46,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const Center(child: NuzlLogo(size: 48)),
+                  const SizedBox(height: AppSpacing.x24),
                   Text('Create account', style: t.headlineMedium),
                   const SizedBox(height: AppSpacing.x24),
                   TextFormField(
