@@ -13,6 +13,7 @@ import '../../features/mortgage/presentation/calculator_screen.dart';
 import '../../features/mortgage/presentation/mortgage_list_screen.dart';
 import '../../features/mortgage/presentation/mortgage_form_screen.dart';
 import '../../features/mortgage/presentation/mortgage_detail_screen.dart';
+import '../../features/landing/landing_screen.dart';
 import '../../features/shell/main_shell.dart';
 import '../network/api_client.dart';
 
@@ -25,24 +26,27 @@ class _AuthRefresh extends ChangeNotifier {
 }
 
 /// Public routes accessible without login (the mortgage calculator included).
-const _publicPaths = {'/login', '/register', '/calculator'};
+const _publicPaths = {'/', '/login', '/register', '/calculator'};
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _AuthRefresh(ref);
   return GoRouter(
-    initialLocation: '/feed',
+    initialLocation: '/',
     refreshListenable: refresh,
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
       if (!auth.initialized) return null;
       final isPublic = _publicPaths.contains(state.matchedLocation);
       if (!auth.isAuthenticated) return isPublic ? null : '/login';
-      if (state.matchedLocation == '/login' || state.matchedLocation == '/register') {
+      if (state.matchedLocation == '/' ||
+          state.matchedLocation == '/login' ||
+          state.matchedLocation == '/register') {
         return '/feed';
       }
       return null;
     },
     routes: [
+      GoRoute(path: '/', builder: (_, __) => const LandingScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
       // public calculator
