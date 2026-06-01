@@ -1,7 +1,7 @@
 name: nuzl_app
 description: NUZL.AE — opportunity-first real-estate operating platform (Flutter, mobile + web).
 publish_to: "none"
-version: 1.1.0+2
+version: 1.2.0+3
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
