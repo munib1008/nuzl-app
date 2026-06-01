@@ -14,6 +14,7 @@ import '../../features/mortgage/presentation/mortgage_list_screen.dart';
 import '../../features/mortgage/presentation/mortgage_form_screen.dart';
 import '../../features/mortgage/presentation/mortgage_detail_screen.dart';
 import '../../features/landing/landing_screen.dart';
+import '../../features/marketing/info_page.dart';
 import '../../features/shell/main_shell.dart';
 import '../network/api_client.dart';
 
@@ -36,7 +37,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
       if (!auth.initialized) return null;
-      final isPublic = _publicPaths.contains(state.matchedLocation);
+      final loc = state.matchedLocation;
+      final isPublic = _publicPaths.contains(loc) || loc.startsWith('/info/');
       if (!auth.isAuthenticated) return isPublic ? null : '/login';
       if (state.matchedLocation == '/' ||
           state.matchedLocation == '/login' ||
@@ -51,6 +53,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
       // public calculator
       GoRoute(path: '/calculator', builder: (_, __) => const CalculatorScreen()),
+      GoRoute(path: '/info/:slug', builder: (_, st) => InfoPage(slug: st.pathParameters['slug']!)),
       // authed mortgage tracker (pushed routes, not bottom-nav tabs)
       GoRoute(path: '/mortgages', builder: (_, __) => const MortgageListScreen()),
       GoRoute(path: '/mortgages/new', builder: (_, __) => const MortgageFormScreen()),
