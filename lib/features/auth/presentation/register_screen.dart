@@ -27,7 +27,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     if (!_formKey.currentState!.validate()) return;
     final ok = await ref.read(authControllerProvider.notifier)
         .register(_email.text.trim(), _password.text, _name.text.trim());
-    if (ok && mounted) context.go('/feed');
+    if (ok && mounted) context.go('/onboarding');
   }
 
   @override
