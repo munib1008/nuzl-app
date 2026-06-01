@@ -36,6 +36,19 @@ class ProfileScreen extends ConsumerWidget {
               Center(child: Text(user.role!, style: t.bodySmall)),
             const SizedBox(height: AppSpacing.x32),
             ListTile(
+              leading: const Icon(Icons.account_balance_outlined),
+              title: const Text('Mortgages'),
+              subtitle: const Text('Track payments and balances'),
+              onTap: () => context.push('/mortgages'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.calculate_outlined),
+              title: const Text('Mortgage calculator'),
+              subtitle: const Text('Estimate a monthly payment'),
+              onTap: () => context.push('/calculator'),
+            ),
+            const Divider(),
+            ListTile(
               leading: const Icon(Icons.brightness_6_outlined),
               title: const Text('Appearance'),
               subtitle: const Text('Light / Dark / System'),
