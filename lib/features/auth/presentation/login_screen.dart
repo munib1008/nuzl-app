@@ -79,10 +79,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: () => context.go('/register'),
                     child: const Text("Don't have an account? Register"),
                   ),
-                  TextButton(
-                    onPressed: () => context.push('/calculator'),
-                    child: const Text('Try the mortgage calculator'),
-                  ),
                 ],
               ),
             ),
