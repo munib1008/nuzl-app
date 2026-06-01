@@ -27,7 +27,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     final ok = await ref.read(authControllerProvider.notifier)
         .login(_email.text.trim(), _password.text);
-    if (ok && mounted) context.go('/feed');
+    if (ok && mounted) context.go('/dashboard');
   }
 
   @override
