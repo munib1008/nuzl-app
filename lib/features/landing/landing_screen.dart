@@ -24,6 +24,7 @@ class LandingScreen extends StatelessWidget {
                 child: Column(
                   children: const [
                     _Hero(),
+                    _WhatYouGet(),
                     _CalculatorSection(),
                     _Footer(),
                   ],
@@ -154,6 +155,85 @@ class _Features extends StatelessWidget {
   }
 }
 
+class _WhatYouGet extends StatelessWidget {
+  const _WhatYouGet();
+
+  static const _groups = [
+    ('For brokers & agents', [
+      'Live opportunity feed — never miss a new listing or buyer',
+      'Smart matching of buyers to listings (rule-based + AI)',
+      'Listing availability verification — no dead listings',
+      'Holds & blocking to avoid double-selling a unit',
+      'Viewings, offers and deals tracked end to end',
+      'System-generated reputation that builds trust',
+    ]),
+    ('For owners & investors', [
+      'Portfolio tracking with income, expenses and ROI',
+      'Mortgage calculator and live payment tracker',
+      'Community & building intelligence',
+      'Clear view of every property\'s timeline',
+    ]),
+    ('For lead generators & co-broking', [
+      'Post buyer leads to a verified network',
+      'Referral network with transparent commissions',
+      'Co-broking and "need help" requests',
+      'Activity trail on every opportunity',
+    ]),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final wide = MediaQuery.of(context).size.width >= 900;
+
+    Widget group((String, List<String>) g) => Container(
+          width: wide ? 320 : double.infinity,
+          padding: const EdgeInsets.all(AppSpacing.x20),
+          decoration: BoxDecoration(
+            color: AppColors.dSurface,
+            borderRadius: BorderRadius.circular(AppSpacing.rLg),
+            border: Border.all(color: AppColors.dBorder),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(g.$1, style: GoogleFonts.poppins(
+                fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white)),
+            const SizedBox(height: AppSpacing.x12),
+            ...g.$2.map((line) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.x8),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 2, right: AppSpacing.x8),
+                      child: Icon(Icons.check_circle, size: 18, color: AppColors.dPrimary),
+                    ),
+                    Expanded(child: Text(line,
+                        style: t.bodyMedium?.copyWith(color: AppColors.dTextMuted, height: 1.4))),
+                  ]),
+                )),
+          ]),
+        );
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1040),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24, vertical: AppSpacing.x24),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Text('What you get with nuzl',
+                style: GoogleFonts.poppins(
+                    fontSize: wide ? 30 : 24, fontWeight: FontWeight.w600, color: Colors.white)),
+            const SizedBox(height: AppSpacing.x4),
+            Text('One platform for everyone in the deal — not a portal, not a CRM.',
+                style: t.bodyMedium?.copyWith(color: AppColors.dTextMuted)),
+            const SizedBox(height: AppSpacing.x20),
+            Wrap(spacing: AppSpacing.x16, runSpacing: AppSpacing.x16,
+                children: _groups.map(group).toList()),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 class _CalculatorSection extends StatelessWidget {
   const _CalculatorSection();
   @override
@@ -253,8 +333,17 @@ class _Footer extends StatelessWidget {
               const SizedBox(height: AppSpacing.x32),
               const Divider(color: AppColors.dBorder),
               const SizedBox(height: AppSpacing.x16),
-              Text('© ${DateTime.now().year} NUZL.AE — All rights reserved.',
+              Text('© 2026 nuzl by Businesstech Arabia FZE, Innovation Licence 6803. All rights reserved.',
                   style: t.bodySmall?.copyWith(color: AppColors.dTextSubtle)),
+              const SizedBox(height: AppSpacing.x16),
+              Text('Important disclaimer',
+                  style: GoogleFonts.poppins(
+                      color: AppColors.dTextMuted, fontWeight: FontWeight.w600, fontSize: 13)),
+              const SizedBox(height: AppSpacing.x4),
+              Text(
+                'nuzl is not a real estate broker or agent. We are licensed to conduct opportunity facilitation and operate as a marketplace platform connecting real estate professionals. We are not involved directly in the sale, purchase, or lease of any property units. All real estate transactions are conducted between licensed brokers, agents, and their clients in accordance with UAE real estate regulations. Users must ensure they work with RERA-certified professionals for all property transactions.',
+                style: t.bodySmall?.copyWith(color: AppColors.dTextSubtle, height: 1.5),
+              ),
               const SizedBox(height: AppSpacing.x16),
             ]),
           ),
