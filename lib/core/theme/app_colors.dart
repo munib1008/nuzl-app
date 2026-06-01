@@ -35,6 +35,7 @@ class AppColors {
   static const dBorderStrong = Color(0xFF33425A);
   static const dText = Color(0xFFE2E8F0);
   static const dTextMuted = Color(0xFF94A3B8);
+  static const dTextSubtle = Color(0xFF64748B);
   static const dPrimary = Color(0xFF1E9C85); // lightened for dark contrast
   static const dPrimaryTint = Color(0xFF13332C);
   static const dGold = Color(0xFFD4B36E);
