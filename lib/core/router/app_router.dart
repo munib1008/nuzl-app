@@ -4,18 +4,20 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
+import '../../features/dashboard/dashboard_screen.dart';
+import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/listings/presentation/listings_screen.dart';
 import '../../features/leads/presentation/leads_screen.dart';
 import '../../features/deals/presentation/deals_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/common/stub_screen.dart';
 import '../../features/mortgage/presentation/calculator_screen.dart';
 import '../../features/mortgage/presentation/mortgage_list_screen.dart';
 import '../../features/mortgage/presentation/mortgage_form_screen.dart';
 import '../../features/mortgage/presentation/mortgage_detail_screen.dart';
 import '../../features/landing/landing_screen.dart';
 import '../../features/marketing/info_page.dart';
-import '../../features/shell/main_shell.dart';
 import '../network/api_client.dart';
 
 class _AuthRefresh extends ChangeNotifier {
@@ -26,7 +28,7 @@ class _AuthRefresh extends ChangeNotifier {
   final Ref _ref;
 }
 
-/// Public routes accessible without login (the mortgage calculator included).
+/// Public routes (no login). The mortgage calculator + marketing pages included.
 const _publicPaths = {'/', '/login', '/register', '/calculator'};
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -40,36 +42,34 @@ final routerProvider = Provider<GoRouter>((ref) {
       final loc = state.matchedLocation;
       final isPublic = _publicPaths.contains(loc) || loc.startsWith('/info/');
       if (!auth.isAuthenticated) return isPublic ? null : '/login';
-      if (state.matchedLocation == '/' ||
-          state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register') {
-        return '/feed';
-      }
+      // authed users shouldn't sit on landing/login/register
+      if (loc == '/' || loc == '/login' || loc == '/register') return '/dashboard';
       return null;
     },
     routes: [
+      // public
       GoRoute(path: '/', builder: (_, __) => const LandingScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
-      // public calculator
       GoRoute(path: '/calculator', builder: (_, __) => const CalculatorScreen()),
       GoRoute(path: '/info/:slug', builder: (_, st) => InfoPage(slug: st.pathParameters['slug']!)),
-      // authed mortgage tracker (pushed routes, not bottom-nav tabs)
+
+      // onboarding (authed, full screen)
+      GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
+
+      // authed app — each screen carries the NuzlAppBar + role-based NuzlDrawer
+      GoRoute(path: '/dashboard', builder: (_, __) => const DashboardScreen()),
+      GoRoute(path: '/feed', builder: (_, __) => const FeedScreen()),
+      GoRoute(path: '/properties', builder: (_, __) => const ListingsScreen()),
+      GoRoute(path: '/leads', builder: (_, __) => const LeadsScreen()),
+      GoRoute(path: '/deals', builder: (_, __) => const DealsScreen()),
+      GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+      GoRoute(path: '/soon/:title', builder: (_, st) => StubScreen(title: st.pathParameters['title']!)),
+
+      // mortgages
       GoRoute(path: '/mortgages', builder: (_, __) => const MortgageListScreen()),
       GoRoute(path: '/mortgages/new', builder: (_, __) => const MortgageFormScreen()),
-      GoRoute(path: '/mortgages/:id',
-          builder: (_, s) => MortgageDetailScreen(id: s.pathParameters['id']!)),
-      ShellRoute(
-        builder: (context, state, child) =>
-            MainShell(location: state.matchedLocation, child: child),
-        routes: [
-          GoRoute(path: '/feed', builder: (_, __) => const FeedScreen()),
-          GoRoute(path: '/properties', builder: (_, __) => const ListingsScreen()),
-          GoRoute(path: '/leads', builder: (_, __) => const LeadsScreen()),
-          GoRoute(path: '/deals', builder: (_, __) => const DealsScreen()),
-          GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
-        ],
-      ),
+      GoRoute(path: '/mortgages/:id', builder: (_, s) => MortgageDetailScreen(id: s.pathParameters['id']!)),
     ],
   );
 });
