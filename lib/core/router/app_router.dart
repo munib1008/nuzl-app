@@ -8,8 +8,15 @@ import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/listings/presentation/listings_screen.dart';
+import '../../features/listings/presentation/listing_form_screen.dart';
 import '../../features/leads/presentation/leads_screen.dart';
+import '../../features/leads/presentation/post_lead_screen.dart';
 import '../../features/deals/presentation/deals_screen.dart';
+import '../../features/customers/customers_screen.dart';
+import '../../features/team/team_screen.dart';
+import '../../features/admin/view_as_screen.dart';
+import '../../features/rentals/rentals_screen.dart';
+import '../../features/maintenance/maintenance_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/common/stub_screen.dart';
 import '../../features/mortgage/presentation/calculator_screen.dart';
@@ -61,8 +68,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/dashboard', builder: (_, __) => const DashboardScreen()),
       GoRoute(path: '/feed', builder: (_, __) => const FeedScreen()),
       GoRoute(path: '/properties', builder: (_, __) => const ListingsScreen()),
+      GoRoute(path: '/properties/new', builder: (_, __) => const ListingFormScreen()),
       GoRoute(path: '/leads', builder: (_, __) => const LeadsScreen()),
+      GoRoute(path: '/leads/new', builder: (_, __) => const PostLeadScreen()),
       GoRoute(path: '/deals', builder: (_, __) => const DealsScreen()),
+      GoRoute(path: '/customers', builder: (_, __) => const CustomersScreen()),
+      GoRoute(path: '/team', builder: (_, __) => const TeamScreen()),
+      GoRoute(path: '/view-as', builder: (_, __) => const ViewAsScreen()),
+      GoRoute(path: '/rentals', builder: (_, __) => const RentalsScreen()),
+      GoRoute(path: '/maintenance', builder: (_, __) => const MaintenanceScreen()),
       GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
       GoRoute(path: '/soon/:title', builder: (_, st) => StubScreen(title: st.pathParameters['title']!)),
 
