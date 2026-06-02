@@ -16,7 +16,7 @@ List<NavItem> navItemsFor(Persona p) {
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/feed'),
-        NavItem(Icons.add_circle_outline, 'Post Lead', '/soon/Post Lead'),
+        NavItem(Icons.add_circle_outline, 'Post Lead', '/leads/new'),
         NavItem(Icons.trending_up, 'My Leads', '/leads'),
         NavItem(Icons.auto_awesome_outlined, 'Lead Matches', '/soon/Lead Matches'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/soon/Messages'),
@@ -29,7 +29,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.trending_up, 'Leads', '/leads'),
         NavItem(Icons.handshake_outlined, 'Deals', '/deals'),
-        NavItem(Icons.contacts_outlined, 'Customers', '/soon/Customers'),
+        NavItem(Icons.contacts_outlined, 'Customers', '/customers'),
         NavItem(Icons.event_note_outlined, 'Activities', '/soon/Activities'),
         NavItem(Icons.insights_outlined, 'Reports', '/soon/Reports'),
       ];
@@ -40,9 +40,9 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.trending_up, 'Leads', '/leads'),
         NavItem(Icons.handshake_outlined, 'Deals', '/deals'),
-        NavItem(Icons.contacts_outlined, 'Customers', '/soon/Customers'),
+        NavItem(Icons.contacts_outlined, 'Customers', '/customers'),
         NavItem(Icons.inventory_2_outlined, 'Inventory', '/soon/Inventory'),
-        NavItem(Icons.groups_outlined, 'Team', '/soon/Team'),
+        NavItem(Icons.groups_outlined, 'Team', '/team'),
         NavItem(Icons.insights_outlined, 'Reports', '/soon/Reports'),
       ];
     case Persona.developer:
@@ -59,13 +59,15 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.home_work_outlined, 'My Properties', '/soon/My Properties'),
         NavItem(Icons.account_balance_wallet_outlined, 'Financials', '/soon/Financials'),
         NavItem(Icons.account_balance_outlined, 'Mortgages', '/mortgages'),
+        NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
         NavItem(Icons.folder_outlined, 'Documents', '/soon/Documents'),
       ];
     case Persona.owner:
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
-        NavItem(Icons.vpn_key_outlined, 'Rentals', '/soon/Rentals'),
+        NavItem(Icons.vpn_key_outlined, 'Rentals', '/rentals'),
+        NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
         NavItem(Icons.account_balance_wallet_outlined, 'Financials', '/soon/Financials'),
         NavItem(Icons.account_balance_outlined, 'Mortgages', '/mortgages'),
         NavItem(Icons.folder_outlined, 'Documents', '/soon/Documents'),
