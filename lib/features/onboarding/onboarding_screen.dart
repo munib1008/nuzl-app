@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -35,11 +36,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  void _finish() {
+  Future<void> _finish() async {
     if (role != null) {
       ref.read(personaOverrideProvider.notifier).state = role;
     }
-    context.go('/dashboard');
+    try {
+      await ref.read(apiClientProvider).patch('/users/me', body: {
+        'company': businessName.text.trim(),
+        'bio': bio.text.trim(),
+        'phone': phone.text.trim(),
+        'whatsapp': whatsapp.text.trim(),
+        'areas': areas.toList(),
+        'languages': languages.toList(),
+        'specialties': specialties.toList(),
+      });
+    } catch (_) {/* non-blocking: continue to dashboard */}
+    if (mounted) context.go('/dashboard');
   }
 
   @override
