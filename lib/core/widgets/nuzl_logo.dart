@@ -28,7 +28,7 @@ class NuzlLogo extends StatelessWidget {
           colorFilter: ColorFilter.mode(markColor, BlendMode.srcIn),
         ),
         if (showWordmark) ...[
-          SizedBox(width: size * 0.18),
+          SizedBox(width: size * 0.06),
           Text(
             'nuzl',
             style: GoogleFonts.poppins(
