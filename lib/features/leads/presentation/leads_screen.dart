@@ -1,3 +1,4 @@
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -19,7 +20,7 @@ class LeadsScreen extends ConsumerWidget {
       appBar: const NuzlAppBar(title: 'Leads'),
       drawer: const NuzlDrawer(),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {},
+        onPressed: () => context.push('/leads/new'),
         icon: const Icon(Icons.person_add_alt),
         label: const Text('New lead'),
       ),
