@@ -25,6 +25,11 @@ class AuthRepository {
     return _persist(data);
   }
 
+  Future<AppUser> loginWithGoogle(String idToken) async {
+    final data = await _api.post(Api.google, body: {'idToken': idToken});
+    return _persist(data);
+  }
+
   Future<AppUser?> currentUser() async {
     final token = await _storage.read();
     if (token == null || token.isEmpty) return null;
