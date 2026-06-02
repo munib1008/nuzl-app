@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../application/auth_controller.dart';
+import '../../../core/auth/google_sign_in_service.dart';
 import '../../../core/widgets/nuzl_logo.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -28,6 +29,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final ok = await ref.read(authControllerProvider.notifier)
         .register(_email.text.trim(), _password.text, _name.text.trim());
     if (ok && mounted) context.go('/onboarding');
+  }
+
+  Future<void> _google() async {
+    final idToken = await GoogleSignInService().getIdToken();
+    if (idToken == null) return;
+    final ok = await ref.read(authControllerProvider.notifier).loginWithGoogle(idToken);
+    if (ok && mounted) context.go('/dashboard');
   }
 
   @override
@@ -79,6 +87,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     child: state.loading
                         ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Text('Create account'),
+                  ),
+                  const SizedBox(height: AppSpacing.x16),
+                  Row(children: [
+                    const Expanded(child: Divider()),
+                    Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: Text('or', style: t.bodySmall)),
+                    const Expanded(child: Divider()),
+                  ]),
+                  const SizedBox(height: AppSpacing.x16),
+                  OutlinedButton.icon(
+                    onPressed: state.loading ? null : _google,
+                    icon: const Icon(Icons.account_circle_outlined),
+                    label: const Text('Continue with Google'),
                   ),
                   const SizedBox(height: AppSpacing.x16),
                   TextButton(
