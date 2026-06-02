@@ -138,7 +138,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                 value: furnishing, decoration: const InputDecoration(labelText: 'Furnishing'),
                 items: const [
                   DropdownMenuItem(value: 'unfurnished', child: Text('Unfurnished')),
-                  DropdownMenuItem(value: 'semi_furnished', child: Text('Semi')),
+                  DropdownMenuItem(value: 'partly_furnished', child: Text('Partly furnished')),
                   DropdownMenuItem(value: 'furnished', child: Text('Furnished')),
                 ],
                 onChanged: (v) => setState(() => furnishing = v ?? 'unfurnished'))),
