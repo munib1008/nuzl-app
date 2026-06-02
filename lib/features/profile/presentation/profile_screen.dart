@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -14,7 +15,14 @@ class ProfileScreen extends ConsumerStatefulWidget {
   ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
+final _meProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final d = await ref.read(apiClientProvider).get('/users/me');
+  return (d is Map) ? Map<String, dynamic>.from(d) : {};
+});
+
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  bool _loaded = false;
+  bool _saving = false;
   final roles = <String>{};
   final company = TextEditingController();
   final phone = TextEditingController();
@@ -31,20 +39,46 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void dispose() { company.dispose(); phone.dispose(); whatsapp.dispose(); bio.dispose(); super.dispose(); }
 
-  void _save() {
-    // Map the first selected role to the session persona so navigation adapts.
+  Future<void> _save() async {
     if (roles.contains('Broker')) ref.read(personaOverrideProvider.notifier).state = Persona.broker;
     else if (roles.contains('Agent')) ref.read(personaOverrideProvider.notifier).state = Persona.agent;
     else if (roles.contains('Lead Generator')) ref.read(personaOverrideProvider.notifier).state = Persona.leadGenerator;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Profile saved')),
-    );
+    setState(() => _saving = true);
+    try {
+      await ref.read(apiClientProvider).patch('/users/me', body: {
+        'company': company.text.trim(),
+        'phone': phone.text.trim(),
+        'whatsapp': whatsapp.text.trim(),
+        'bio': bio.text.trim(),
+        'areas': areas.toList(),
+        'languages': languages.toList(),
+        'specialties': specialties.toList(),
+      });
+      ref.invalidate(_meProvider);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile saved')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not save: $e')));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _prefill(Map<String, dynamic> m) {
+    if (_loaded) return;
+    _loaded = true;
+    company.text = (m['company'] ?? '').toString();
+    phone.text = (m['phone'] ?? '').toString();
+    whatsapp.text = (m['whatsapp'] ?? '').toString();
+    bio.text = (m['bio'] ?? '').toString();
+    void fill(Set<String> set, dynamic v) { if (v is List) set.addAll(v.map((e) => '$e')); }
+    fill(areas, m['areas']); fill(languages, m['languages']); fill(specialties, m['specialties']);
   }
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final user = ref.watch(authControllerProvider).user;
+    ref.watch(_meProvider).whenData(_prefill);
 
     Widget chips(String label, List<String> options, Set<String> selected, {bool wrapTrue = true}) =>
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -122,7 +156,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               chips('Languages', _langs, languages),
               chips('Property specialties', _specs, specialties),
               Align(alignment: Alignment.centerRight,
-                child: FilledButton.icon(onPressed: _save, icon: const Icon(Icons.save_outlined), label: const Text('Save changes'))),
+                child: FilledButton.icon(onPressed: _saving ? null : _save, icon: const Icon(Icons.save_outlined), label: Text(_saving ? 'Saving…' : 'Save changes'))),
             ]),
           )),
           const SizedBox(height: AppSpacing.x16),
