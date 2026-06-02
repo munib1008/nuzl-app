@@ -136,6 +136,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 onTap: () => context.go('/calculator')),
             const Divider(height: 1),
             ListTile(
+              leading: const Icon(Icons.science_outlined),
+              title: const Text('View as role'),
+              subtitle: const Text('Preview any role (test mode)'),
+              onTap: () => context.go('/view-as')),
+            const Divider(height: 1),
+            ListTile(
               leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
               title: Text('Sign out', style: TextStyle(color: Theme.of(context).colorScheme.error)),
               onTap: () async {
