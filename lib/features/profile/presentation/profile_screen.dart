@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/theme/theme_mode_provider.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -157,6 +158,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               chips('Property specialties', _specs, specialties),
               Align(alignment: Alignment.centerRight,
                 child: FilledButton.icon(onPressed: _saving ? null : _save, icon: const Icon(Icons.save_outlined), label: Text(_saving ? 'Saving…' : 'Save changes'))),
+            ]),
+          )),
+          const SizedBox(height: AppSpacing.x16),
+
+          // appearance
+          Card(child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.x16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Appearance', style: t.titleMedium),
+              const SizedBox(height: AppSpacing.x12),
+              Builder(builder: (context) {
+                final mode = ref.watch(themeModeProvider);
+                return Wrap(spacing: 8, children: [
+                  for (final m in ThemeMode.values)
+                    ChoiceChip(
+                      label: Text(m.name[0].toUpperCase() + m.name.substring(1)),
+                      selected: mode == m,
+                      onSelected: (_) => ref.read(themeModeProvider.notifier).set(m),
+                    ),
+                ]);
+              }),
             ]),
           )),
           const SizedBox(height: AppSpacing.x16),
