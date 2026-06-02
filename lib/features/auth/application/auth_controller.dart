@@ -43,6 +43,7 @@ class AuthController extends StateNotifier<AuthState> {
   Future<bool> login(String email, String password) => _run(() => _repo.login(email, password));
   Future<bool> register(String email, String password, String name) =>
       _run(() => _repo.register(email, password, name));
+  Future<bool> loginWithGoogle(String idToken) => _run(() => _repo.loginWithGoogle(idToken));
 
   Future<bool> _run(Future<AppUser> Function() action) async {
     state = state.copyWith(loading: true, error: null);
