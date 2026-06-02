@@ -3,6 +3,7 @@ class Api {
   // auth
   static const login = '/auth/login';
   static const register = '/auth/register';
+  static const google = '/auth/google';
   // users
   static const me = '/users/me';
   static const theme = '/users/me/theme';
