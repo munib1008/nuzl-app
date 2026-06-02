@@ -6,6 +6,7 @@ import '../../core/rbac/persona.dart';
 import '../../core/rbac/nav_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/theme_mode_provider.dart';
 import '../../core/widgets/nuzl_logo.dart';
 import '../auth/application/auth_controller.dart';
 
@@ -45,6 +46,13 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
           : const NuzlLogo(size: 28),
       actions: [
         ...?actions,
+        IconButton(
+          tooltip: 'Toggle light / dark',
+          icon: Icon(Theme.of(context).brightness == Brightness.dark
+              ? Icons.light_mode_outlined
+              : Icons.dark_mode_outlined),
+          onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
+        ),
         ref.watch(unreadCountProvider).maybeWhen(
               data: (n) => _Bell(count: n, onTap: () => context.go('/soon/Notifications')),
               orElse: () => IconButton(
