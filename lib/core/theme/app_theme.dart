@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 import 'app_spacing.dart';
@@ -42,7 +43,7 @@ class AppTheme {
         centerTitle: false,
         titleTextStyle: AppTypography.textTheme(text, muted).headlineSmall,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
