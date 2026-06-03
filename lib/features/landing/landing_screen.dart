@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/theme_mode_provider.dart';
+import '../../core/widgets/fade_in.dart';
 import '../../core/widgets/nuzl_logo.dart';
 import '../mortgage/presentation/calculator_screen.dart';
 
@@ -67,10 +68,19 @@ class _StickyTopBar extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24, vertical: AppSpacing.x12),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 InkWell(onTap: () => context.go('/'), child: NuzlLogo(size: 36, color: _onBg(context))),
-                Row(children: [
+                // centered nav links (wide screens only)
+                Expanded(
+                  child: MediaQuery.of(context).size.width >= 760
+                      ? const Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
+                          _NavLink('Marketplace', '/info/marketplace'),
+                          _NavLink('Tools', '/info/tools'),
+                          _NavLink('Pricing', '/info/pricing'),
+                        ])
+                      : const SizedBox.shrink(),
+                ),
+                Row(mainAxisSize: MainAxisSize.min, children: [
                   IconButton(
                     tooltip: 'Toggle light / dark',
                     icon: Icon(_isDark(context) ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
@@ -97,13 +107,27 @@ class _StickyTopBar extends ConsumerWidget {
   }
 }
 
+class _NavLink extends StatelessWidget {
+  const _NavLink(this.label, this.route);
+  final String label;
+  final String route;
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: () => context.go(route),
+      child: Text(label, style: GoogleFonts.poppins(color: _muted(context), fontWeight: FontWeight.w500)),
+    );
+  }
+}
+
 class _Hero extends StatelessWidget {
   const _Hero();
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final wide = MediaQuery.of(context).size.width >= 900;
-    return Center(
+    return FadeIn(
+      child: Center(
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 1040),
         child: Padding(
@@ -139,6 +163,7 @@ class _Hero extends StatelessWidget {
             const _Features(),
           ]),
         ),
+      ),
       ),
     );
   }
@@ -384,49 +409,80 @@ class _FeaturedListings extends ConsumerWidget {
     final t = Theme.of(context).textTheme;
     final wide = MediaQuery.of(context).size.width >= 900;
     final listings = ref.watch(_featuredListingsProvider);
-    return listings.maybeWhen(
-      orElse: () => const SizedBox.shrink(),
-      data: (list) {
-        if (list.isEmpty) return const SizedBox.shrink(); // hide section if nothing yet
-        return Container(
-          width: double.infinity,
-          color: _surface(context),
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.x48),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1040),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Fresh on nuzl',
-                      style: GoogleFonts.poppins(fontSize: wide ? 30 : 24, fontWeight: FontWeight.w700, color: _onBg(context))),
-                  const SizedBox(height: AppSpacing.x4),
-                  Text('New and top listings shared by verified agents across the UAE.',
-                      style: t.bodyMedium?.copyWith(color: _muted(context))),
-                  const SizedBox(height: AppSpacing.x20),
-                  Wrap(
-                      spacing: AppSpacing.x16,
-                      runSpacing: AppSpacing.x16,
-                      children: list
-                          .map((m) => _ListingCard(
-                                data: Map<String, dynamic>.from(m),
-                                width: wide ? 320 : MediaQuery.of(context).size.width - (AppSpacing.x24 * 2),
-                              ))
-                          .toList()),
-                  const SizedBox(height: AppSpacing.x24),
-                  OutlinedButton(
-                    onPressed: () => context.go('/register'),
-                    style: OutlinedButton.styleFrom(foregroundColor: _onBg(context), side: BorderSide(color: _borderStrong(context))),
-                    child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x8),
-                        child: Text('Join to see every listing')),
-                  ),
-                ]),
+    return Container(
+      width: double.infinity,
+      color: _surface(context),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.x48),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1040),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Browse properties',
+                  style: GoogleFonts.poppins(fontSize: wide ? 30 : 24, fontWeight: FontWeight.w700, color: _onBg(context))),
+              const SizedBox(height: AppSpacing.x4),
+              Text('A preview of listings shared by verified agents across the UAE — sign in to view full details.',
+                  style: t.bodyMedium?.copyWith(color: _muted(context))),
+              const SizedBox(height: AppSpacing.x20),
+              listings.when(
+                loading: () => const Padding(
+                    padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
+                error: (e, _) => const _GalleryEmpty(),
+                data: (list) => list.isEmpty
+                    ? const _GalleryEmpty()
+                    : Wrap(
+                        spacing: AppSpacing.x16,
+                        runSpacing: AppSpacing.x16,
+                        children: list.asMap().entries.map((e) {
+                          final w = wide ? 320.0 : MediaQuery.of(context).size.width - (AppSpacing.x24 * 2);
+                          return FadeIn(
+                            delayMs: 60 * e.key,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(AppSpacing.rLg),
+                              onTap: () => context.go('/login'),
+                              child: _ListingCard(data: Map<String, dynamic>.from(e.value), width: w),
+                            ),
+                          );
+                        }).toList()),
               ),
-            ),
+              const SizedBox(height: AppSpacing.x24),
+              OutlinedButton(
+                onPressed: () => context.go('/login'),
+                style: OutlinedButton.styleFrom(foregroundColor: _onBg(context), side: BorderSide(color: _borderStrong(context))),
+                child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x8),
+                    child: Text('Sign in to view all listings')),
+              ),
+            ]),
           ),
-        );
-      },
+        ),
+      ),
+    );
+  }
+}
+
+class _GalleryEmpty extends StatelessWidget {
+  const _GalleryEmpty();
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.x40),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(AppSpacing.rLg),
+        border: Border.all(color: _border(context)),
+      ),
+      child: Column(children: [
+        Icon(Icons.apartment_outlined, size: 44, color: _primary(context)),
+        const SizedBox(height: AppSpacing.x12),
+        Text('Listings coming soon', style: t.titleMedium?.copyWith(color: _onBg(context))),
+        const SizedBox(height: AppSpacing.x4),
+        Text('Verified agents across the UAE will post properties here.',
+            style: t.bodySmall?.copyWith(color: _muted(context)), textAlign: TextAlign.center),
+      ]),
     );
   }
 }

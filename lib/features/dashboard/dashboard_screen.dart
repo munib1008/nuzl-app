@@ -6,6 +6,7 @@ import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/fade_in.dart';
 import '../auth/application/auth_controller.dart';
 import '../shell/app_shell.dart';
 
@@ -56,7 +57,7 @@ class DashboardScreen extends ConsumerWidget {
 
           // hero stat (first card) + grid of the rest
           if (cards.isNotEmpty) ...[
-            _HeroStat(card: cards.first),
+            FadeIn(child: _HeroStat(card: cards.first)),
             const SizedBox(height: AppSpacing.x12),
             GridView.count(
               crossAxisCount: wide ? 3 : 2,
@@ -65,7 +66,9 @@ class DashboardScreen extends ConsumerWidget {
               mainAxisSpacing: AppSpacing.x12,
               crossAxisSpacing: AppSpacing.x12,
               childAspectRatio: 1.5,
-              children: cards.skip(1).map((c) => _StatCard(card: c)).toList(),
+              children: cards.skip(1).toList().asMap().entries
+                  .map((e) => FadeIn(delayMs: 80 * (e.key + 1), child: _StatCard(card: e.value)))
+                  .toList(),
             ),
             const SizedBox(height: AppSpacing.x24),
           ],
