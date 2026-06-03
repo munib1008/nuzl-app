@@ -65,7 +65,7 @@ class _PostLeadScreenState extends ConsumerState<PostLeadScreen> {
             TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone', hintText: '+971 …')),
             const SizedBox(height: AppSpacing.x12),
             DropdownButtonFormField<String>(
-              value: buyerType,
+              initialValue: buyerType,
               decoration: const InputDecoration(labelText: 'Buyer type'),
               items: const [
                 DropdownMenuItem(value: 'end_user', child: Text('End user')),
@@ -75,7 +75,7 @@ class _PostLeadScreenState extends ConsumerState<PostLeadScreen> {
             ),
             const SizedBox(height: AppSpacing.x12),
             DropdownButtonFormField<String>(
-              value: purpose,
+              initialValue: purpose,
               decoration: const InputDecoration(labelText: 'Purpose'),
               items: const [
                 DropdownMenuItem(value: 'sale', child: Text('Buy / Sale')),
@@ -93,7 +93,7 @@ class _PostLeadScreenState extends ConsumerState<PostLeadScreen> {
             ]),
             const SizedBox(height: AppSpacing.x12),
             DropdownButtonFormField<int>(
-              value: beds,
+              initialValue: beds,
               decoration: const InputDecoration(labelText: 'Bedrooms'),
               items: const [
                 DropdownMenuItem(value: null, child: Text('Any')),
