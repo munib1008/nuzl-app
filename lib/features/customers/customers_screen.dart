@@ -57,7 +57,7 @@ class CustomersScreen extends ConsumerWidget {
         TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone')),
         TextField(controller: email, decoration: const InputDecoration(labelText: 'Email')),
         const SizedBox(height: 8),
-        DropdownButtonFormField<String>(value: type, decoration: const InputDecoration(labelText: 'Type'),
+        DropdownButtonFormField<String>(initialValue: type, decoration: const InputDecoration(labelText: 'Type'),
           items: const [
             DropdownMenuItem(value: 'client', child: Text('Client')),
             DropdownMenuItem(value: 'investor', child: Text('Investor')),
