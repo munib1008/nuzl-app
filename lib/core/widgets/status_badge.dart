@@ -10,9 +10,9 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, fg) = switch (tone) {
-      BadgeTone.success => (AppColors.success.withOpacity(.12), AppColors.success),
-      BadgeTone.warning => (AppColors.warning.withOpacity(.14), AppColors.warning),
-      BadgeTone.danger => (AppColors.danger.withOpacity(.12), AppColors.danger),
+      BadgeTone.success => (AppColors.success.withValues(alpha: .12), AppColors.success),
+      BadgeTone.warning => (AppColors.warning.withValues(alpha: .14), AppColors.warning),
+      BadgeTone.danger => (AppColors.danger.withValues(alpha: .12), AppColors.danger),
       BadgeTone.gold => (AppColors.accentGoldTint, AppColors.accentGold),
       BadgeTone.neutral => (Theme.of(context).colorScheme.surface, AppColors.textMuted),
     };
