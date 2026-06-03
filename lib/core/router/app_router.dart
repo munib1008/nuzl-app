@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
+import '../../features/auth/presentation/forgot_password_screen.dart';
+import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/feed/presentation/feed_screen.dart';
@@ -36,7 +38,7 @@ class _AuthRefresh extends ChangeNotifier {
 }
 
 /// Public routes (no login). The mortgage calculator + marketing pages included.
-const _publicPaths = {'/', '/login', '/register', '/calculator'};
+const _publicPaths = {'/', '/login', '/register', '/calculator', '/forgot', '/reset'};
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _AuthRefresh(ref);
@@ -58,6 +60,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/', builder: (_, __) => const LandingScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(path: '/forgot', builder: (_, __) => const ForgotPasswordScreen()),
+      GoRoute(path: '/reset', builder: (_, st) => ResetPasswordScreen(token: st.uri.queryParameters['token'] ?? '')),
       GoRoute(path: '/calculator', builder: (_, __) => const CalculatorScreen()),
       GoRoute(path: '/info/:slug', builder: (_, st) => InfoPage(slug: st.pathParameters['slug']!)),
 
