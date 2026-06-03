@@ -4,6 +4,9 @@ class Api {
   static const login = '/auth/login';
   static const register = '/auth/register';
   static const google = '/auth/google';
+  static const forgotPassword = '/auth/forgot-password';
+  static const resetPassword = '/auth/reset-password';
+  static const publicListings = '/public/listings';
   // users
   static const me = '/users/me';
   static const theme = '/users/me/theme';
