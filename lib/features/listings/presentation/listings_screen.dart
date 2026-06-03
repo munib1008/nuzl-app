@@ -2,47 +2,101 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/rbac/persona.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/empty_state.dart';
-import '../../../core/widgets/status_badge.dart';
-import '../data/listings_repository.dart';
-import '../domain/listing.dart';
 import '../../shell/app_shell.dart';
+
+final listingsRawProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/listings');
+    return d is List ? d : [];
+  } catch (_) {
+    return [];
+  }
+});
+
+final _fPurpose = StateProvider.autoDispose<String>((ref) => 'all');
+final _fType = StateProvider.autoDispose<String>((ref) => 'all');
+final _fBeds = StateProvider.autoDispose<int?>((ref) => null);
+final _fPriceMax = StateProvider.autoDispose<double?>((ref) => null);
 
 class ListingsScreen extends ConsumerWidget {
   const ListingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final listings = ref.watch(listingsProvider);
+    final listings = ref.watch(listingsRawProvider);
+    final canList = ref.watch(personaProvider).canListProperty;
+    final purpose = ref.watch(_fPurpose);
+    final type = ref.watch(_fType);
+    final beds = ref.watch(_fBeds);
+    final priceMax = ref.watch(_fPriceMax);
+
     return Scaffold(
       appBar: const NuzlAppBar(title: 'Properties'),
       drawer: const NuzlDrawer(),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/properties/new'),
-        icon: const Icon(Icons.add),
-        label: const Text('New listing'),
-      ),
+      floatingActionButton: canList
+          ? FloatingActionButton.extended(
+              onPressed: () => context.push('/properties/new'),
+              icon: const Icon(Icons.add),
+              label: const Text('New listing'),
+            )
+          : null,
       body: RefreshIndicator(
-        onRefresh: () async => ref.refresh(listingsProvider.future),
-        child: AsyncView<List<Listing>>(
-          value: listings,
-          onRetry: () => ref.refresh(listingsProvider),
-          data: (items) {
-            if (items.isEmpty) {
-              return const EmptyState(
-                icon: Icons.apartment_outlined,
-                title: 'No properties yet',
-                message: 'Add your first listing to start matching it to buyers.',
-                actionLabel: 'Add listing',
-              );
-            }
-            return ListView.separated(
+        onRefresh: () async => ref.refresh(listingsRawProvider.future),
+        child: listings.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          data: (raw) {
+            final all = raw.map((e) => Map<String, dynamic>.from(e)).toList();
+            final types = <String>{'all', ...all.map((m) => '${m['property_type'] ?? ''}').where((s) => s.isNotEmpty)};
+            num priceOf(Map<String, dynamic> m) => num.tryParse('${m['price']}') ?? 0;
+            int? bedsOf(Map<String, dynamic> m) => m['bedrooms'] is int ? m['bedrooms'] as int : int.tryParse('${m['bedrooms']}');
+            final items = all.where((m) {
+              if (purpose != 'all' && '${m['purpose']}' != purpose) return false;
+              if (type != 'all' && '${m['property_type']}' != type) return false;
+              if (beds != null && (bedsOf(m) ?? -1) < beds) return false;
+              if (priceMax != null && priceOf(m) > priceMax) return false;
+              return true;
+            }).toList();
+
+            return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x12),
-              itemBuilder: (_, i) => _ListingCard(items[i]),
+              children: [
+                _FilterBar(types: types.toList()),
+                const SizedBox(height: AppSpacing.x12),
+                if (items.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 40),
+                    child: EmptyState(
+                      icon: Icons.search_off_outlined,
+                      title: 'No matching properties',
+                      message: 'Try widening your filters to see more listings.',
+                    ),
+                  )
+                else
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1100),
+                      child: LayoutBuilder(
+                        builder: (ctx, c) {
+                          final cols = c.maxWidth >= 980 ? 3 : (c.maxWidth >= 620 ? 2 : 1);
+                          final cardW = cols == 1 ? c.maxWidth : (c.maxWidth - (cols - 1) * AppSpacing.x16) / cols;
+                          return Wrap(
+                            spacing: AppSpacing.x16,
+                            runSpacing: AppSpacing.x16,
+                            children: items
+                                .map((m) => SizedBox(width: cardW, child: _ListingCard(m)))
+                                .toList(),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+              ],
             );
           },
         ),
@@ -51,42 +105,154 @@ class ListingsScreen extends ConsumerWidget {
   }
 }
 
+class _FilterBar extends ConsumerWidget {
+  const _FilterBar({required this.types});
+  final List<String> types;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _Drop<String>(
+            label: 'Purpose',
+            value: ref.watch(_fPurpose),
+            items: const [('all', 'Any'), ('sale', 'For sale'), ('rent', 'For rent')],
+            onChanged: (v) => ref.read(_fPurpose.notifier).state = v ?? 'all',
+          ),
+          const SizedBox(width: AppSpacing.x8),
+          _Drop<String>(
+            label: 'Type',
+            value: ref.watch(_fType),
+            items: types.map((t) => (t, t == 'all' ? 'Any type' : _cap(t))).toList(),
+            onChanged: (v) => ref.read(_fType.notifier).state = v ?? 'all',
+          ),
+          const SizedBox(width: AppSpacing.x8),
+          _Drop<int?>(
+            label: 'Beds',
+            value: ref.watch(_fBeds),
+            items: const [(null, 'Any beds'), (0, 'Studio'), (1, '1+'), (2, '2+'), (3, '3+'), (4, '4+')],
+            onChanged: (v) => ref.read(_fBeds.notifier).state = v,
+          ),
+          const SizedBox(width: AppSpacing.x8),
+          _Drop<double?>(
+            label: 'Max price',
+            value: ref.watch(_fPriceMax),
+            items: const [
+              (null, 'Any price'),
+              (500000.0, '≤ 500K'),
+              (1000000.0, '≤ 1M'),
+              (2000000.0, '≤ 2M'),
+              (5000000.0, '≤ 5M'),
+            ],
+            onChanged: (v) => ref.read(_fPriceMax.notifier).state = v,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Drop<T> extends StatelessWidget {
+  const _Drop({required this.label, required this.value, required this.items, required this.onChanged});
+  final String label;
+  final T value;
+  final List<(T, String)> items;
+  final ValueChanged<T?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppSpacing.rFull),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: value,
+          isDense: true,
+          borderRadius: BorderRadius.circular(AppSpacing.rMd),
+          hint: Text(label),
+          items: items.map((it) => DropdownMenuItem<T>(value: it.$1, child: Text(it.$2))).toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}
+
+String _cap(String s) => s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
+
 class _ListingCard extends StatelessWidget {
   const _ListingCard(this.l);
-  final Listing l;
-
-  BadgeTone get _availTone => switch (l.availability) {
-        'verified' => BadgeTone.success,
-        'expired' => BadgeTone.danger,
-        _ => BadgeTone.warning,
-      };
+  final Map<String, dynamic> l;
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final price = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(l.price);
+    final price = num.tryParse('${l['price']}') ?? 0;
+    final money = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price);
+    final cover = '${l['cover_image'] ?? ''}';
+    final isRent = '${l['purpose']}' == 'rent';
+    final facts = [
+      if (l['property_type'] != null) _cap('${l['property_type']}'),
+      if (l['bedrooms'] != null) '${l['bedrooms']} BR',
+      if (l['bathrooms'] != null) '${l['bathrooms']} BA',
+      if (l['size_sqft'] != null) '${(num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0)} sqft',
+    ].join('  ·  ');
+
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.x16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/listings/${l['id']}'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Expanded(child: Text(price, style: t.titleLarge)),
-              StatusBadge(l.availability ?? 'unverified', tone: _availTone),
-            ]),
-            const SizedBox(height: AppSpacing.x4),
-            Text([
-              if (l.community != null) l.community,
-              if (l.bedrooms != null) '${l.bedrooms} BR',
-              if (l.sizeSqft != null) '${l.sizeSqft!.toStringAsFixed(0)} sqft',
-              if (l.purpose != null) 'for ${l.purpose}',
-            ].whereType<String>().join('  ·  '), style: t.bodyMedium),
-            const SizedBox(height: AppSpacing.x8),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: StatusBadge(l.status ?? 'available',
-                  tone: l.status == 'held' ? BadgeTone.warning : BadgeTone.neutral),
+            Stack(
+              children: [
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: cover.isEmpty
+                      ? Container(
+                          color: AppColors.surface2,
+                          child: const Center(child: Icon(Icons.apartment_outlined, size: 40, color: AppColors.textSubtle)),
+                        )
+                      : Image.network(cover, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                              color: AppColors.surface2,
+                              child: const Center(child: Icon(Icons.apartment_outlined, size: 40, color: AppColors.textSubtle)))),
+                ),
+                Positioned(
+                  left: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: (isRent ? AppColors.info : AppColors.primary).withValues(alpha: 0.92),
+                      borderRadius: BorderRadius.circular(AppSpacing.rFull),
+                    ),
+                    child: Text(isRent ? 'For rent' : 'For sale',
+                        style: t.bodySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.x12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(money, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  if (l['community'] != null)
+                    Text('${l['community']}', style: t.bodyMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text(facts, style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                ],
+              ),
             ),
           ],
         ),
