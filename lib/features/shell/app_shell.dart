@@ -124,6 +124,29 @@ class _Bell extends StatelessWidget {
   }
 }
 
+/// Mobile-only bottom navigation: the role's top 4 destinations. The drawer
+/// still carries the full menu. Hidden on wide (web) layouts.
+class NuzlBottomNav extends ConsumerWidget {
+  const NuzlBottomNav({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = navItemsFor(ref.watch(personaProvider)).take(4).toList();
+    if (items.length < 2) return const SizedBox.shrink();
+    final location = GoRouterState.of(context).matchedLocation;
+    var index = items.indexWhere((it) =>
+        it.route == '/dashboard' ? location == '/dashboard' : location.startsWith(it.route));
+    if (index < 0) index = 0;
+    return NavigationBar(
+      selectedIndex: index,
+      onDestinationSelected: (i) => context.go(items[i].route),
+      destinations: items
+          .map((it) => NavigationDestination(icon: Icon(it.icon), label: it.label))
+          .toList(),
+    );
+  }
+}
+
 /// Role-based navigation drawer (menu varies by persona) + profile footer.
 class NuzlDrawer extends ConsumerWidget {
   const NuzlDrawer({super.key});
@@ -138,9 +161,9 @@ class NuzlDrawer extends ConsumerWidget {
     return Drawer(
       child: SafeArea(
         child: Column(children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.x20, AppSpacing.x20, AppSpacing.x20, AppSpacing.x8),
-            child: Align(alignment: Alignment.centerLeft, child: const NuzlLogo(size: 34)),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(AppSpacing.x20, AppSpacing.x20, AppSpacing.x20, AppSpacing.x8),
+            child: Align(alignment: Alignment.centerLeft, child: NuzlLogo(size: 34)),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x20),
