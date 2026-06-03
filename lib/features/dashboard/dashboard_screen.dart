@@ -55,22 +55,34 @@ class DashboardScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.x20),
 
           // hero stat (first card) + grid of the rest
-          if (cards.isNotEmpty) _HeroStat(card: cards.first),
-          const SizedBox(height: AppSpacing.x12),
-          GridView.count(
-            crossAxisCount: wide ? 3 : 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: AppSpacing.x12,
-            crossAxisSpacing: AppSpacing.x12,
-            childAspectRatio: 1.5,
-            children: cards.skip(1).map((c) => _StatCard(card: c)).toList(),
-          ),
+          if (cards.isNotEmpty) ...[
+            _HeroStat(card: cards.first),
+            const SizedBox(height: AppSpacing.x12),
+            GridView.count(
+              crossAxisCount: wide ? 3 : 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: AppSpacing.x12,
+              crossAxisSpacing: AppSpacing.x12,
+              childAspectRatio: 1.5,
+              children: cards.skip(1).map((c) => _StatCard(card: c)).toList(),
+            ),
+            const SizedBox(height: AppSpacing.x24),
+          ],
 
-          const SizedBox(height: AppSpacing.x24),
+          if (persona == Persona.buyer) ...[
+            const _BuyerCta(),
+            const SizedBox(height: AppSpacing.x24),
+          ],
+
           Text('Quick actions', style: t.titleMedium),
           const SizedBox(height: AppSpacing.x12),
           _QuickActions(persona: persona),
+
+          const SizedBox(height: AppSpacing.x24),
+          Text('Tools', style: t.titleMedium),
+          const SizedBox(height: AppSpacing.x12),
+          _ToolsGroup(persona: persona),
         ],
       ),
     ));
@@ -213,6 +225,110 @@ class _QuickActions extends StatelessWidget {
           onTap: () => context.go(a.$3),
         ),
       )).toList(),
+    );
+  }
+}
+
+class _BuyerCta extends StatelessWidget {
+  const _BuyerCta();
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+            colors: [AppColors.primaryDark, AppColors.primary],
+            begin: Alignment.topLeft, end: Alignment.bottomRight),
+        borderRadius: BorderRadius.circular(AppSpacing.rLg),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Find your next home',
+            style: t.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+        const SizedBox(height: AppSpacing.x4),
+        Text('Browse verified listings across the UAE.',
+            style: t.bodyMedium?.copyWith(color: Colors.white70)),
+        const SizedBox(height: AppSpacing.x12),
+        FilledButton.icon(
+          style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: AppColors.primary),
+          onPressed: () => context.go('/feed'),
+          icon: const Icon(Icons.search),
+          label: const Text('Browse the marketplace'),
+        ),
+      ]),
+    );
+  }
+}
+
+/// Per-role tools — only the ones relevant to the persona are shown (§7).
+List<(String, IconData, String)> _toolsFor(Persona p) => switch (p) {
+      Persona.broker || Persona.agent => [
+          ('Lead matcher', Icons.auto_awesome_outlined, '/lead-matches'),
+          ('Mortgage calculator', Icons.calculate_outlined, '/calculator'),
+          ('Documents', Icons.folder_outlined, '/documents'),
+          ('Commission tracker', Icons.payments_outlined, '/soon/Commission'),
+        ],
+      Persona.leadGenerator => [
+          ('Lead matcher', Icons.auto_awesome_outlined, '/lead-matches'),
+          ('Marketplace', Icons.storefront_outlined, '/feed'),
+          ('Network', Icons.people_outline, '/network'),
+        ],
+      Persona.developer => [
+          ('Projects', Icons.domain_outlined, '/projects'),
+          ('Inventory', Icons.inventory_2_outlined, '/inventory'),
+          ('Reports', Icons.insights_outlined, '/reports'),
+        ],
+      Persona.owner => [
+          ('Financials / ROI', Icons.account_balance_wallet_outlined, '/financials'),
+          ('Rent & cheques', Icons.vpn_key_outlined, '/rentals'),
+          ('Maintenance', Icons.build_outlined, '/maintenance'),
+        ],
+      Persona.investor => [
+          ('ROI & portfolio', Icons.home_work_outlined, '/my-properties'),
+          ('Financials', Icons.account_balance_wallet_outlined, '/financials'),
+          ('Mortgage tracker', Icons.account_balance_outlined, '/mortgages'),
+          ('Mortgage calculator', Icons.calculate_outlined, '/calculator'),
+        ],
+      Persona.buyer => [
+          ('Mortgage calculator', Icons.calculate_outlined, '/calculator'),
+          ('Saved searches', Icons.bookmark_outline, '/soon/Saved'),
+          ('Viewing scheduler', Icons.event_available_outlined, '/soon/Viewings'),
+        ],
+      Persona.admin => [
+          ('Organizations', Icons.business_outlined, '/organizations'),
+          ('Audit logs', Icons.receipt_long_outlined, '/audit'),
+          ('Plans', Icons.workspace_premium_outlined, '/plans'),
+        ],
+    };
+
+class _ToolsGroup extends StatelessWidget {
+  const _ToolsGroup({required this.persona});
+  final Persona persona;
+  @override
+  Widget build(BuildContext context) {
+    final tools = _toolsFor(persona);
+    return LayoutBuilder(
+      builder: (ctx, c) {
+        final cols = c.maxWidth >= 600 ? 2 : 1;
+        final w = cols == 1 ? c.maxWidth : (c.maxWidth - AppSpacing.x12) / 2;
+        return Wrap(
+          spacing: AppSpacing.x12,
+          runSpacing: AppSpacing.x12,
+          children: tools
+              .map((tool) => SizedBox(
+                    width: w,
+                    child: Card(
+                      child: ListTile(
+                        leading: Icon(tool.$2, color: AppColors.primary),
+                        title: Text(tool.$1),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => context.go(tool.$3),
+                      ),
+                    ),
+                  ))
+              .toList(),
+        );
+      },
     );
   }
 }
