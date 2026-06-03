@@ -15,17 +15,17 @@ class LandingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       backgroundColor: AppColors.dBg,
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
-            const _StickyTopBar(),           // stays pinned while content scrolls
+            _StickyTopBar(),           // stays pinned while content scrolls
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
-                  children: const [
+                  children: [
                     _Hero(),
                     _WhatYouGet(),
                     _FeaturedListings(),
@@ -446,7 +446,7 @@ class _ListingCard extends StatelessWidget {
             Row(children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.2), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
                 child: Text(purpose == 'rent' ? 'For rent' : 'For sale',
                     style: t.bodySmall?.copyWith(color: AppColors.dPrimary, fontWeight: FontWeight.w600)),
               ),
