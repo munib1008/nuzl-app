@@ -6,11 +6,13 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
+import '../../features/profile/presentation/public_profile_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/listings/presentation/listings_screen.dart';
 import '../../features/listings/presentation/listing_form_screen.dart';
+import '../../features/listings/presentation/listing_detail_screen.dart';
 import '../../features/leads/presentation/leads_screen.dart';
 import '../../features/leads/presentation/post_lead_screen.dart';
 import '../../features/deals/presentation/deals_screen.dart';
@@ -27,6 +29,21 @@ import '../../features/mortgage/presentation/mortgage_form_screen.dart';
 import '../../features/mortgage/presentation/mortgage_detail_screen.dart';
 import '../../features/landing/landing_screen.dart';
 import '../../features/marketing/info_page.dart';
+import '../../features/reports/reports_screen.dart';
+import '../../features/financials/financials_screen.dart';
+import '../../features/documents/documents_screen.dart';
+import '../../features/inventory/inventory_screen.dart';
+import '../../features/projects/projects_screen.dart';
+import '../../features/portfolio/my_properties_screen.dart';
+import '../../features/matching/lead_matches_screen.dart';
+import '../../features/activities/activities_screen.dart';
+import '../../features/messages/messages_screen.dart';
+import '../../features/network/network_screen.dart';
+import '../../features/admin/organizations_screen.dart';
+import '../../features/admin/audit_screen.dart';
+import '../../features/billing/plans_screen.dart';
+import '../../features/crm/crm_screen.dart';
+import '../../features/shell/app_shell.dart';
 import '../network/api_client.dart';
 
 class _AuthRefresh extends ChangeNotifier {
@@ -49,7 +66,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final auth = ref.read(authControllerProvider);
       if (!auth.initialized) return null;
       final loc = state.matchedLocation;
-      final isPublic = _publicPaths.contains(loc) || loc.startsWith('/info/');
+      final isPublic = _publicPaths.contains(loc) || loc.startsWith('/info/') || loc.startsWith('/u/');
       if (!auth.isAuthenticated) return isPublic ? null : '/login';
       // authed users shouldn't sit on landing/login/register
       if (loc == '/' || loc == '/login' || loc == '/register') return '/dashboard';
@@ -64,15 +81,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/reset', builder: (_, st) => ResetPasswordScreen(token: st.uri.queryParameters['token'] ?? '')),
       GoRoute(path: '/calculator', builder: (_, __) => const CalculatorScreen()),
       GoRoute(path: '/info/:slug', builder: (_, st) => InfoPage(slug: st.pathParameters['slug']!)),
+      GoRoute(path: '/u/:id', builder: (_, st) => PublicProfileScreen(id: st.pathParameters['id']!)),
 
       // onboarding (authed, full screen)
       GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
 
-      // authed app — each screen carries the NuzlAppBar + role-based NuzlDrawer
+      // authed app — wrapped in a shell that adds the mobile bottom nav.
+      // Each screen still carries the NuzlAppBar + role-based NuzlDrawer.
+      ShellRoute(
+        builder: (_, __, child) => _BottomNavShell(child: child),
+        routes: [
       GoRoute(path: '/dashboard', builder: (_, __) => const DashboardScreen()),
       GoRoute(path: '/feed', builder: (_, __) => const FeedScreen()),
       GoRoute(path: '/properties', builder: (_, __) => const ListingsScreen()),
       GoRoute(path: '/properties/new', builder: (_, __) => const ListingFormScreen()),
+      GoRoute(path: '/listings/:id', builder: (_, st) => ListingDetailScreen(id: st.pathParameters['id']!)),
       GoRoute(path: '/leads', builder: (_, __) => const LeadsScreen()),
       GoRoute(path: '/leads/new', builder: (_, __) => const PostLeadScreen()),
       GoRoute(path: '/deals', builder: (_, __) => const DealsScreen()),
@@ -82,12 +105,44 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/rentals', builder: (_, __) => const RentalsScreen()),
       GoRoute(path: '/maintenance', builder: (_, __) => const MaintenanceScreen()),
       GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
+
+      // Phase 2 — completed sections (were /soon placeholders)
+      GoRoute(path: '/reports', builder: (_, __) => const ReportsScreen()),
+      GoRoute(path: '/financials', builder: (_, __) => const FinancialsScreen()),
+      GoRoute(path: '/documents', builder: (_, __) => const DocumentsScreen()),
+      GoRoute(path: '/inventory', builder: (_, __) => const InventoryScreen()),
+      GoRoute(path: '/projects', builder: (_, __) => const ProjectsScreen()),
+      GoRoute(path: '/my-properties', builder: (_, __) => const MyPropertiesScreen()),
+      GoRoute(path: '/lead-matches', builder: (_, __) => const LeadMatchesScreen()),
+      GoRoute(path: '/crm', builder: (_, __) => const CrmScreen()),
+      GoRoute(path: '/activities', builder: (_, __) => const ActivitiesScreen()),
+      GoRoute(path: '/messages', builder: (_, __) => const MessagesScreen()),
+      GoRoute(path: '/network', builder: (_, __) => const NetworkScreen()),
+      GoRoute(path: '/organizations', builder: (_, __) => const OrganizationsScreen()),
+      GoRoute(path: '/audit', builder: (_, __) => const AuditScreen()),
+      GoRoute(path: '/plans', builder: (_, __) => const PlansScreen()),
+
       GoRoute(path: '/soon/:title', builder: (_, st) => StubScreen(title: st.pathParameters['title']!)),
 
       // mortgages
       GoRoute(path: '/mortgages', builder: (_, __) => const MortgageListScreen()),
       GoRoute(path: '/mortgages/new', builder: (_, __) => const MortgageFormScreen()),
       GoRoute(path: '/mortgages/:id', builder: (_, s) => MortgageDetailScreen(id: s.pathParameters['id']!)),
+        ],
+      ),
     ],
   );
 });
+
+/// Wraps authed screens with a mobile bottom nav (narrow widths only); on wide
+/// layouts the role-based drawer is enough, so the child renders unchanged.
+class _BottomNavShell extends StatelessWidget {
+  const _BottomNavShell({required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final narrow = MediaQuery.sizeOf(context).width < 600;
+    if (!narrow) return child;
+    return Scaffold(body: child, bottomNavigationBar: const NuzlBottomNav());
+  }
+}
