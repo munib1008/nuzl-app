@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/async_view.dart';
 import '../data/mortgage_repository.dart';
-import '../domain/mortgage.dart';
 
 /// Mortgage detail: progress summary + payment history + log a payment.
 class MortgageDetailScreen extends ConsumerWidget {
