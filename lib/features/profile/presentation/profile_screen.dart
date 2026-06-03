@@ -6,6 +6,7 @@ import '../../../core/theme/theme_mode_provider.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/multi_select_field.dart';
 import '../../../core/widgets/nuzl_logo.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../shell/app_shell.dart';
@@ -24,7 +25,7 @@ final _meProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _loaded = false;
   bool _saving = false;
-  final roles = <String>{};
+  String? _role; // agency | agent | owner | investor | buyer
   final company = TextEditingController();
   final phone = TextEditingController();
   final whatsapp = TextEditingController();
@@ -36,17 +37,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   static const _emirates = ['Dubai','Abu Dhabi','Sharjah','Ajman','Ras Al Khaimah','Fujairah','Umm Al Quwain','Al Ain'];
   static const _langs = ['English','Arabic','Hindi','Urdu','Tagalog','Malayalam','Tamil','French'];
   static const _specs = ['Villas','Apartments','Penthouses','Townhouses','Commercial','Off-Plan','Luxury','Investment'];
+  static const _roleOptions = [
+    ('agency', 'Agency'),
+    ('agent', 'Agent'),
+    ('owner', 'Owner'),
+    ('investor', 'Investor'),
+    ('buyer', 'Buyer'),
+  ];
+
+  /// Map any stored role string to one of the five selectable options.
+  static String? _canonRole(dynamic raw) {
+    final r = '${raw ?? ''}'.toLowerCase();
+    if (r.isEmpty) return null;
+    return switch (personaFromRole(r)) {
+      Persona.broker => 'agency',
+      Persona.agent || Persona.leadGenerator => 'agent',
+      Persona.owner => 'owner',
+      Persona.investor || Persona.developer => 'investor',
+      Persona.buyer => 'buyer',
+      Persona.admin => null,
+    };
+  }
 
   @override
   void dispose() { company.dispose(); phone.dispose(); whatsapp.dispose(); bio.dispose(); super.dispose(); }
 
   Future<void> _save() async {
-    if (roles.contains('Broker')) ref.read(personaOverrideProvider.notifier).state = Persona.broker;
-    else if (roles.contains('Agent')) ref.read(personaOverrideProvider.notifier).state = Persona.agent;
-    else if (roles.contains('Lead Generator')) ref.read(personaOverrideProvider.notifier).state = Persona.leadGenerator;
+    if (_role != null) {
+      ref.read(personaOverrideProvider.notifier).state = personaFromRole(_role);
+    }
     setState(() => _saving = true);
     try {
       await ref.read(apiClientProvider).patch('/users/me', body: {
+        if (_role != null) 'role': _role,
         'company': company.text.trim(),
         'phone': phone.text.trim(),
         'whatsapp': whatsapp.text.trim(),
@@ -67,6 +90,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _prefill(Map<String, dynamic> m) {
     if (_loaded) return;
     _loaded = true;
+    _role = _canonRole(m['role']);
     company.text = (m['company'] ?? '').toString();
     phone.text = (m['phone'] ?? '').toString();
     whatsapp.text = (m['whatsapp'] ?? '').toString();
@@ -80,21 +104,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final t = Theme.of(context).textTheme;
     final user = ref.watch(authControllerProvider).user;
     ref.watch(_meProvider).whenData(_prefill);
-
-    Widget chips(String label, List<String> options, Set<String> selected, {bool wrapTrue = true}) =>
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: t.titleSmall),
-          const SizedBox(height: AppSpacing.x8),
-          Wrap(spacing: 8, runSpacing: 8, children: options.map((o) {
-            final sel = selected.contains(o);
-            return FilterChip(
-              label: Text(o), selected: sel,
-              onSelected: (v) => setState(() => v ? selected.add(o) : selected.remove(o)),
-              selectedColor: AppColors.primaryTint, checkmarkColor: AppColors.primary,
-            );
-          }).toList()),
-          const SizedBox(height: AppSpacing.x16),
-        ]);
 
     return Scaffold(
       appBar: const NuzlAppBar(title: 'Profile & settings'),
@@ -144,7 +153,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Text('Update your profile to help others find and trust you',
                   style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
               const SizedBox(height: AppSpacing.x16),
-              chips('I am a… (select all that apply)', const ['Broker','Agent','Lead Generator'], roles),
+              DropdownButtonFormField<String>(
+                initialValue: _role,
+                decoration: const InputDecoration(labelText: 'I am a…', prefixIcon: Icon(Icons.badge_outlined)),
+                items: _roleOptions.map((r) => DropdownMenuItem(value: r.$1, child: Text(r.$2))).toList(),
+                onChanged: (v) => setState(() => _role = v),
+              ),
+              const SizedBox(height: AppSpacing.x12),
               TextField(controller: company, decoration: const InputDecoration(labelText: 'Company name', hintText: 'Your company or brokerage')),
               const SizedBox(height: AppSpacing.x12),
               TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone number', hintText: '+971 …')),
@@ -153,9 +168,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               const SizedBox(height: AppSpacing.x12),
               TextField(controller: bio, maxLines: 3, decoration: const InputDecoration(labelText: 'Bio', hintText: 'Tell others about yourself…')),
               const SizedBox(height: AppSpacing.x16),
-              chips('Areas you cover', _emirates, areas),
-              chips('Languages', _langs, languages),
-              chips('Property specialties', _specs, specialties),
+              MultiSelectField(label: 'Areas you cover', icon: Icons.map_outlined, options: _emirates, selected: areas,
+                  onChanged: (v) => setState(() => areas..clear()..addAll(v))),
+              MultiSelectField(label: 'Languages', icon: Icons.translate_outlined, options: _langs, selected: languages,
+                  onChanged: (v) => setState(() => languages..clear()..addAll(v))),
+              MultiSelectField(label: 'Property specialties', icon: Icons.star_outline, options: _specs, selected: specialties,
+                  onChanged: (v) => setState(() => specialties..clear()..addAll(v))),
               Align(alignment: Alignment.centerRight,
                 child: FilledButton.icon(onPressed: _saving ? null : _save, icon: const Icon(Icons.save_outlined), label: Text(_saving ? 'Saving…' : 'Save changes'))),
             ]),
@@ -207,7 +225,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ])),
           const SizedBox(height: AppSpacing.x24),
-          Center(child: Opacity(opacity: 0.5, child: NuzlLogo(size: 24))),
+          const Center(child: Opacity(opacity: 0.5, child: NuzlLogo(size: 24))),
           const SizedBox(height: AppSpacing.x24),
         ],
       ),
