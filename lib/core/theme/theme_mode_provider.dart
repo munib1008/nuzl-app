@@ -6,12 +6,13 @@ const _kThemeKey = 'nuzl_theme_mode';
 const _storage = FlutterSecureStorage();
 
 class ThemeModeNotifier extends StateNotifier<ThemeMode> {
-  ThemeModeNotifier() : super(ThemeMode.system) {
+  ThemeModeNotifier() : super(ThemeMode.light) {
     _load();
   }
   Future<void> _load() async {
     final v = await _storage.read(key: _kThemeKey);
-    state = switch (v) { 'light' => ThemeMode.light, 'dark' => ThemeMode.dark, _ => ThemeMode.system };
+    // Default to light unless the user explicitly chose dark before.
+    state = switch (v) { 'dark' => ThemeMode.dark, 'system' => ThemeMode.system, _ => ThemeMode.light };
   }
   Future<void> set(ThemeMode m) async {
     state = m;

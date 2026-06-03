@@ -6,8 +6,19 @@ import '../../core/network/api_client.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/theme_mode_provider.dart';
 import '../../core/widgets/nuzl_logo.dart';
 import '../mortgage/presentation/calculator_screen.dart';
+
+// Theme-aware color helpers — the landing now follows light/dark like the rest of the app.
+bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+Color _surface(BuildContext c) => Theme.of(c).colorScheme.surface;
+Color _border(BuildContext c) => Theme.of(c).dividerColor;
+Color _onBg(BuildContext c) => Theme.of(c).colorScheme.onSurface;
+Color _muted(BuildContext c) => _isDark(c) ? AppColors.dTextMuted : AppColors.textMuted;
+Color _subtle(BuildContext c) => _isDark(c) ? AppColors.dTextSubtle : AppColors.textSubtle;
+Color _primary(BuildContext c) => Theme.of(c).colorScheme.primary;
+Color _borderStrong(BuildContext c) => _isDark(c) ? AppColors.dBorderStrong : AppColors.borderStrong;
 
 /// Public landing page with a STICKY top bar, hero, features, calculator and footer.
 class LandingScreen extends StatelessWidget {
@@ -16,12 +27,11 @@ class LandingScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      backgroundColor: AppColors.dBg,
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
-            _StickyTopBar(),           // stays pinned while content scrolls
+            _StickyTopBar(), // stays pinned while content scrolls
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
@@ -42,14 +52,14 @@ class LandingScreen extends StatelessWidget {
   }
 }
 
-class _StickyTopBar extends StatelessWidget {
+class _StickyTopBar extends ConsumerWidget {
   const _StickyTopBar();
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.dBg,
-        border: Border(bottom: BorderSide(color: AppColors.dBorder)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        border: Border(bottom: BorderSide(color: _border(context))),
       ),
       child: Center(
         child: ConstrainedBox(
@@ -59,12 +69,18 @@ class _StickyTopBar extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                InkWell(onTap: () => context.go('/'), child: const NuzlLogo(size: 36, color: Colors.white)),
+                InkWell(onTap: () => context.go('/'), child: NuzlLogo(size: 36, color: _onBg(context))),
                 Row(children: [
+                  IconButton(
+                    tooltip: 'Toggle light / dark',
+                    icon: Icon(_isDark(context) ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                        color: _onBg(context)),
+                    onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
+                  ),
                   TextButton(
                     onPressed: () => context.go('/login'),
                     child: Text('Sign in',
-                        style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600)),
+                        style: GoogleFonts.poppins(color: _onBg(context), fontWeight: FontWeight.w600)),
                   ),
                   const SizedBox(width: AppSpacing.x8),
                   FilledButton(
@@ -95,27 +111,28 @@ class _Hero extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Text('The operating system\nfor UAE real estate',
                 style: GoogleFonts.poppins(
-                    fontSize: wide ? 52 : 34, height: 1.1,
-                    fontWeight: FontWeight.w700, color: Colors.white)),
+                    fontSize: wide ? 52 : 34, height: 1.1, fontWeight: FontWeight.w700, color: _onBg(context))),
             const SizedBox(height: AppSpacing.x16),
             Text(
               'A verified network connecting brokers, agents and lead generators — capture buyers, match listings, manage viewings, offers and deals, and track mortgages, all in one place.',
-              style: t.bodyLarge?.copyWith(color: AppColors.dTextMuted, height: 1.5),
+              style: t.bodyLarge?.copyWith(color: _muted(context), height: 1.5),
             ),
             const SizedBox(height: AppSpacing.x24),
             Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x12, children: [
               FilledButton(
                 onPressed: () => context.go('/register'),
-                child: const Padding(padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16), child: Text('Get started')),
+                child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16), child: Text('Get started')),
               ),
               OutlinedButton(
                 onPressed: () => context.go('/login'),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: AppColors.dBorderStrong),
+                  foregroundColor: _onBg(context),
+                  side: BorderSide(color: _borderStrong(context)),
                   minimumSize: const Size.fromHeight(AppSpacing.tapTarget),
                 ),
-                child: const Padding(padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16), child: Text('Sign in')),
+                child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16), child: Text('Sign in')),
               ),
             ]),
             const SizedBox(height: AppSpacing.x48),
@@ -143,16 +160,16 @@ class _Features extends StatelessWidget {
           width: wide ? 232 : double.infinity,
           padding: const EdgeInsets.all(AppSpacing.x20),
           decoration: BoxDecoration(
-            color: AppColors.dSurface,
+            color: _surface(context),
             borderRadius: BorderRadius.circular(AppSpacing.rLg),
-            border: Border.all(color: AppColors.dBorder),
+            border: Border.all(color: _border(context)),
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(it.$1, color: AppColors.dPrimary, size: 28),
+            Icon(it.$1, color: _primary(context), size: 28),
             const SizedBox(height: AppSpacing.x12),
-            Text(it.$2, style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white)),
+            Text(it.$2, style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w600, color: _onBg(context))),
             const SizedBox(height: AppSpacing.x4),
-            Text(it.$3, style: t.bodySmall?.copyWith(color: AppColors.dTextMuted, height: 1.4)),
+            Text(it.$3, style: t.bodySmall?.copyWith(color: _muted(context), height: 1.4)),
           ]),
         )).toList();
     return Wrap(spacing: AppSpacing.x16, runSpacing: AppSpacing.x16, children: cards);
@@ -194,23 +211,21 @@ class _WhatYouGet extends StatelessWidget {
           width: wide ? 320 : double.infinity,
           padding: const EdgeInsets.all(AppSpacing.x20),
           decoration: BoxDecoration(
-            color: AppColors.dSurface,
+            color: _surface(context),
             borderRadius: BorderRadius.circular(AppSpacing.rLg),
-            border: Border.all(color: AppColors.dBorder),
+            border: Border.all(color: _border(context)),
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(g.$1, style: GoogleFonts.poppins(
-                fontSize: 17, fontWeight: FontWeight.w600, color: Colors.white)),
+            Text(g.$1, style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w600, color: _onBg(context))),
             const SizedBox(height: AppSpacing.x12),
             ...g.$2.map((line) => Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.x8),
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Padding(
-                      padding: EdgeInsets.only(top: 2, right: AppSpacing.x8),
-                      child: Icon(Icons.check_circle, size: 18, color: AppColors.dPrimary),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2, right: AppSpacing.x8),
+                      child: Icon(Icons.check_circle, size: 18, color: _primary(context)),
                     ),
-                    Expanded(child: Text(line,
-                        style: t.bodyMedium?.copyWith(color: AppColors.dTextMuted, height: 1.4))),
+                    Expanded(child: Text(line, style: t.bodyMedium?.copyWith(color: _muted(context), height: 1.4))),
                   ]),
                 )),
           ]),
@@ -223,14 +238,12 @@ class _WhatYouGet extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24, vertical: AppSpacing.x24),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Text('What you get with nuzl',
-                style: GoogleFonts.poppins(
-                    fontSize: wide ? 30 : 24, fontWeight: FontWeight.w600, color: Colors.white)),
+                style: GoogleFonts.poppins(fontSize: wide ? 30 : 24, fontWeight: FontWeight.w600, color: _onBg(context))),
             const SizedBox(height: AppSpacing.x4),
             Text('One platform for everyone in the deal — not a portal, not a CRM.',
-                style: t.bodyMedium?.copyWith(color: AppColors.dTextMuted)),
+                style: t.bodyMedium?.copyWith(color: _muted(context))),
             const SizedBox(height: AppSpacing.x20),
-            Wrap(spacing: AppSpacing.x16, runSpacing: AppSpacing.x16,
-                children: _groups.map(group).toList()),
+            Wrap(spacing: AppSpacing.x16, runSpacing: AppSpacing.x16, children: _groups.map(group).toList()),
           ]),
         ),
       ),
@@ -251,16 +264,16 @@ class _CalculatorSection extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24, vertical: AppSpacing.x24),
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Text('Mortgage calculator',
-                style: GoogleFonts.poppins(fontSize: wide ? 30 : 24, fontWeight: FontWeight.w600, color: Colors.white)),
+                style: GoogleFonts.poppins(fontSize: wide ? 30 : 24, fontWeight: FontWeight.w600, color: _onBg(context))),
             const SizedBox(height: AppSpacing.x4),
             Text('Estimate a monthly payment instantly — no account needed.',
-                style: t.bodyMedium?.copyWith(color: AppColors.dTextMuted)),
+                style: t.bodyMedium?.copyWith(color: _muted(context))),
             const SizedBox(height: AppSpacing.x16),
             Container(
               decoration: BoxDecoration(
-                color: AppColors.dSurface,
+                color: _surface(context),
                 borderRadius: BorderRadius.circular(AppSpacing.rLg),
-                border: Border.all(color: AppColors.dBorder),
+                border: Border.all(color: _border(context)),
               ),
               child: const CalculatorScreen(embedded: true),
             ),
@@ -281,13 +294,13 @@ class _Footer extends StatelessWidget {
     Widget col(String title, List<(String, String)> links) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+            Text(title, style: GoogleFonts.poppins(color: _onBg(context), fontWeight: FontWeight.w600, fontSize: 15)),
             const SizedBox(height: AppSpacing.x12),
             ...links.map((l) => Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.x8),
                   child: InkWell(
                     onTap: () => context.go(l.$2),
-                    child: Text(l.$1, style: t.bodyMedium?.copyWith(color: AppColors.dTextMuted)),
+                    child: Text(l.$1, style: t.bodyMedium?.copyWith(color: _muted(context))),
                   ),
                 )),
           ],
@@ -301,9 +314,9 @@ class _Footer extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: AppColors.dSurface,
-        border: Border(top: BorderSide(color: AppColors.dBorder)),
+      decoration: BoxDecoration(
+        color: _surface(context),
+        border: Border(top: BorderSide(color: _border(context))),
       ),
       child: Center(
         child: ConstrainedBox(
@@ -318,35 +331,33 @@ class _Footer extends StatelessWidget {
                   Expanded(
                     flex: wide ? 2 : 0,
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const NuzlLogo(size: 34, color: Colors.white),
+                      NuzlLogo(size: 34, color: _onBg(context)),
                       const SizedBox(height: AppSpacing.x12),
                       SizedBox(
                         width: 280,
                         child: Text('UAE\'s premier real-estate lead marketplace. Dubai · Abu Dhabi.',
-                            style: t.bodySmall?.copyWith(color: AppColors.dTextMuted, height: 1.5)),
+                            style: t.bodySmall?.copyWith(color: _muted(context), height: 1.5)),
                       ),
                     ]),
                   ),
                   if (!wide) const SizedBox(height: AppSpacing.x32),
-                  ...columns.map((c) => Expanded(flex: wide ? 1 : 0, child: Padding(
-                        padding: EdgeInsets.only(bottom: wide ? 0 : AppSpacing.x24),
-                        child: c,
-                      ))),
+                  ...columns.map((c) => Expanded(
+                      flex: wide ? 1 : 0,
+                      child: Padding(padding: EdgeInsets.only(bottom: wide ? 0 : AppSpacing.x24), child: c))),
                 ],
               ),
               const SizedBox(height: AppSpacing.x32),
-              const Divider(color: AppColors.dBorder),
+              Divider(color: _border(context)),
               const SizedBox(height: AppSpacing.x16),
               Text('© 2026 nuzl by Businesstech Arabia FZE, Innovation Licence 6803. All rights reserved.',
-                  style: t.bodySmall?.copyWith(color: AppColors.dTextSubtle)),
+                  style: t.bodySmall?.copyWith(color: _subtle(context))),
               const SizedBox(height: AppSpacing.x16),
               Text('Important disclaimer',
-                  style: GoogleFonts.poppins(
-                      color: AppColors.dTextMuted, fontWeight: FontWeight.w600, fontSize: 13)),
+                  style: GoogleFonts.poppins(color: _muted(context), fontWeight: FontWeight.w600, fontSize: 13)),
               const SizedBox(height: AppSpacing.x4),
               Text(
                 'nuzl is not a real estate broker or agent. We are licensed to conduct opportunity facilitation and operate as a marketplace platform connecting real estate professionals. We are not involved directly in the sale, purchase, or lease of any property units. All real estate transactions are conducted between licensed brokers, agents, and their clients in accordance with UAE real estate regulations. Users must ensure they work with RERA-certified professionals for all property transactions.',
-                style: t.bodySmall?.copyWith(color: AppColors.dTextSubtle, height: 1.5),
+                style: t.bodySmall?.copyWith(color: _subtle(context), height: 1.5),
               ),
               const SizedBox(height: AppSpacing.x16),
             ]),
@@ -357,12 +368,13 @@ class _Footer extends StatelessWidget {
   }
 }
 
-
 final _featuredListingsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   try {
     final d = await ref.read(apiClientProvider).get('/public/listings?limit=6');
     return d is List ? d : [];
-  } catch (_) { return []; }
+  } catch (_) {
+    return [];
+  }
 });
 
 class _FeaturedListings extends ConsumerWidget {
@@ -378,7 +390,7 @@ class _FeaturedListings extends ConsumerWidget {
         if (list.isEmpty) return const SizedBox.shrink(); // hide section if nothing yet
         return Container(
           width: double.infinity,
-          color: AppColors.dSurface,
+          color: _surface(context),
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.x48),
           child: Center(
             child: ConstrainedBox(
@@ -386,21 +398,27 @@ class _FeaturedListings extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Fresh on nuzl', style: GoogleFonts.poppins(fontSize: wide ? 30 : 24, fontWeight: FontWeight.w700, color: Colors.white)),
+                  Text('Fresh on nuzl',
+                      style: GoogleFonts.poppins(fontSize: wide ? 30 : 24, fontWeight: FontWeight.w700, color: _onBg(context))),
                   const SizedBox(height: AppSpacing.x4),
                   Text('New and top listings shared by verified agents across the UAE.',
-                      style: t.bodyMedium?.copyWith(color: AppColors.dTextMuted)),
+                      style: t.bodyMedium?.copyWith(color: _muted(context))),
                   const SizedBox(height: AppSpacing.x20),
-                  Wrap(spacing: AppSpacing.x16, runSpacing: AppSpacing.x16,
-                    children: list.map((m) => _ListingCard(
-                      data: Map<String, dynamic>.from(m),
-                      width: wide ? 320 : MediaQuery.of(context).size.width - (AppSpacing.x24 * 2),
-                    )).toList()),
+                  Wrap(
+                      spacing: AppSpacing.x16,
+                      runSpacing: AppSpacing.x16,
+                      children: list
+                          .map((m) => _ListingCard(
+                                data: Map<String, dynamic>.from(m),
+                                width: wide ? 320 : MediaQuery.of(context).size.width - (AppSpacing.x24 * 2),
+                              ))
+                          .toList()),
                   const SizedBox(height: AppSpacing.x24),
                   OutlinedButton(
                     onPressed: () => context.go('/register'),
-                    style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: AppColors.dBorderStrong)),
-                    child: const Padding(padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x8),
+                    style: OutlinedButton.styleFrom(foregroundColor: _onBg(context), side: BorderSide(color: _borderStrong(context))),
+                    child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x8),
                         child: Text('Join to see every listing')),
                   ),
                 ]),
@@ -424,21 +442,23 @@ class _ListingCard extends StatelessWidget {
     final price = num.tryParse('${data['price']}') ?? 0;
     final cover = data['cover_image']?.toString();
     final purpose = (data['purpose'] ?? '').toString();
+    final placeholder = ColoredBox(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: Icon(Icons.apartment, color: _muted(context), size: 40));
     return Container(
       width: width,
       decoration: BoxDecoration(
-        color: AppColors.dBg,
+        color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(AppSpacing.rLg),
-        border: Border.all(color: AppColors.dBorder),
+        border: Border.all(color: _border(context)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         AspectRatio(
           aspectRatio: 16 / 10,
           child: cover != null && cover.isNotEmpty
-              ? Image.network(cover, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const ColoredBox(color: AppColors.dSurface, child: Icon(Icons.apartment, color: AppColors.dTextMuted, size: 40)))
-              : const ColoredBox(color: AppColors.dSurface, child: Icon(Icons.apartment, color: AppColors.dTextMuted, size: 40)),
+              ? Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => placeholder)
+              : placeholder,
         ),
         Padding(
           padding: const EdgeInsets.all(AppSpacing.x12),
@@ -446,16 +466,17 @@ class _ListingCard extends StatelessWidget {
             Row(children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                decoration: BoxDecoration(
+                    color: _primary(context).withValues(alpha: 0.14), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
                 child: Text(purpose == 'rent' ? 'For rent' : 'For sale',
-                    style: t.bodySmall?.copyWith(color: AppColors.dPrimary, fontWeight: FontWeight.w600)),
+                    style: t.bodySmall?.copyWith(color: _primary(context), fontWeight: FontWeight.w600)),
               ),
             ]),
             const SizedBox(height: AppSpacing.x8),
-            Text(aed.format(price), style: t.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+            Text(aed.format(price), style: t.titleLarge?.copyWith(color: _onBg(context), fontWeight: FontWeight.w700)),
             const SizedBox(height: AppSpacing.x4),
             Text('${data['property_type'] ?? ''}${data['community'] != null ? ' · ${data['community']}' : ''}',
-                style: t.bodySmall?.copyWith(color: AppColors.dTextMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                style: t.bodySmall?.copyWith(color: _muted(context)), maxLines: 1, overflow: TextOverflow.ellipsis),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
               _meta(context, Icons.bed_outlined, '${data['bedrooms'] ?? '-'}'),
@@ -471,8 +492,8 @@ class _ListingCard extends StatelessWidget {
   }
 
   Widget _meta(BuildContext context, IconData i, String v) => Row(children: [
-        Icon(i, size: 14, color: AppColors.dTextMuted),
+        Icon(i, size: 14, color: _muted(context)),
         const SizedBox(width: 4),
-        Text(v, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.dTextMuted)),
+        Text(v, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: _muted(context))),
       ]);
 }
