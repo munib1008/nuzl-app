@@ -89,7 +89,7 @@ class _Cheques extends ConsumerWidget {
                         PopupMenuItem(value: 'pending', child: Text('Mark pending')),
                       ],
                       child: Chip(label: Text(ch['status'] ?? 'pending'),
-                          backgroundColor: c('${ch['status']}').withOpacity(0.15),
+                          backgroundColor: c('${ch['status']}').withValues(alpha: 0.15),
                           labelStyle: TextStyle(color: c('${ch['status']}'), fontSize: 12)),
                     ),
                   );
