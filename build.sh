@@ -12,7 +12,7 @@ if [ ! -f lib/app.dart ] || [ ! -f lib/core/router/app_router.dart ]; then
 fi
 
 # --- Download a pinned Flutter SDK and build the web app ---
-curl -fsSL -o flutter.tar.xz https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.24.5-stable.tar.xz
+curl -fsSL -o flutter.tar.xz https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.44.1-stable.tar.xz
 tar xf flutter.tar.xz
 export PATH="$PATH:$(pwd)/flutter/bin"
 git config --global --add safe.directory "$(pwd)/flutter"
