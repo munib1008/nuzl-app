@@ -122,7 +122,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
             ),
             const SizedBox(height: AppSpacing.x16),
             DropdownButtonFormField<String>(
-              value: propertyType, decoration: const InputDecoration(labelText: 'Property type'),
+              initialValue: propertyType, decoration: const InputDecoration(labelText: 'Property type'),
               items: const ['apartment','villa','townhouse','office','retail','warehouse','land']
                   .map((v) => DropdownMenuItem(value: v, child: Text(v[0].toUpperCase() + v.substring(1)))).toList(),
               onChanged: (v) => setState(() => propertyType = v ?? 'apartment'),
@@ -130,12 +130,12 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
             const SizedBox(height: AppSpacing.x12),
             Row(children: [
               Expanded(child: DropdownButtonFormField<String>(
-                value: purpose, decoration: const InputDecoration(labelText: 'Purpose'),
+                initialValue: purpose, decoration: const InputDecoration(labelText: 'Purpose'),
                 items: const [DropdownMenuItem(value: 'sale', child: Text('Sale')), DropdownMenuItem(value: 'rent', child: Text('Rent'))],
                 onChanged: (v) => setState(() => purpose = v ?? 'sale'))),
               const SizedBox(width: AppSpacing.x12),
               Expanded(child: DropdownButtonFormField<String>(
-                value: furnishing, decoration: const InputDecoration(labelText: 'Furnishing'),
+                initialValue: furnishing, decoration: const InputDecoration(labelText: 'Furnishing'),
                 items: const [
                   DropdownMenuItem(value: 'unfurnished', child: Text('Unfurnished')),
                   DropdownMenuItem(value: 'partly_furnished', child: Text('Partly furnished')),
