@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import '../../core/network/api_client.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -25,6 +28,7 @@ class LandingScreen extends StatelessWidget {
                   children: const [
                     _Hero(),
                     _WhatYouGet(),
+                    _FeaturedListings(),
                     _CalculatorSection(),
                     _Footer(),
                   ],
@@ -351,4 +355,124 @@ class _Footer extends StatelessWidget {
       ),
     );
   }
+}
+
+
+final _featuredListingsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/public/listings?limit=6');
+    return d is List ? d : [];
+  } catch (_) { return []; }
+});
+
+class _FeaturedListings extends ConsumerWidget {
+  const _FeaturedListings();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final wide = MediaQuery.of(context).size.width >= 900;
+    final listings = ref.watch(_featuredListingsProvider);
+    return listings.maybeWhen(
+      orElse: () => const SizedBox.shrink(),
+      data: (list) {
+        if (list.isEmpty) return const SizedBox.shrink(); // hide section if nothing yet
+        return Container(
+          width: double.infinity,
+          color: AppColors.dSurface,
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.x48),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1040),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Fresh on nuzl', style: GoogleFonts.poppins(fontSize: wide ? 30 : 24, fontWeight: FontWeight.w700, color: Colors.white)),
+                  const SizedBox(height: AppSpacing.x4),
+                  Text('New and top listings shared by verified agents across the UAE.',
+                      style: t.bodyMedium?.copyWith(color: AppColors.dTextMuted)),
+                  const SizedBox(height: AppSpacing.x20),
+                  Wrap(spacing: AppSpacing.x16, runSpacing: AppSpacing.x16,
+                    children: list.map((m) => _ListingCard(
+                      data: Map<String, dynamic>.from(m),
+                      width: wide ? 320 : MediaQuery.of(context).size.width - (AppSpacing.x24 * 2),
+                    )).toList()),
+                  const SizedBox(height: AppSpacing.x24),
+                  OutlinedButton(
+                    onPressed: () => context.go('/register'),
+                    style: OutlinedButton.styleFrom(foregroundColor: Colors.white, side: const BorderSide(color: AppColors.dBorderStrong)),
+                    child: const Padding(padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x8),
+                        child: Text('Join to see every listing')),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ListingCard extends StatelessWidget {
+  const _ListingCard({required this.data, required this.width});
+  final Map<String, dynamic> data;
+  final double width;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
+    final price = num.tryParse('${data['price']}') ?? 0;
+    final cover = data['cover_image']?.toString();
+    final purpose = (data['purpose'] ?? '').toString();
+    return Container(
+      width: width,
+      decoration: BoxDecoration(
+        color: AppColors.dBg,
+        borderRadius: BorderRadius.circular(AppSpacing.rLg),
+        border: Border.all(color: AppColors.dBorder),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        AspectRatio(
+          aspectRatio: 16 / 10,
+          child: cover != null && cover.isNotEmpty
+              ? Image.network(cover, fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const ColoredBox(color: AppColors.dSurface, child: Icon(Icons.apartment, color: AppColors.dTextMuted, size: 40)))
+              : const ColoredBox(color: AppColors.dSurface, child: Icon(Icons.apartment, color: AppColors.dTextMuted, size: 40)),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(AppSpacing.x12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.2), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                child: Text(purpose == 'rent' ? 'For rent' : 'For sale',
+                    style: t.bodySmall?.copyWith(color: AppColors.dPrimary, fontWeight: FontWeight.w600)),
+              ),
+            ]),
+            const SizedBox(height: AppSpacing.x8),
+            Text(aed.format(price), style: t.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+            const SizedBox(height: AppSpacing.x4),
+            Text('${data['property_type'] ?? ''}${data['community'] != null ? ' · ${data['community']}' : ''}',
+                style: t.bodySmall?.copyWith(color: AppColors.dTextMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              _meta(context, Icons.bed_outlined, '${data['bedrooms'] ?? '-'}'),
+              const SizedBox(width: AppSpacing.x12),
+              _meta(context, Icons.bathtub_outlined, '${data['bathrooms'] ?? '-'}'),
+              const SizedBox(width: AppSpacing.x12),
+              _meta(context, Icons.straighten, '${data['size_sqft'] ?? '-'} sqft'),
+            ]),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _meta(BuildContext context, IconData i, String v) => Row(children: [
+        Icon(i, size: 14, color: AppColors.dTextMuted),
+        const SizedBox(width: 4),
+        Text(v, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.dTextMuted)),
+      ]);
 }
