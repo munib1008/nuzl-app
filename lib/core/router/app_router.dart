@@ -38,6 +38,7 @@ import '../../features/portfolio/my_properties_screen.dart';
 import '../../features/matching/lead_matches_screen.dart';
 import '../../features/activities/activities_screen.dart';
 import '../../features/messages/messages_screen.dart';
+import '../../features/notifications/notifications_screen.dart';
 import '../../features/network/network_screen.dart';
 import '../../features/admin/organizations_screen.dart';
 import '../../features/admin/audit_screen.dart';
@@ -95,6 +96,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/feed', builder: (_, __) => const FeedScreen()),
       GoRoute(path: '/properties', builder: (_, __) => const ListingsScreen()),
       GoRoute(path: '/properties/new', builder: (_, __) => const ListingFormScreen()),
+      GoRoute(path: '/properties/:id/edit', builder: (_, st) => ListingFormScreen(
+            editId: st.pathParameters['id'],
+            initial: st.extra is Map<String, dynamic> ? st.extra as Map<String, dynamic> : null)),
       GoRoute(path: '/listings/:id', builder: (_, st) => ListingDetailScreen(id: st.pathParameters['id']!)),
       GoRoute(path: '/leads', builder: (_, __) => const LeadsScreen()),
       GoRoute(path: '/leads/new', builder: (_, __) => const PostLeadScreen()),
@@ -117,6 +121,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/crm', builder: (_, __) => const CrmScreen()),
       GoRoute(path: '/activities', builder: (_, __) => const ActivitiesScreen()),
       GoRoute(path: '/messages', builder: (_, __) => const MessagesScreen()),
+      GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
       GoRoute(path: '/network', builder: (_, __) => const NetworkScreen()),
       GoRoute(path: '/organizations', builder: (_, __) => const OrganizationsScreen()),
       GoRoute(path: '/audit', builder: (_, __) => const AuditScreen()),
