@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
@@ -19,6 +21,17 @@ class ProfileScreen extends ConsumerStatefulWidget {
 final _meProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
   final d = await ref.read(apiClientProvider).get('/users/me');
   return (d is Map) ? Map<String, dynamic>.from(d) : {};
+});
+
+/// Avatar is fetched/saved separately so it never blocks profile load/save.
+final _avatarProvider = FutureProvider.autoDispose<String?>((ref) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/users/me/avatar');
+    final u = (d is Map) ? '${d['avatar_url'] ?? ''}' : '';
+    return u.isEmpty ? null : u;
+  } catch (_) {
+    return null;
+  }
 });
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
@@ -117,6 +130,105 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
+  // ── Profile photo ─────────────────────────────────────────────
+  void _avatarMenu() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Upload photo'),
+              onTap: () { Navigator.pop(ctx); _pickAndUpload(); }),
+          ListTile(
+              leading: const Icon(Icons.link),
+              title: const Text('Paste image URL'),
+              onTap: () { Navigator.pop(ctx); _pasteUrlDialog(); }),
+          ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: const Text('Remove photo'),
+              onTap: () { Navigator.pop(ctx); _setAvatar(''); }),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _pickAndUpload() async {
+    try {
+      final file = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 800, imageQuality: 85);
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      final res = await ref.read(apiClientProvider).post('/uploads', body: {
+        'filename': file.name,
+        'contentType': file.mimeType ?? 'image/jpeg',
+        'dataBase64': base64Encode(bytes),
+      });
+      final url = (res is Map) ? '${res['url'] ?? ''}' : '';
+      if (url.isNotEmpty) await _setAvatar(url);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Upload unavailable ($e). Try “Paste image URL”.')));
+      }
+    }
+  }
+
+  Future<void> _pasteUrlDialog() async {
+    final c = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Profile photo URL'),
+        content: TextField(controller: c, decoration: const InputDecoration(hintText: 'https://…')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+        ],
+      ),
+    );
+    if (ok == true) await _setAvatar(c.text.trim());
+  }
+
+  Future<void> _setAvatar(String url) async {
+    try {
+      await ref.read(apiClientProvider).patch('/users/me/avatar', body: {'avatar_url': url});
+      ref.invalidate(_avatarProvider);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(url.isEmpty ? 'Photo removed' : 'Photo updated')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  // ── Account deletion (soft delete) ────────────────────────────
+  Future<void> _deleteAccount() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete account?'),
+        content: const Text(
+            'Your account will be deactivated and you will be signed out. Contact support to restore it.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(apiClientProvider).post('/users/me/deactivate');
+      await ref.read(authControllerProvider.notifier).logout();
+      if (mounted) context.go('/');
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
   void _prefill(Map<String, dynamic> m) {
     if (_loaded) return;
     _loaded = true;
@@ -134,6 +246,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final t = Theme.of(context).textTheme;
     final user = ref.watch(authControllerProvider).user;
     final isAdmin = personaFromRole(user?.role) == Persona.admin;
+    final avatarUrl = ref.watch(_avatarProvider).asData?.value;
     ref.watch(_meProvider).whenData(_prefill);
 
     return PopScope(
@@ -150,9 +263,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           children: [
             // header
             Center(child: Column(children: [
-              CircleAvatar(radius: 36, backgroundColor: AppColors.primary,
-                child: Text((user?.fullName.isNotEmpty == true ? user!.fullName[0] : 'N').toUpperCase(),
-                    style: t.headlineMedium?.copyWith(color: Colors.white))),
+              Stack(children: [
+                if (avatarUrl != null && avatarUrl.isNotEmpty)
+                  CircleAvatar(radius: 36, backgroundColor: AppColors.surface2, backgroundImage: NetworkImage(avatarUrl))
+                else
+                  CircleAvatar(radius: 36, backgroundColor: AppColors.primary,
+                    child: Text((user?.fullName.isNotEmpty == true ? user!.fullName[0] : 'N').toUpperCase(),
+                        style: t.headlineMedium?.copyWith(color: Colors.white))),
+                Positioned(
+                  right: 0, bottom: 0,
+                  child: Material(
+                    color: AppColors.primary,
+                    shape: const CircleBorder(),
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: _avatarMenu,
+                      child: const Padding(padding: EdgeInsets.all(6),
+                        child: Icon(Icons.camera_alt_outlined, size: 16, color: Colors.white)),
+                    ),
+                  ),
+                ),
+              ]),
               const SizedBox(height: AppSpacing.x12),
               Text(user?.fullName ?? 'Account', style: t.titleLarge),
               Text(user?.email ?? '', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
@@ -204,23 +335,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             )),
             const SizedBox(height: AppSpacing.x16),
 
-            // tools + account
+            // account
             Card(child: Column(children: [
-              ListTile(leading: const Icon(Icons.account_balance_outlined), title: const Text('Mortgages'),
-                  onTap: () => context.go('/mortgages')),
-              const Divider(height: 1),
-              ListTile(leading: const Icon(Icons.calculate_outlined), title: const Text('Mortgage calculator'),
-                  onTap: () => context.go('/calculator')),
               // "View as role" test mode is restricted to administrators.
-              if (isAdmin) ...[
-                const Divider(height: 1),
+              if (isAdmin)
                 ListTile(
                   leading: const Icon(Icons.science_outlined),
                   title: const Text('View as role'),
                   subtitle: const Text('Preview any role (test mode)'),
                   onTap: () => context.go('/view-as')),
-              ],
-              const Divider(height: 1),
+              if (isAdmin) const Divider(height: 1),
               ListTile(
                 leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
                 title: Text('Sign out', style: TextStyle(color: Theme.of(context).colorScheme.error)),
@@ -230,6 +354,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 },
               ),
             ])),
+            const SizedBox(height: AppSpacing.x16),
+
+            // danger zone — account deletion (kept low-key)
+            Card(child: ListTile(
+              leading: Icon(Icons.delete_forever_outlined, color: Theme.of(context).colorScheme.error),
+              title: Text('Delete account', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              subtitle: const Text('Deactivate your account and sign out'),
+              onTap: _deleteAccount,
+            )),
             const SizedBox(height: AppSpacing.x24),
             const Center(child: Opacity(opacity: 0.5, child: NuzlLogo(size: 24))),
             const SizedBox(height: AppSpacing.x24),
