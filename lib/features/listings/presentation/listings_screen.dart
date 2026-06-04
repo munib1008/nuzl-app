@@ -7,6 +7,7 @@ import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../auth/application/auth_controller.dart';
 import '../../shell/app_shell.dart';
 
 final listingsRawProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
@@ -22,6 +23,8 @@ final _fPurpose = StateProvider.autoDispose<String>((ref) => 'all');
 final _fType = StateProvider.autoDispose<String>((ref) => 'all');
 final _fBeds = StateProvider.autoDispose<int?>((ref) => null);
 final _fPriceMax = StateProvider.autoDispose<double?>((ref) => null);
+final _fSort = StateProvider.autoDispose<String>((ref) => 'latest');
+final _fMine = StateProvider.autoDispose<bool>((ref) => false);
 
 class ListingsScreen extends ConsumerWidget {
   const ListingsScreen({super.key});
@@ -34,6 +37,9 @@ class ListingsScreen extends ConsumerWidget {
     final type = ref.watch(_fType);
     final beds = ref.watch(_fBeds);
     final priceMax = ref.watch(_fPriceMax);
+    final sort = ref.watch(_fSort);
+    final mine = ref.watch(_fMine);
+    final myId = ref.watch(authControllerProvider).user?.id;
 
     return Scaffold(
       appBar: const NuzlAppBar(title: 'Properties'),
@@ -56,12 +62,19 @@ class ListingsScreen extends ConsumerWidget {
             num priceOf(Map<String, dynamic> m) => num.tryParse('${m['price']}') ?? 0;
             int? bedsOf(Map<String, dynamic> m) => m['bedrooms'] is int ? m['bedrooms'] as int : int.tryParse('${m['bedrooms']}');
             final items = all.where((m) {
+              if (mine && myId != null && '${m['listing_broker_id']}' != myId) return false;
               if (purpose != 'all' && '${m['purpose']}' != purpose) return false;
               if (type != 'all' && '${m['property_type']}' != type) return false;
               if (beds != null && (bedsOf(m) ?? -1) < beds) return false;
               if (priceMax != null && priceOf(m) > priceMax) return false;
               return true;
             }).toList();
+            // sort — 'latest' keeps the server order (created_at desc)
+            if (sort == 'price_asc') {
+              items.sort((a, b) => priceOf(a).compareTo(priceOf(b)));
+            } else if (sort == 'price_desc') {
+              items.sort((a, b) => priceOf(b).compareTo(priceOf(a)));
+            }
 
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
@@ -148,6 +161,21 @@ class _FilterBar extends ConsumerWidget {
             ],
             onChanged: (v) => ref.read(_fPriceMax.notifier).state = v,
           ),
+          const SizedBox(width: AppSpacing.x8),
+          _Drop<String>(
+            label: 'Sort',
+            value: ref.watch(_fSort),
+            items: const [('latest', 'Latest'), ('price_asc', 'Price: low→high'), ('price_desc', 'Price: high→low')],
+            onChanged: (v) => ref.read(_fSort.notifier).state = v ?? 'latest',
+          ),
+          if (ref.watch(personaProvider).canListProperty) ...[
+            const SizedBox(width: AppSpacing.x8),
+            FilterChip(
+              label: const Text('My listings'),
+              selected: ref.watch(_fMine),
+              onSelected: (v) => ref.read(_fMine.notifier).state = v,
+            ),
+          ],
         ],
       ),
     );
