@@ -228,12 +228,30 @@ class _AgentCard extends ConsumerWidget {
   final String listingId;
 
   Future<void> _requestViewing(BuildContext context, WidgetRef ref) async {
+    final now = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: now.add(const Duration(days: 1)),
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 90)),
+      helpText: 'Preferred viewing date',
+    );
+    if (date == null || !context.mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 11, minute: 0),
+      helpText: 'Preferred time',
+    );
+    if (time == null || !context.mounted) return;
+    final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
     try {
       await ref.read(apiClientProvider).post('/viewings', body: {
         'listing_id': listingId,
+        'scheduled_at': dt.toIso8601String(),
       });
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Viewing requested — the agent will be in touch.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Viewing requested — the agent will confirm your slot.')));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
@@ -312,4 +330,9 @@ class _MapPlaceholder extends StatelessWidget {
   }
 }
 
-String _cap(String s) => s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
+/// Humanise an enum-ish value: drop underscores, capitalise the first letter.
+/// e.g. "partly_furnished" → "Partly furnished", "hotel_apartment" → "Hotel apartment".
+String _cap(String s) {
+  final x = s.replaceAll('_', ' ').trim();
+  return x.isEmpty ? x : '${x[0].toUpperCase()}${x.substring(1)}';
+}

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/util/mortgage_math.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../shell/app_shell.dart';
 
 /// Mortgage calculator.
 /// - Standalone screen at /calculator (its own Scaffold + scroll).
@@ -37,8 +38,19 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
     if (widget.embedded) {
       return Padding(padding: const EdgeInsets.all(AppSpacing.x16), child: content);
     }
+    // Signed-in users keep the full app menu (drawer); public visitors get a back button.
+    final signedIn = ref.watch(authControllerProvider).isAuthenticated;
     return Scaffold(
-      appBar: AppBar(title: const Text('Calculator')),
+      appBar: signedIn
+          ? const NuzlAppBar(title: 'Mortgage calculator')
+          : AppBar(
+              title: const Text('Calculator'),
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.canPop() ? context.pop() : context.go('/'),
+              ),
+            ),
+      drawer: signedIn ? const NuzlDrawer() : null,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Center(
