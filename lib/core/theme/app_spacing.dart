@@ -5,10 +5,12 @@ class AppSpacing {
 
   // radius
   static const double rSm = 6, rMd = 10, rLg = 14, rXl = 20, rFull = 9999;
+  // design-system radii: cards/inputs 16, buttons 14
+  static const double rButton = 14, rCard = 16;
 
   // tap target
   static const double tapTarget = 44;
 
-  // motion (ms)
-  static const int durFast = 150, durBase = 200, durSlow = 250;
+  // motion (ms) — standard transition 200–300ms
+  static const int durFast = 150, durBase = 200, durSlow = 250, durStd = 250;
 }
