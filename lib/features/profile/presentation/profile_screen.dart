@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
-import '../../../core/theme/theme_mode_provider.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -132,19 +131,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ])),
           const SizedBox(height: AppSpacing.x24),
 
-          // performance stats
-          Card(child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.x16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Performance', style: t.titleMedium),
-              const SizedBox(height: AppSpacing.x12),
-              _stat('Deals closed', '0', t),
-              _stat('Total earnings', 'AED 0', t),
-              _stat('Total reviews', '0', t),
-            ]),
-          )),
-          const SizedBox(height: AppSpacing.x16),
-
           // profile information
           Card(child: Padding(
             padding: const EdgeInsets.all(AppSpacing.x16),
@@ -180,27 +166,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           )),
           const SizedBox(height: AppSpacing.x16),
 
-          // appearance
-          Card(child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.x16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Appearance', style: t.titleMedium),
-              const SizedBox(height: AppSpacing.x12),
-              Builder(builder: (context) {
-                final mode = ref.watch(themeModeProvider);
-                return Wrap(spacing: 8, children: [
-                  for (final m in ThemeMode.values)
-                    ChoiceChip(
-                      label: Text(m.name[0].toUpperCase() + m.name.substring(1)),
-                      selected: mode == m,
-                      onSelected: (_) => ref.read(themeModeProvider.notifier).set(m),
-                    ),
-                ]);
-              }),
-            ]),
-          )),
-          const SizedBox(height: AppSpacing.x16),
-
           // tools + account
           Card(child: Column(children: [
             ListTile(leading: const Icon(Icons.account_balance_outlined), title: const Text('Mortgages'),
@@ -231,10 +196,4 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
     );
   }
-
-  Widget _stat(String k, String v, TextTheme t) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4),
-    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-      Text(k, style: t.bodyMedium), Text(v, style: t.titleMedium),
-    ]));
 }

@@ -11,8 +11,9 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
   Future<void> _load() async {
     final v = await _storage.read(key: _kThemeKey);
-    // Default to light unless the user explicitly chose dark before.
-    state = switch (v) { 'dark' => ThemeMode.dark, 'system' => ThemeMode.system, _ => ThemeMode.light };
+    // System option was removed from the UI — honor only explicit light/dark
+    // (the top-nav toggle is the single global theme control).
+    state = v == 'dark' ? ThemeMode.dark : ThemeMode.light;
   }
   Future<void> set(ThemeMode m) async {
     state = m;
