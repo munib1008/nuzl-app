@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -35,6 +36,16 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final user = ref.watch(authControllerProvider).user;
     return AppBar(
       titleSpacing: 0,
+      // Frosted glass: translucent surface + backdrop blur over scrolled content.
+      backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.72),
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      flexibleSpace: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: const SizedBox.expand(),
+        ),
+      ),
       leading: Builder(
         builder: (ctx) => IconButton(
           icon: const Icon(Icons.menu),
@@ -137,12 +148,20 @@ class NuzlBottomNav extends ConsumerWidget {
     var index = items.indexWhere((it) =>
         it.route == '/dashboard' ? location == '/dashboard' : location.startsWith(it.route));
     if (index < 0) index = 0;
-    return NavigationBar(
-      selectedIndex: index,
-      onDestinationSelected: (i) => context.go(items[i].route),
-      destinations: items
-          .map((it) => NavigationDestination(icon: Icon(it.icon), label: it.label))
-          .toList(),
+    // Frosted glass nav bar (translucent surface + backdrop blur).
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: NavigationBar(
+          backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.75),
+          surfaceTintColor: Colors.transparent,
+          selectedIndex: index,
+          onDestinationSelected: (i) => context.go(items[i].route),
+          destinations: items
+              .map((it) => NavigationDestination(icon: Icon(it.icon), label: it.label))
+              .toList(),
+        ),
+      ),
     );
   }
 }
