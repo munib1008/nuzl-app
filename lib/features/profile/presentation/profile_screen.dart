@@ -41,7 +41,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     ('agent', 'Agent'),
     ('owner', 'Owner'),
     ('investor', 'Investor'),
-    ('buyer', 'Buyer'),
+    ('buyer', 'Customer'),
   ];
 
   /// Map any stored role string to one of the five selectable options.

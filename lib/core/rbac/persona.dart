@@ -43,7 +43,7 @@ extension PersonaLabel on Persona {
         Persona.developer => 'Developer',
         Persona.investor => 'Investor',
         Persona.owner => 'Property Owner',
-        Persona.buyer => 'Buyer',
+        Persona.buyer => 'Customer',
         Persona.admin => 'Administrator',
       };
 }

@@ -39,7 +39,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     ('agent', 'Agent'),
     ('owner', 'Owner'),
     ('investor', 'Investor'),
-    ('buyer', 'Buyer'),
+    ('buyer', 'Customer'),
   ];
   static const _emirates = ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Fujairah', 'Umm Al Quwain', 'Al Ain'];
   static const _langs = ['English', 'Arabic', 'Hindi', 'Urdu', 'Tagalog', 'Malayalam', 'Tamil', 'French', 'Russian', 'Chinese'];
@@ -54,6 +54,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     whatsapp.dispose();
     super.dispose();
   }
+
+  /// Real-estate professionals (agency/agent) get the pro-only fields; everyone
+  /// else (customer/owner/investor) completes without "areas you cover".
+  bool get _isPro => role == 'agency' || role == 'agent';
 
   Future<void> _finish() async {
     if (role != null) {
@@ -176,19 +180,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         Text('Help others find and connect with you',
             style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
         const SizedBox(height: AppSpacing.x16),
-        TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone number *', hintText: '+971 …')),
+        TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone number', hintText: '+971 …')),
         const SizedBox(height: AppSpacing.x12),
         TextField(controller: whatsapp, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'WhatsApp number', hintText: '+971 …')),
         const SizedBox(height: AppSpacing.x8),
-        MultiSelectField(
-          label: 'Areas you cover *',
-          icon: Icons.map_outlined,
-          options: _emirates,
-          selected: areas,
-          onChanged: (v) => setState(() => areas
-            ..clear()
-            ..addAll(v)),
-        ),
         MultiSelectField(
           label: 'Languages you speak',
           icon: Icons.translate_outlined,
@@ -198,20 +193,31 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ..clear()
             ..addAll(v)),
         ),
-        MultiSelectField(
-          label: 'Property specialties',
-          icon: Icons.star_outline,
-          options: _specs,
-          selected: specialties,
-          onChanged: (v) => setState(() => specialties
-            ..clear()
-            ..addAll(v)),
-        ),
+        if (_isPro) ...[
+          MultiSelectField(
+            label: 'Areas you cover',
+            icon: Icons.map_outlined,
+            options: _emirates,
+            selected: areas,
+            onChanged: (v) => setState(() => areas
+              ..clear()
+              ..addAll(v)),
+          ),
+          MultiSelectField(
+            label: 'Property specialties',
+            icon: Icons.star_outline,
+            options: _specs,
+            selected: specialties,
+            onChanged: (v) => setState(() => specialties
+              ..clear()
+              ..addAll(v)),
+          ),
+        ],
         const SizedBox(height: AppSpacing.x12),
         _nav(
           onBack: () => setState(() => step = 0),
           nextLabel: 'Complete setup',
-          onNext: (areas.isEmpty || phone.text.trim().isEmpty) ? null : _finish,
+          onNext: _finish,
         ),
       ],
     );
