@@ -148,6 +148,6 @@ class _BottomNavShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final narrow = MediaQuery.sizeOf(context).width < 600;
     if (!narrow) return child;
-    return Scaffold(body: child, bottomNavigationBar: const NuzlBottomNav());
+    return Scaffold(extendBody: true, body: child, bottomNavigationBar: const NuzlBottomNav());
   }
 }
