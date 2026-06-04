@@ -131,6 +131,7 @@ class DashboardScreen extends ConsumerWidget {
           _Card('Hot leads', '${g('hot_leads')}', Icons.local_fire_department_outlined),
           _Card('Follow-ups', '${g('follow_ups')}', Icons.event_repeat_outlined),
           _Card('Active deals', '${g('active_deals')}', Icons.handshake_outlined),
+          _Card('Listings', '${g('listings')}', Icons.apartment_outlined),
           _Card('Tasks today', '${g('tasks_due_today')}', Icons.task_alt_outlined),
         ];
     }
