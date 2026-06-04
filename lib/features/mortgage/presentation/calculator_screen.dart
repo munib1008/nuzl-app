@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/util/mortgage_math.dart';
+import '../../auth/application/auth_controller.dart';
 
 /// Mortgage calculator.
 /// - Standalone screen at /calculator (its own Scaffold + scroll).
 /// - Embedded (e.g. on the landing page) it renders as a plain Column so it
 ///   flows inside the parent's scroll view (no nested scrolling).
-class CalculatorScreen extends StatefulWidget {
+class CalculatorScreen extends ConsumerStatefulWidget {
   const CalculatorScreen({super.key, this.embedded = false});
   final bool embedded;
   @override
-  State<CalculatorScreen> createState() => _CalculatorScreenState();
+  ConsumerState<CalculatorScreen> createState() => _CalculatorScreenState();
 }
 
-class _CalculatorScreenState extends State<CalculatorScreen> {
+class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
   double price = 1500000;
   double downPct = 20;
   double ratePct = 4.5;
@@ -91,10 +93,16 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
         )),
         if (!widget.embedded) ...[
           const SizedBox(height: AppSpacing.x24),
-          FilledButton(
-            onPressed: () => context.go('/register'),
-            child: const Text('Sign up to track real payments'),
-          ),
+          if (ref.watch(authControllerProvider).isAuthenticated)
+            FilledButton(
+              onPressed: () => context.go('/mortgages'),
+              child: const Text('Track real payments'),
+            )
+          else
+            FilledButton(
+              onPressed: () => context.go('/register'),
+              child: const Text('Sign up to track real payments'),
+            ),
         ],
       ],
     );

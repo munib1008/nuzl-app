@@ -29,6 +29,20 @@ class ViewAsScreen extends ConsumerWidget {
     final actual = personaFromRole(ref.watch(authControllerProvider).user?.role);
     final current = ref.watch(personaProvider);
 
+    // Test mode is restricted to real administrators only.
+    if (actual != Persona.admin) {
+      return const Scaffold(
+        appBar: NuzlAppBar(title: 'View as role'),
+        drawer: NuzlDrawer(),
+        body: Center(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.x24),
+            child: Text('Test mode is restricted to administrators.', textAlign: TextAlign.center),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: const NuzlAppBar(title: 'View as role · Test mode'),
       drawer: const NuzlDrawer(),

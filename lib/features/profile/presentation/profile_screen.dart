@@ -24,6 +24,7 @@ final _meProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _loaded = false;
   bool _saving = false;
+  bool _dirty = false;
   String? _role; // agency | agent | owner | investor | buyer
   final company = TextEditingController();
   final phone = TextEditingController();
@@ -61,6 +62,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void dispose() { company.dispose(); phone.dispose(); whatsapp.dispose(); bio.dispose(); super.dispose(); }
 
+  void _markDirty() { if (!_dirty) setState(() => _dirty = true); }
+
+  /// Prompt to Save / Discard / Keep editing when leaving with unsaved edits.
+  Future<void> _onLeave() async {
+    final action = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Unsaved changes'),
+        content: const Text('You have unsaved changes. Save them before leaving?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, 'cancel'), child: const Text('Keep editing')),
+          TextButton(onPressed: () => Navigator.pop(ctx, 'discard'), child: const Text('Discard')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, 'save'), child: const Text('Save')),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (action == 'save') {
+      await _save();
+    } else if (action == 'discard') {
+      _dirty = false;
+    } else {
+      return; // keep editing
+    }
+    if (mounted) _leave();
+  }
+
+  void _leave() => context.canPop() ? context.pop() : context.go('/dashboard');
+
   Future<void> _save() async {
     if (_role != null) {
       ref.read(personaOverrideProvider.notifier).set(personaFromRole(_role));
@@ -78,6 +108,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         'specialties': specialties.toList(),
       });
       ref.invalidate(_meProvider);
+      _dirty = false;
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile saved')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not save: $e')));
@@ -102,97 +133,108 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final user = ref.watch(authControllerProvider).user;
+    final isAdmin = personaFromRole(user?.role) == Persona.admin;
     ref.watch(_meProvider).whenData(_prefill);
 
-    return Scaffold(
-      appBar: const NuzlAppBar(title: 'Profile & settings'),
-      drawer: const NuzlDrawer(),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.x16),
-        children: [
-          // header
-          Center(child: Column(children: [
-            CircleAvatar(radius: 36, backgroundColor: AppColors.primary,
-              child: Text((user?.fullName.isNotEmpty == true ? user!.fullName[0] : 'N').toUpperCase(),
-                  style: t.headlineMedium?.copyWith(color: Colors.white))),
-            const SizedBox(height: AppSpacing.x12),
-            Text(user?.fullName ?? 'Account', style: t.titleLarge),
-            Text(user?.email ?? '', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
-            const SizedBox(height: AppSpacing.x8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.verified_outlined, size: 14, color: AppColors.textMuted),
-                const SizedBox(width: 4),
-                Text('Unverified', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
-              ]),
-            ),
-          ])),
-          const SizedBox(height: AppSpacing.x24),
-
-          // profile information
-          Card(child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.x16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Profile information', style: t.titleMedium),
-              Text('Update your profile to help others find and trust you',
-                  style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
-              const SizedBox(height: AppSpacing.x16),
-              DropdownButtonFormField<String>(
-                initialValue: _role,
-                decoration: const InputDecoration(labelText: 'I am a…', prefixIcon: Icon(Icons.badge_outlined)),
-                items: _roleOptions.map((r) => DropdownMenuItem(value: r.$1, child: Text(r.$2))).toList(),
-                onChanged: (v) => setState(() => _role = v),
+    return PopScope(
+      canPop: !_dirty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop || !_dirty) return;
+        _onLeave();
+      },
+      child: Scaffold(
+        appBar: const NuzlAppBar(title: 'Profile & settings'),
+        drawer: const NuzlDrawer(),
+        body: ListView(
+          padding: const EdgeInsets.all(AppSpacing.x16),
+          children: [
+            // header
+            Center(child: Column(children: [
+              CircleAvatar(radius: 36, backgroundColor: AppColors.primary,
+                child: Text((user?.fullName.isNotEmpty == true ? user!.fullName[0] : 'N').toUpperCase(),
+                    style: t.headlineMedium?.copyWith(color: Colors.white))),
+              const SizedBox(height: AppSpacing.x12),
+              Text(user?.fullName ?? 'Account', style: t.titleLarge),
+              Text(user?.email ?? '', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              const SizedBox(height: AppSpacing.x8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.verified_outlined, size: 14, color: AppColors.textMuted),
+                  const SizedBox(width: 4),
+                  Text('Unverified', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                ]),
               ),
-              const SizedBox(height: AppSpacing.x12),
-              TextField(controller: company, decoration: const InputDecoration(labelText: 'Company name', hintText: 'Your company or brokerage')),
-              const SizedBox(height: AppSpacing.x12),
-              TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone number', hintText: '+971 …')),
-              const SizedBox(height: AppSpacing.x12),
-              TextField(controller: whatsapp, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'WhatsApp', hintText: '+971 …')),
-              const SizedBox(height: AppSpacing.x12),
-              TextField(controller: bio, maxLines: 3, decoration: const InputDecoration(labelText: 'Bio', hintText: 'Tell others about yourself…')),
-              const SizedBox(height: AppSpacing.x16),
-              MultiSelectField(label: 'Areas you cover', icon: Icons.map_outlined, options: _emirates, selected: areas,
-                  onChanged: (v) => setState(() => areas..clear()..addAll(v))),
-              MultiSelectField(label: 'Languages', icon: Icons.translate_outlined, options: _langs, selected: languages,
-                  onChanged: (v) => setState(() => languages..clear()..addAll(v))),
-              MultiSelectField(label: 'Property specialties', icon: Icons.star_outline, options: _specs, selected: specialties,
-                  onChanged: (v) => setState(() => specialties..clear()..addAll(v))),
-              Align(alignment: Alignment.centerRight,
-                child: FilledButton.icon(onPressed: _saving ? null : _save, icon: const Icon(Icons.save_outlined), label: Text(_saving ? 'Saving…' : 'Save changes'))),
-            ]),
-          )),
-          const SizedBox(height: AppSpacing.x16),
+            ])),
+            const SizedBox(height: AppSpacing.x24),
 
-          // tools + account
-          Card(child: Column(children: [
-            ListTile(leading: const Icon(Icons.account_balance_outlined), title: const Text('Mortgages'),
-                onTap: () => context.go('/mortgages')),
-            const Divider(height: 1),
-            ListTile(leading: const Icon(Icons.calculate_outlined), title: const Text('Mortgage calculator'),
-                onTap: () => context.go('/calculator')),
-            const Divider(height: 1),
-            ListTile(
-              leading: const Icon(Icons.science_outlined),
-              title: const Text('View as role'),
-              subtitle: const Text('Preview any role (test mode)'),
-              onTap: () => context.go('/view-as')),
-            const Divider(height: 1),
-            ListTile(
-              leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
-              title: Text('Sign out', style: TextStyle(color: Theme.of(context).colorScheme.error)),
-              onTap: () async {
-                await ref.read(authControllerProvider.notifier).logout();
-                if (context.mounted) context.go('/login');
-              },
-            ),
-          ])),
-          const SizedBox(height: AppSpacing.x24),
-          const Center(child: Opacity(opacity: 0.5, child: NuzlLogo(size: 24))),
-          const SizedBox(height: AppSpacing.x24),
-        ],
+            // profile information
+            Card(child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.x16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Profile information', style: t.titleMedium),
+                Text('Update your profile to help others find and trust you',
+                    style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                const SizedBox(height: AppSpacing.x16),
+                DropdownButtonFormField<String>(
+                  initialValue: _role,
+                  decoration: const InputDecoration(labelText: 'I am a…', prefixIcon: Icon(Icons.badge_outlined)),
+                  items: _roleOptions.map((r) => DropdownMenuItem(value: r.$1, child: Text(r.$2))).toList(),
+                  onChanged: (v) => setState(() { _role = v; _dirty = true; }),
+                ),
+                const SizedBox(height: AppSpacing.x12),
+                TextField(controller: company, onChanged: (_) => _markDirty(), decoration: const InputDecoration(labelText: 'Company name', hintText: 'Your company or brokerage')),
+                const SizedBox(height: AppSpacing.x12),
+                TextField(controller: phone, onChanged: (_) => _markDirty(), keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone number', hintText: '+971 …')),
+                const SizedBox(height: AppSpacing.x12),
+                TextField(controller: whatsapp, onChanged: (_) => _markDirty(), keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'WhatsApp', hintText: '+971 …')),
+                const SizedBox(height: AppSpacing.x12),
+                TextField(controller: bio, onChanged: (_) => _markDirty(), maxLines: 3, decoration: const InputDecoration(labelText: 'Bio', hintText: 'Tell others about yourself…')),
+                const SizedBox(height: AppSpacing.x16),
+                MultiSelectField(label: 'Areas you cover', icon: Icons.map_outlined, options: _emirates, selected: areas,
+                    onChanged: (v) => setState(() { areas..clear()..addAll(v); _dirty = true; })),
+                MultiSelectField(label: 'Languages', icon: Icons.translate_outlined, options: _langs, selected: languages,
+                    onChanged: (v) => setState(() { languages..clear()..addAll(v); _dirty = true; })),
+                MultiSelectField(label: 'Property specialties', icon: Icons.star_outline, options: _specs, selected: specialties,
+                    onChanged: (v) => setState(() { specialties..clear()..addAll(v); _dirty = true; })),
+                Align(alignment: Alignment.centerRight,
+                  child: FilledButton.icon(onPressed: _saving ? null : _save, icon: const Icon(Icons.save_outlined), label: Text(_saving ? 'Saving…' : 'Save changes'))),
+              ]),
+            )),
+            const SizedBox(height: AppSpacing.x16),
+
+            // tools + account
+            Card(child: Column(children: [
+              ListTile(leading: const Icon(Icons.account_balance_outlined), title: const Text('Mortgages'),
+                  onTap: () => context.go('/mortgages')),
+              const Divider(height: 1),
+              ListTile(leading: const Icon(Icons.calculate_outlined), title: const Text('Mortgage calculator'),
+                  onTap: () => context.go('/calculator')),
+              // "View as role" test mode is restricted to administrators.
+              if (isAdmin) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.science_outlined),
+                  title: const Text('View as role'),
+                  subtitle: const Text('Preview any role (test mode)'),
+                  onTap: () => context.go('/view-as')),
+              ],
+              const Divider(height: 1),
+              ListTile(
+                leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
+                title: Text('Sign out', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                onTap: () async {
+                  await ref.read(authControllerProvider.notifier).logout();
+                  if (context.mounted) context.go('/login');
+                },
+              ),
+            ])),
+            const SizedBox(height: AppSpacing.x24),
+            const Center(child: Opacity(opacity: 0.5, child: NuzlLogo(size: 24))),
+            const SizedBox(height: AppSpacing.x24),
+          ],
+        ),
       ),
     );
   }
