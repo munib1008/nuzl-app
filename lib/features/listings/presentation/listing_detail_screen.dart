@@ -6,6 +6,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../auth/application/auth_controller.dart';
 
 final _detailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
   final d = await ref.read(apiClientProvider).get('/listings/$id');
@@ -104,6 +105,17 @@ class _Detail extends ConsumerWidget {
                       if (l['community'] != null) ...[
                         const SizedBox(height: AppSpacing.x4),
                         Text('${l['community']}', style: t.bodyLarge?.copyWith(color: AppColors.textMuted)),
+                      ],
+                      if (brokerId.isNotEmpty && ref.watch(authControllerProvider).user?.id == brokerId) ...[
+                        const SizedBox(height: AppSpacing.x12),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: OutlinedButton.icon(
+                            onPressed: () => context.push('/properties/$id/edit', extra: l),
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            label: const Text('Edit listing'),
+                          ),
+                        ),
                       ],
                       const SizedBox(height: AppSpacing.x16),
                       Text('Key facts', style: t.titleMedium),
