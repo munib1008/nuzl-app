@@ -40,6 +40,7 @@ import '../../features/activities/activities_screen.dart';
 import '../../features/messages/messages_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/viewings/viewings_screen.dart';
+import '../../features/saved/saved_screen.dart';
 import '../../features/network/network_screen.dart';
 import '../../features/admin/organizations_screen.dart';
 import '../../features/admin/audit_screen.dart';
@@ -125,6 +126,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/messages', builder: (_, __) => const MessagesScreen()),
       GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
       GoRoute(path: '/viewings', builder: (_, __) => const ViewingsScreen()),
+      GoRoute(path: '/saved', builder: (_, __) => const SavedScreen()),
       GoRoute(path: '/network', builder: (_, __) => const NetworkScreen()),
       GoRoute(path: '/organizations', builder: (_, __) => const OrganizationsScreen()),
       GoRoute(path: '/audit', builder: (_, __) => const AuditScreen()),

@@ -7,6 +7,7 @@ import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../saved/saved_screen.dart';
 
 final _detailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
   final d = await ref.read(apiClientProvider).get('/listings/$id');
@@ -30,7 +31,7 @@ class ListingDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(_detailProvider(id));
     return Scaffold(
-      appBar: AppBar(title: const Text('Listing')),
+      appBar: AppBar(title: const Text('Listing'), actions: [SaveListingButton(listingId: id)]),
       body: detail.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),

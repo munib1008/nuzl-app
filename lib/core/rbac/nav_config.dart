@@ -77,7 +77,7 @@ List<NavItem> navItemsFor(Persona p) {
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
-        NavItem(Icons.bookmark_outline, 'Saved', '/soon/Saved'),
+        NavItem(Icons.bookmark_outline, 'Saved', '/saved'),
         NavItem(Icons.calculate_outlined, 'Mortgage Calculator', '/calculator'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];

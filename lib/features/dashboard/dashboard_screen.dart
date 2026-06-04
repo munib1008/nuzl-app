@@ -216,7 +216,7 @@ class _QuickActions extends StatelessWidget {
       ],
       Persona.buyer => [
         ('Browse properties', Icons.storefront_outlined, '/properties'),
-        ('Saved properties', Icons.bookmark_outline, '/soon/Saved'),
+        ('Saved properties', Icons.bookmark_outline, '/saved'),
         ('Messages', Icons.chat_bubble_outline, '/messages'),
       ],
       _ => [
@@ -299,7 +299,7 @@ List<(String, IconData, String)> _toolsFor(Persona p) => switch (p) {
         ],
       Persona.buyer => [
           ('Mortgage calculator', Icons.calculate_outlined, '/calculator'),
-          ('Saved searches', Icons.bookmark_outline, '/soon/Saved'),
+          ('Saved', Icons.bookmark_outline, '/saved'),
           ('Viewings', Icons.event_available_outlined, '/viewings'),
         ],
       Persona.admin => [
