@@ -54,10 +54,10 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
           onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
         ),
         ref.watch(unreadCountProvider).maybeWhen(
-              data: (n) => _Bell(count: n, onTap: () => context.go('/soon/Notifications')),
+              data: (n) => _Bell(count: n, onTap: () => context.go('/notifications')),
               orElse: () => IconButton(
                   icon: const Icon(Icons.notifications_none),
-                  onPressed: () => context.go('/soon/Notifications')),
+                  onPressed: () => context.go('/notifications')),
             ),
         PopupMenuButton<String>(
           offset: const Offset(0, 48),
