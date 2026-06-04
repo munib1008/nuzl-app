@@ -271,6 +271,7 @@ class _BuyerCta extends StatelessWidget {
 List<(String, IconData, String)> _toolsFor(Persona p) => switch (p) {
       Persona.broker || Persona.agent => [
           ('Lead matcher', Icons.auto_awesome_outlined, '/lead-matches'),
+          ('Viewings', Icons.event_available_outlined, '/viewings'),
           ('Mortgage calculator', Icons.calculate_outlined, '/calculator'),
           ('Documents', Icons.folder_outlined, '/documents'),
           ('Commission tracker', Icons.payments_outlined, '/soon/Commission'),
@@ -299,7 +300,7 @@ List<(String, IconData, String)> _toolsFor(Persona p) => switch (p) {
       Persona.buyer => [
           ('Mortgage calculator', Icons.calculate_outlined, '/calculator'),
           ('Saved searches', Icons.bookmark_outline, '/soon/Saved'),
-          ('Viewing scheduler', Icons.event_available_outlined, '/soon/Viewings'),
+          ('Viewings', Icons.event_available_outlined, '/viewings'),
         ],
       Persona.admin => [
           ('Organizations', Icons.business_outlined, '/organizations'),

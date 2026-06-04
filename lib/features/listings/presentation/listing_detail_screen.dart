@@ -229,8 +229,7 @@ class _AgentCard extends ConsumerWidget {
 
   Future<void> _requestViewing(BuildContext context, WidgetRef ref) async {
     try {
-      await ref.read(apiClientProvider).post('/activity', body: {
-        'activity_type': 'viewing_request',
+      await ref.read(apiClientProvider).post('/viewings', body: {
         'listing_id': listingId,
       });
       if (context.mounted) {
