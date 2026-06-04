@@ -93,6 +93,7 @@ class _StickyTopBar extends ConsumerWidget {
                       ),
                       FilledButton(
                         onPressed: () => context.go('/register'),
+                        style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
                         child: const Text('Get started'),
                       ),
                     ],
@@ -132,6 +133,7 @@ class _Hero extends StatelessWidget {
             Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x12, children: [
               FilledButton(
                 onPressed: () => context.go('/register'),
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
                 child: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16), child: Text('Get started')),
               ),
@@ -140,7 +142,7 @@ class _Hero extends StatelessWidget {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: _onBg(context),
                   side: BorderSide(color: _borderStrong(context)),
-                  minimumSize: const Size.fromHeight(AppSpacing.tapTarget),
+                  minimumSize: const Size(0, 48),
                 ),
                 child: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16), child: Text('Sign in')),
