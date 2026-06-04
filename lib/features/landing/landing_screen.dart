@@ -70,7 +70,7 @@ class _StickyTopBar extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                InkWell(onTap: () => context.go('/'), child: NuzlLogo(size: 36, color: _onBg(context))),
+                InkWell(onTap: () => context.go('/'), child: const NuzlLogo(size: 36)),
                 // Right side: theme toggle · Sign in · Get started.
                 // Wrap so it never overflows on narrow phones — items flow to a new line if tight.
                 Flexible(
@@ -345,7 +345,7 @@ class _Footer extends StatelessWidget {
                   Expanded(
                     flex: wide ? 2 : 0,
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      NuzlLogo(size: 34, color: _onBg(context)),
+                      const NuzlLogo(size: 34),
                       const SizedBox(height: AppSpacing.x12),
                       SizedBox(
                         width: 280,

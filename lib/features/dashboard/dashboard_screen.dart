@@ -155,9 +155,7 @@ class _HeroStat extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-            colors: [AppColors.primaryDark, AppColors.primary, Color(0xFF2BB39A)],
-            begin: Alignment.topLeft, end: Alignment.bottomRight),
+        color: AppColors.primary,
         borderRadius: BorderRadius.circular(AppSpacing.rLg),
       ),
       child: Row(children: [
@@ -248,9 +246,7 @@ class _BuyerCta extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-            colors: [AppColors.primaryDark, AppColors.primary],
-            begin: Alignment.topLeft, end: Alignment.bottomRight),
+        color: AppColors.primary,
         borderRadius: BorderRadius.circular(AppSpacing.rLg),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

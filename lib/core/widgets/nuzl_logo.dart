@@ -15,7 +15,7 @@ class NuzlLogo extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final markColor = color ?? (dark ? AppColors.dPrimary : AppColors.primary);
-    final wordColor = color ?? (dark ? Colors.white : AppColors.secondary);
+    final wordColor = color ?? (dark ? Colors.white : AppColors.primary);
 
     return Row(
       mainAxisSize: MainAxisSize.min,

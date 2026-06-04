@@ -47,7 +47,7 @@ class _TestModeWrapper extends ConsumerWidget {
     return Column(
       children: [
         Material(
-          color: AppColors.accentGold,
+          color: AppColors.accentGoldTint,
           child: SafeArea(
             bottom: false,
             child: Padding(

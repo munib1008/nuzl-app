@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -36,16 +35,12 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final user = ref.watch(authControllerProvider).user;
     return AppBar(
       titleSpacing: 0,
-      // Frosted glass: translucent surface + backdrop blur over scrolled content.
-      backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.72),
+      // Solid, premium app bar with a hairline separator (no glassmorphism).
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
-      flexibleSpace: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: const SizedBox.expand(),
-        ),
-      ),
+      shape: Border(bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5)),
       leading: Builder(
         builder: (ctx) => IconButton(
           icon: const Icon(Icons.menu),
@@ -76,7 +71,7 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
             if (v == 'profile') context.go('/profile');
             if (v == 'logout') {
               await ref.read(authControllerProvider.notifier).logout();
-              if (context.mounted) context.go('/login');
+              if (context.mounted) context.go('/');
             }
           },
           itemBuilder: (_) => [
@@ -148,19 +143,19 @@ class NuzlBottomNav extends ConsumerWidget {
     var index = items.indexWhere((it) =>
         it.route == '/dashboard' ? location == '/dashboard' : location.startsWith(it.route));
     if (index < 0) index = 0;
-    // Frosted glass nav bar (translucent surface + backdrop blur).
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: NavigationBar(
-          backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.75),
-          surfaceTintColor: Colors.transparent,
-          selectedIndex: index,
-          onDestinationSelected: (i) => context.go(items[i].route),
-          destinations: items
-              .map((it) => NavigationDestination(icon: Icon(it.icon), label: it.label))
-              .toList(),
-        ),
+    // Solid nav bar with a hairline top separator (no glassmorphism).
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: Theme.of(context).dividerColor, width: 0.5)),
+      ),
+      child: NavigationBar(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
+        selectedIndex: index,
+        onDestinationSelected: (i) => context.go(items[i].route),
+        destinations: items
+            .map((it) => NavigationDestination(icon: Icon(it.icon), label: it.label))
+            .toList(),
       ),
     );
   }

@@ -226,7 +226,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 title: Text('Sign out', style: TextStyle(color: Theme.of(context).colorScheme.error)),
                 onTap: () async {
                   await ref.read(authControllerProvider.notifier).logout();
-                  if (context.mounted) context.go('/login');
+                  if (context.mounted) context.go('/');
                 },
               ),
             ])),
