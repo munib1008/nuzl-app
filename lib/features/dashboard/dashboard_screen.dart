@@ -217,7 +217,7 @@ class _QuickActions extends StatelessWidget {
         ('My properties', Icons.home_work_outlined, '/soon/My Properties'),
       ],
       Persona.buyer => [
-        ('Browse properties', Icons.storefront_outlined, '/feed'),
+        ('Browse properties', Icons.storefront_outlined, '/properties'),
         ('Saved properties', Icons.bookmark_outline, '/soon/Saved'),
         ('Messages', Icons.chat_bubble_outline, '/messages'),
       ],
@@ -262,7 +262,7 @@ class _BuyerCta extends StatelessWidget {
         const SizedBox(height: AppSpacing.x12),
         FilledButton.icon(
           style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: AppColors.primary),
-          onPressed: () => context.go('/feed'),
+          onPressed: () => context.go('/properties'),
           icon: const Icon(Icons.search),
           label: const Text('Browse the marketplace'),
         ),
