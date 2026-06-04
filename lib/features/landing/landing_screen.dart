@@ -68,54 +68,41 @@ class _StickyTopBar extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24, vertical: AppSpacing.x12),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 InkWell(onTap: () => context.go('/'), child: NuzlLogo(size: 36, color: _onBg(context))),
-                // centered nav links (wide screens only)
-                Expanded(
-                  child: MediaQuery.of(context).size.width >= 760
-                      ? const Row(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: [
-                          _NavLink('Marketplace', '/info/marketplace'),
-                          _NavLink('Tools', '/info/tools'),
-                          _NavLink('Pricing', '/info/pricing'),
-                        ])
-                      : const SizedBox.shrink(),
+                // Right side: theme toggle · Sign in · Get started.
+                // Wrap so it never overflows on narrow phones — items flow to a new line if tight.
+                Flexible(
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: AppSpacing.x8,
+                    runSpacing: AppSpacing.x4,
+                    children: [
+                      IconButton(
+                        tooltip: 'Toggle light / dark',
+                        icon: Icon(_isDark(context) ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                            color: _onBg(context)),
+                        onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
+                      ),
+                      TextButton(
+                        onPressed: () => context.go('/login'),
+                        child: Text('Sign in',
+                            style: GoogleFonts.poppins(color: _onBg(context), fontWeight: FontWeight.w600)),
+                      ),
+                      FilledButton(
+                        onPressed: () => context.go('/register'),
+                        child: const Text('Get started'),
+                      ),
+                    ],
+                  ),
                 ),
-                Row(mainAxisSize: MainAxisSize.min, children: [
-                  IconButton(
-                    tooltip: 'Toggle light / dark',
-                    icon: Icon(_isDark(context) ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
-                        color: _onBg(context)),
-                    onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
-                  ),
-                  TextButton(
-                    onPressed: () => context.go('/login'),
-                    child: Text('Sign in',
-                        style: GoogleFonts.poppins(color: _onBg(context), fontWeight: FontWeight.w600)),
-                  ),
-                  const SizedBox(width: AppSpacing.x8),
-                  FilledButton(
-                    onPressed: () => context.go('/register'),
-                    child: const Text('Get started'),
-                  ),
-                ]),
               ],
             ),
           ),
         ),
       ),
-    );
-  }
-}
-
-class _NavLink extends StatelessWidget {
-  const _NavLink(this.label, this.route);
-  final String label;
-  final String route;
-  @override
-  Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: () => context.go(route),
-      child: Text(label, style: GoogleFonts.poppins(color: _muted(context), fontWeight: FontWeight.w500)),
     );
   }
 }
