@@ -12,7 +12,12 @@ import '../../shell/app_shell.dart';
 import '../data/listings_repository.dart' show listingsProvider;
 
 class ListingFormScreen extends ConsumerStatefulWidget {
-  const ListingFormScreen({super.key});
+  const ListingFormScreen({super.key, this.editId, this.initial});
+
+  /// When set, the form edits this listing (PATCH) instead of creating one.
+  final String? editId;
+  final Map<String, dynamic>? initial;
+
   @override
   ConsumerState<ListingFormScreen> createState() => _ListingFormScreenState();
 }
@@ -38,6 +43,27 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   String? error;
 
   @override
+  void initState() {
+    super.initState();
+    final m = widget.initial;
+    if (m != null) {
+      const types = ['apartment', 'villa', 'townhouse', 'office', 'retail', 'warehouse', 'land'];
+      const furns = ['unfurnished', 'partly_furnished', 'furnished'];
+      propertyType = types.contains('${m['property_type']}') ? '${m['property_type']}' : 'apartment';
+      purpose = (m['purpose'] == 'rent') ? 'rent' : 'sale';
+      furnishing = furns.contains('${m['furnishing']}') ? '${m['furnishing']}' : 'unfurnished';
+      price.text = m['price'] != null ? '${m['price']}' : '';
+      beds.text = m['bedrooms'] != null ? '${m['bedrooms']}' : '';
+      baths.text = m['bathrooms'] != null ? '${m['bathrooms']}' : '';
+      size.text = m['size_sqft'] != null ? '${m['size_sqft']}' : '';
+      unitNo.text = '${m['unit_no'] ?? ''}';
+      description.text = '${m['description'] ?? ''}';
+      final cov = '${m['cover_image'] ?? ''}';
+      if (cov.isNotEmpty) coverUrl = cov;
+    }
+  }
+
+  @override
   void dispose() {
     price.dispose(); beds.dispose(); baths.dispose(); size.dispose(); unitNo.dispose();
     ownerName.dispose(); ownerPhone.dispose(); description.dispose(); super.dispose();
@@ -58,24 +84,33 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
 
   Future<void> _save() async {
     setState(() { saving = true; error = null; });
+    final editing = widget.editId != null;
+    final body = <String, dynamic>{
+      'property_type': propertyType,
+      'purpose': purpose,
+      'furnishing': furnishing,
+      'price': double.tryParse(price.text) ?? 0,
+      'bedrooms': int.tryParse(beds.text),
+      'bathrooms': int.tryParse(baths.text),
+      'size_sqft': double.tryParse(size.text),
+      'description': description.text.trim(),
+      if (coverUrl != null) 'cover_image': coverUrl,
+      if (coverUrl != null) 'images': [coverUrl],
+    };
     try {
-      await ref.read(apiClientProvider).post('/listings', body: {
-        'property_type': propertyType,
-        'purpose': purpose,
-        'furnishing': furnishing,
-        'price': double.tryParse(price.text) ?? 0,
-        'bedrooms': int.tryParse(beds.text),
-        'bathrooms': int.tryParse(baths.text),
-        'size_sqft': double.tryParse(size.text),
-        'unit_no': unitNo.text.trim(),
-        'owner_name': ownerName.text.trim(),
-        'owner_phone': ownerPhone.text.trim(),
-        'description': description.text.trim(),
-        if (coverUrl != null) 'cover_image': coverUrl,
-        if (coverUrl != null) 'images': [coverUrl],
-      });
+      if (editing) {
+        await ref.read(apiClientProvider).patch('/listings/${widget.editId}', body: body);
+      } else {
+        body['unit_no'] = unitNo.text.trim();
+        body['owner_name'] = ownerName.text.trim();
+        body['owner_phone'] = ownerPhone.text.trim();
+        await ref.read(apiClientProvider).post('/listings', body: body);
+      }
       ref.invalidate(listingsProvider);
-      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing added'))); context.go('/properties'); }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(editing ? 'Listing updated' : 'Listing added')));
+        context.go('/properties');
+      }
     } catch (e) {
       setState(() => error = e.toString());
     } finally {
@@ -87,7 +122,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Add listing'),
+      appBar: NuzlAppBar(title: widget.editId != null ? 'Edit listing' : 'Add listing'),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: ListView(
@@ -153,14 +188,16 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
               const SizedBox(width: AppSpacing.x12),
               Expanded(child: TextField(controller: size, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Size (sqft)'))),
             ]),
-            const SizedBox(height: AppSpacing.x12),
-            TextField(controller: unitNo, decoration: const InputDecoration(labelText: 'Unit number')),
-            const SizedBox(height: AppSpacing.x12),
-            Row(children: [
-              Expanded(child: TextField(controller: ownerName, decoration: const InputDecoration(labelText: 'Owner name'))),
-              const SizedBox(width: AppSpacing.x12),
-              Expanded(child: TextField(controller: ownerPhone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Owner phone'))),
-            ]),
+            if (widget.editId == null) ...[
+              const SizedBox(height: AppSpacing.x12),
+              TextField(controller: unitNo, decoration: const InputDecoration(labelText: 'Unit number')),
+              const SizedBox(height: AppSpacing.x12),
+              Row(children: [
+                Expanded(child: TextField(controller: ownerName, decoration: const InputDecoration(labelText: 'Owner name'))),
+                const SizedBox(width: AppSpacing.x12),
+                Expanded(child: TextField(controller: ownerPhone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Owner phone'))),
+              ]),
+            ],
             const SizedBox(height: AppSpacing.x12),
             TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'Description')),
             if (error != null) Padding(
@@ -171,7 +208,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
               onPressed: saving ? null : _save,
               child: saving
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Add listing'),
+                  : Text(widget.editId != null ? 'Save changes' : 'Add listing'),
             ),
             const SizedBox(height: AppSpacing.x24),
           ],
