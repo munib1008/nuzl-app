@@ -61,16 +61,16 @@ class ViewAsScreen extends ConsumerWidget {
                   subtitle: Text(r.$4),
                   trailing: selected ? const Icon(Icons.check_circle, color: AppColors.primary) : const Icon(Icons.chevron_right),
                   onTap: () {
-                    ref.read(personaOverrideProvider.notifier).state = r.$1;
+                    ref.read(personaPreviewProvider.notifier).state = r.$1;
                     context.go('/dashboard');
                   },
                 ),
               );
             }),
             const SizedBox(height: AppSpacing.x12),
-            if (ref.watch(personaOverrideProvider) != null)
+            if (ref.watch(personaPreviewProvider) != null)
               OutlinedButton.icon(
-                onPressed: () => ref.read(personaOverrideProvider.notifier).state = null,
+                onPressed: () => ref.read(personaPreviewProvider.notifier).state = null,
                 icon: const Icon(Icons.logout),
                 label: const Text('Exit test mode'),
               ),

@@ -42,10 +42,8 @@ class _TestModeWrapper extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final override = ref.watch(personaOverrideProvider);
-    final actual = personaFromRole(ref.watch(authControllerProvider).user?.role);
-    final testing = override != null && override != actual;
-    if (!testing) return child;
+    final preview = ref.watch(personaPreviewProvider);
+    if (preview == null) return child;
     return Column(
       children: [
         Material(
@@ -57,10 +55,10 @@ class _TestModeWrapper extends ConsumerWidget {
               child: Row(children: [
                 const Icon(Icons.science_outlined, size: 18, color: AppColors.secondary),
                 const SizedBox(width: 8),
-                Expanded(child: Text('TEST MODE — viewing as ${override.label}',
+                Expanded(child: Text('TEST MODE — viewing as ${preview.label}',
                     style: const TextStyle(color: AppColors.secondary, fontWeight: FontWeight.w600))),
                 TextButton(
-                  onPressed: () => ref.read(personaOverrideProvider.notifier).state = null,
+                  onPressed: () => ref.read(personaPreviewProvider.notifier).state = null,
                   child: const Text('Exit'),
                 ),
               ]),

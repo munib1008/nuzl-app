@@ -61,7 +61,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _finish() async {
     if (role != null) {
-      ref.read(personaOverrideProvider.notifier).state = personaFromRole(role);
+      ref.read(personaOverrideProvider.notifier).set(personaFromRole(role));
     }
     final body = <String, dynamic>{
       'role': role,

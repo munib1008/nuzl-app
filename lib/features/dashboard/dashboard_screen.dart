@@ -118,6 +118,8 @@ class DashboardScreen extends ConsumerWidget {
           _Card('Outstanding loan', aed(g('outstanding_loan')), Icons.account_balance_outlined),
           _Card('Rental income', aed(g('annual_rental_income')), Icons.payments_outlined),
         ];
+      case Persona.buyer:
+        return <_Card>[]; // customers get the browse CTA + tools, not agent KPIs
       case Persona.admin:
         return [
           _Card('Organizations', '${g('organizations')}', Icons.business_outlined),
@@ -213,6 +215,11 @@ class _QuickActions extends StatelessWidget {
         ('Mortgage calculator', Icons.calculate_outlined, '/calculator'),
         ('Track mortgages', Icons.account_balance_outlined, '/mortgages'),
         ('My properties', Icons.home_work_outlined, '/soon/My Properties'),
+      ],
+      Persona.buyer => [
+        ('Browse properties', Icons.storefront_outlined, '/feed'),
+        ('Saved properties', Icons.bookmark_outline, '/soon/Saved'),
+        ('Messages', Icons.chat_bubble_outline, '/messages'),
       ],
       _ => [
         ('Add listing', Icons.add_home_work_outlined, '/properties'),

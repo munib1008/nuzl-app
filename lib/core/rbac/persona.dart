@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../features/auth/application/auth_controller.dart';
 
 /// The product persona that drives navigation + dashboard per user type.
@@ -76,10 +77,60 @@ extension PersonaCapabilities on Persona {
   bool get browseOnly => this == Persona.buyer || this == Persona.investor;
 }
 
-/// Onboarding can override the persona for the session.
-final personaOverrideProvider = StateProvider<Persona?>((ref) => null);
+Persona? _personaByName(String name) {
+  for (final p in Persona.values) {
+    if (p.name == name) return p;
+  }
+  return null;
+}
+
+/// The user's chosen working persona, persisted per-user. The API `users.role`
+/// enum can't yet store the marketplace roles (agency/agent/owner/investor/
+/// buyer), so we keep the choice locally so it survives reloads. Set at
+/// onboarding / profile.
+class PersonaOverrideNotifier extends StateNotifier<Persona?> {
+  PersonaOverrideNotifier(this._userId) : super(null) {
+    _load();
+  }
+  final String? _userId;
+  static const _storage = FlutterSecureStorage();
+  String? get _key => (_userId == null || _userId.isEmpty) ? null : 'nuzl_persona_$_userId';
+
+  Future<void> _load() async {
+    final k = _key;
+    if (k == null) return;
+    final v = await _storage.read(key: k);
+    if (v != null) {
+      final p = _personaByName(v);
+      if (p != null) state = p;
+    }
+  }
+
+  Future<void> set(Persona? p) async {
+    state = p;
+    final k = _key;
+    if (k == null) return;
+    if (p == null) {
+      await _storage.delete(key: k);
+    } else {
+      await _storage.write(key: k, value: p.name);
+    }
+  }
+}
+
+final personaOverrideProvider =
+    StateNotifierProvider<PersonaOverrideNotifier, Persona?>((ref) {
+  final userId = ref.watch(authControllerProvider).user?.id;
+  return PersonaOverrideNotifier(userId);
+});
+
+/// Ephemeral admin "view as role" preview — NOT persisted, reverts on reload.
+final personaPreviewProvider = StateProvider<Persona?>((ref) => null);
 
 final personaProvider = Provider<Persona>((ref) {
+  // 1) admin preview (temporary)  2) persisted working persona  3) API role.
+  final preview = ref.watch(personaPreviewProvider);
+  if (preview != null) return preview;
   final override = ref.watch(personaOverrideProvider);
   if (override != null) return override;
   final role = ref.watch(authControllerProvider).user?.role;

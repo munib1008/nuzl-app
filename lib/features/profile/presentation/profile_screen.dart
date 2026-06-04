@@ -63,7 +63,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _save() async {
     if (_role != null) {
-      ref.read(personaOverrideProvider.notifier).state = personaFromRole(_role);
+      ref.read(personaOverrideProvider.notifier).set(personaFromRole(_role));
     }
     setState(() => _saving = true);
     try {
