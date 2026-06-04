@@ -48,7 +48,7 @@ class AppTheme {
         elevation: 0,
         shape: RoundedRectangleBorder(
           side: BorderSide(color: border),
-          borderRadius: BorderRadius.circular(AppSpacing.rMd),
+          borderRadius: BorderRadius.circular(AppSpacing.rCard),
         ),
         margin: EdgeInsets.zero,
       ),
@@ -58,15 +58,15 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.x16, vertical: AppSpacing.x12),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.rSm),
+          borderRadius: BorderRadius.circular(AppSpacing.rCard),
           borderSide: BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.rSm),
+          borderRadius: BorderRadius.circular(AppSpacing.rCard),
           borderSide: BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.rSm),
+          borderRadius: BorderRadius.circular(AppSpacing.rCard),
           borderSide: BorderSide(color: primary, width: 2),
         ),
         hintStyle: TextStyle(color: muted),
@@ -77,7 +77,7 @@ class AppTheme {
           foregroundColor: Colors.white,
           minimumSize: const Size.fromHeight(AppSpacing.tapTarget),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSpacing.rMd),
+            borderRadius: BorderRadius.circular(AppSpacing.rButton),
           ),
           textStyle: AppTypography.textTheme(text, muted).labelLarge,
         ),
