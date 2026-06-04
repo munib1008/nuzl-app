@@ -88,6 +88,8 @@ class OrganizationsScreen extends ConsumerWidget {
                 DropdownMenuItem(value: 'developer', child: Text('Developer')),
                 DropdownMenuItem(value: 'bank', child: Text('Bank')),
                 DropdownMenuItem(value: 'investor', child: Text('Investor')),
+                DropdownMenuItem(value: 'service', child: Text('Service')),
+                DropdownMenuItem(value: 'seller', child: Text('Seller')),
               ],
               onChanged: (v) => setS(() => type = v ?? 'agency'),
             ),
