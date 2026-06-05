@@ -22,13 +22,13 @@ class AppTheme {
     final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
     final tt = AppTypography.textTheme(text, muted);
 
-    // Squircle (iOS-style continuous corners) for cards + buttons.
+    // Smooth continuous corners — cards 16, buttons 14. Soft elevation only.
     final cardShape = SmoothRectangleBorder(
       side: BorderSide(color: border),
-      borderRadius: SmoothBorderRadius(cornerRadius: 20, cornerSmoothing: 0.6),
+      borderRadius: SmoothBorderRadius(cornerRadius: 16, cornerSmoothing: 0.6),
     );
     final buttonShape = SmoothRectangleBorder(
-      borderRadius: SmoothBorderRadius(cornerRadius: 20, cornerSmoothing: 0.6),
+      borderRadius: SmoothBorderRadius(cornerRadius: 14, cornerSmoothing: 0.6),
     );
     const motion = Duration(milliseconds: 250);
 
@@ -36,7 +36,7 @@ class AppTheme {
       brightness: b,
       primary: primary,
       onPrimary: Colors.white,
-      secondary: AppColors.accentGold,
+      secondary: dark ? AppColors.dSecondary : AppColors.secondary,
       onSecondary: Colors.white,
       error: AppColors.danger,
       onError: Colors.white,
