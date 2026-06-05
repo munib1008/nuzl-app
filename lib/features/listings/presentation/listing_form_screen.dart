@@ -8,6 +8,7 @@ import '../../../core/network/upload_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/responsive.dart';
+import '../../../core/widgets/sticky_save_bar.dart';
 import '../../shell/app_shell.dart';
 import '../data/listings_repository.dart' show listingsProvider;
 
@@ -203,16 +204,16 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
             if (error != null) Padding(
               padding: const EdgeInsets.only(top: AppSpacing.x12),
               child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
-            const SizedBox(height: AppSpacing.x20),
-            FilledButton(
-              onPressed: saving ? null : _save,
-              child: saving
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text(widget.editId != null ? 'Save changes' : 'Add listing'),
-            ),
-            const SizedBox(height: AppSpacing.x24),
+            const SizedBox(height: AppSpacing.x16),
           ],
         ),
+      ),
+      // Pinned save bar — stays visible above the mobile bottom nav so the
+      // primary action is never hidden behind it (and clears the home indicator).
+      bottomNavigationBar: StickySaveBar(
+        saving: saving,
+        label: widget.editId != null ? 'Save changes' : 'Add listing',
+        onPressed: _save,
       ),
     );
   }

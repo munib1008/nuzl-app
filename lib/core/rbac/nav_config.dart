@@ -30,6 +30,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.trending_up, 'CRM', '/crm'),
         NavItem(Icons.handshake_outlined, 'Deals', '/deals'),
         NavItem(Icons.contacts_outlined, 'Customers', '/customers'),
+        NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.event_note_outlined, 'Activities', '/activities'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
@@ -41,6 +42,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.trending_up, 'CRM', '/crm'),
         NavItem(Icons.handshake_outlined, 'Deals', '/deals'),
         NavItem(Icons.contacts_outlined, 'Customers', '/customers'),
+        NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.inventory_2_outlined, 'Inventory', '/inventory'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),

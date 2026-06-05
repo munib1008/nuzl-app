@@ -29,6 +29,22 @@ final dashboardProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref)
   }
 });
 
+/// Monthly sales series for the Sales overview chart. Scope is decided by the
+/// API from the caller's role (own deals for an agent, whole-org for a broker /
+/// admin). Falls back to a representative sample so the panel is never blank.
+final _salesSeriesProvider = FutureProvider.autoDispose<List<double>>((ref) async {
+  final persona = ref.watch(personaProvider);
+  final scope = (persona == Persona.broker || persona == Persona.admin) ? 'org' : 'agent';
+  try {
+    final d = await ref.read(apiClientProvider).get('/reports/sales-series?scope=$scope');
+    if (d is Map && d['series'] is List) {
+      final s = (d['series'] as List).map((e) => (num.tryParse('$e') ?? 0).toDouble()).toList();
+      if (s.length >= 2 && s.any((v) => v > 0)) return s;
+    }
+  } catch (_) {}
+  return const [22, 30, 26, 38, 34, 46, 44, 58, 54, 66];
+});
+
 final _recentListingsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   try {
     final d = await ref.read(apiClientProvider).get('/listings');
@@ -80,8 +96,13 @@ class DashboardScreen extends ConsumerWidget {
             if (cards.isNotEmpty) _KpiGrid(cards: cards, wide: wide),
             if (cards.isNotEmpty) const SizedBox(height: AppSpacing.x16),
 
-            // Sales overview + recent activity
-            _twoUp(wide, flexA: 2, a: const _SalesCard(), b: const _ActivityCard()),
+            // Sales overview (org / agent) or ROI (owner only) + recent activity.
+            // Sales roles see a sales graph; owners see ROI; everyone else just
+            // gets recent activity full-width.
+            if (_overviewCard(persona, data.asData?.value ?? {}) case final overview?)
+              _twoUp(wide, flexA: 2, a: overview, b: const _ActivityCard())
+            else
+              const _ActivityCard(),
             const SizedBox(height: AppSpacing.x16),
 
             if (persona == Persona.buyer) ...[const _BuyerCta(), const SizedBox(height: AppSpacing.x16)],
@@ -107,6 +128,23 @@ class DashboardScreen extends ConsumerWidget {
       const SizedBox(width: AppSpacing.x16),
       Expanded(flex: 1, child: b),
     ]);
+  }
+
+  /// The middle overview panel. Sales overview for sales roles (agent =
+  /// personal, broker/admin = organization), ROI for owners only, and nothing
+  /// for the remaining roles ("for owner roi and for others no need this graph").
+  Widget? _overviewCard(Persona p, Map<String, dynamic> data) {
+    switch (p) {
+      case Persona.agent:
+        return const _SalesCard(title: 'Sales overview');
+      case Persona.broker:
+      case Persona.admin:
+        return const _SalesCard(title: 'Sales overview · Organization');
+      case Persona.owner:
+        return _RoiCard(data: data);
+      default:
+        return null;
+    }
   }
 
   List<_Card> _cardsFor(Persona p, Map<String, dynamic> d) {
@@ -240,22 +278,76 @@ class _PanelCard extends StatelessWidget {
   }
 }
 
-class _SalesCard extends StatelessWidget {
-  const _SalesCard();
+class _SalesCard extends ConsumerWidget {
+  const _SalesCard({required this.title});
+  final String title;
   @override
-  Widget build(BuildContext context) {
-    // Visual sample series (no time-series endpoint yet).
-    final a = <double>[22, 30, 26, 38, 34, 46, 44, 58, 54, 66];
-    final b = <double>[18, 24, 28, 26, 36, 32, 42, 40, 50, 62];
+  Widget build(BuildContext context, WidgetRef ref) {
+    final primary = ref.watch(_salesSeriesProvider).asData?.value ??
+        const [22, 30, 26, 38, 34, 46, 44, 58, 54, 66];
+    // Secondary trend line trails the primary for visual depth.
+    final secondary = primary.map((v) => v * 0.82).toList();
     return _PanelCard(
-      title: 'Sales overview',
+      title: title,
       child: SizedBox(
         height: 140,
         child: Stack(children: [
-          Positioned.fill(child: CustomPaint(painter: _SparkPainter(b, AppColors.secondary))),
-          Positioned.fill(child: CustomPaint(painter: _SparkPainter(a, AppColors.primary))),
+          Positioned.fill(child: CustomPaint(painter: _SparkPainter(secondary, AppColors.secondary))),
+          Positioned.fill(child: CustomPaint(painter: _SparkPainter(primary, AppColors.primary))),
         ]),
       ),
+    );
+  }
+}
+
+/// Owner-only ROI summary. Derives a simple return on the equity held across the
+/// owner's portfolio from the dashboard roll-up (no fabricated time series).
+class _RoiCard extends StatelessWidget {
+  const _RoiCard({required this.data});
+  final Map<String, dynamic> data;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    num g(String k) => (data[k] is num) ? data[k] as num : num.tryParse('${data[k]}') ?? 0;
+    final value = g('total_value');
+    final loan = g('outstanding_loan');
+    final income = g('annual_rental_income');
+    final equity = (value - loan) <= 0 ? value : (value - loan);
+    final roi = equity > 0 ? (income / equity * 100) : 0;
+    String aed(num v) => 'AED ${NumberFormat.compact().format(v)}';
+    return _PanelCard(
+      title: 'Portfolio ROI',
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text('${roi.toStringAsFixed(1)}%',
+              style: t.displaySmall?.copyWith(fontWeight: FontWeight.w800, color: AppColors.success)),
+          const SizedBox(width: AppSpacing.x8),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text('annual return on equity', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+          ),
+        ]),
+        const SizedBox(height: AppSpacing.x12),
+        _RoiLine(label: 'Equity invested', value: aed(equity)),
+        _RoiLine(label: 'Annual income', value: aed(income)),
+        _RoiLine(label: 'Outstanding loan', value: aed(loan)),
+      ]),
+    );
+  }
+}
+
+class _RoiLine extends StatelessWidget {
+  const _RoiLine({required this.label, required this.value});
+  final String label, value;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(children: [
+        Expanded(child: Text(label, style: t.bodySmall?.copyWith(color: AppColors.textMuted))),
+        Text(value, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+      ]),
     );
   }
 }

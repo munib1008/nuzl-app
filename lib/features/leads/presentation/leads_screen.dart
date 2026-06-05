@@ -31,11 +31,12 @@ class LeadsScreen extends ConsumerWidget {
           onRetry: () => ref.refresh(leadsProvider),
           data: (items) {
             if (items.isEmpty) {
-              return const EmptyState(
+              return EmptyState(
                 icon: Icons.people_outline,
                 title: 'No leads yet',
                 message: 'Capture a buyer requirement to start qualifying and matching.',
                 actionLabel: 'Add lead',
+                onAction: () => context.push('/leads/new'),
               );
             }
             return ListView.separated(

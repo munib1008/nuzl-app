@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/responsive.dart';
+import '../../../core/widgets/sticky_save_bar.dart';
 import '../../shell/app_shell.dart';
 import '../data/leads_repository.dart' show leadsProvider;
 
@@ -21,6 +22,10 @@ class _PostLeadScreenState extends ConsumerState<PostLeadScreen> {
   final propertyType = TextEditingController(text: 'Apartment');
   String buyerType = 'end_user';
   String purpose = 'sale';
+  // Lead lifecycle classification. A lead is captured as General and is promoted
+  // to Potential / Qualified as it is worked; it becomes a Customer automatically
+  // once the person signs up on Nuzl (handled server-side on registration).
+  String category = 'general';
   int? beds;
   bool saving = false;
   String? error;
@@ -41,6 +46,7 @@ class _PostLeadScreenState extends ConsumerState<PostLeadScreen> {
         'bedrooms_min': beds,
         'bedrooms_max': beds,
         'property_type': propertyType.text.trim(),
+        'lead_category': category,
       });
       ref.invalidate(leadsProvider);
       if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lead posted'))); context.go('/leads'); }
@@ -72,6 +78,17 @@ class _PostLeadScreenState extends ConsumerState<PostLeadScreen> {
                 DropdownMenuItem(value: 'investor', child: Text('Investor')),
               ],
               onChanged: (v) => setState(() => buyerType = v ?? 'end_user'),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            DropdownButtonFormField<String>(
+              initialValue: category,
+              decoration: const InputDecoration(labelText: 'Lead status', prefixIcon: Icon(Icons.flag_outlined)),
+              items: const [
+                DropdownMenuItem(value: 'general', child: Text('General')),
+                DropdownMenuItem(value: 'potential', child: Text('Potential')),
+                DropdownMenuItem(value: 'qualified', child: Text('Qualified')),
+              ],
+              onChanged: (v) => setState(() => category = v ?? 'general'),
             ),
             const SizedBox(height: AppSpacing.x12),
             DropdownButtonFormField<String>(
@@ -108,17 +125,11 @@ class _PostLeadScreenState extends ConsumerState<PostLeadScreen> {
             if (error != null) Padding(
               padding: const EdgeInsets.only(top: AppSpacing.x12),
               child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
-            const SizedBox(height: AppSpacing.x20),
-            FilledButton(
-              onPressed: saving ? null : _save,
-              child: saving
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Post lead'),
-            ),
-            const SizedBox(height: AppSpacing.x24),
+            const SizedBox(height: AppSpacing.x16),
           ],
         ),
       ),
+      bottomNavigationBar: StickySaveBar(saving: saving, label: 'Post lead', onPressed: _save),
     );
   }
 }

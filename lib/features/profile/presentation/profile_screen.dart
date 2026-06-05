@@ -7,6 +7,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/image_crop_dialog.dart';
 import '../../../core/widgets/multi_select_field.dart';
 import '../../../core/widgets/nuzl_logo.dart';
 import '../../auth/application/auth_controller.dart';
@@ -155,13 +156,19 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _pickAndUpload() async {
     try {
-      final file = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 800, imageQuality: 85);
+      // Pick at a modest resolution, then let the user crop/align to a square.
+      // Keeping the source small + the square output well under the server body
+      // limit avoids the "request entity too large" failures.
+      final file = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1200, imageQuality: 90);
       if (file == null) return;
-      final bytes = await file.readAsBytes();
+      final raw = await file.readAsBytes();
+      if (!mounted) return;
+      final cropped = await ImageCropDialog.show(context, raw);
+      if (cropped == null) return; // cancelled
       final res = await ref.read(apiClientProvider).post('/uploads', body: {
-        'filename': file.name,
-        'contentType': file.mimeType ?? 'image/jpeg',
-        'dataBase64': base64Encode(bytes),
+        'filename': 'avatar.png',
+        'contentType': 'image/png',
+        'dataBase64': base64Encode(cropped),
       });
       final url = (res is Map) ? '${res['url'] ?? ''}' : '';
       if (url.isNotEmpty) await _setAvatar(url);

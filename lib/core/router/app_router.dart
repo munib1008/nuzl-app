@@ -160,6 +160,11 @@ class _BottomNavShell extends StatelessWidget {
       return Scaffold(body: Row(children: [const NuzlSidebar(), Expanded(child: child)]));
     }
     if (w >= 600) return child;
-    return Scaffold(extendBody: true, body: child, bottomNavigationBar: const NuzlBottomNav());
+    // NB: extendBody must stay false. The bottom nav is opaque, and each screen
+    // carries its own Scaffold + FloatingActionButton. With extendBody:true the
+    // child body extends behind the nav, so those FABs (e.g. Feed "New post",
+    // "New listing") float at the very bottom of the screen — hidden behind the
+    // nav bar. Keeping the body above the nav lets each screen's FAB sit above it.
+    return Scaffold(body: child, bottomNavigationBar: const NuzlBottomNav());
   }
 }

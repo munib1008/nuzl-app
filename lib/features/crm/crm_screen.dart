@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
@@ -38,6 +39,11 @@ final _statusFilter = StateProvider.autoDispose<String>((ref) => 'all');
 
 const _statuses = ['new', 'contacted', 'qualified', 'viewing_scheduled', 'negotiating', 'converted', 'lost'];
 
+/// Lightweight lead lifecycle classification, independent of the deal-pipeline
+/// stage above. A lead is General → Potential → Qualified, then becomes a
+/// Customer automatically once the contact signs up on Nuzl.
+const _categories = ['general', 'potential', 'qualified'];
+
 BadgeTone _tone(String s) => switch (s) {
       'qualified' || 'converted' => BadgeTone.success,
       'lost' => BadgeTone.danger,
@@ -64,6 +70,11 @@ class CrmScreen extends ConsumerWidget {
     return Scaffold(
       appBar: const NuzlAppBar(title: 'CRM'),
       drawer: const NuzlDrawer(),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/leads/new'),
+        icon: const Icon(Icons.person_add_alt),
+        label: const Text('New lead'),
+      ),
       body: ResponsiveCenter(
         child: leads.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
@@ -99,6 +110,7 @@ class CrmScreen extends ConsumerWidget {
                               child: ListTile(
                                 title: Text('${m['buyer_name'] ?? 'Unnamed buyer'}'),
                                 subtitle: Text([
+                                  _humanize('${m['lead_category'] ?? 'general'}'),
                                   if (m['community'] != null) '${m['community']}',
                                   if (owner.isNotEmpty) 'Owner: $owner',
                                 ].join('  ·  ')),
@@ -169,6 +181,16 @@ class CrmScreen extends ConsumerWidget {
                 ]),
                 const SizedBox(height: AppSpacing.x20),
 
+                Text('Lead status', style: Theme.of(ctx).textTheme.titleSmall),
+                const SizedBox(height: AppSpacing.x8),
+                DropdownButtonFormField<String>(
+                  initialValue: _categories.contains('${lead['lead_category']}') ? '${lead['lead_category']}' : 'general',
+                  decoration: const InputDecoration(labelText: 'Classification'),
+                  items: _categories.map((s) => DropdownMenuItem(value: s, child: Text(_humanize(s)))).toList(),
+                  onChanged: (v) { if (v != null) _setCategory(ctx, r, id, v); },
+                ),
+                const SizedBox(height: AppSpacing.x16),
+
                 Text('Set stage', style: Theme.of(ctx).textTheme.titleSmall),
                 const SizedBox(height: AppSpacing.x8),
                 DropdownButtonFormField<String>(
@@ -217,6 +239,18 @@ class CrmScreen extends ConsumerWidget {
       ref.invalidate(crmLeadsProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lead marked ${_humanize(status)}')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _setCategory(BuildContext context, WidgetRef ref, String id, String category) async {
+    try {
+      await ref.read(apiClientProvider).patch('/buyer-requirements/$id/category', body: {'lead_category': category});
+      ref.invalidate(crmLeadsProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lead marked ${_humanize(category)}')));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
