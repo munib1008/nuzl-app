@@ -224,13 +224,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Widget _nav({VoidCallback? onBack, VoidCallback? onNext, String nextLabel = 'Continue'}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        onBack != null ? OutlinedButton(onPressed: onBack, child: const Text('Back')) : const SizedBox.shrink(),
-        FilledButton(onPressed: onNext, child: Text(nextLabel)),
-      ],
+    final next = FilledButton(
+      onPressed: onNext,
+      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+      child: Text(nextLabel),
     );
+    // Full-width primary action so "Continue" / "Complete setup" is unmissable.
+    if (onBack == null) return SizedBox(width: double.infinity, child: next);
+    return Row(children: [
+      Expanded(
+        child: OutlinedButton(
+          onPressed: onBack,
+          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+          child: const Text('Back'),
+        ),
+      ),
+      const SizedBox(width: AppSpacing.x12),
+      Expanded(child: next),
+    ]);
   }
 }
 
