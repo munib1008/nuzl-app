@@ -200,19 +200,19 @@ class _QuickActions extends StatelessWidget {
   Widget build(BuildContext context) {
     final actions = switch (persona) {
       Persona.leadGenerator => [
-        ('Post new lead', Icons.add_circle_outline, '/soon/Post Lead'),
+        ('Post new lead', Icons.add_circle_outline, '/leads/new'),
         ('Browse marketplace', Icons.storefront_outlined, '/feed'),
-        ('Find partners', Icons.people_outline, '/soon/Network'),
+        ('Find partners', Icons.people_outline, '/network'),
       ],
       Persona.developer => [
-        ('New project', Icons.domain_add_outlined, '/soon/Projects'),
-        ('Manage inventory', Icons.inventory_2_outlined, '/soon/Inventory'),
+        ('New project', Icons.domain_add_outlined, '/projects'),
+        ('Manage inventory', Icons.inventory_2_outlined, '/inventory'),
         ('View feed', Icons.dynamic_feed_outlined, '/feed'),
       ],
       Persona.investor || Persona.owner => [
         ('Mortgage calculator', Icons.calculate_outlined, '/calculator'),
         ('Track mortgages', Icons.account_balance_outlined, '/mortgages'),
-        ('My properties', Icons.home_work_outlined, '/soon/My Properties'),
+        ('My properties', Icons.home_work_outlined, '/my-properties'),
       ],
       Persona.buyer => [
         ('Browse properties', Icons.storefront_outlined, '/properties'),
@@ -274,7 +274,7 @@ List<(String, IconData, String)> _toolsFor(Persona p) => switch (p) {
           ('Viewings', Icons.event_available_outlined, '/viewings'),
           ('Mortgage calculator', Icons.calculate_outlined, '/calculator'),
           ('Documents', Icons.folder_outlined, '/documents'),
-          ('Commission tracker', Icons.payments_outlined, '/soon/Commission'),
+          ('Commission tracker', Icons.payments_outlined, '/reports'),
         ],
       Persona.leadGenerator => [
           ('Lead matcher', Icons.auto_awesome_outlined, '/lead-matches'),

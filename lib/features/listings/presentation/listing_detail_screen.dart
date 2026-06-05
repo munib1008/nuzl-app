@@ -23,6 +23,25 @@ final _agentProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, S
   }
 });
 
+/// The current user's active viewing request for this listing (if any), so the
+/// "Request viewing" button reflects the booking until the agent rejects it.
+final _myViewingProvider = FutureProvider.autoDispose.family<Map<String, dynamic>?, String>((ref, listingId) async {
+  try {
+    final myId = ref.read(authControllerProvider).user?.id;
+    final d = await ref.read(apiClientProvider).get('/viewings');
+    if (d is List && myId != null) {
+      for (final e in d) {
+        final m = Map<String, dynamic>.from(e);
+        final active = !['cancelled', 'completed'].contains('${m['status']}');
+        if ('${m['listing_id']}' == listingId && '${m['requested_by']}' == myId && active) return m;
+      }
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+});
+
 class ListingDetailScreen extends ConsumerWidget {
   const ListingDetailScreen({super.key, required this.id});
   final String id;
@@ -228,7 +247,7 @@ class _AgentCard extends ConsumerWidget {
   final String brokerId;
   final String listingId;
 
-  Future<void> _requestViewing(BuildContext context, WidgetRef ref) async {
+  Future<DateTime?> _pickDateTime(BuildContext context) async {
     final now = DateTime.now();
     final date = await showDatePicker(
       context: context,
@@ -237,22 +256,45 @@ class _AgentCard extends ConsumerWidget {
       lastDate: now.add(const Duration(days: 90)),
       helpText: 'Preferred viewing date',
     );
-    if (date == null || !context.mounted) return;
+    if (date == null || !context.mounted) return null;
     final time = await showTimePicker(
       context: context,
       initialTime: const TimeOfDay(hour: 11, minute: 0),
       helpText: 'Preferred time',
     );
-    if (time == null || !context.mounted) return;
-    final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    if (time == null) return null;
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
+
+  Future<void> _requestViewing(BuildContext context, WidgetRef ref) async {
+    final dt = await _pickDateTime(context);
+    if (dt == null || !context.mounted) return;
     try {
       await ref.read(apiClientProvider).post('/viewings', body: {
         'listing_id': listingId,
         'scheduled_at': dt.toIso8601String(),
       });
+      ref.invalidate(_myViewingProvider(listingId));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Viewing requested — the agent will confirm your slot.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _reschedule(BuildContext context, WidgetRef ref, String viewingId) async {
+    final dt = await _pickDateTime(context);
+    if (dt == null || !context.mounted) return;
+    try {
+      await ref.read(apiClientProvider).patch('/viewings/$viewingId/reschedule', body: {
+        'scheduled_at': dt.toIso8601String(),
+      });
+      ref.invalidate(_myViewingProvider(listingId));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('New time proposed — the agent will confirm.')));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
@@ -291,17 +333,75 @@ class _AgentCard extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.x12),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () => _requestViewing(context, ref),
-                icon: const Icon(Icons.event_available_outlined),
-                label: const Text('Request viewing'),
+            ref.watch(_myViewingProvider(listingId)).maybeWhen(
+              data: (v) => v == null
+                  ? SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => _requestViewing(context, ref),
+                        icon: const Icon(Icons.event_available_outlined),
+                        label: const Text('Request viewing'),
+                      ),
+                    )
+                  : _BookingBox(v: v, onChange: () => _reschedule(context, ref, '${v['id']}')),
+              orElse: () => SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: null,
+                  icon: const Icon(Icons.event_available_outlined),
+                  label: const Text('Request viewing'),
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Shows the customer's pending booking (date/time + status) on the listing,
+/// with a "change" action — until the agent rejects, when it reverts to the button.
+class _BookingBox extends StatelessWidget {
+  const _BookingBox({required this.v, required this.onChange});
+  final Map<String, dynamic> v;
+  final VoidCallback onChange;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final sched = DateTime.tryParse('${v['scheduled_at']}');
+    final status = '${v['status']}';
+    final when = sched != null ? DateFormat('EEE d MMM · HH:mm').format(sched) : 'time to be confirmed';
+    final label = switch (status) {
+      'scheduled' => 'confirmed',
+      'approved' => 'approved',
+      _ => 'requested',
+    };
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.x12),
+      decoration: BoxDecoration(color: AppColors.primaryTint, borderRadius: BorderRadius.circular(AppSpacing.rCard)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.event_available_outlined, size: 18, color: AppColors.primary),
+          const SizedBox(width: AppSpacing.x8),
+          Expanded(child: Text('Viewing $label', style: t.titleSmall?.copyWith(color: AppColors.primaryDark))),
+        ]),
+        const SizedBox(height: 2),
+        Text(when, style: t.bodyMedium?.copyWith(color: AppColors.primaryDark, fontWeight: FontWeight.w600)),
+        if (status != 'scheduled') ...[
+          const SizedBox(height: AppSpacing.x8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: OutlinedButton.icon(
+              onPressed: onChange,
+              icon: const Icon(Icons.edit_calendar_outlined, size: 16),
+              label: const Text('Change date / time'),
+            ),
+          ),
+        ],
+      ]),
     );
   }
 }

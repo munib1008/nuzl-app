@@ -135,6 +135,11 @@ class _ViewingCard extends ConsumerWidget {
     if (status == 'scheduled') {
       buttons.add(FilledButton(onPressed: () => _outcome(context, ref), child: const Text('Record outcome')));
     }
+    buttons.add(TextButton(
+      onPressed: () => _reject(context, ref),
+      style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+      child: const Text('Reject'),
+    ));
     if (buttons.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: AppSpacing.x12),
@@ -156,6 +161,9 @@ class _ViewingCard extends ConsumerWidget {
 
   Future<void> _approve(BuildContext context, WidgetRef ref) =>
       _patch(context, ref, '/viewings/$_id/approve', toast: 'Approved');
+
+  Future<void> _reject(BuildContext context, WidgetRef ref) =>
+      _patch(context, ref, '/viewings/$_id/cancel', toast: 'Viewing declined');
 
   Future<void> _schedule(BuildContext context, WidgetRef ref) async {
     final now = DateTime.now();
