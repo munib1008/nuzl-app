@@ -195,20 +195,30 @@ class NuzlDrawer extends ConsumerWidget {
           const SizedBox(height: AppSpacing.x8),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x8),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4),
               children: items.map((it) {
                 final selected = it.route == '/dashboard'
                     ? location == '/dashboard'
                     : location.startsWith(it.route);
-                return ListTile(
-                  leading: Icon(it.icon, color: selected ? AppColors.primary : null),
-                  title: Text(it.label, style: TextStyle(
-                      color: selected ? AppColors.primary : null,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400)),
-                  selected: selected,
-                  selectedTileColor: AppColors.primaryTint,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.rMd)),
-                  onTap: () { Navigator.pop(context); context.go(it.route); },
+                final dark = Theme.of(context).brightness == Brightness.dark;
+                final accent = dark ? AppColors.dPrimary : AppColors.primary;
+                final tint = dark ? AppColors.dPrimaryTint : AppColors.primaryTint;
+                final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+                final onSurface = dark ? AppColors.dText : AppColors.text;
+                // Enterprise: subtle tint + 3px left accent border; monochrome icons except active.
+                return DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: selected ? tint : null,
+                    border: Border(left: BorderSide(color: selected ? accent : Colors.transparent, width: 3)),
+                  ),
+                  child: ListTile(
+                    dense: true,
+                    leading: Icon(it.icon, size: 20, color: selected ? accent : muted),
+                    title: Text(it.label, style: TextStyle(
+                        color: selected ? onSurface : muted,
+                        fontWeight: selected ? FontWeight.w600 : FontWeight.w500)),
+                    onTap: () { Navigator.pop(context); context.go(it.route); },
+                  ),
                 );
               }).toList(),
             ),

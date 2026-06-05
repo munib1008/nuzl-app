@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:figma_squircle/figma_squircle.dart';
 import 'app_colors.dart';
 import 'app_spacing.dart';
 import 'app_typography.dart';
 
-/// Builds light + dark ThemeData from NUZL tokens — Apple-inspired:
-/// squircle cards/buttons, hairline separators, soft depth, gentle motion.
+/// Builds light + dark ThemeData from NUZL DS 3.0 tokens — enterprise SaaS:
+/// flat cards (thin border, no shadow), 8px radius, Inter, gentle motion.
 class AppTheme {
   static ThemeData light() => _build(Brightness.light);
   static ThemeData dark() => _build(Brightness.dark);
@@ -22,13 +21,13 @@ class AppTheme {
     final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
     final tt = AppTypography.textTheme(text, muted);
 
-    // Smooth continuous corners — cards 16, buttons 14. Soft elevation only.
-    final cardShape = SmoothRectangleBorder(
+    // Enterprise: flat cards (thin border, no shadow), 8px radius, no pills.
+    final cardShape = RoundedRectangleBorder(
       side: BorderSide(color: border),
-      borderRadius: SmoothBorderRadius(cornerRadius: 16, cornerSmoothing: 0.6),
+      borderRadius: BorderRadius.circular(8),
     );
-    final buttonShape = SmoothRectangleBorder(
-      borderRadius: SmoothBorderRadius(cornerRadius: 14, cornerSmoothing: 0.6),
+    final buttonShape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(8),
     );
     const motion = Duration(milliseconds: 250);
 
@@ -70,15 +69,15 @@ class AppTheme {
         fillColor: card,
         contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x12),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.rCard),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.rCard),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.rCard),
+          borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: primary, width: 2),
         ),
         hintStyle: TextStyle(color: muted),

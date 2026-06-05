@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/theme_mode_provider.dart';
 import '../../core/widgets/fade_in.dart';
+import '../../core/widgets/gradient_button.dart';
 import '../../core/widgets/nuzl_logo.dart';
 import '../mortgage/presentation/calculator_screen.dart';
 
@@ -131,11 +132,10 @@ class _Hero extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.x24),
             Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x12, children: [
-              FilledButton(
+              GradientButton(
                 onPressed: () => context.go('/register'),
-                style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
-                child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16), child: Text('Get started')),
+                label: 'Get started',
+                icon: Icons.arrow_forward,
               ),
               OutlinedButton(
                 onPressed: () => context.go('/login'),
