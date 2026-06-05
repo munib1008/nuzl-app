@@ -75,11 +75,21 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
     if (picked == null) return;
     final bytes = await picked.readAsBytes();
     setState(() { imageBytes = bytes; imageName = picked.name; uploading = true; });
-    final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
-    setState(() { coverUrl = url; uploading = false; });
-    if (url == null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Image upload not configured on the server — listing will save without a photo.')));
+    try {
+      final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
+      setState(() { coverUrl = url; uploading = false; });
+      if (url == null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Server returned no image URL — listing will save without a photo.')));
+      }
+    } catch (e) {
+      // Keep the local preview, but the listing will save without a stored photo.
+      // Surface the real reason (e.g. uploads not configured / image too large).
+      setState(() { coverUrl = null; uploading = false; });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Photo not uploaded: $e\nThe listing will save without a photo.')));
+      }
     }
   }
 
