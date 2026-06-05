@@ -15,6 +15,7 @@ class _S extends ConsumerState<ForgotPasswordScreen> {
   final _email = TextEditingController();
   bool _sending = false;
   bool _sent = false;
+  String? _devToken; // present only when AUTH_RESET_DEBUG=true (no email configured)
 
   @override
   void dispose() { _email.dispose(); super.dispose(); }
@@ -22,8 +23,9 @@ class _S extends ConsumerState<ForgotPasswordScreen> {
   Future<void> _submit() async {
     setState(() => _sending = true);
     try {
-      await ref.read(authRepositoryProvider).forgotPassword(_email.text.trim());
-      if (mounted) setState(() => _sent = true);
+      final res = await ref.read(authRepositoryProvider).forgotPassword(_email.text.trim());
+      final dt = '${res['devToken'] ?? ''}';
+      if (mounted) setState(() { _sent = true; if (dt.isNotEmpty) _devToken = dt; });
     } catch (_) {
       if (mounted) setState(() => _sent = true); // never reveal whether the email exists
     } finally {
@@ -51,6 +53,13 @@ class _S extends ConsumerState<ForgotPasswordScreen> {
                 Text('If an account exists for that address, we sent a link to reset your password. It expires in 1 hour.',
                     style: t.bodyMedium?.copyWith(color: Theme.of(context).hintColor), textAlign: TextAlign.center),
                 const SizedBox(height: AppSpacing.x24),
+                if (_devToken != null) ...[
+                  FilledButton(
+                    onPressed: () => context.go('/reset?token=$_devToken'),
+                    child: const Text('Set new password now'),
+                  ),
+                  const SizedBox(height: AppSpacing.x8),
+                ],
                 TextButton(onPressed: () => context.go('/login'), child: const Text('Back to sign in')),
               ] else ...[
                 Text('Reset your password', style: t.headlineSmall, textAlign: TextAlign.center),

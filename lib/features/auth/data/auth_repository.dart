@@ -37,8 +37,9 @@ class AuthRepository {
     return AppUser.fromJson(Map<String, dynamic>.from(data));
   }
 
-  Future<void> forgotPassword(String email) async {
-    await _api.post(Api.forgotPassword, body: {'email': email});
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    final d = await _api.post(Api.forgotPassword, body: {'email': email});
+    return d is Map ? Map<String, dynamic>.from(d) : <String, dynamic>{};
   }
 
   Future<void> resetPassword(String token, String password) async {
