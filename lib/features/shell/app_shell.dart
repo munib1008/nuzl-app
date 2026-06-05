@@ -41,15 +41,18 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
       elevation: 0,
       scrolledUnderElevation: 0,
       shape: Border(bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5)),
-      leading: Builder(
-        builder: (ctx) => IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () => Scaffold.of(ctx).openDrawer(),
-        ),
-      ),
+      automaticallyImplyLeading: false,
+      leading: MediaQuery.sizeOf(context).width >= 1000
+          ? null
+          : Builder(
+              builder: (ctx) => IconButton(
+                icon: const Icon(Icons.menu),
+                onPressed: () => Scaffold.of(ctx).openDrawer(),
+              ),
+            ),
       title: title != null
           ? Text(title!)
-          : const NuzlLogo(size: 28),
+          : (MediaQuery.sizeOf(context).width >= 1000 ? const SizedBox.shrink() : const NuzlLogo(size: 28)),
       actions: [
         ...?actions,
         IconButton(
@@ -161,9 +164,11 @@ class NuzlBottomNav extends ConsumerWidget {
   }
 }
 
-/// Role-based navigation drawer (menu varies by persona) + profile footer.
-class NuzlDrawer extends ConsumerWidget {
-  const NuzlDrawer({super.key});
+/// Shared sidebar content (logo + role badge + nav + profile). Used by both the
+/// mobile Drawer and the persistent desktop sidebar.
+class NuzlSidebarBody extends ConsumerWidget {
+  const NuzlSidebarBody({super.key, this.inDrawer = true});
+  final bool inDrawer;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -171,66 +176,90 @@ class NuzlDrawer extends ConsumerWidget {
     final items = navItemsFor(persona);
     final location = GoRouterState.of(context).matchedLocation;
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final accent = dark ? AppColors.dPrimary : AppColors.primary;
+    final tint = dark ? AppColors.dPrimaryTint : AppColors.primaryTint;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final onSurface = dark ? AppColors.dText : AppColors.text;
 
-    return Drawer(
-      child: SafeArea(
-        child: Column(children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(AppSpacing.x20, AppSpacing.x20, AppSpacing.x20, AppSpacing.x8),
-            child: Align(alignment: Alignment.centerLeft, child: NuzlLogo(size: 34)),
+    void go(String route) {
+      if (inDrawer) Navigator.pop(context);
+      context.go(route);
+    }
+
+    return SafeArea(
+      child: Column(children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(AppSpacing.x20, AppSpacing.x20, AppSpacing.x20, AppSpacing.x8),
+          child: Align(alignment: Alignment.centerLeft, child: NuzlLogo(size: 30)),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x20),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x12, vertical: 4),
+              decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+              child: Text(persona.label, style: t.bodySmall?.copyWith(color: accent, fontWeight: FontWeight.w600)),
+            ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x20),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x12, vertical: 4),
+        ),
+        const SizedBox(height: AppSpacing.x8),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4),
+            children: items.map((it) {
+              final selected = it.route == '/dashboard'
+                  ? location == '/dashboard'
+                  : location.startsWith(it.route);
+              // Enterprise: subtle tint + 3px left accent border; monochrome icons except active.
+              return DecoratedBox(
                 decoration: BoxDecoration(
-                  color: AppColors.primaryTint, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                child: Text(persona.label, style: t.bodySmall?.copyWith(
-                    color: AppColors.primaryDark, fontWeight: FontWeight.w600)),
-              ),
-            ),
+                  color: selected ? tint : null,
+                  border: Border(left: BorderSide(color: selected ? accent : Colors.transparent, width: 3)),
+                ),
+                child: ListTile(
+                  dense: true,
+                  leading: Icon(it.icon, size: 20, color: selected ? accent : muted),
+                  title: Text(it.label, style: TextStyle(
+                      color: selected ? onSurface : muted,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500)),
+                  onTap: () => go(it.route),
+                ),
+              );
+            }).toList(),
           ),
-          const SizedBox(height: AppSpacing.x8),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4),
-              children: items.map((it) {
-                final selected = it.route == '/dashboard'
-                    ? location == '/dashboard'
-                    : location.startsWith(it.route);
-                final dark = Theme.of(context).brightness == Brightness.dark;
-                final accent = dark ? AppColors.dPrimary : AppColors.primary;
-                final tint = dark ? AppColors.dPrimaryTint : AppColors.primaryTint;
-                final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
-                final onSurface = dark ? AppColors.dText : AppColors.text;
-                // Enterprise: subtle tint + 3px left accent border; monochrome icons except active.
-                return DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: selected ? tint : null,
-                    border: Border(left: BorderSide(color: selected ? accent : Colors.transparent, width: 3)),
-                  ),
-                  child: ListTile(
-                    dense: true,
-                    leading: Icon(it.icon, size: 20, color: selected ? accent : muted),
-                    title: Text(it.label, style: TextStyle(
-                        color: selected ? onSurface : muted,
-                        fontWeight: selected ? FontWeight.w600 : FontWeight.w500)),
-                    onTap: () { Navigator.pop(context); context.go(it.route); },
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          const Divider(height: 1),
-          ListTile(
-            leading: const Icon(Icons.person_outline),
-            title: const Text('Profile & settings'),
-            onTap: () { Navigator.pop(context); context.go('/profile'); },
-          ),
-        ]),
+        ),
+        const Divider(height: 1),
+        ListTile(
+          leading: const Icon(Icons.person_outline),
+          title: const Text('Profile & settings'),
+          onTap: () => go('/profile'),
+        ),
+      ]),
+    );
+  }
+}
+
+/// Mobile drawer wrapper.
+class NuzlDrawer extends StatelessWidget {
+  const NuzlDrawer({super.key});
+  @override
+  Widget build(BuildContext context) => const Drawer(child: NuzlSidebarBody(inDrawer: true));
+}
+
+/// Persistent sidebar for wide (desktop/tablet) layouts.
+class NuzlSidebar extends StatelessWidget {
+  const NuzlSidebar({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 248,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(right: BorderSide(color: Theme.of(context).dividerColor, width: 0.5)),
       ),
+      child: const NuzlSidebarBody(inDrawer: false),
     );
   }
 }

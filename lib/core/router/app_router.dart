@@ -154,8 +154,12 @@ class _BottomNavShell extends StatelessWidget {
   final Widget child;
   @override
   Widget build(BuildContext context) {
-    final narrow = MediaQuery.sizeOf(context).width < 600;
-    if (!narrow) return child;
+    final w = MediaQuery.sizeOf(context).width;
+    // Wide: persistent sidebar + content. Medium: drawer only. Narrow: bottom nav.
+    if (w >= 1000) {
+      return Scaffold(body: Row(children: [const NuzlSidebar(), Expanded(child: child)]));
+    }
+    if (w >= 600) return child;
     return Scaffold(extendBody: true, body: child, bottomNavigationBar: const NuzlBottomNav());
   }
 }
