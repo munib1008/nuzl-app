@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../saved/saved_searches.dart';
 import '../../shell/app_shell.dart';
 
 final listingsRawProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
@@ -42,7 +43,15 @@ class ListingsScreen extends ConsumerWidget {
     final myId = ref.watch(authControllerProvider).user?.id;
 
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Properties'),
+      appBar: NuzlAppBar(title: 'Properties', actions: [
+        SaveSearchAction(filters: {
+          if (purpose != 'all') 'purpose': purpose,
+          if (type != 'all') 'property_type': type,
+          if (beds != null) 'min_bedrooms': beds,
+          if (priceMax != null) 'max_price': priceMax,
+        }),
+        const SavedSearchAlertsBell(),
+      ]),
       drawer: const NuzlDrawer(),
       floatingActionButton: canList
           ? FloatingActionButton.extended(

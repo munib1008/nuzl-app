@@ -56,7 +56,13 @@ class SavedScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final saved = ref.watch(savedListingsProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Saved'),
+      appBar: NuzlAppBar(title: 'Saved', actions: [
+        IconButton(
+          tooltip: 'Saved searches',
+          icon: const Icon(Icons.saved_search),
+          onPressed: () => context.push('/saved-searches'),
+        ),
+      ]),
       drawer: const NuzlDrawer(),
       body: RefreshIndicator(
         onRefresh: () async {

@@ -156,6 +156,8 @@ class _Detail extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.x4),
                         Text('${l['description']}', style: t.bodyMedium),
                       ],
+                      _AmenitiesBlock(l: l),
+                      _VerificationBlock(l: l),
                       const SizedBox(height: AppSpacing.x20),
                       if (brokerId.isNotEmpty) _AgentCard(brokerId: brokerId, listingId: id),
                       const SizedBox(height: AppSpacing.x20),
@@ -426,6 +428,125 @@ class _MapPlaceholder extends StatelessWidget {
             Text('Map view coming soon', style: TextStyle(color: AppColors.textSubtle)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Amenities chips (from the listing's `amenities` array). Hidden when empty.
+class _AmenitiesBlock extends StatelessWidget {
+  const _AmenitiesBlock({required this.l});
+  final Map<String, dynamic> l;
+
+  @override
+  Widget build(BuildContext context) {
+    final raw = l['amenities'];
+    final items = raw is List
+        ? raw.map((e) {
+            final m = e is Map ? e : const {};
+            return '${m['label'] ?? m['code'] ?? ''}';
+          }).where((s) => s.isNotEmpty).toList()
+        : <String>[];
+    if (items.isEmpty) return const SizedBox.shrink();
+    final t = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.x16),
+        Text('Amenities', style: t.titleMedium),
+        const SizedBox(height: AppSpacing.x8),
+        Wrap(
+          spacing: AppSpacing.x8,
+          runSpacing: AppSpacing.x8,
+          children: items
+              .map((a) => Chip(label: Text(a), visualDensity: VisualDensity.compact))
+              .toList(),
+        ),
+      ],
+    );
+  }
+}
+
+/// Verification & compliance: verified badge, permit / RERA numbers, quality meter.
+/// Hidden entirely when there's nothing to show.
+class _VerificationBlock extends StatelessWidget {
+  const _VerificationBlock({required this.l});
+  final Map<String, dynamic> l;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final permit = '${l['permit_number'] ?? ''}'.trim();
+    final rera = '${l['rera_number'] ?? ''}'.trim();
+    final quality = int.tryParse('${l['quality_score'] ?? 0}') ?? 0;
+    final verified = '${l['availability_status']}' == 'verified';
+    if (permit.isEmpty && rera.isEmpty && quality <= 0 && !verified) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.x16),
+        Text('Verification & compliance', style: t.titleMedium),
+        const SizedBox(height: AppSpacing.x8),
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.x12),
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(AppSpacing.rCard),
+            border: Border.all(color: Theme.of(context).dividerColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (verified) ...[
+                Row(children: [
+                  const Icon(Icons.verified, size: 18, color: AppColors.success),
+                  const SizedBox(width: 6),
+                  Text('Verified listing',
+                      style: t.bodyMedium?.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
+                ]),
+                const SizedBox(height: AppSpacing.x8),
+              ],
+              if (permit.isNotEmpty) _kv(context, 'Permit no.', permit),
+              if (rera.isNotEmpty) _kv(context, 'RERA no.', rera),
+              if (quality > 0) ...[
+                const SizedBox(height: AppSpacing.x8),
+                Row(children: [
+                  Text('Listing quality', style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                  const Spacer(),
+                  Text('$quality/100', style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                ]),
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: quality / 100,
+                    minHeight: 8,
+                    backgroundColor: AppColors.surface,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _kv(BuildContext c, String k, String v) {
+    final t = Theme.of(c).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(k, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+          Flexible(
+            child: Text(v,
+                style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                textAlign: TextAlign.right)),
+        ],
       ),
     );
   }

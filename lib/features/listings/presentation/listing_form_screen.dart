@@ -10,7 +10,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/sticky_save_bar.dart';
 import '../../shell/app_shell.dart';
-import '../data/listings_repository.dart' show listingsProvider;
+import '../data/listings_repository.dart' show listingsProvider, amenitiesProvider;
 
 class ListingFormScreen extends ConsumerStatefulWidget {
   const ListingFormScreen({super.key, this.editId, this.initial});
@@ -35,6 +35,8 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   final ownerName = TextEditingController();
   final ownerPhone = TextEditingController();
   final description = TextEditingController();
+  final permit = TextEditingController();
+  final Set<int> selectedAmenities = {};
 
   Uint8List? imageBytes;
   String? imageName;
@@ -59,15 +61,24 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       size.text = m['size_sqft'] != null ? '${m['size_sqft']}' : '';
       unitNo.text = '${m['unit_no'] ?? ''}';
       description.text = '${m['description'] ?? ''}';
+      permit.text = '${m['permit_number'] ?? ''}';
       final cov = '${m['cover_image'] ?? ''}';
       if (cov.isNotEmpty) coverUrl = cov;
+      final am = m['amenities'];
+      if (am is List) {
+        for (final e in am) {
+          final id = e is Map ? e['id'] : null;
+          final n = id is int ? id : int.tryParse('$id');
+          if (n != null) selectedAmenities.add(n);
+        }
+      }
     }
   }
 
   @override
   void dispose() {
     price.dispose(); beds.dispose(); baths.dispose(); size.dispose(); unitNo.dispose();
-    ownerName.dispose(); ownerPhone.dispose(); description.dispose(); super.dispose();
+    ownerName.dispose(); ownerPhone.dispose(); description.dispose(); permit.dispose(); super.dispose();
   }
 
   Future<void> _pickImage() async {
@@ -105,6 +116,8 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       'bathrooms': int.tryParse(baths.text),
       'size_sqft': double.tryParse(size.text),
       'description': description.text.trim(),
+      'amenities': selectedAmenities.toList(),
+      if (permit.text.trim().isNotEmpty) 'permit_number': permit.text.trim(),
       if (coverUrl != null) 'cover_image': coverUrl,
       if (coverUrl != null) 'images': [coverUrl],
     };
@@ -211,6 +224,42 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
             ],
             const SizedBox(height: AppSpacing.x12),
             TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'Description')),
+            const SizedBox(height: AppSpacing.x12),
+            TextField(
+              controller: permit,
+              decoration: const InputDecoration(
+                labelText: 'Permit number (Trakheesi / RERA)',
+                helperText: 'Required to publish a live listing',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x16),
+            Text('Amenities', style: t.titleSmall),
+            const SizedBox(height: AppSpacing.x8),
+            ref.watch(amenitiesProvider).maybeWhen(
+              data: (list) => list.isEmpty
+                  ? Text('No amenities available', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  : Wrap(
+                      spacing: AppSpacing.x8,
+                      runSpacing: AppSpacing.x8,
+                      children: list.map((e) {
+                        final m = Map<String, dynamic>.from(e);
+                        final id = m['id'] is int ? m['id'] as int : int.tryParse('${m['id']}') ?? -1;
+                        final label = '${m['label'] ?? m['code'] ?? ''}';
+                        return FilterChip(
+                          label: Text(label),
+                          selected: selectedAmenities.contains(id),
+                          onSelected: (v) => setState(() {
+                            if (v) {
+                              selectedAmenities.add(id);
+                            } else {
+                              selectedAmenities.remove(id);
+                            }
+                          }),
+                        );
+                      }).toList(),
+                    ),
+              orElse: () => const SizedBox.shrink(),
+            ),
             if (error != null) Padding(
               padding: const EdgeInsets.only(top: AppSpacing.x12),
               child: Text(error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
