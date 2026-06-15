@@ -15,6 +15,13 @@ import '../../../core/widgets/sticky_save_bar.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../shell/app_shell.dart';
 
+/// Humanise a Nuzler designation slug for display (e.g. property_mgmt → Property Mgmt).
+String _designationLabel(String slug) => slug
+    .replaceAll('_', ' ')
+    .split(' ')
+    .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+    .join(' ');
+
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
   @override
@@ -343,6 +350,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                       child: Text(personaFromRole(user?.activeRole ?? user?.role).label),
                     ),
+                    if ((user?.designation ?? '').trim().isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.x12),
+                      InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Nuzler designation',
+                          prefixIcon: Icon(Icons.workspace_premium_outlined),
+                        ),
+                        child: Text(_designationLabel('${user!.designation}')),
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.x12),
                     TextField(controller: company, onChanged: (_) => _markDirty(),
                         decoration: const InputDecoration(labelText: 'Company name', hintText: 'Your company or brokerage', prefixIcon: Icon(Icons.business_outlined))),
