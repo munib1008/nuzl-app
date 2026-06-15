@@ -35,10 +35,10 @@ flutter:
 
 flutter_launcher_icons:
   image_path: "assets/icon/nuzl_icon.png"
-  android: true
-  ios: true
+  android: false # no native android/ folder (web-only build); flip to true after `flutter create`
+  ios: false
   remove_alpha_ios: true
   web:
     generate: true
-    background_color: "#0F172A"
-    theme_color: "#0F6B5B"
+    background_color: "#172B36"
+    theme_color: "#172B36"

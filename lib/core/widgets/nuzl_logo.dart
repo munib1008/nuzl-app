@@ -27,7 +27,7 @@ class NuzlLogo extends StatelessWidget {
             'nuzl',
             style: GoogleFonts.poppins(
               fontSize: size * 0.72,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600, // matches the brand wordmark (Poppins SemiBold)
               color: wordColor,
               letterSpacing: -0.5,
             ),
