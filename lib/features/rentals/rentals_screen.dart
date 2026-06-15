@@ -121,6 +121,45 @@ class _Renewal extends ConsumerWidget {
     }
   }
 
+  Future<void> _terminate(BuildContext context, WidgetRef ref) async {
+    final reason = TextEditingController();
+    final ok = await AppDialog.show<bool>(context, title: 'Terminate tenancy', children: [
+      const Text('Ends the tenancy now. The other party is notified.'),
+      const SizedBox(height: AppSpacing.x12),
+      TextField(controller: reason, decoration: const InputDecoration(labelText: 'Reason (optional)')),
+    ], actions: [
+      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+      FilledButton(
+        style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+        onPressed: () => Navigator.pop(context, true),
+        child: const Text('Terminate'),
+      ),
+    ]);
+    if (ok != true) return;
+    try {
+      await ref.read(apiClientProvider).post('/tenancies/${tc['id']}/terminate', body: {'reason': reason.text.trim()});
+      ref.invalidate(tenanciesProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tenancy terminated.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _declineRenewal(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(apiClientProvider).post('/tenancies/${tc['id']}/decline-renewal');
+      ref.invalidate(tenanciesProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Renewal declined — the other party was notified.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
@@ -131,6 +170,9 @@ class _Renewal extends ConsumerWidget {
     final eligibleFrom = noticeAt?.add(const Duration(days: 90));
     final increaseAllowed = eligibleFrom != null && !DateTime.now().isBefore(eligibleFrom);
     final df = DateFormat('d MMM yyyy');
+    final terminated = '${tc['status']}' == 'terminated';
+    final terminationReason = '${tc['termination_reason'] ?? ''}'.trim();
+    final declined = DateTime.tryParse('${tc['renewal_declined_at'] ?? ''}') != null;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x8, AppSpacing.x16, AppSpacing.x8),
@@ -154,28 +196,48 @@ class _Renewal extends ConsumerWidget {
         const SizedBox(height: 4),
         if (end != null)
           Text('Term ends ${df.format(end)}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
-        Text(
-          noticeAt == null
-              ? 'No renewal notice issued. A rent increase needs 90 days’ notice.'
-              : increaseAllowed
-                  ? 'Notice issued ${df.format(noticeAt)} · rent increase allowed now'
-                  : 'Notice issued ${df.format(noticeAt)} · increase allowed from ${df.format(eligibleFrom!)}',
-          style: t.bodySmall?.copyWith(
-              color: (noticeAt != null && increaseAllowed) ? AppColors.success : AppColors.textMuted),
-        ),
-        const SizedBox(height: AppSpacing.x8),
-        Wrap(spacing: AppSpacing.x8, children: [
-          OutlinedButton.icon(
-            onPressed: () => _issueNotice(context, ref),
-            icon: const Icon(Icons.campaign_outlined, size: 18),
-            label: const Text('Issue notice'),
+        if (terminated)
+          Text('Terminated${terminationReason.isNotEmpty ? ' · $terminationReason' : ''}',
+              style: t.bodySmall?.copyWith(color: AppColors.danger, fontWeight: FontWeight.w600))
+        else ...[
+          Text(
+            noticeAt == null
+                ? 'No renewal notice issued. A rent increase needs 90 days’ notice.'
+                : increaseAllowed
+                    ? 'Notice issued ${df.format(noticeAt)} · rent increase allowed now'
+                    : 'Notice issued ${df.format(noticeAt)} · increase allowed from ${df.format(eligibleFrom!)}',
+            style: t.bodySmall?.copyWith(
+                color: (noticeAt != null && increaseAllowed) ? AppColors.success : AppColors.textMuted),
           ),
-          FilledButton.icon(
-            onPressed: () => _renew(context, ref),
-            icon: const Icon(Icons.autorenew, size: 18),
-            label: const Text('Renew'),
-          ),
-        ]),
+          if (declined)
+            Text('Renewal declined — runs to term end',
+                style: t.bodySmall?.copyWith(color: AppColors.warning)),
+          const SizedBox(height: AppSpacing.x8),
+          Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
+            OutlinedButton.icon(
+              onPressed: () => _issueNotice(context, ref),
+              icon: const Icon(Icons.campaign_outlined, size: 18),
+              label: const Text('Issue notice'),
+            ),
+            FilledButton.icon(
+              onPressed: () => _renew(context, ref),
+              icon: const Icon(Icons.autorenew, size: 18),
+              label: const Text('Renew'),
+            ),
+            if (!declined)
+              OutlinedButton.icon(
+                onPressed: () => _declineRenewal(context, ref),
+                icon: const Icon(Icons.event_busy_outlined, size: 18),
+                label: const Text('Decline renewal'),
+              ),
+            OutlinedButton.icon(
+              onPressed: () => _terminate(context, ref),
+              style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+              icon: const Icon(Icons.cancel_outlined, size: 18),
+              label: const Text('Terminate'),
+            ),
+          ]),
+        ],
         const Divider(height: AppSpacing.x24),
       ]),
     );

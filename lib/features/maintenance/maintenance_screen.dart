@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/network/api_client.dart';
+import '../../core/network/upload_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
 final jobsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   try { final d = await ref.read(apiClientProvider).get('/maintenance/jobs'); return d is List ? d : []; } catch (_) { return []; }
+});
+final maintPropertiesProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  try { final d = await ref.read(apiClientProvider).get('/maintenance/properties'); return d is List ? d : []; } catch (_) { return []; }
 });
 final providersProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   try { final d = await ref.read(apiClientProvider).get('/service-providers'); return d is List ? d : []; } catch (_) { return []; }
@@ -24,29 +28,24 @@ class MaintenanceScreen extends ConsumerWidget {
       appBar: const NuzlAppBar(title: 'Maintenance'),
       drawer: const NuzlDrawer(),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _request(context, ref), icon: const Icon(Icons.build_outlined), label: const Text('Request job')),
+        onPressed: () => _openRequest(context),
+        icon: const Icon(Icons.build_outlined),
+        label: const Text('Request job'),
+      ),
       body: ResponsiveCenter(
         child: RefreshIndicator(
           onRefresh: () async { ref.invalidate(jobsProvider); ref.invalidate(providersProvider); },
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.x16),
             children: [
-              Text('Jobs', style: Theme.of(context).textTheme.titleMedium),
+              Text('Requests', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: AppSpacing.x8),
               jobs.when(
                 loading: () => const LinearProgressIndicator(),
                 error: (e, _) => Text('$e'),
                 data: (list) => list.isEmpty
-                    ? const Text('No jobs yet — request one below.')
-                    : Column(children: list.map((m) {
-                        final j = Map<String, dynamic>.from(m);
-                        return Card(child: ListTile(
-                          title: Text('${j['category']} · ${j['provider_name'] ?? 'Unassigned'}'),
-                          subtitle: Text(j['description'] ?? ''),
-                          trailing: _StatusChip(status: '${j['status']}'),
-                          onTap: () => _advance(context, ref, j['id'].toString(), '${j['status']}'),
-                        ));
-                      }).toList()),
+                    ? const Text('No requests yet — raise one with the button below.')
+                    : Column(children: list.map((m) => _JobCard(j: Map<String, dynamic>.from(m))).toList()),
               ),
               const SizedBox(height: AppSpacing.x24),
               Text('Service providers', style: Theme.of(context).textTheme.titleMedium),
@@ -75,35 +74,232 @@ class MaintenanceScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _request(BuildContext context, WidgetRef ref) async {
-    final cat = TextEditingController(text: 'ac'); final desc = TextEditingController();
-    final ok = await AppDialog.show<bool>(context,
-      title: 'Request maintenance',
-      children: [
-        TextField(controller: cat, decoration: const InputDecoration(labelText: 'Category', hintText: 'ac, plumbing, electrical…')),
-        TextField(controller: desc, maxLines: 2, decoration: const InputDecoration(labelText: 'Describe the issue')),
-      ],
-      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Request'))],
+  void _openRequest(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (_) => const _RequestSheet(),
     );
-    if (ok != true) return;
+  }
+}
+
+class _JobCard extends ConsumerWidget {
+  const _JobCard({required this.j});
+  final Map<String, dynamic> j;
+
+  Future<void> _advance(BuildContext context, WidgetRef ref) async {
+    const flow = ['requested', 'matched', 'accepted', 'in_progress', 'completed', 'cancelled'];
+    final current = '${j['status']}';
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: ListView(shrinkWrap: true, children: flow.map((s) => ListTile(
+          title: Text(s),
+          trailing: s == current ? const Icon(Icons.check, color: AppColors.primary) : null,
+          onTap: () => Navigator.pop(ctx, s),
+        )).toList()),
+      ),
+    );
+    if (picked == null || picked == current) return;
     try {
-      await ref.read(apiClientProvider).post('/maintenance/jobs', body: {'category': cat.text.trim(), 'description': desc.text.trim()});
+      await ref.read(apiClientProvider).patch('/maintenance/jobs/${j['id']}/status', body: {'status': picked});
       ref.invalidate(jobsProvider);
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
   }
 
-  Future<void> _advance(BuildContext context, WidgetRef ref, String id, String current) async {
-    const flow = ['requested','matched','accepted','in_progress','completed','cancelled'];
-    final picked = await showModalBottomSheet<String>(context: context, builder: (ctx) => SafeArea(
-      child: ListView(shrinkWrap: true, children: flow.map((s) => ListTile(
-        title: Text(s), trailing: s == current ? const Icon(Icons.check, color: AppColors.primary) : null,
-        onTap: () => Navigator.pop(ctx, s))).toList())));
-    if (picked == null || picked == current) return;
-    await ref.read(apiClientProvider).patch('/maintenance/jobs/$id/status', body: {'status': picked});
-    ref.invalidate(jobsProvider);
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final images = (j['images'] is List) ? (j['images'] as List).map((e) => '$e').where((s) => s.isNotEmpty).toList() : <String>[];
+    final where = [
+      if ('${j['community'] ?? ''}'.isNotEmpty) '${j['community']}',
+      if ('${j['unit_no'] ?? ''}'.isNotEmpty) 'Unit ${j['unit_no']}',
+    ].join(' · ');
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _advance(context, ref),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.x12),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (images.isNotEmpty)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppSpacing.rSm),
+                  child: Image.network(images.first, width: 52, height: 52, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox(width: 52, height: 52)),
+                )
+              else
+                Container(
+                  width: 52, height: 52,
+                  decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(AppSpacing.rSm)),
+                  child: const Icon(Icons.build_outlined, color: AppColors.textSubtle),
+                ),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${_cap('${j['category'] ?? 'Maintenance'}')}${where.isNotEmpty ? ' · $where' : ''}',
+                        style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    if ('${j['description'] ?? ''}'.isNotEmpty)
+                      Text('${j['description']}', style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+                          maxLines: 2, overflow: TextOverflow.ellipsis),
+                    if ('${j['provider_name'] ?? ''}'.isNotEmpty)
+                      Text('Assigned: ${j['provider_name']}', style: t.labelSmall?.copyWith(color: AppColors.textMuted)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.x8),
+              _StatusChip(status: '${j['status']}'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom-sheet form: pick a property you own/tenant, category, description, photo.
+class _RequestSheet extends ConsumerStatefulWidget {
+  const _RequestSheet();
+  @override
+  ConsumerState<_RequestSheet> createState() => _RequestSheetState();
+}
+
+class _RequestSheetState extends ConsumerState<_RequestSheet> {
+  static const _categories = ['ac', 'plumbing', 'electrical', 'appliance', 'cleaning', 'general'];
+  String? _propertyId;
+  String _category = 'ac';
+  final _desc = TextEditingController();
+  String? _imageUrl;
+  bool _uploading = false;
+  bool _submitting = false;
+
+  @override
+  void dispose() {
+    _desc.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickPhoto() async {
+    try {
+      final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1600, imageQuality: 80);
+      if (picked == null) return;
+      setState(() => _uploading = true);
+      final bytes = await picked.readAsBytes();
+      final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
+      setState(() => _imageUrl = url);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Photo not added: $e')));
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  Future<void> _submit() async {
+    if (_propertyId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pick a property first.')));
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      await ref.read(apiClientProvider).post('/maintenance/jobs', body: {
+        'property_id': _propertyId,
+        'category': _category,
+        'description': _desc.text.trim(),
+        if (_imageUrl != null) 'images': [_imageUrl],
+      });
+      ref.invalidate(jobsProvider);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final props = ref.watch(maintPropertiesProvider);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          AppSpacing.x20, AppSpacing.x8, AppSpacing.x20, MediaQuery.viewInsetsOf(context).bottom + AppSpacing.x20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Request maintenance', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: AppSpacing.x16),
+          props.when(
+            loading: () => const Padding(padding: EdgeInsets.all(8), child: LinearProgressIndicator()),
+            error: (e, _) => Text('$e'),
+            data: (list) => list.isEmpty
+                ? const Text('No properties found. You can raise maintenance once you own a property or have an active tenancy.')
+                : DropdownButtonFormField<String>(
+                    initialValue: _propertyId,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Property', prefixIcon: Icon(Icons.home_outlined)),
+                    items: list.map((m) {
+                      final p = Map<String, dynamic>.from(m);
+                      final label = [
+                        if ('${p['community'] ?? ''}'.isNotEmpty) '${p['community']}',
+                        if ('${p['unit_no'] ?? ''}'.isNotEmpty) 'Unit ${p['unit_no']}',
+                        if ('${p['community'] ?? ''}'.isEmpty && '${p['unit_no'] ?? ''}'.isEmpty) _cap('${p['property_type'] ?? 'Property'}'),
+                      ].join(' · ');
+                      return DropdownMenuItem(
+                        value: '${p['id']}',
+                        child: Text('$label${p['is_owner'] == true ? '' : ' (tenancy)'}',
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                      );
+                    }).toList(),
+                    onChanged: (v) => setState(() => _propertyId = v),
+                  ),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          DropdownButtonFormField<String>(
+            initialValue: _category,
+            decoration: const InputDecoration(labelText: 'Category', prefixIcon: Icon(Icons.category_outlined)),
+            items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(_cap(c)))).toList(),
+            onChanged: (v) => setState(() => _category = v ?? 'general'),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          TextField(
+            controller: _desc,
+            minLines: 2, maxLines: 4,
+            decoration: const InputDecoration(labelText: 'Describe the issue', alignLabelWithHint: true),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          Row(children: [
+            OutlinedButton.icon(
+              onPressed: _uploading ? null : _pickPhoto,
+              icon: _uploading
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.add_a_photo_outlined, size: 18),
+              label: Text(_imageUrl == null ? 'Add photo' : 'Photo added'),
+            ),
+            const SizedBox(width: AppSpacing.x12),
+            if (_imageUrl != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppSpacing.rSm),
+                child: Image.network(_imageUrl!, width: 44, height: 44, fit: BoxFit.cover),
+              ),
+          ]),
+          const SizedBox(height: AppSpacing.x20),
+          FilledButton(
+            onPressed: _submitting ? null : _submit,
+            child: _submitting
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Text('Submit request'),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -118,6 +314,12 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-      child: Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)));
+      child: Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
+    );
   }
+}
+
+String _cap(String s) {
+  final x = s.replaceAll('_', ' ').trim();
+  return x.isEmpty ? x : '${x[0].toUpperCase()}${x.substring(1)}';
 }
