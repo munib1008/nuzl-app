@@ -17,7 +17,8 @@ final dashboardProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref)
   final endpoint = switch (persona) {
     Persona.broker => '/reports/agency',
     Persona.developer => '/reports/developer',
-    Persona.investor || Persona.owner => '/reports/investor',
+    Persona.owner => '/reports/owner',
+    Persona.investor => '/reports/investor',
     Persona.admin => '/admin/overview',
     _ => '/reports/agent',
   };
@@ -111,9 +112,12 @@ class DashboardScreen extends ConsumerWidget {
 
             if (persona == Persona.buyer) ...[const _BuyerCta(), const SizedBox(height: AppSpacing.x16)],
 
-            // Recent properties
-            const _RecentProperties(),
-            const SizedBox(height: AppSpacing.x16),
+            // Recent properties — owners care about OWNED assets (their KPIs +
+            // My Properties), not recently-added/viewed listings.
+            if (persona != Persona.owner) ...[
+              const _RecentProperties(),
+              const SizedBox(height: AppSpacing.x16),
+            ],
 
             // Quick actions + tools
             _twoUp(wide, flexA: 1,
@@ -169,8 +173,16 @@ class DashboardScreen extends ConsumerWidget {
           _Card('Reserved', '${g('reserved')}', Icons.lock_clock_outlined, AppColors.warning),
           _Card('Sold', '${g('sold')}', Icons.sell_outlined, AppColors.primary),
         ];
-      case Persona.investor:
       case Persona.owner:
+        return [
+          _Card('Owned properties', '${g('owned_properties')}', Icons.home_work_outlined, AppColors.secondary),
+          _Card('Active listings', '${g('active_listings')}', Icons.apartment_outlined, AppColors.primary),
+          _Card('Under lease', '${g('under_lease')}', Icons.vpn_key_outlined, AppColors.info),
+          _Card('Expiring tenancies', '${g('expiring_tenancies')}', Icons.event_busy_outlined, AppColors.warning),
+          _Card('Pending maintenance', '${g('pending_maintenance')}', Icons.build_outlined, AppColors.danger),
+          _Card('Owner actions', '${g('outstanding_actions')}', Icons.notifications_active_outlined, AppColors.success),
+        ];
+      case Persona.investor:
         return [
           _Card('Properties', '${g('properties')}', Icons.home_work_outlined, AppColors.secondary),
           _Card('Total value', aed(g('total_value')), Icons.real_estate_agent_outlined, AppColors.primary),

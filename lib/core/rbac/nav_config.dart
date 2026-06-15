@@ -15,7 +15,8 @@ List<NavItem> navItemsFor(Persona p) {
     case Persona.leadGenerator:
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
-        NavItem(Icons.storefront_outlined, 'Marketplace', '/feed'),
+        NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
+        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.add_circle_outline, 'Post Lead', '/leads/new'),
         NavItem(Icons.trending_up, 'My Leads', '/leads'),
         NavItem(Icons.auto_awesome_outlined, 'Lead Matches', '/lead-matches'),
