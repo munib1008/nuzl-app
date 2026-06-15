@@ -170,7 +170,7 @@ class _BottomNavShell extends StatelessWidget {
     if (w >= 1000) {
       return Scaffold(body: Row(children: [const NuzlSidebar(), Expanded(child: child)]));
     }
-    if (w >= 600) return child;
+    // Below 1000 (incl. tablet 600-999, previously a no-nav dead-band): bottom nav.
     // NB: extendBody must stay false. The bottom nav is opaque, and each screen
     // carries its own Scaffold + FloatingActionButton. With extendBody:true the
     // child body extends behind the nav, so those FABs (e.g. Feed "New post",
