@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -73,11 +74,24 @@ class _Body extends ConsumerWidget {
     final name = '${user['full_name'] ?? 'Member'}';
     final role = personaFromRole('${user['role'] ?? ''}').label;
     final reraVerified = '${user['rera_brn'] ?? ''}'.trim().isNotEmpty;
+    final avatarUrl = '${user['avatar_url'] ?? ''}'.trim();
+    final bio = '${user['bio'] ?? ''}'.trim();
+    final company = '${user['company'] ?? ''}'.trim();
+    final orgName = '${user['org_name'] ?? ''}'.trim();
+    final phone = '${user['phone'] ?? ''}'.trim();
+    final whatsapp = '${user['whatsapp'] ?? ''}'.trim();
     final areas = _list(user['areas']);
     final languages = _list(user['languages']);
     final specialties = _list(user['specialties']);
     final listings = ref.watch(_publicListingsProvider(id));
     final reviews = ref.watch(_reviewsProvider(id));
+
+    final listingCount = listings.asData?.value.length ?? 0;
+    final ratings = (reviews.asData?.value ?? const [])
+        .map((e) => num.tryParse('${(e as Map)['rating']}') ?? 0)
+        .where((r) => r > 0)
+        .toList();
+    final avg = ratings.isEmpty ? null : ratings.reduce((a, b) => a + b) / ratings.length;
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.x16),
@@ -85,7 +99,7 @@ class _Body extends ConsumerWidget {
         Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 720),
+            constraints: const BoxConstraints(maxWidth: 760),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -93,32 +107,68 @@ class _Body extends ConsumerWidget {
                 Center(
                   child: Column(
                     children: [
-                      CircleAvatar(
-                        radius: 40,
-                        backgroundColor: AppColors.primary,
-                        child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-                            style: t.headlineMedium?.copyWith(color: Colors.white)),
-                      ),
+                      if (avatarUrl.isNotEmpty)
+                        CircleAvatar(radius: 44, backgroundColor: AppColors.surface2, backgroundImage: NetworkImage(avatarUrl))
+                      else
+                        CircleAvatar(
+                          radius: 44,
+                          backgroundColor: AppColors.primary,
+                          child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
+                              style: t.headlineMedium?.copyWith(color: Colors.white)),
+                        ),
                       const SizedBox(height: AppSpacing.x12),
-                      Text(name, style: t.headlineSmall),
-                      const SizedBox(height: AppSpacing.x4),
+                      Text(name, style: t.headlineSmall, textAlign: TextAlign.center),
+                      const SizedBox(height: AppSpacing.x8),
                       Wrap(
                         spacing: AppSpacing.x8,
+                        runSpacing: AppSpacing.x8,
                         alignment: WrapAlignment.center,
                         children: [
                           _Pill(text: role, color: AppColors.primaryTint, textColor: AppColors.primaryDark),
                           if (reraVerified)
-                            const _Pill(text: 'RERA verified', color: AppColors.accentGoldTint, textColor: AppColors.secondary, icon: Icons.verified_outlined),
+                            const _Pill(text: 'RERA verified', color: AppColors.accentGoldTint, textColor: AppColors.accentGold, icon: Icons.verified),
+                          if (orgName.isNotEmpty)
+                            _Pill(text: orgName, color: AppColors.surface2, textColor: AppColors.textMuted, icon: Icons.business_outlined),
                         ],
                       ),
-                      if ('${user['company'] ?? ''}'.isNotEmpty) ...[
+                      if (company.isNotEmpty && company != orgName) ...[
                         const SizedBox(height: AppSpacing.x8),
-                        Text('${user['company']}', style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                        Text(company, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
                       ],
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.x24),
+                const SizedBox(height: AppSpacing.x20),
+
+                // stats strip
+                _StatsStrip(items: [
+                  ('Listings', '$listingCount'),
+                  ('Areas', '${areas.length}'),
+                  ('Languages', '${languages.length}'),
+                  if (avg != null) ('Rating', avg.toStringAsFixed(1)),
+                ]),
+                const SizedBox(height: AppSpacing.x20),
+
+                // contact
+                if (phone.isNotEmpty || whatsapp.isNotEmpty) ...[
+                  Row(children: [
+                    if (phone.isNotEmpty)
+                      Expanded(child: _ContactButton(icon: Icons.call_outlined, label: 'Call', value: phone)),
+                    if (phone.isNotEmpty && whatsapp.isNotEmpty) const SizedBox(width: AppSpacing.x12),
+                    if (whatsapp.isNotEmpty)
+                      Expanded(child: _ContactButton(icon: Icons.chat_outlined, label: 'WhatsApp', value: whatsapp)),
+                  ]),
+                  const SizedBox(height: AppSpacing.x20),
+                ],
+
+                // about / bio
+                if (bio.isNotEmpty) ...[
+                  Text('About', style: t.titleMedium),
+                  const SizedBox(height: AppSpacing.x8),
+                  Text(bio, style: t.bodyMedium),
+                  const SizedBox(height: AppSpacing.x20),
+                ],
+
                 if (areas.isNotEmpty) _ChipBlock(label: 'Areas covered', values: areas),
                 if (languages.isNotEmpty) _ChipBlock(label: 'Languages', values: languages),
                 if (specialties.isNotEmpty) _ChipBlock(label: 'Specialties', values: specialties),
@@ -137,7 +187,17 @@ class _Body extends ConsumerWidget {
                   error: (e, _) => const Text('No listings.'),
                   data: (list) => list.isEmpty
                       ? Text('No active listings.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
-                      : Column(children: list.map((e) => _PublicListingCard(Map<String, dynamic>.from(e))).toList()),
+                      : LayoutBuilder(builder: (ctx, c) {
+                          final cols = c.maxWidth >= 560 ? 2 : 1;
+                          final cardW = cols == 1 ? c.maxWidth : (c.maxWidth - AppSpacing.x12) / 2;
+                          return Wrap(
+                            spacing: AppSpacing.x12,
+                            runSpacing: AppSpacing.x12,
+                            children: list
+                                .map((e) => SizedBox(width: cardW, child: _PublicListingCard(Map<String, dynamic>.from(e))))
+                                .toList(),
+                          );
+                        }),
                 ),
                 const SizedBox(height: AppSpacing.x32),
               ],
@@ -145,6 +205,50 @@ class _Body extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _StatsStrip extends StatelessWidget {
+  const _StatsStrip({required this.items});
+  final List<(String, String)> items;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
+      decoration: BoxDecoration(
+        color: AppColors.surface2,
+        borderRadius: BorderRadius.circular(AppSpacing.rCard),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: items
+            .map((it) => Column(mainAxisSize: MainAxisSize.min, children: [
+                  Text(it.$2, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
+                  const SizedBox(height: 2),
+                  Text(it.$1, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                ]))
+            .toList(),
+      ),
+    );
+  }
+}
+
+class _ContactButton extends StatelessWidget {
+  const _ContactButton({required this.icon, required this.label, required this.value});
+  final IconData icon;
+  final String label;
+  final String value;
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: () {
+        Clipboard.setData(ClipboardData(text: value));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label copied — $value')));
+      },
+      icon: Icon(icon, size: 18),
+      label: Text(label),
     );
   }
 }
