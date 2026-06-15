@@ -36,6 +36,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   static const _roleOptions = [
     ('agency', 'Agency'),
+    ('developer', 'Developer'),
     ('agent', 'Agent'),
     ('owner', 'Owner'),
     ('investor', 'Investor'),
@@ -55,9 +56,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  /// Real-estate professionals (agency/agent) get the pro-only fields; everyone
-  /// else (customer/owner/investor) completes without "areas you cover".
-  bool get _isPro => role == 'agency' || role == 'agent';
+  /// Real-estate professionals (agency/developer/agent) get the pro-only fields;
+  /// everyone else (customer/owner/investor) completes without "areas you cover".
+  bool get _isPro => role == 'agency' || role == 'developer' || role == 'agent';
 
   Future<void> _finish() async {
     if (role != null) {
@@ -71,7 +72,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       'languages': languages.toList(),
       'specialties': specialties.toList(),
     };
-    if (role == 'agency') {
+    if (role == 'agency' || role == 'developer') {
       body['company'] = company.text.trim();
       if (orn.text.trim().isNotEmpty) body['rera_brn'] = orn.text.trim();
     } else if (role == 'agent') {
@@ -163,6 +164,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         if (role == 'agency') ...[
           const SizedBox(height: AppSpacing.x12),
           TextField(controller: company, decoration: const InputDecoration(labelText: 'Company name')),
+          const SizedBox(height: AppSpacing.x12),
+          TextField(controller: orn, decoration: const InputDecoration(labelText: 'Trade licence / ORN')),
+        ],
+        if (role == 'developer') ...[
+          const SizedBox(height: AppSpacing.x12),
+          TextField(controller: company, decoration: const InputDecoration(labelText: 'Developer / company name')),
           const SizedBox(height: AppSpacing.x12),
           TextField(controller: orn, decoration: const InputDecoration(labelText: 'Trade licence / ORN')),
         ],
