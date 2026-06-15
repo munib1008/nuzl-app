@@ -141,6 +141,7 @@ class _Detail extends ConsumerWidget {
                         ),
                         const SizedBox(height: AppSpacing.x12),
                         _OwnershipCard(listingId: id, listing: l),
+                        _PublishRow(listingId: id, listing: l),
                       ],
                       const SizedBox(height: AppSpacing.x16),
                       Text('Key facts', style: t.titleMedium),
@@ -535,6 +536,49 @@ class _OwnershipCardState extends ConsumerState<_OwnershipCard> {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Owner publish / take-offline. Publish surfaces the server gate (permit + 3
+/// photos, and for owners a submitted title deed).
+class _PublishRow extends ConsumerWidget {
+  const _PublishRow({required this.listingId, required this.listing});
+  final String listingId;
+  final Map<String, dynamic> listing;
+
+  Future<void> _act(BuildContext context, WidgetRef ref, String action) async {
+    try {
+      await ref.read(apiClientProvider).post('/listings/$listingId/$action');
+      ref.invalidate(_detailProvider(listingId));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(action == 'publish' ? 'Listing published.' : 'Listing taken offline.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final live = listing['is_visible'] == true;
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.x12),
+      child: SizedBox(
+        width: double.infinity,
+        child: live
+            ? OutlinedButton.icon(
+                onPressed: () => _act(context, ref, 'unpublish'),
+                icon: const Icon(Icons.visibility_off_outlined, size: 18),
+                label: const Text('Take offline'),
+              )
+            : FilledButton.icon(
+                onPressed: () => _act(context, ref, 'publish'),
+                icon: const Icon(Icons.publish_outlined, size: 18),
+                label: const Text('Publish (go live)'),
+              ),
       ),
     );
   }

@@ -111,6 +111,74 @@ class _JobCard extends ConsumerWidget {
     }
   }
 
+  Future<void> _actions(BuildContext context, WidgetRef ref) async {
+    final action = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: ListView(shrinkWrap: true, children: [
+          ListTile(
+              leading: const Icon(Icons.handyman_outlined),
+              title: const Text('Assign provider'),
+              onTap: () => Navigator.pop(ctx, 'assign')),
+          ListTile(
+              leading: const Icon(Icons.flag_outlined),
+              title: const Text('Update status'),
+              onTap: () => Navigator.pop(ctx, 'status')),
+        ]),
+      ),
+    );
+    if (action == 'assign' && context.mounted) {
+      await _assign(context, ref);
+    } else if (action == 'status' && context.mounted) {
+      await _advance(context, ref);
+    }
+  }
+
+  /// Owner picks a service provider from the marketplace of providers (owner #4).
+  Future<void> _assign(BuildContext context, WidgetRef ref) async {
+    List<dynamic> providers = [];
+    try {
+      final d = await ref.read(apiClientProvider).get('/service-providers');
+      providers = d is List ? d : [];
+    } catch (_) {/* show empty below */}
+    if (!context.mounted) return;
+    if (providers.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('No service providers available yet.')));
+      return;
+    }
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: providers.map((m) {
+            final p = Map<String, dynamic>.from(m);
+            final cats = (p['categories'] is List) ? (p['categories'] as List).join(', ') : '';
+            return ListTile(
+              leading: const Icon(Icons.handyman_outlined),
+              title: Text('${p['name'] ?? 'Provider'}'),
+              subtitle: cats.isNotEmpty ? Text(cats) : null,
+              trailing: Text('★ ${p['rating'] ?? 0}'),
+              onTap: () => Navigator.pop(ctx, '${p['id']}'),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+    if (picked == null) return;
+    try {
+      await ref.read(apiClientProvider)
+          .patch('/maintenance/jobs/${j['id']}/assign', body: {'provider_id': picked});
+      ref.invalidate(jobsProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Provider assigned.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
@@ -122,7 +190,7 @@ class _JobCard extends ConsumerWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => _advance(context, ref),
+        onTap: () => _actions(context, ref),
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.x12),
           child: Row(

@@ -160,6 +160,19 @@ class _Renewal extends ConsumerWidget {
     }
   }
 
+  Future<void> _linkTenant(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(apiClientProvider).post('/tenancies/${tc['id']}/link-tenant');
+      ref.invalidate(tenanciesProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Tenant linked to their NUZL account.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
@@ -196,6 +209,25 @@ class _Renewal extends ConsumerWidget {
         const SizedBox(height: 4),
         if (end != null)
           Text('Term ends ${df.format(end)}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+        if ('${tc['tenant_user_id'] ?? ''}'.isNotEmpty)
+          Row(children: [
+            const Icon(Icons.link, size: 14, color: AppColors.success),
+            const SizedBox(width: 4),
+            Text('Tenant has a NUZL account', style: t.bodySmall?.copyWith(color: AppColors.success)),
+          ])
+        else if ('${tc['tenant_email'] ?? ''}'.trim().isNotEmpty && !terminated)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => _linkTenant(context, ref),
+              icon: const Icon(Icons.link, size: 16),
+              label: const Text('Link tenant to NUZL'),
+              style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 0),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+            ),
+          ),
         if (terminated)
           Text('Terminated${terminationReason.isNotEmpty ? ' · $terminationReason' : ''}',
               style: t.bodySmall?.copyWith(color: AppColors.danger, fontWeight: FontWeight.w600))
