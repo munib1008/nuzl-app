@@ -42,13 +42,142 @@ class RentalsScreen extends ConsumerWidget {
                       return Card(child: ExpansionTile(
                         title: Text(tc['tenant_name'] ?? 'Tenant'),
                         subtitle: Text('${aed.format(num.tryParse('${tc['rent_amount']}') ?? 0)} / yr · ${tc['status']}'),
-                        children: [_Cheques(tenancyId: tc['id'].toString())],
+                        children: [_Renewal(tc: tc), _Cheques(tenancyId: tc['id'].toString())],
                       ));
                     }).toList(),
                   ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Renewal + rent-increase compliance (UAT #6). Shows the term end, an expiring
+/// badge, the 90-day-notice status, and the owner actions (issue notice / renew).
+class _Renewal extends ConsumerWidget {
+  const _Renewal({required this.tc});
+  final Map<String, dynamic> tc;
+
+  Future<void> _issueNotice(BuildContext context, WidgetRef ref) async {
+    final pct = TextEditingController();
+    final ok = await AppDialog.show<bool>(context, title: 'Issue renewal notice', children: [
+      const Text('Records a 90-day notice to the tenant. A rent increase can take '
+          'effect 90 days from today (UAE Law 26/2007).'),
+      const SizedBox(height: AppSpacing.x12),
+      TextField(
+        controller: pct,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(labelText: 'Proposed rent increase %', hintText: 'e.g. 5'),
+      ),
+    ], actions: [
+      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+      FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Issue notice')),
+    ]);
+    if (ok != true) return;
+    try {
+      await ref.read(apiClientProvider)
+          .post('/tenancies/${tc['id']}/notice', body: {'rent_increase_pct': double.tryParse(pct.text)});
+      ref.invalidate(tenanciesProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Renewal notice recorded.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _renew(BuildContext context, WidgetRef ref) async {
+    final pct = TextEditingController();
+    final months = TextEditingController(text: '12');
+    final ok = await AppDialog.show<bool>(context, title: 'Renew tenancy', children: [
+      TextField(
+        controller: pct,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(labelText: 'Rent increase % (0 for no change)'),
+      ),
+      TextField(
+        controller: months,
+        keyboardType: TextInputType.number,
+        decoration: const InputDecoration(labelText: 'New term (months)'),
+      ),
+    ], actions: [
+      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+      FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Renew')),
+    ]);
+    if (ok != true) return;
+    try {
+      await ref.read(apiClientProvider).post('/tenancies/${tc['id']}/renew', body: {
+        'escalation_pct': double.tryParse(pct.text) ?? 0,
+        'months': int.tryParse(months.text) ?? 12,
+      });
+      ref.invalidate(tenanciesProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tenancy renewed.')));
+      }
+    } catch (e) {
+      // Surfaces the server-side 90-day-notice block message when applicable.
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final end = DateTime.tryParse('${tc['end_date'] ?? ''}');
+    final noticeAt = DateTime.tryParse('${tc['notice_issued_at'] ?? ''}');
+    final daysLeft = end?.difference(DateTime.now()).inDays;
+    final expiringSoon = daysLeft != null && daysLeft <= 60;
+    final eligibleFrom = noticeAt?.add(const Duration(days: 90));
+    final increaseAllowed = eligibleFrom != null && !DateTime.now().isBefore(eligibleFrom);
+    final df = DateFormat('d MMM yyyy');
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x8, AppSpacing.x16, AppSpacing.x8),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Text('Renewal', style: TextStyle(fontWeight: FontWeight.w600)),
+          const Spacer(),
+          if (expiringSoon)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.warning.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(AppSpacing.rFull),
+              ),
+              child: Text(
+                daysLeft >= 0 ? 'Ends in $daysLeft days' : 'Expired',
+                style: const TextStyle(color: AppColors.warning, fontSize: 12, fontWeight: FontWeight.w600),
+              ),
+            ),
+        ]),
+        const SizedBox(height: 4),
+        if (end != null)
+          Text('Term ends ${df.format(end)}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+        Text(
+          noticeAt == null
+              ? 'No renewal notice issued. A rent increase needs 90 days’ notice.'
+              : increaseAllowed
+                  ? 'Notice issued ${df.format(noticeAt)} · rent increase allowed now'
+                  : 'Notice issued ${df.format(noticeAt)} · increase allowed from ${df.format(eligibleFrom!)}',
+          style: t.bodySmall?.copyWith(
+              color: (noticeAt != null && increaseAllowed) ? AppColors.success : AppColors.textMuted),
+        ),
+        const SizedBox(height: AppSpacing.x8),
+        Wrap(spacing: AppSpacing.x8, children: [
+          OutlinedButton.icon(
+            onPressed: () => _issueNotice(context, ref),
+            icon: const Icon(Icons.campaign_outlined, size: 18),
+            label: const Text('Issue notice'),
+          ),
+          FilledButton.icon(
+            onPressed: () => _renew(context, ref),
+            icon: const Icon(Icons.autorenew, size: 18),
+            label: const Text('Renew'),
+          ),
+        ]),
+        const Divider(height: AppSpacing.x24),
+      ]),
     );
   }
 }
