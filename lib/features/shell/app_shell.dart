@@ -55,6 +55,7 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
           : (MediaQuery.sizeOf(context).width >= 1000 ? const SizedBox.shrink() : const NuzlLogo(size: 28)),
       actions: [
         ...?actions,
+        const _RoleSwitcher(),
         IconButton(
           tooltip: 'Toggle light / dark',
           icon: Icon(Theme.of(context).brightness == Brightness.dark
@@ -130,6 +131,55 @@ class _Bell extends StatelessWidget {
           ),
         ),
     ]);
+  }
+}
+
+/// Top-nav role switcher (UAT #3) — shown only when the account holds >1
+/// approved role. Switching writes the active role server-side (survives
+/// devices) and reloads nav + dashboard.
+class _RoleSwitcher extends ConsumerWidget {
+  const _RoleSwitcher();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authControllerProvider).user;
+    final roles = user?.approvedRoles ?? const [];
+    if (roles.length < 2) return const SizedBox.shrink();
+    final active = (user?.activeRole?.isNotEmpty == true) ? user!.activeRole! : roles.first;
+    final t = Theme.of(context).textTheme;
+    return PopupMenuButton<String>(
+      tooltip: 'Switch role',
+      offset: const Offset(0, 44),
+      onSelected: (r) async {
+        if (r == active) return;
+        await ref.read(authControllerProvider.notifier).switchRole(r);
+        if (context.mounted) context.go('/dashboard');
+      },
+      itemBuilder: (_) => roles
+          .map((r) => PopupMenuItem<String>(
+                value: r,
+                child: Row(children: [
+                  Icon(r == active ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                      size: 16, color: r == active ? AppColors.primary : AppColors.textMuted),
+                  const SizedBox(width: 8),
+                  Text(personaFromRole(r).label),
+                ]),
+              ))
+          .toList(),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.primaryTint,
+          borderRadius: BorderRadius.circular(AppSpacing.rFull),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.swap_horiz, size: 16, color: AppColors.primary),
+          const SizedBox(width: 4),
+          Text(personaFromRole(active).label,
+              style: t.bodySmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+        ]),
+      ),
+    );
   }
 }
 

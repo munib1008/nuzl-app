@@ -6,6 +6,9 @@ class AppUser {
     this.role,
     this.organizationId,
     this.deletedAt,
+    this.activeRole,
+    this.designation,
+    this.roles = const [],
   });
   final String id;
   final String email;
@@ -16,10 +19,18 @@ class AppUser {
   /// Set when the account is in the 14-day deletion grace window. Null = active.
   final DateTime? deletedAt;
 
-  bool get pendingDeletion => deletedAt != null;
+  /// Multi-role (UAT #3): the currently-selected role (server-backed), the
+  /// Nuzler designation, and all roles held by the account.
+  final String? activeRole;
+  final String? designation;
+  final List<Map<String, dynamic>> roles; // [{role, status, is_primary}]
 
-  /// 14 days after [deletedAt] — when the account is permanently deleted.
+  bool get pendingDeletion => deletedAt != null;
   DateTime? get deletionAt => deletedAt?.add(const Duration(days: 14));
+
+  /// Approved roles available to switch to.
+  List<String> get approvedRoles =>
+      roles.where((r) => '${r['status']}' == 'approved').map((r) => '${r['role']}').toList();
 
   factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
         id: j['id']?.toString() ?? '',
@@ -28,5 +39,10 @@ class AppUser {
         role: j['role'],
         organizationId: j['organization_id']?.toString(),
         deletedAt: DateTime.tryParse('${j['deleted_at'] ?? ''}'),
+        activeRole: j['active_role'],
+        designation: j['designation'],
+        roles: (j['roles'] is List)
+            ? (j['roles'] as List).map((e) => Map<String, dynamic>.from(e)).toList()
+            : const [],
       );
 }

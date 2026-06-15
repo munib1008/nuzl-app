@@ -51,6 +51,16 @@ class AuthRepository {
     await _api.post('/users/me/reactivate');
   }
 
+  /// Switch the active role (multi-role accounts, UAT #3).
+  Future<void> switchActiveRole(String role) async {
+    await _api.patch('/users/me/roles/active', body: {'role': role});
+  }
+
+  /// Set the account's primary role once at signup.
+  Future<void> setPrimaryRole(String role) async {
+    await _api.post('/users/me/primary-role', body: {'role': role});
+  }
+
   Future<void> logout() => _storage.clear();
 
   Future<AppUser> _persist(dynamic data) async {

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
+import '../auth/application/auth_controller.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/multi_select_field.dart';
@@ -34,18 +35,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final languages = <String>{};
   final specialties = <String>{};
 
+  // One PRIMARY role (UAT #3). Agency/Bank/etc. are org TYPES (chosen later via
+  // your organization), not user roles; Nuzler is auto-assigned to @nuzl.ae.
   static const _roleOptions = [
-    ('agency', 'Agency'),
-    ('developer', 'Developer'),
-    ('bank', 'Bank'),
+    ('owner', 'Owner'),
+    ('tenant', 'Tenant'),
     ('agent', 'Agent'),
     ('salesperson', 'Salesperson'),
-    ('maintenance', 'Maintenance'),
-    ('interior_gardens', 'Interior & Gardens'),
-    ('seller', 'Seller'),
-    ('owner', 'Owner'),
-    ('investor', 'Investor'),
-    ('customer', 'Customer'),
+    ('lead', 'Customer'),
+    ('developer', 'Developer'),
   ];
   static const _emirates = ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Fujairah', 'Umm Al Quwain', 'Al Ain'];
   static const _langs = ['English', 'Arabic', 'Hindi', 'Urdu', 'Tagalog', 'Malayalam', 'Tamil', 'French', 'Russian', 'Chinese'];
@@ -61,12 +59,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  /// Org/provider roles get an "Organization name + licence" block.
-  bool get _isOrg => const ['agency', 'developer', 'bank', 'maintenance', 'interior_gardens', 'seller'].contains(role);
+  /// Agent / Salesperson / Developer can name the organization they work with.
+  bool get _isOrg => const ['salesperson', 'developer'].contains(role);
 
-  /// Professionals + providers get the "areas / specialties" fields; consumers
-  /// (owner/investor/customer) complete without them.
-  bool get _isPro => role != null && !const ['owner', 'investor', 'customer'].contains(role);
+  /// Professionals get the "areas / specialties" fields; consumers
+  /// (owner/tenant/customer) complete without them.
+  bool get _isPro => const ['agent', 'salesperson', 'developer'].contains(role);
 
   Future<void> _finish() async {
     if (role != null) {
@@ -89,6 +87,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
     try {
       await ref.read(apiClientProvider).patch('/users/me', body: body);
+      // Persist the primary role server-side (UAT #3) so it survives devices.
+      if (role != null) await ref.read(authControllerProvider.notifier).setPrimaryRole(role!);
     } catch (_) {/* non-blocking: continue to dashboard */}
     if (mounted) context.go('/dashboard');
   }

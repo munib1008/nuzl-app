@@ -64,6 +64,18 @@ class AuthController extends StateNotifier<AuthState> {
     await bootstrap();
   }
 
+  /// Switch the active role + refresh so nav/dashboard reload (UAT #3).
+  Future<void> switchRole(String role) async {
+    await _repo.switchActiveRole(role);
+    await bootstrap();
+  }
+
+  /// Set the account's primary role once at signup, then refresh.
+  Future<void> setPrimaryRole(String role) async {
+    await _repo.setPrimaryRole(role);
+    await bootstrap();
+  }
+
   Future<void> logout() async {
     await _repo.logout();
     state = state.copyWith(clearUser: true, loading: false);

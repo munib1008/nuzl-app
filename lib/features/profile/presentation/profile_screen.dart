@@ -41,7 +41,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   bool _loaded = false;
   bool _saving = false;
   bool _dirty = false;
-  String? _role; // agency | agent | owner | investor | buyer
   final fullName = TextEditingController();
   final company = TextEditingController();
   final phone = TextEditingController();
@@ -55,39 +54,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   static const _emirates = ['Dubai','Abu Dhabi','Sharjah','Ajman','Ras Al Khaimah','Fujairah','Umm Al Quwain','Al Ain'];
   static const _langs = ['English','Arabic','Hindi','Urdu','Tagalog','Malayalam','Tamil','French'];
   static const _specs = ['Villas','Apartments','Penthouses','Townhouses','Commercial','Off-Plan','Luxury','Investment'];
-  // Providers (orgs) + users, per the role taxonomy.
-  static const _roleOptions = [
-    ('agency', 'Agency'),
-    ('developer', 'Developer'),
-    ('bank', 'Bank'),
-    ('agent', 'Agent'),
-    ('salesperson', 'Salesperson'),
-    ('maintenance', 'Maintenance'),
-    ('interior_gardens', 'Interior & Gardens'),
-    ('seller', 'Seller'),
-    ('owner', 'Owner'),
-    ('investor', 'Investor'),
-    ('customer', 'Customer'),
-  ];
-
-  /// Map any stored role string to one of the selectable options.
-  static String? _canonRole(dynamic raw) {
-    final r = '${raw ?? ''}'.toLowerCase();
-    if (r.isEmpty) return null;
-    return switch (personaFromRole(r)) {
-      Persona.broker => 'agency',
-      Persona.developer => 'developer',
-      Persona.bank => 'bank',
-      Persona.agent || Persona.leadGenerator => 'agent',
-      Persona.salesperson => 'salesperson',
-      Persona.provider => 'maintenance', // provider subtype (maintenance/seller/…) not preserved
-      Persona.owner => 'owner',
-      Persona.investor => 'investor',
-      Persona.buyer => 'customer',
-      Persona.admin => null,
-    };
-  }
-
   @override
   void dispose() {
     fullName.dispose(); company.dispose(); phone.dispose(); whatsapp.dispose();
@@ -122,13 +88,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _leave() => context.canPop() ? context.pop() : context.go('/dashboard');
 
   Future<void> _save() async {
-    if (_role != null) {
-      ref.read(personaOverrideProvider.notifier).set(personaFromRole(_role));
-    }
     setState(() => _saving = true);
     try {
       final res = await ref.read(apiClientProvider).patch('/users/me', body: {
-        if (_role != null) 'role': _role,
         if (fullName.text.trim().isNotEmpty) 'full_name': fullName.text.trim(),
         'company': company.text.trim(),
         'phone': phone.text.trim(),
@@ -269,7 +231,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void _prefill(Map<String, dynamic> m) {
     if (_loaded) return;
     _loaded = true;
-    _role = _canonRole(m['role']);
     fullName.text = '${m['full_name'] ?? ''}';
     company.text = '${m['company'] ?? ''}';
     phone.text = '${m['phone'] ?? ''}';
@@ -374,11 +335,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     TextField(controller: fullName, onChanged: (_) => _markDirty(),
                         decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Icons.person_outline))),
                     const SizedBox(height: AppSpacing.x12),
-                    DropdownButtonFormField<String>(
-                      initialValue: _role,
-                      decoration: const InputDecoration(labelText: 'I am a…', prefixIcon: Icon(Icons.badge_outlined)),
-                      items: _roleOptions.map((r) => DropdownMenuItem(value: r.$1, child: Text(r.$2))).toList(),
-                      onChanged: (v) => setState(() { _role = v; _dirty = true; }),
+                    InputDecorator(
+                      decoration: const InputDecoration(
+                        labelText: 'Role',
+                        prefixIcon: Icon(Icons.badge_outlined),
+                        helperText: 'Switch roles from the top bar; add roles via support.',
+                      ),
+                      child: Text(personaFromRole(user?.activeRole ?? user?.role).label),
                     ),
                     const SizedBox(height: AppSpacing.x12),
                     TextField(controller: company, onChanged: (_) => _markDirty(),

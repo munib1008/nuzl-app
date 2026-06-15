@@ -83,6 +83,15 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
+    case Persona.tenant:
+      return const [
+        NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
+        NavItem(Icons.vpn_key_outlined, 'My Tenancy', '/rentals'),
+        NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
+        NavItem(Icons.folder_outlined, 'Documents', '/documents'),
+        NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
+        NavItem(Icons.calculate_outlined, 'Mortgage Calculator', '/calculator'),
+      ];
     case Persona.investor:
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),

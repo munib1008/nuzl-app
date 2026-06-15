@@ -750,6 +750,11 @@ List<(String, IconData, String)> _toolsFor(Persona p) => switch (p) {
           ('Team', Icons.groups_outlined, '/team'),
           ('Reports', Icons.insights_outlined, '/reports'),
         ],
+      Persona.tenant => [
+          ('Maintenance', Icons.build_outlined, '/maintenance'),
+          ('My Tenancy', Icons.vpn_key_outlined, '/rentals'),
+          ('Documents', Icons.folder_outlined, '/documents'),
+        ],
       Persona.admin => [
           ('Organizations', Icons.business_outlined, '/organizations'),
           ('Audit logs', Icons.receipt_long_outlined, '/audit'),

@@ -8,7 +8,7 @@ import '../../features/auth/application/auth_controller.dart';
 ///  • Property/real-estate side: agent, broker(=Agency), developer, bank, leadGenerator.
 ///  • Service/product side: salesperson, provider (Maintenance / Interior&Gardens / Seller).
 ///  • Consumers: owner, investor, buyer(=Customer).
-enum Persona { leadGenerator, agent, broker, developer, bank, salesperson, provider, investor, owner, buyer, admin }
+enum Persona { leadGenerator, agent, broker, developer, bank, salesperson, provider, tenant, investor, owner, buyer, admin }
 
 Persona personaFromRole(String? role) {
   switch ((role ?? '').toLowerCase()) {
@@ -37,6 +37,8 @@ Persona personaFromRole(String? role) {
     case 'seller':
     case 'provider':
       return Persona.provider;
+    case 'tenant':
+      return Persona.tenant;
     case 'investor':
     case 'investor_owner':
       return Persona.investor;
@@ -45,9 +47,11 @@ Persona personaFromRole(String? role) {
       return Persona.owner;
     case 'customer':
     case 'buyer':
+    case 'lead':
       return Persona.buyer;
     case 'admin':
     case 'super_admin':
+    case 'nuzler':
       return Persona.admin;
     default:
       return Persona.broker;
@@ -63,6 +67,7 @@ extension PersonaLabel on Persona {
         Persona.bank => 'Bank',
         Persona.salesperson => 'Salesperson',
         Persona.provider => 'Service Provider',
+        Persona.tenant => 'Tenant',
         Persona.investor => 'Investor',
         Persona.owner => 'Property Owner',
         Persona.buyer => 'Customer',
@@ -166,11 +171,14 @@ final personaOverrideProvider =
 final personaPreviewProvider = StateProvider<Persona?>((ref) => null);
 
 final personaProvider = Provider<Persona>((ref) {
-  // 1) admin preview (temporary)  2) persisted working persona  3) API role.
+  // 1) admin preview (temporary)  2) server active_role (UAT #3, durable across
+  // devices)  3) legacy device-local override  4) API enum role.
   final preview = ref.watch(personaPreviewProvider);
   if (preview != null) return preview;
+  final user = ref.watch(authControllerProvider).user;
+  final active = user?.activeRole;
+  if (active != null && active.isNotEmpty) return personaFromRole(active);
   final override = ref.watch(personaOverrideProvider);
   if (override != null) return override;
-  final role = ref.watch(authControllerProvider).user?.role;
-  return personaFromRole(role);
+  return personaFromRole(user?.role);
 });
