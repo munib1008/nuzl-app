@@ -5,6 +5,7 @@ import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/status_badge.dart';
 import '../shell/app_shell.dart';
 
@@ -57,47 +58,43 @@ class MarketplaceScreen extends ConsumerWidget {
     final price = TextEditingController();
     final unit = TextEditingController();
     final contact = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('List a service / product'),
-        content: StatefulBuilder(
-          builder: (ctx, setS) => SizedBox(
-            width: 400,
-            child: SingleChildScrollView(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                DropdownButtonFormField<String>(
-                  initialValue: kind,
-                  decoration: const InputDecoration(labelText: 'Type'),
-                  items: const [
-                    DropdownMenuItem(value: 'service', child: Text('Service')),
-                    DropdownMenuItem(value: 'product', child: Text('Product')),
-                  ],
-                  onChanged: (v) => setS(() => kind = v ?? 'service'),
-                ),
-                const SizedBox(height: AppSpacing.x8),
-                TextField(controller: title, decoration: const InputDecoration(labelText: 'Title')),
-                const SizedBox(height: AppSpacing.x8),
-                TextField(controller: category, decoration: const InputDecoration(labelText: 'Category')),
-                const SizedBox(height: AppSpacing.x8),
-                TextField(controller: desc, maxLines: 2, decoration: const InputDecoration(labelText: 'Description')),
-                const SizedBox(height: AppSpacing.x8),
-                Row(children: [
-                  Expanded(child: TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price (AED)'))),
-                  const SizedBox(width: AppSpacing.x8),
-                  Expanded(child: TextField(controller: unit, decoration: const InputDecoration(labelText: 'Unit', hintText: 'each / from'))),
-                ]),
-                const SizedBox(height: AppSpacing.x8),
-                TextField(controller: contact, decoration: const InputDecoration(labelText: 'Contact')),
-              ]),
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'List a service / product',
+      maxWidth: 460,
+      children: [
+        StatefulBuilder(
+          builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
+            DropdownButtonFormField<String>(
+              initialValue: kind,
+              decoration: const InputDecoration(labelText: 'Type'),
+              items: const [
+                DropdownMenuItem(value: 'service', child: Text('Service')),
+                DropdownMenuItem(value: 'product', child: Text('Product')),
+              ],
+              onChanged: (v) => setS(() => kind = v ?? 'service'),
             ),
-          ),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: title, decoration: const InputDecoration(labelText: 'Title')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: category, decoration: const InputDecoration(labelText: 'Category')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: desc, maxLines: 2, decoration: const InputDecoration(labelText: 'Description')),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(child: TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price (AED)'))),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(child: TextField(controller: unit, decoration: const InputDecoration(labelText: 'Unit', hintText: 'each / from'))),
+            ]),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: contact, decoration: const InputDecoration(labelText: 'Contact')),
+          ]),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('List')),
-        ],
-      ),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('List')),
+      ],
     );
     if (ok != true || title.text.trim().isEmpty) return;
     try {

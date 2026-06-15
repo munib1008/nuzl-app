@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
@@ -76,15 +77,15 @@ class MaintenanceScreen extends ConsumerWidget {
 
   Future<void> _request(BuildContext context, WidgetRef ref) async {
     final cat = TextEditingController(text: 'ac'); final desc = TextEditingController();
-    final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('Request maintenance'),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
+    final ok = await AppDialog.show<bool>(context,
+      title: 'Request maintenance',
+      children: [
         TextField(controller: cat, decoration: const InputDecoration(labelText: 'Category', hintText: 'ac, plumbing, electrical…')),
         TextField(controller: desc, maxLines: 2, decoration: const InputDecoration(labelText: 'Describe the issue')),
-      ]),
-      actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Request'))],
-    ));
+      ],
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Request'))],
+    );
     if (ok != true) return;
     try {
       await ref.read(apiClientProvider).post('/maintenance/jobs', body: {'category': cat.text.trim(), 'description': desc.text.trim()});

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
@@ -101,17 +102,15 @@ class _Cheques extends ConsumerWidget {
 
   Future<void> _add(BuildContext context, WidgetRef ref) async {
     final no = TextEditingController(); final bank = TextEditingController(); final amount = TextEditingController(); final due = TextEditingController();
-    final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('Add cheque'),
-      content: Column(mainAxisSize: MainAxisSize.min, children: [
-        TextField(controller: no, decoration: const InputDecoration(labelText: 'Cheque no.')),
-        TextField(controller: bank, decoration: const InputDecoration(labelText: 'Bank')),
-        TextField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (AED)')),
-        TextField(controller: due, decoration: const InputDecoration(labelText: 'Due date (YYYY-MM-DD)')),
-      ]),
-      actions: [TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save'))],
-    ));
+    final ok = await AppDialog.show<bool>(context, title: 'Add cheque', children: [
+      TextField(controller: no, decoration: const InputDecoration(labelText: 'Cheque no.')),
+      TextField(controller: bank, decoration: const InputDecoration(labelText: 'Bank')),
+      TextField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (AED)')),
+      TextField(controller: due, decoration: const InputDecoration(labelText: 'Due date (YYYY-MM-DD)')),
+    ], actions: [
+      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+      FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+    ]);
     if (ok != true) return;
     await ref.read(apiClientProvider).post('/tenancies/$tenancyId/cheques', body: {
       'cheque_no': no.text.trim(), 'bank': bank.text.trim(), 'amount': double.tryParse(amount.text), 'due_date': due.text.trim(),

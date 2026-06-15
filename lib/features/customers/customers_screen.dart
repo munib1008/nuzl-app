@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
@@ -50,25 +51,26 @@ class CustomersScreen extends ConsumerWidget {
   Future<void> _createDialog(BuildContext context, WidgetRef ref) async {
     final name = TextEditingController(); final email = TextEditingController(); final phone = TextEditingController();
     String type = 'client';
-    final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
-      title: const Text('Add customer'),
-      content: StatefulBuilder(builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
+    final ok = await AppDialog.show<bool>(context,
+      title: 'Add customer',
+      children: [
         TextField(controller: name, decoration: const InputDecoration(labelText: 'Full name')),
         TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone')),
         TextField(controller: email, decoration: const InputDecoration(labelText: 'Email')),
         const SizedBox(height: 8),
-        DropdownButtonFormField<String>(initialValue: type, decoration: const InputDecoration(labelText: 'Type'),
+        StatefulBuilder(builder: (ctx, setS) => DropdownButtonFormField<String>(
+          initialValue: type, decoration: const InputDecoration(labelText: 'Type'),
           items: const [
             DropdownMenuItem(value: 'client', child: Text('Client')),
             DropdownMenuItem(value: 'investor', child: Text('Investor')),
             DropdownMenuItem(value: 'owner', child: Text('Owner')),
-          ], onChanged: (v) => setS(() => type = v ?? 'client')),
-      ])),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+          ], onChanged: (v) => setS(() => type = v ?? 'client'))),
       ],
-    ));
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+      ],
+    );
     if (ok != true) return;
     try {
       await ref.read(apiClientProvider).post('/customers', body: {

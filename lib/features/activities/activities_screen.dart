@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
@@ -63,19 +64,17 @@ class ActivitiesScreen extends ConsumerWidget {
   Future<void> _addDialog(BuildContext context, WidgetRef ref) async {
     final type = TextEditingController();
     final note = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Log activity'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: type, decoration: const InputDecoration(labelText: 'Type', hintText: 'call, viewing, follow_up…')),
-          TextField(controller: note, decoration: const InputDecoration(labelText: 'Note'), maxLines: 2),
-        ]),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
-        ],
-      ),
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Log activity',
+      children: [
+        TextField(controller: type, decoration: const InputDecoration(labelText: 'Type', hintText: 'call, viewing, follow_up…')),
+        TextField(controller: note, decoration: const InputDecoration(labelText: 'Note'), maxLines: 2),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+      ],
     );
     if (ok != true) return;
     if (type.text.trim().isEmpty) return;

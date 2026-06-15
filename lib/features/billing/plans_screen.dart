@@ -5,6 +5,7 @@ import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
 import '../../core/widgets/status_badge.dart';
 import '../auth/application/auth_controller.dart';
@@ -143,67 +144,63 @@ class PlansScreen extends ConsumerWidget {
         text: existing?['features'] is List ? (existing!['features'] as List).join(', ') : '');
     var interval = const ['month', 'year'].contains('${existing?['interval']}') ? '${existing!['interval']}' : 'month';
 
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(editing ? 'Edit plan' : 'New plan'),
-        content: StatefulBuilder(
-          builder: (ctx, setS) => SizedBox(
-            width: 400,
-            child: SingleChildScrollView(
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                TextField(
-                  controller: key,
-                  enabled: !editing,
-                  decoration: const InputDecoration(labelText: 'Key (e.g. starter)', helperText: 'lowercase, unique'),
-                ),
-                const SizedBox(height: AppSpacing.x8),
-                TextField(controller: name, decoration: const InputDecoration(labelText: 'Name')),
-                const SizedBox(height: AppSpacing.x8),
-                Row(children: [
-                  Expanded(
-                    child: TextField(
-                      controller: price,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Price (AED)'),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.x8),
-                  SizedBox(
-                    width: 120,
-                    child: DropdownButtonFormField<String>(
-                      initialValue: interval,
-                      decoration: const InputDecoration(labelText: 'Per'),
-                      items: const [
-                        DropdownMenuItem(value: 'month', child: Text('month')),
-                        DropdownMenuItem(value: 'year', child: Text('year')),
-                      ],
-                      onChanged: (v) => setS(() => interval = v ?? 'month'),
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: AppSpacing.x8),
-                TextField(
-                  controller: seats,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Seats', helperText: 'blank = unlimited'),
-                ),
-                const SizedBox(height: AppSpacing.x8),
-                TextField(
-                  controller: feats,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                      labelText: 'Features', helperText: 'comma-separated, e.g. 10 users, Full CRM, Reports'),
-                ),
-              ]),
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: editing ? 'Edit plan' : 'New plan',
+      maxWidth: 460,
+      children: [
+        StatefulBuilder(
+          builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+              controller: key,
+              enabled: !editing,
+              decoration: const InputDecoration(labelText: 'Key (e.g. starter)', helperText: 'lowercase, unique'),
             ),
-          ),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: name, decoration: const InputDecoration(labelText: 'Name')),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: price,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Price (AED)'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.x8),
+              SizedBox(
+                width: 120,
+                child: DropdownButtonFormField<String>(
+                  initialValue: interval,
+                  decoration: const InputDecoration(labelText: 'Per'),
+                  items: const [
+                    DropdownMenuItem(value: 'month', child: Text('month')),
+                    DropdownMenuItem(value: 'year', child: Text('year')),
+                  ],
+                  onChanged: (v) => setS(() => interval = v ?? 'month'),
+                ),
+              ),
+            ]),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(
+              controller: seats,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Seats', helperText: 'blank = unlimited'),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(
+              controller: feats,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                  labelText: 'Features', helperText: 'comma-separated, e.g. 10 users, Full CRM, Reports'),
+            ),
+          ]),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
-        ],
-      ),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+      ],
     );
     if (ok != true) return;
     if (key.text.trim().isEmpty || name.text.trim().isEmpty) return;

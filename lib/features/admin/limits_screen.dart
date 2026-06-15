@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
@@ -81,11 +82,12 @@ class _LimitTile extends ConsumerWidget {
     final valueCtl = TextEditingController(text: '${m['value'] ?? 0}');
     var period = const ['day', 'week', 'month', 'year'].contains('${m['period']}') ? '${m['period']}' : 'day';
     var soft = m['soft'] == true;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(_humanize('${m['key']}')),
-        content: StatefulBuilder(
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: _humanize('${m['key']}'),
+      maxWidth: 460,
+      children: [
+        StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(
               controller: valueCtl,
@@ -113,11 +115,11 @@ class _LimitTile extends ConsumerWidget {
             ),
           ]),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
-        ],
-      ),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+      ],
     );
     if (ok != true) return;
     try {

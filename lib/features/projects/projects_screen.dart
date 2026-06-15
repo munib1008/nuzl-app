@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
 import '../../core/widgets/status_badge.dart';
 import '../auth/application/auth_controller.dart';
@@ -77,11 +78,11 @@ class ProjectsScreen extends ConsumerWidget {
     final me = ref.read(authControllerProvider).user;
     final name = TextEditingController();
     var status = 'planning';
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('New project'),
-        content: StatefulBuilder(
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'New project',
+      children: [
+        StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(controller: name, decoration: const InputDecoration(labelText: 'Project name')),
             const SizedBox(height: AppSpacing.x8),
@@ -98,11 +99,11 @@ class ProjectsScreen extends ConsumerWidget {
             ),
           ]),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Create')),
-        ],
-      ),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Create')),
+      ],
     );
     if (ok != true) return;
     if (name.text.trim().isEmpty) return;

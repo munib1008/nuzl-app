@@ -8,6 +8,7 @@ import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/reset_password_screen.dart';
 import '../../features/profile/presentation/public_profile_screen.dart';
+import '../../features/profile/presentation/public_org_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/feed/presentation/feed_screen.dart';
@@ -73,7 +74,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final auth = ref.read(authControllerProvider);
       if (!auth.initialized) return null;
       final loc = state.matchedLocation;
-      final isPublic = _publicPaths.contains(loc) || loc.startsWith('/info/') || loc.startsWith('/u/');
+      final isPublic = _publicPaths.contains(loc) || loc.startsWith('/info/') ||
+          loc.startsWith('/u/') || loc.startsWith('/org/');
       if (!auth.isAuthenticated) return isPublic ? null : '/login';
       // authed users shouldn't sit on landing/login/register
       if (loc == '/' || loc == '/login' || loc == '/register') return '/dashboard';
@@ -93,6 +95,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/reset', builder: (_, st) => ResetPasswordScreen(token: st.uri.queryParameters['token'] ?? '')),
       GoRoute(path: '/info/:slug', builder: (_, st) => InfoPage(slug: st.pathParameters['slug']!)),
       GoRoute(path: '/u/:id', builder: (_, st) => PublicProfileScreen(id: st.pathParameters['id']!)),
+      GoRoute(path: '/org/:slug', builder: (_, st) => PublicOrgScreen(slug: st.pathParameters['slug']!)),
 
       // onboarding (authed, full screen)
       GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),

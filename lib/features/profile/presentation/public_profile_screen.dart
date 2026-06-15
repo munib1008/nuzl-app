@@ -78,6 +78,7 @@ class _Body extends ConsumerWidget {
     final bio = '${user['bio'] ?? ''}'.trim();
     final company = '${user['company'] ?? ''}'.trim();
     final orgName = '${user['org_name'] ?? ''}'.trim();
+    final orgSlug = '${user['org_slug'] ?? ''}'.trim();
     final phone = '${user['phone'] ?? ''}'.trim();
     final whatsapp = '${user['whatsapp'] ?? ''}'.trim();
     final areas = _list(user['areas']);
@@ -128,7 +129,10 @@ class _Body extends ConsumerWidget {
                           if (reraVerified)
                             const _Pill(text: 'RERA verified', color: AppColors.accentGoldTint, textColor: AppColors.accentGold, icon: Icons.verified),
                           if (orgName.isNotEmpty)
-                            _Pill(text: orgName, color: AppColors.surface2, textColor: AppColors.textMuted, icon: Icons.business_outlined),
+                            GestureDetector(
+                              onTap: orgSlug.isNotEmpty ? () => context.push('/org/$orgSlug') : null,
+                              child: _Pill(text: orgName, color: AppColors.surface2, textColor: AppColors.textMuted, icon: Icons.business_outlined),
+                            ),
                         ],
                       ),
                       if (company.isNotEmpty && company != orgName) ...[

@@ -5,6 +5,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/app_dialog.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../shell/app_shell.dart';
 
@@ -89,32 +90,30 @@ class FeedScreen extends ConsumerWidget {
     final title = TextEditingController();
     final body = TextEditingController();
     var kind = 'market_update';
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('New post'),
-        content: StatefulBuilder(
-          builder: (ctx, setS) => SizedBox(
-            width: 380,
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              DropdownButtonFormField<String>(
-                initialValue: kind,
-                decoration: const InputDecoration(labelText: 'Category'),
-                items: _kinds.map((k) => DropdownMenuItem(value: k.$1, child: Text(k.$2))).toList(),
-                onChanged: (v) => setS(() => kind = v ?? 'market_update'),
-              ),
-              const SizedBox(height: AppSpacing.x8),
-              TextField(controller: title, decoration: const InputDecoration(labelText: 'Title')),
-              const SizedBox(height: AppSpacing.x8),
-              TextField(controller: body, maxLines: 4, decoration: const InputDecoration(labelText: 'Share an update…')),
-            ]),
-          ),
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'New post',
+      maxWidth: 460,
+      children: [
+        StatefulBuilder(
+          builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
+            DropdownButtonFormField<String>(
+              initialValue: kind,
+              decoration: const InputDecoration(labelText: 'Category'),
+              items: _kinds.map((k) => DropdownMenuItem(value: k.$1, child: Text(k.$2))).toList(),
+              onChanged: (v) => setS(() => kind = v ?? 'market_update'),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: title, decoration: const InputDecoration(labelText: 'Title')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: body, maxLines: 4, decoration: const InputDecoration(labelText: 'Share an update…')),
+          ]),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Post')),
-        ],
-      ),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Post')),
+      ],
     );
     if (ok != true) return;
     if (title.text.trim().isEmpty && body.text.trim().isEmpty) return;

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
@@ -184,31 +185,30 @@ class _PropertyFinancials extends ConsumerWidget {
     final amount = TextEditingController();
     final note = TextEditingController();
     var kind = 'income';
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add transaction'),
-        content: StatefulBuilder(
-          builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
-            DropdownButtonFormField<String>(
-              initialValue: kind,
-              decoration: const InputDecoration(labelText: 'Kind'),
-              items: const [
-                DropdownMenuItem(value: 'income', child: Text('Income')),
-                DropdownMenuItem(value: 'expense', child: Text('Expense')),
-              ],
-              onChanged: (v) => setS(() => kind = v ?? 'income'),
-            ),
-            TextField(controller: category, decoration: const InputDecoration(labelText: 'Category')),
-            TextField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (AED)')),
-            TextField(controller: note, decoration: const InputDecoration(labelText: 'Note')),
-          ]),
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Add transaction',
+      maxWidth: 460,
+      children: [
+        StatefulBuilder(
+          builder: (ctx, setS) => DropdownButtonFormField<String>(
+            initialValue: kind,
+            decoration: const InputDecoration(labelText: 'Kind'),
+            items: const [
+              DropdownMenuItem(value: 'income', child: Text('Income')),
+              DropdownMenuItem(value: 'expense', child: Text('Expense')),
+            ],
+            onChanged: (v) => setS(() => kind = v ?? 'income'),
+          ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
-        ],
-      ),
+        TextField(controller: category, decoration: const InputDecoration(labelText: 'Category')),
+        TextField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (AED)')),
+        TextField(controller: note, decoration: const InputDecoration(labelText: 'Note')),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+      ],
     );
     if (ok != true) return;
     final amt = num.tryParse(amount.text.trim());
@@ -231,32 +231,31 @@ class _PropertyFinancials extends ConsumerWidget {
     final subtype = TextEditingController();
     final amount = TextEditingController();
     var category = 'expense';
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add ledger event'),
-        content: StatefulBuilder(
-          builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
-            DropdownButtonFormField<String>(
-              initialValue: category,
-              decoration: const InputDecoration(labelText: 'Category'),
-              items: const [
-                DropdownMenuItem(value: 'acquisition', child: Text('Acquisition')),
-                DropdownMenuItem(value: 'expense', child: Text('Expense')),
-                DropdownMenuItem(value: 'income', child: Text('Income')),
-                DropdownMenuItem(value: 'loan', child: Text('Loan')),
-              ],
-              onChanged: (v) => setS(() => category = v ?? 'expense'),
-            ),
-            TextField(controller: subtype, decoration: const InputDecoration(labelText: 'Subtype')),
-            TextField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (AED)')),
-          ]),
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Add ledger event',
+      maxWidth: 460,
+      children: [
+        StatefulBuilder(
+          builder: (ctx, setS) => DropdownButtonFormField<String>(
+            initialValue: category,
+            decoration: const InputDecoration(labelText: 'Category'),
+            items: const [
+              DropdownMenuItem(value: 'acquisition', child: Text('Acquisition')),
+              DropdownMenuItem(value: 'expense', child: Text('Expense')),
+              DropdownMenuItem(value: 'income', child: Text('Income')),
+              DropdownMenuItem(value: 'loan', child: Text('Loan')),
+            ],
+            onChanged: (v) => setS(() => category = v ?? 'expense'),
+          ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
-        ],
-      ),
+        TextField(controller: subtype, decoration: const InputDecoration(labelText: 'Subtype')),
+        TextField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (AED)')),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+      ],
     );
     if (ok != true) return;
     final amt = num.tryParse(amount.text.trim());

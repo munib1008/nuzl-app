@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
 import '../../core/widgets/status_badge.dart';
 import '../shell/app_shell.dart';
@@ -259,11 +260,11 @@ class CrmScreen extends ConsumerWidget {
 
   Future<void> _transfer(BuildContext context, WidgetRef ref, String id, List<dynamic> users) async {
     String? toUser;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Assign to agent'),
-        content: StatefulBuilder(
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Assign to agent',
+      children: [
+        StatefulBuilder(
           builder: (ctx, setS) => DropdownButtonFormField<String>(
             initialValue: toUser,
             isExpanded: true,
@@ -275,11 +276,11 @@ class CrmScreen extends ConsumerWidget {
             onChanged: (v) => setS(() => toUser = v),
           ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Assign')),
-        ],
-      ),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Assign')),
+      ],
     );
     if (ok != true || toUser == null) return;
     try {
@@ -313,29 +314,25 @@ class CrmScreen extends ConsumerWidget {
       final d = await ref.read(apiClientProvider).post('/matching/requirements/$id/run');
       final matches = d is List ? d : [];
       if (!context.mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text('${matches.length} matching listings'),
-          content: matches.isEmpty
-              ? const Text('No strong matches yet.')
-              : SizedBox(
-                  width: 320,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: matches.take(6).map((e) {
-                      final m = Map<String, dynamic>.from(e);
-                      final score = (num.tryParse('${m['score']}') ?? 0).round();
-                      return ListTile(
-                        dense: true,
-                        leading: CircleAvatar(radius: 14, child: Text('$score', style: const TextStyle(fontSize: 11))),
-                        title: Text('Listing ${'${m['listing_id'] ?? ''}'.split('-').first}'),
-                      );
-                    }).toList(),
-                  ),
-                ),
-          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
-        ),
+      await AppDialog.show<void>(
+        context,
+        title: '${matches.length} matching listings',
+        maxWidth: 460,
+        children: [
+          if (matches.isEmpty)
+            const Text('No strong matches yet.')
+          else
+            ...matches.take(6).map((e) {
+              final m = Map<String, dynamic>.from(e);
+              final score = (num.tryParse('${m['score']}') ?? 0).round();
+              return ListTile(
+                dense: true,
+                leading: CircleAvatar(radius: 14, child: Text('$score', style: const TextStyle(fontSize: 11))),
+                title: Text('Listing ${'${m['listing_id'] ?? ''}'.split('-').first}'),
+              );
+            }),
+        ],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
       );
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
@@ -345,11 +342,11 @@ class CrmScreen extends ConsumerWidget {
   Future<void> _logActivity(BuildContext context, WidgetRef ref, String id) async {
     final note = TextEditingController();
     var type = 'call';
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Log activity'),
-        content: StatefulBuilder(
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Log activity',
+      children: [
+        StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
             DropdownButtonFormField<String>(
               initialValue: type,
@@ -366,11 +363,11 @@ class CrmScreen extends ConsumerWidget {
             TextField(controller: note, decoration: const InputDecoration(labelText: 'Note'), maxLines: 2),
           ]),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
-        ],
-      ),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+      ],
     );
     if (ok != true) return;
     try {
