@@ -3,7 +3,12 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../features/auth/application/auth_controller.dart';
 
 /// The product persona that drives navigation + dashboard per user type.
-enum Persona { leadGenerator, agent, broker, developer, investor, owner, buyer, admin }
+///
+/// Two families:
+///  • Property/real-estate side: agent, broker(=Agency), developer, bank, leadGenerator.
+///  • Service/product side: salesperson, provider (Maintenance / Interior&Gardens / Seller).
+///  • Consumers: owner, investor, buyer(=Customer).
+enum Persona { leadGenerator, agent, broker, developer, bank, salesperson, provider, investor, owner, buyer, admin }
 
 Persona personaFromRole(String? role) {
   switch ((role ?? '').toLowerCase()) {
@@ -19,13 +24,26 @@ Persona personaFromRole(String? role) {
       return Persona.broker;
     case 'developer':
       return Persona.developer;
+    case 'bank':
+      return Persona.bank;
+    case 'salesperson':
+    case 'sales':
+      return Persona.salesperson;
+    case 'maintenance':
+    case 'interior_gardens':
+    case 'interior':
+    case 'gardens':
+    case 'service':
+    case 'seller':
+    case 'provider':
+      return Persona.provider;
     case 'investor':
     case 'investor_owner':
-    case 'customer':
       return Persona.investor;
     case 'owner':
     case 'property_owner':
       return Persona.owner;
+    case 'customer':
     case 'buyer':
       return Persona.buyer;
     case 'admin':
@@ -40,8 +58,11 @@ extension PersonaLabel on Persona {
   String get label => switch (this) {
         Persona.leadGenerator => 'Lead Generator',
         Persona.agent => 'Agent',
-        Persona.broker => 'Broker / Agency',
+        Persona.broker => 'Agency',
         Persona.developer => 'Developer',
+        Persona.bank => 'Bank',
+        Persona.salesperson => 'Salesperson',
+        Persona.provider => 'Service Provider',
         Persona.investor => 'Investor',
         Persona.owner => 'Property Owner',
         Persona.buyer => 'Customer',
@@ -52,20 +73,29 @@ extension PersonaLabel on Persona {
 /// Capability flags derived from the persona. These are the single source of
 /// truth for what each role can do — mirror the same checks in the API guards.
 extension PersonaCapabilities on Persona {
-  /// AGENCY | AGENT | OWNER (+ operator roles) may create property listings.
+  /// AGENCY | AGENT | OWNER | DEVELOPER may create property listings.
   bool get canListProperty => switch (this) {
         Persona.broker || Persona.agent || Persona.owner || Persona.developer || Persona.admin => true,
         _ => false,
       };
 
-  /// AGENCY | AGENT (+ lead generators) manage the leads pipeline.
+  /// AGENCY | AGENT | LEAD-GEN | BANK run a leads pipeline.
   bool get canManageLeads => switch (this) {
-        Persona.broker || Persona.agent || Persona.leadGenerator || Persona.admin => true,
+        Persona.broker || Persona.agent || Persona.leadGenerator || Persona.bank || Persona.admin => true,
         _ => false,
       };
 
-  /// Only AGENCY manages a team of agents.
-  bool get canManageTeam => this == Persona.broker || this == Persona.admin;
+  /// AGENCY | DEVELOPER | BANK | PROVIDER manage a team (agents / salespeople).
+  bool get canManageTeam => switch (this) {
+        Persona.broker || Persona.developer || Persona.bank || Persona.provider || Persona.admin => true,
+        _ => false,
+      };
+
+  /// SALESPERSON | PROVIDER (+ property roles) list services/products in the marketplace.
+  bool get canListMarketplace => switch (this) {
+        Persona.salesperson || Persona.provider || Persona.broker || Persona.agent || Persona.admin => true,
+        _ => false,
+      };
 
   /// OWNER | INVESTOR hold a property portfolio.
   bool get canManagePortfolio => switch (this) {
@@ -73,8 +103,17 @@ extension PersonaCapabilities on Persona {
         _ => false,
       };
 
-  /// BUYER | INVESTOR browse only — they cannot list or run a pipeline.
-  bool get browseOnly => this == Persona.buyer || this == Persona.investor;
+  /// Real-estate professional side (vs service/product or consumer).
+  bool get isPropertyPro => switch (this) {
+        Persona.broker || Persona.agent || Persona.developer || Persona.bank || Persona.leadGenerator => true,
+        _ => false,
+      };
+
+  /// Service / product provider side (Maintenance / Interior&Gardens / Seller).
+  bool get isServiceProvider => this == Persona.salesperson || this == Persona.provider;
+
+  /// BUYER (Customer) browses only — no listing, pipeline, or portfolio.
+  bool get browseOnly => this == Persona.buyer;
 }
 
 Persona? _personaByName(String name) {
@@ -85,9 +124,8 @@ Persona? _personaByName(String name) {
 }
 
 /// The user's chosen working persona, persisted per-user. The API `users.role`
-/// enum can't yet store the marketplace roles (agency/agent/owner/investor/
-/// buyer), so we keep the choice locally so it survives reloads. Set at
-/// onboarding / profile.
+/// enum can't yet store every marketplace role, so we keep the choice locally so
+/// it survives reloads. Set at onboarding / profile.
 class PersonaOverrideNotifier extends StateNotifier<Persona?> {
   PersonaOverrideNotifier(this._userId) : super(null) {
     _load();

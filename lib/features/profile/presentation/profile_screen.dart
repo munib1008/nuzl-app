@@ -55,24 +55,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   static const _emirates = ['Dubai','Abu Dhabi','Sharjah','Ajman','Ras Al Khaimah','Fujairah','Umm Al Quwain','Al Ain'];
   static const _langs = ['English','Arabic','Hindi','Urdu','Tagalog','Malayalam','Tamil','French'];
   static const _specs = ['Villas','Apartments','Penthouses','Townhouses','Commercial','Off-Plan','Luxury','Investment'];
+  // Providers (orgs) + users, per the role taxonomy.
   static const _roleOptions = [
     ('agency', 'Agency'),
+    ('developer', 'Developer'),
+    ('bank', 'Bank'),
     ('agent', 'Agent'),
+    ('salesperson', 'Salesperson'),
+    ('maintenance', 'Maintenance'),
+    ('interior_gardens', 'Interior & Gardens'),
+    ('seller', 'Seller'),
     ('owner', 'Owner'),
     ('investor', 'Investor'),
-    ('buyer', 'Customer'),
+    ('customer', 'Customer'),
   ];
 
-  /// Map any stored role string to one of the five selectable options.
+  /// Map any stored role string to one of the selectable options.
   static String? _canonRole(dynamic raw) {
     final r = '${raw ?? ''}'.toLowerCase();
     if (r.isEmpty) return null;
     return switch (personaFromRole(r)) {
       Persona.broker => 'agency',
+      Persona.developer => 'developer',
+      Persona.bank => 'bank',
       Persona.agent || Persona.leadGenerator => 'agent',
+      Persona.salesperson => 'salesperson',
+      Persona.provider => 'maintenance', // provider subtype (maintenance/seller/…) not preserved
       Persona.owner => 'owner',
-      Persona.investor || Persona.developer => 'investor',
-      Persona.buyer => 'buyer',
+      Persona.investor => 'investor',
+      Persona.buyer => 'customer',
       Persona.admin => null,
     };
   }
@@ -234,7 +245,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final ok = await AppDialog.show<bool>(
       context,
       title: 'Delete account?',
-      children: const [Text('Your account will be deactivated and you will be signed out. Contact support to restore it.')],
+      children: const [Text(
+        'Your account will be deactivated and you will be signed out. You have 14 days '
+        'to sign back in and reactivate — after that it is permanently deleted.')],
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
         FilledButton(

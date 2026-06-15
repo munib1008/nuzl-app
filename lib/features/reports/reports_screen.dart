@@ -9,11 +9,11 @@ import '../shell/app_shell.dart';
 
 /// Role-aware reports: each persona hits its own summary endpoint.
 String _reportPath(Persona p) => switch (p) {
-      Persona.agent || Persona.leadGenerator || Persona.buyer => '/reports/agent',
-      Persona.broker => '/reports/agency',
+      Persona.broker || Persona.bank || Persona.provider => '/reports/agency',
       Persona.developer => '/reports/developer',
       Persona.investor || Persona.owner => '/reports/investor',
       Persona.admin => '/admin/overview',
+      _ => '/reports/agent', // agent, leadGenerator, salesperson, buyer
     };
 
 final reportsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {

@@ -46,6 +46,11 @@ class AuthRepository {
     await _api.post(Api.resetPassword, body: {'token': token, 'password': password});
   }
 
+  /// Cancel a pending account deletion (within the 14-day grace window).
+  Future<void> reactivate() async {
+    await _api.post('/users/me/reactivate');
+  }
+
   Future<void> logout() => _storage.clear();
 
   Future<AppUser> _persist(dynamic data) async {

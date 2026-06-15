@@ -24,7 +24,7 @@ class MarketplaceScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final persona = ref.watch(personaProvider);
-    final canAdd = persona.canListProperty || persona.canManageLeads || persona == Persona.admin;
+    final canAdd = persona.canListMarketplace;
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -188,10 +188,19 @@ class _ItemCard extends ConsumerWidget {
           ]),
           const SizedBox(height: AppSpacing.x8),
           Row(children: [
-            if (contact.isNotEmpty)
-              Expanded(child: Text(contact, style: t.bodySmall?.copyWith(color: AppColors.textMuted)))
-            else
+            if (contact.isNotEmpty) ...[
+              const Icon(Icons.call_outlined, size: 14, color: AppColors.textMuted),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(contact,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    softWrap: false,
+                    style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              ),
+            ] else
               const Spacer(),
+            const SizedBox(width: AppSpacing.x8),
             FilledButton(onPressed: () => _request(context, ref), child: const Text('Request')),
           ]),
         ]),

@@ -56,6 +56,32 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
+    case Persona.bank:
+      return const [
+        NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
+        NavItem(Icons.account_balance_outlined, 'Mortgages', '/mortgages'),
+        NavItem(Icons.trending_up, 'Leads', '/leads'),
+        NavItem(Icons.contacts_outlined, 'Customers', '/customers'),
+        NavItem(Icons.groups_outlined, 'Team', '/team'),
+        NavItem(Icons.insights_outlined, 'Reports', '/reports'),
+      ];
+    case Persona.salesperson:
+      return const [
+        NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
+        NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
+        NavItem(Icons.contacts_outlined, 'Customers', '/customers'),
+        NavItem(Icons.event_note_outlined, 'Activities', '/activities'),
+        NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
+      ];
+    case Persona.provider:
+      return const [
+        NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
+        NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
+        NavItem(Icons.groups_outlined, 'Team', '/team'),
+        NavItem(Icons.contacts_outlined, 'Customers', '/customers'),
+        NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
+        NavItem(Icons.insights_outlined, 'Reports', '/reports'),
+      ];
     case Persona.investor:
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
@@ -81,7 +107,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
         NavItem(Icons.bookmark_outline, 'Saved', '/saved'),
-        NavItem(Icons.calculate_outlined, 'Mortgage Calculator', '/calculator'),
+        NavItem(Icons.account_balance_outlined, 'My Mortgage', '/mortgages'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
     case Persona.admin:

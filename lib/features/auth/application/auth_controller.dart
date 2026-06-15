@@ -57,6 +57,13 @@ class AuthController extends StateNotifier<AuthState> {
     }
   }
 
+  /// Cancel a pending account deletion, then refresh the user so the
+  /// reactivation banner disappears.
+  Future<void> reactivate() async {
+    await _repo.reactivate();
+    await bootstrap();
+  }
+
   Future<void> logout() async {
     await _repo.logout();
     state = state.copyWith(clearUser: true, loading: false);

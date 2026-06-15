@@ -36,10 +36,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   static const _roleOptions = [
     ('agency', 'Agency'),
+    ('developer', 'Developer'),
+    ('bank', 'Bank'),
     ('agent', 'Agent'),
+    ('salesperson', 'Salesperson'),
+    ('maintenance', 'Maintenance'),
+    ('interior_gardens', 'Interior & Gardens'),
+    ('seller', 'Seller'),
     ('owner', 'Owner'),
     ('investor', 'Investor'),
-    ('buyer', 'Customer'),
+    ('customer', 'Customer'),
   ];
   static const _emirates = ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Fujairah', 'Umm Al Quwain', 'Al Ain'];
   static const _langs = ['English', 'Arabic', 'Hindi', 'Urdu', 'Tagalog', 'Malayalam', 'Tamil', 'French', 'Russian', 'Chinese'];
@@ -55,9 +61,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  /// Real-estate professionals (agency/agent) get the pro-only fields; everyone
-  /// else (customer/owner/investor) completes without "areas you cover".
-  bool get _isPro => role == 'agency' || role == 'agent';
+  /// Org/provider roles get an "Organization name + licence" block.
+  bool get _isOrg => const ['agency', 'developer', 'bank', 'maintenance', 'interior_gardens', 'seller'].contains(role);
+
+  /// Professionals + providers get the "areas / specialties" fields; consumers
+  /// (owner/investor/customer) complete without them.
+  bool get _isPro => role != null && !const ['owner', 'investor', 'customer'].contains(role);
 
   Future<void> _finish() async {
     if (role != null) {
@@ -71,7 +80,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       'languages': languages.toList(),
       'specialties': specialties.toList(),
     };
-    if (role == 'agency') {
+    if (_isOrg) {
       body['company'] = company.text.trim();
       if (orn.text.trim().isNotEmpty) body['rera_brn'] = orn.text.trim();
     } else if (role == 'agent') {
@@ -98,7 +107,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 const SizedBox(height: AppSpacing.x16),
                 const Center(child: NuzlLogo(size: 44, showWordmark: false)),
                 const SizedBox(height: AppSpacing.x12),
-                Center(child: Text('Welcome to nuzl', style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.w700))),
+                Center(child: Text('Welcome to nuzl', style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700))),
                 Center(
                     child: Text("Let's set up your profile to get started",
                         style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
@@ -160,11 +169,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             TextField(controller: company, decoration: const InputDecoration(labelText: 'Agency name')),
           ],
         ],
-        if (role == 'agency') ...[
+        if (_isOrg) ...[
           const SizedBox(height: AppSpacing.x12),
-          TextField(controller: company, decoration: const InputDecoration(labelText: 'Company name')),
+          TextField(controller: company, decoration: const InputDecoration(labelText: 'Organization name')),
           const SizedBox(height: AppSpacing.x12),
-          TextField(controller: orn, decoration: const InputDecoration(labelText: 'Trade licence / ORN')),
+          TextField(controller: orn, decoration: const InputDecoration(labelText: 'Trade licence / registration no.')),
         ],
         const SizedBox(height: AppSpacing.x20),
         _nav(onNext: role == null ? null : () => setState(() => step = 1)),

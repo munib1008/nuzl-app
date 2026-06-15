@@ -90,6 +90,10 @@ class DashboardScreen extends ConsumerWidget {
             Text('Welcome back${user?.fullName.isNotEmpty == true ? ', ${user!.fullName.split(' ').first}' : ''}',
                 style: t.headlineSmall),
             Text("Here's what's happening today", style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            if (user?.pendingDeletion == true) ...[
+              const SizedBox(height: AppSpacing.x16),
+              _DeletionBanner(deletionAt: user!.deletionAt),
+            ],
             const SizedBox(height: AppSpacing.x20),
 
             // KPI row
@@ -589,6 +593,53 @@ class _QuickActions extends StatelessWidget {
   }
 }
 
+/// Shown when the signed-in account is in the 14-day deletion grace window.
+class _DeletionBanner extends ConsumerWidget {
+  const _DeletionBanner({this.deletionAt});
+  final DateTime? deletionAt;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final when = deletionAt != null ? DateFormat('d MMM y').format(deletionAt!) : 'soon';
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x12),
+      decoration: BoxDecoration(
+        color: AppColors.danger.withValues(alpha: .08),
+        borderRadius: BorderRadius.circular(AppSpacing.rCard),
+        border: Border.all(color: AppColors.danger.withValues(alpha: .35)),
+      ),
+      child: Row(children: [
+        const Icon(Icons.warning_amber_rounded, color: AppColors.danger),
+        const SizedBox(width: AppSpacing.x12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Account scheduled for deletion',
+                style: t.titleSmall?.copyWith(color: AppColors.danger, fontWeight: FontWeight.w700)),
+            Text('Your account will be permanently deleted on $when. Reactivate to cancel.',
+                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+          ]),
+        ),
+        const SizedBox(width: AppSpacing.x8),
+        FilledButton(
+          onPressed: () async {
+            try {
+              await ref.read(authControllerProvider.notifier).reactivate();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Account reactivated — welcome back!')));
+              }
+            } catch (e) {
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+            }
+          },
+          child: const Text('Reactivate'),
+        ),
+      ]),
+    );
+  }
+}
+
 class _BuyerCta extends StatelessWidget {
   const _BuyerCta();
   @override
@@ -671,6 +722,21 @@ List<(String, IconData, String)> _toolsFor(Persona p) => switch (p) {
           ('Marketplace', Icons.storefront_outlined, '/marketplace'),
           ('Mortgage calculator', Icons.calculate_outlined, '/calculator'),
           ('Viewings', Icons.event_available_outlined, '/viewings'),
+        ],
+      Persona.bank => [
+          ('Mortgages', Icons.account_balance_outlined, '/mortgages'),
+          ('Leads', Icons.trending_up, '/leads'),
+          ('Reports', Icons.insights_outlined, '/reports'),
+        ],
+      Persona.salesperson => [
+          ('Marketplace', Icons.storefront_outlined, '/marketplace'),
+          ('Customers', Icons.contacts_outlined, '/customers'),
+          ('Activities', Icons.event_note_outlined, '/activities'),
+        ],
+      Persona.provider => [
+          ('Marketplace', Icons.storefront_outlined, '/marketplace'),
+          ('Team', Icons.groups_outlined, '/team'),
+          ('Reports', Icons.insights_outlined, '/reports'),
         ],
       Persona.admin => [
           ('Organizations', Icons.business_outlined, '/organizations'),

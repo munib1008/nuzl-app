@@ -3,49 +3,37 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_colors.dart';
 
-/// NUZL logo lockup — the flowing-"n" mark + "nuzl" wordmark.
-/// FIXED brand gradient (#00C2A8 → #6D4AFF), never recoloured by theme.
+/// NUZL logo lockup — the hexagonal-house mark + "nuzl" wordmark.
+/// The mark carries the brand colours (ink hexagon, white house, gold accent);
+/// the wordmark is ink on light surfaces and near-white in dark mode.
 class NuzlLogo extends StatelessWidget {
   const NuzlLogo({super.key, this.size = 48, this.showWordmark = true, this.color});
   final double size;
   final bool showWordmark;
-  final Color? color; // ignored — logo colour is fixed (kept for call-site compatibility)
+  final Color? color; // optional wordmark override (the mark keeps its brand colours)
 
   @override
   Widget build(BuildContext context) {
-    final lockup = Row(
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final wordColor = color ?? (dark ? AppColors.dText : AppColors.primary);
+    return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        SvgPicture.asset(
-          'assets/logo/nuzl_mark.svg',
-          width: size,
-          height: size,
-          colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
-        ),
+        SvgPicture.asset('assets/logo/nuzl_mark.svg', width: size, height: size),
         if (showWordmark) ...[
-          SizedBox(width: size * 0.06),
+          SizedBox(width: size * 0.16),
           Text(
             'nuzl',
-            style: GoogleFonts.inter(
-              fontSize: size * 0.74,
+            style: GoogleFonts.poppins(
+              fontSize: size * 0.72,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: wordColor,
               letterSpacing: -0.5,
             ),
           ),
         ],
       ],
-    );
-    // Paint the white lockup with the fixed brand gradient.
-    return ShaderMask(
-      blendMode: BlendMode.srcIn,
-      shaderCallback: (rect) => const LinearGradient(
-        colors: [AppColors.gradientStart, AppColors.gradientEnd],
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-      ).createShader(rect),
-      child: lockup,
     );
   }
 }
