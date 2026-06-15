@@ -57,21 +57,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   static const _specs = ['Villas','Apartments','Penthouses','Townhouses','Commercial','Off-Plan','Luxury','Investment'];
   static const _roleOptions = [
     ('agency', 'Agency'),
+    ('developer', 'Developer'),
     ('agent', 'Agent'),
     ('owner', 'Owner'),
     ('investor', 'Investor'),
     ('buyer', 'Customer'),
   ];
 
-  /// Map any stored role string to one of the five selectable options.
+  /// Map any stored role string to one of the selectable options.
   static String? _canonRole(dynamic raw) {
     final r = '${raw ?? ''}'.toLowerCase();
     if (r.isEmpty) return null;
     return switch (personaFromRole(r)) {
       Persona.broker => 'agency',
       Persona.agent || Persona.leadGenerator => 'agent',
+      Persona.developer => 'developer',
       Persona.owner => 'owner',
-      Persona.investor || Persona.developer => 'investor',
+      Persona.investor => 'investor',
       Persona.buyer => 'buyer',
       Persona.admin => null,
     };
