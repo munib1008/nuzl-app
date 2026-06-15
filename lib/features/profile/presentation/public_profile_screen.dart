@@ -8,6 +8,8 @@ import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/nuzl_logo.dart';
+import '../../auth/application/auth_controller.dart';
+import '../../messages/data/messaging_repository.dart';
 
 final _publicUserProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
   final d = await ref.read(apiClientProvider).get('/public/users/$id');
@@ -143,6 +145,7 @@ class _Body extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.x20),
+                _MessageCta(profileId: id),
 
                 // stats strip
                 _StatsStrip(items: [
@@ -209,6 +212,38 @@ class _Body extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// "Message" call-to-action. Hidden when signed-out or viewing your own profile.
+class _MessageCta extends ConsumerWidget {
+  const _MessageCta({required this.profileId});
+  final String profileId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final myId = ref.watch(authControllerProvider).user?.id;
+    if (myId == null || myId == profileId) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.x20),
+      child: SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: () async {
+            try {
+              final convId = await ref.read(messagingRepositoryProvider).startDirect(profileId);
+              if (convId.isNotEmpty && context.mounted) context.push('/messages/$convId');
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+              }
+            }
+          },
+          icon: const Icon(Icons.chat_bubble_outline),
+          label: const Text('Message'),
+        ),
+      ),
     );
   }
 }

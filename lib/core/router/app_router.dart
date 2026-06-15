@@ -40,6 +40,7 @@ import '../../features/portfolio/my_properties_screen.dart';
 import '../../features/matching/lead_matches_screen.dart';
 import '../../features/activities/activities_screen.dart';
 import '../../features/messages/messages_screen.dart';
+import '../../features/messages/chat_thread_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/viewings/viewings_screen.dart';
 import '../../features/saved/saved_screen.dart';
@@ -99,6 +100,11 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // onboarding (authed, full screen)
       GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),
+
+      // chat thread (authed, full screen — outside the shell so the composer
+      // isn't stacked under the mobile bottom-nav). The /messages inbox stays
+      // inside the shell below.
+      GoRoute(path: '/messages/:id', builder: (_, st) => ChatThreadScreen(id: st.pathParameters['id']!)),
 
       // authed app — wrapped in a shell that adds the mobile bottom nav.
       // Each screen still carries the NuzlAppBar + role-based NuzlDrawer.

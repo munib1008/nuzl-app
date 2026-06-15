@@ -55,6 +55,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.inventory_2_outlined, 'Inventory', '/inventory'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
         NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
+        NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
     case Persona.bank:
@@ -100,6 +101,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.account_balance_outlined, 'Mortgages', '/mortgages'),
         NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
         NavItem(Icons.folder_outlined, 'Documents', '/documents'),
+        NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
     case Persona.owner:
       return const [
@@ -110,6 +112,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.account_balance_wallet_outlined, 'Financials', '/financials'),
         NavItem(Icons.account_balance_outlined, 'Mortgages', '/mortgages'),
         NavItem(Icons.folder_outlined, 'Documents', '/documents'),
+        NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
     case Persona.buyer:
       return const [

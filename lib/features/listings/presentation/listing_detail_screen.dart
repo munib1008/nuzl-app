@@ -7,6 +7,7 @@ import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../messages/data/messaging_repository.dart';
 import '../../saved/saved_screen.dart';
 
 final _detailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
@@ -334,6 +335,29 @@ class _AgentCard extends ConsumerWidget {
                 TextButton(onPressed: () => context.push('/u/$brokerId'), child: const Text('Profile')),
               ],
             ),
+            if (ref.watch(authControllerProvider).user?.id != null &&
+                ref.watch(authControllerProvider).user?.id != brokerId) ...[
+              const SizedBox(height: AppSpacing.x8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    try {
+                      final convId = await ref
+                          .read(messagingRepositoryProvider)
+                          .startDirect(brokerId, contextTable: 'listings', contextId: listingId);
+                      if (convId.isNotEmpty && context.mounted) context.push('/messages/$convId');
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                  label: const Text('Message agent'),
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.x12),
             ref.watch(_myViewingProvider(listingId)).maybeWhen(
               data: (v) => v == null

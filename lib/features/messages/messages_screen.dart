@@ -1,84 +1,130 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
+import 'data/messaging_repository.dart';
+import 'domain/conversation.dart';
 
-/// Structured comms log built on the notifications module (no free chat).
-final messagesProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
-  try {
-    final d = await ref.read(apiClientProvider).get('/notifications');
-    return d is List ? d : [];
-  } catch (_) {
-    return [];
-  }
-});
-
+/// Inbox — the list of the user's conversations. Tapping one opens the thread.
 class MessagesScreen extends ConsumerWidget {
   const MessagesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final messages = ref.watch(messagesProvider);
+    final inbox = ref.watch(inboxProvider);
     return Scaffold(
       appBar: const NuzlAppBar(title: 'Messages'),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
-        child: messages.when(
-          loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
+        child: inbox.when(
+          loading: () => const Center(
+              child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
           error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
           data: (list) => list.isEmpty
-              ? const Center(child: Padding(padding: EdgeInsets.all(40), child: Text('No messages yet.')))
+              ? const _EmptyInbox()
               : ListView.separated(
-                  padding: const EdgeInsets.all(AppSpacing.x16),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
                   itemCount: list.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x8),
-                  itemBuilder: (_, i) {
-                    final n = Map<String, dynamic>.from(list[i]);
-                    final read = n['is_read'] == true;
-                    final urgent = '${n['tier']}' == 'urgent';
-                    final created = DateTime.tryParse('${n['created_at']}');
-                    final body = '${n['body'] ?? ''}';
-                    return Card(
-                      child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: urgent ? AppColors.danger : AppColors.primaryTint,
-                          child: Icon(urgent ? Icons.priority_high : Icons.notifications_none,
-                              color: urgent ? Colors.white : AppColors.primary),
-                        ),
-                        title: Text('${n['title'] ?? _humanize('${n['type'] ?? 'Notification'}')}',
-                            style: TextStyle(fontWeight: read ? FontWeight.w400 : FontWeight.w700)),
-                        subtitle: body.isNotEmpty ? Text(body) : null,
-                        isThreeLine: body.isNotEmpty,
-                        trailing: read
-                            ? (created != null
-                                ? Text(DateFormat('d MMM').format(created), style: Theme.of(context).textTheme.bodySmall)
-                                : null)
-                            : TextButton(onPressed: () => _markRead(context, ref, '${n['id']}'), child: const Text('Mark read')),
-                      ),
-                    );
-                  },
+                  separatorBuilder: (_, __) => const Divider(height: 1, indent: 76),
+                  itemBuilder: (_, i) => _ConversationTile(c: list[i]),
                 ),
         ),
       ),
     );
   }
+}
 
-  Future<void> _markRead(BuildContext context, WidgetRef ref, String id) async {
-    try {
-      await ref.read(apiClientProvider).patch('/notifications/$id/read');
-      ref.invalidate(messagesProvider);
-    } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
-    }
+class _ConversationTile extends StatelessWidget {
+  const _ConversationTile({required this.c});
+  final Conversation c;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final avatar = c.primaryOther?.avatarUrl;
+    final unread = c.unread > 0;
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: 4),
+      leading: CircleAvatar(
+        radius: 24,
+        backgroundColor: AppColors.primaryTint,
+        backgroundImage: (avatar != null && avatar.isNotEmpty) ? NetworkImage(avatar) : null,
+        child: (avatar == null || avatar.isEmpty)
+            ? Text(c.title.isNotEmpty ? c.title[0].toUpperCase() : '?',
+                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700))
+            : null,
+      ),
+      title: Text(c.title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: t.titleSmall?.copyWith(fontWeight: unread ? FontWeight.w700 : FontWeight.w600)),
+      subtitle: Text(c.lastPreview ?? 'No messages yet',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: t.bodySmall?.copyWith(
+            color: unread ? null : AppColors.textMuted,
+            fontWeight: unread ? FontWeight.w500 : FontWeight.w400,
+          )),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(c.lastAt != null ? _shortTime(c.lastAt!) : '',
+              style: t.labelSmall?.copyWith(color: AppColors.textMuted)),
+          const SizedBox(height: 4),
+          if (unread)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
+              constraints: const BoxConstraints(minWidth: 20),
+              decoration: BoxDecoration(
+                  color: AppColors.primary, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+              alignment: Alignment.center,
+              child: Text('${c.unread}',
+                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+            )
+          else
+            const SizedBox(height: 18),
+        ],
+      ),
+      onTap: () => context.push('/messages/${c.id}'),
+    );
   }
 }
 
-String _humanize(String k) => k
-    .replaceAll('_', ' ')
-    .split(' ')
-    .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
-    .join(' ');
+class _EmptyInbox extends StatelessWidget {
+  const _EmptyInbox();
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.forum_outlined, size: 56, color: AppColors.textSubtle),
+            const SizedBox(height: AppSpacing.x16),
+            Text('No conversations yet', style: t.titleMedium),
+            const SizedBox(height: AppSpacing.x8),
+            Text('Start a chat from a member’s profile or a listing’s agent card.',
+                textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact timestamp: HH:mm today, weekday this week, else "d MMM".
+String _shortTime(DateTime dt) {
+  final local = dt.toLocal();
+  final now = DateTime.now();
+  final sameDay = now.year == local.year && now.month == local.month && now.day == local.day;
+  if (sameDay) return DateFormat('HH:mm').format(local);
+  if (now.difference(local).inDays < 7) return DateFormat('EEE').format(local);
+  return DateFormat('d MMM').format(local);
+}
