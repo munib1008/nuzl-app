@@ -6,6 +6,7 @@ import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
@@ -61,32 +62,26 @@ class SaveSearchAction extends ConsumerWidget {
 
   Future<void> _save(BuildContext context, WidgetRef ref) async {
     final nameCtrl = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Save search'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: nameCtrl,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Name (optional)',
-                hintText: 'e.g. 2BR in JVC under 1.5M',
-              ),
-            ),
-            const SizedBox(height: AppSpacing.x12),
-            const Text('We’ll alert you when a new listing matches these filters.',
-                style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
-          ],
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Save search',
+      children: [
+        TextField(
+          controller: nameCtrl,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'Name (optional)',
+            hintText: 'e.g. 2BR in JVC under 1.5M',
+          ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
-        ],
-      ),
+        const SizedBox(height: AppSpacing.x12),
+        const Text('We’ll alert you when a new listing matches these filters.',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+      ],
     );
     if (ok != true) return;
     try {

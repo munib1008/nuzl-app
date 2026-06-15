@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
@@ -72,34 +73,32 @@ class OrganizationsScreen extends ConsumerWidget {
   Future<void> _createOrg(BuildContext context, WidgetRef ref) async {
     final name = TextEditingController();
     var type = 'agency';
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('New organization'),
-        content: StatefulBuilder(
-          builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: name, decoration: const InputDecoration(labelText: 'Name')),
-            const SizedBox(height: AppSpacing.x8),
-            DropdownButtonFormField<String>(
-              initialValue: type,
-              decoration: const InputDecoration(labelText: 'Type'),
-              items: const [
-                DropdownMenuItem(value: 'agency', child: Text('Agency')),
-                DropdownMenuItem(value: 'developer', child: Text('Developer')),
-                DropdownMenuItem(value: 'bank', child: Text('Bank')),
-                DropdownMenuItem(value: 'investor', child: Text('Investor')),
-                DropdownMenuItem(value: 'service', child: Text('Service')),
-                DropdownMenuItem(value: 'seller', child: Text('Seller')),
-              ],
-              onChanged: (v) => setS(() => type = v ?? 'agency'),
-            ),
-          ]),
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'New organization',
+      children: [
+        TextField(controller: name, decoration: const InputDecoration(labelText: 'Name')),
+        const SizedBox(height: AppSpacing.x12),
+        StatefulBuilder(
+          builder: (ctx, setS) => DropdownButtonFormField<String>(
+            initialValue: type,
+            decoration: const InputDecoration(labelText: 'Type'),
+            items: const [
+              DropdownMenuItem(value: 'agency', child: Text('Agency')),
+              DropdownMenuItem(value: 'developer', child: Text('Developer')),
+              DropdownMenuItem(value: 'bank', child: Text('Bank')),
+              DropdownMenuItem(value: 'investor', child: Text('Investor')),
+              DropdownMenuItem(value: 'service', child: Text('Service')),
+              DropdownMenuItem(value: 'seller', child: Text('Seller')),
+            ],
+            onChanged: (v) => setS(() => type = v ?? 'agency'),
+          ),
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Create')),
-        ],
-      ),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Create')),
+      ],
     );
     if (ok != true) return;
     if (name.text.trim().isEmpty) return;

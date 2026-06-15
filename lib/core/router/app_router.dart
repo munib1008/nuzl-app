@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/application/auth_controller.dart';
+import '../rbac/persona.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/register_screen.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
@@ -61,7 +62,7 @@ class _AuthRefresh extends ChangeNotifier {
 }
 
 /// Public routes (no login). The mortgage calculator + marketing pages included.
-const _publicPaths = {'/', '/login', '/register', '/calculator', '/forgot', '/reset'};
+const _publicPaths = {'/', '/login', '/register', '/forgot', '/reset'};
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _AuthRefresh(ref);
@@ -76,6 +77,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!auth.isAuthenticated) return isPublic ? null : '/login';
       // authed users shouldn't sit on landing/login/register
       if (loc == '/' || loc == '/login' || loc == '/register') return '/dashboard';
+      // Lead posting/pipeline is for agents / agency / freelancer (+ lead-gen) only.
+      // Customers are active users but don't run a lead pipeline — bounce them out.
+      if (loc == '/leads' || loc == '/leads/new') {
+        if (!ref.read(personaProvider).canManageLeads) return '/dashboard';
+      }
       return null;
     },
     routes: [
@@ -85,7 +91,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
       GoRoute(path: '/forgot', builder: (_, __) => const ForgotPasswordScreen()),
       GoRoute(path: '/reset', builder: (_, st) => ResetPasswordScreen(token: st.uri.queryParameters['token'] ?? '')),
-      GoRoute(path: '/calculator', builder: (_, __) => const CalculatorScreen()),
       GoRoute(path: '/info/:slug', builder: (_, st) => InfoPage(slug: st.pathParameters['slug']!)),
       GoRoute(path: '/u/:id', builder: (_, st) => PublicProfileScreen(id: st.pathParameters['id']!)),
 
@@ -140,6 +145,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/soon/:title', builder: (_, st) => StubScreen(title: st.pathParameters['title']!)),
 
       // mortgages
+      GoRoute(path: '/calculator', builder: (_, __) => const CalculatorScreen()),
       GoRoute(path: '/mortgages', builder: (_, __) => const MortgageListScreen()),
       GoRoute(path: '/mortgages/new', builder: (_, __) => const MortgageFormScreen()),
       GoRoute(path: '/mortgages/:id', builder: (_, s) => MortgageDetailScreen(id: s.pathParameters['id']!)),
