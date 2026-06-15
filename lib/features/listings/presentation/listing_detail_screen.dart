@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/upload_service.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -137,6 +139,8 @@ class _Detail extends ConsumerWidget {
                             label: const Text('Edit listing'),
                           ),
                         ),
+                        const SizedBox(height: AppSpacing.x12),
+                        _OwnershipCard(listingId: id, listing: l),
                       ],
                       const SizedBox(height: AppSpacing.x16),
                       Text('Key facts', style: t.titleMedium),
@@ -432,6 +436,110 @@ class _BookingBox extends StatelessWidget {
   }
 }
 
+/// Owner-facing ownership-verification card (UAT #2B). Shows the current status
+/// and lets the lister submit / resubmit a title-deed for a Nuzler to review.
+class _OwnershipCard extends ConsumerStatefulWidget {
+  const _OwnershipCard({required this.listingId, required this.listing});
+  final String listingId;
+  final Map<String, dynamic> listing;
+  @override
+  ConsumerState<_OwnershipCard> createState() => _OwnershipCardState();
+}
+
+class _OwnershipCardState extends ConsumerState<_OwnershipCard> {
+  bool _busy = false;
+
+  Future<void> _submit() async {
+    if (_busy) return;
+    try {
+      final picked = await ImagePicker()
+          .pickImage(source: ImageSource.gallery, maxWidth: 2200, imageQuality: 85);
+      if (picked == null) return;
+      setState(() => _busy = true);
+      final bytes = await picked.readAsBytes();
+      final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
+      if (url == null) throw Exception('Upload failed — please try again.');
+      await ref.read(apiClientProvider)
+          .post('/listings/${widget.listingId}/ownership', body: {'doc_url': url});
+      ref.invalidate(_detailProvider(widget.listingId));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Title deed submitted — a Nuzler will review it.')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final status = '${widget.listing['ownership_status'] ?? 'none'}';
+    final reason = '${widget.listing['ownership_rejection_reason'] ?? ''}'.trim();
+    final (IconData icon, Color color, String label, String sub) = switch (status) {
+      'verified' => (
+          Icons.verified_user,
+          AppColors.accentGold,
+          'Ownership verified',
+          'Buyers see a verified badge on this listing.'
+        ),
+      'pending' => (
+          Icons.hourglass_top,
+          AppColors.info,
+          'Verification pending',
+          'A Nuzler is reviewing your title deed.'
+        ),
+      'rejected' => (
+          Icons.error_outline,
+          AppColors.danger,
+          'Verification declined',
+          reason.isNotEmpty ? reason : 'Please resubmit a clear title deed.'
+        ),
+      _ => (
+          Icons.shield_outlined,
+          AppColors.textMuted,
+          'Verify ownership',
+          'Submit a title deed so buyers can trust this listing.'
+        ),
+    };
+    final canSubmit = status == 'none' || status == 'rejected';
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 8),
+              Text(label, style: t.titleSmall?.copyWith(color: color)),
+            ]),
+            const SizedBox(height: 4),
+            Text(sub, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            if (canSubmit) ...[
+              const SizedBox(height: AppSpacing.x12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _busy ? null : _submit,
+                  icon: _busy
+                      ? const SizedBox(
+                          width: 18, height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.upload_file_outlined),
+                  label: Text(status == 'rejected' ? 'Resubmit title deed' : 'Submit title deed'),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _MapPlaceholder extends StatelessWidget {
   const _MapPlaceholder();
   @override
@@ -504,7 +612,10 @@ class _VerificationBlock extends StatelessWidget {
     final rera = '${l['rera_number'] ?? ''}'.trim();
     final quality = int.tryParse('${l['quality_score'] ?? 0}') ?? 0;
     final verified = '${l['availability_status']}' == 'verified';
-    if (permit.isEmpty && rera.isEmpty && quality <= 0 && !verified) return const SizedBox.shrink();
+    final ownershipVerified = '${l['ownership_status']}' == 'verified';
+    if (permit.isEmpty && rera.isEmpty && quality <= 0 && !verified && !ownershipVerified) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -522,6 +633,15 @@ class _VerificationBlock extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (ownershipVerified) ...[
+                Row(children: [
+                  const Icon(Icons.verified_user, size: 18, color: AppColors.accentGold),
+                  const SizedBox(width: 6),
+                  Text('Ownership verified',
+                      style: t.bodyMedium?.copyWith(color: AppColors.accentGold, fontWeight: FontWeight.w600)),
+                ]),
+                const SizedBox(height: AppSpacing.x8),
+              ],
               if (verified) ...[
                 Row(children: [
                   const Icon(Icons.verified, size: 18, color: AppColors.success),

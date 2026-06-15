@@ -415,7 +415,19 @@ class _PublicListingCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(money, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                Row(children: [
+                  Expanded(
+                    child: Text(money,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  ),
+                  if ('${l['ownership_status']}' == 'verified')
+                    const Tooltip(
+                      message: 'Ownership verified',
+                      child: Icon(Icons.verified_user, size: 16, color: AppColors.accentGold),
+                    ),
+                ]),
                 const SizedBox(height: 2),
                 Text(facts, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
               ],

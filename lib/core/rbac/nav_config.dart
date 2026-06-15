@@ -127,6 +127,7 @@ List<NavItem> navItemsFor(Persona p) {
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.business_outlined, 'Organizations', '/organizations'),
+        NavItem(Icons.verified_user_outlined, 'Verification', '/verification-queue'),
         NavItem(Icons.receipt_long_outlined, 'Audit Logs', '/audit'),
         NavItem(Icons.workspace_premium_outlined, 'Plans', '/plans'),
         NavItem(Icons.speed_outlined, 'Usage Limits', '/limits'),

@@ -48,6 +48,7 @@ import '../../features/saved/saved_searches.dart';
 import '../../features/marketplace/marketplace_screen.dart';
 import '../../features/network/network_screen.dart';
 import '../../features/admin/organizations_screen.dart';
+import '../../features/admin/verification_queue_screen.dart';
 import '../../features/admin/audit_screen.dart';
 import '../../features/admin/limits_screen.dart';
 import '../../features/billing/plans_screen.dart';
@@ -147,6 +148,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/marketplace', builder: (_, __) => const MarketplaceScreen()),
       GoRoute(path: '/network', builder: (_, __) => const NetworkScreen()),
       GoRoute(path: '/organizations', builder: (_, __) => const OrganizationsScreen()),
+      GoRoute(path: '/verification-queue', builder: (_, __) => const VerificationQueueScreen()),
       GoRoute(path: '/audit', builder: (_, __) => const AuditScreen()),
       GoRoute(path: '/plans', builder: (_, __) => const PlansScreen()),
       GoRoute(path: '/limits', builder: (_, __) => const LimitsScreen()),
