@@ -20,7 +20,11 @@ class NuzlLogo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        SvgPicture.asset('assets/logo/nuzl_mark.svg', width: size, height: size),
+        // The hexagon fill is `currentColor`; drive it from the theme so the mark
+        // matches the wordmark (ink on light, near-white on dark). The gold marker
+        // stays gold. Without this the ink mark vanishes on dark backgrounds.
+        SvgPicture.asset('assets/logo/nuzl_mark.svg',
+            width: size, height: size, theme: SvgTheme(currentColor: wordColor)),
         if (showWordmark) ...[
           SizedBox(width: size * 0.16),
           Text(
