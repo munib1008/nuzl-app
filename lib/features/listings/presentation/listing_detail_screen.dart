@@ -142,6 +142,8 @@ class _Detail extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.x12),
                         _OwnershipCard(listingId: id, listing: l),
                         _PublishRow(listingId: id, listing: l),
+                        if ('${l['property_id'] ?? ''}'.isNotEmpty)
+                          _PropertyAgentsCard(propertyId: '${l['property_id']}'),
                       ],
                       const SizedBox(height: AppSpacing.x16),
                       Text('Key facts', style: t.titleMedium),
@@ -580,6 +582,183 @@ class _PublishRow extends ConsumerWidget {
                 label: const Text('Publish (go live)'),
               ),
       ),
+    );
+  }
+}
+
+final _propertyAgentsProvider = FutureProvider.autoDispose.family<List<dynamic>, String>((ref, propertyId) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/properties/$propertyId/agents');
+    return d is List ? d : [];
+  } catch (_) {
+    return [];
+  }
+});
+
+/// Owner-only: delegate this property to agent(s) → they get its rentals + viewings.
+class _PropertyAgentsCard extends ConsumerWidget {
+  const _PropertyAgentsCard({required this.propertyId});
+  final String propertyId;
+
+  Future<void> _revoke(BuildContext context, WidgetRef ref, String agentId) async {
+    try {
+      await ref.read(apiClientProvider).delete('/properties/$propertyId/agents/$agentId');
+      ref.invalidate(_propertyAgentsProvider(propertyId));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final agents = ref.watch(_propertyAgentsProvider(propertyId));
+    return Card(
+      margin: const EdgeInsets.only(top: AppSpacing.x12),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.support_agent_outlined, size: 20, color: AppColors.primary),
+            const SizedBox(width: 8),
+            Expanded(child: Text('Assigned agents', style: t.titleSmall)),
+            TextButton.icon(
+              onPressed: () async {
+                final ok = await showDialog<bool>(
+                    context: context, builder: (_) => _AssignAgentDialog(propertyId: propertyId));
+                if (ok == true) ref.invalidate(_propertyAgentsProvider(propertyId));
+              },
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Add'),
+            ),
+          ]),
+          Text('Agents you assign can see this property’s rental requests and viewings.',
+              style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+          const SizedBox(height: AppSpacing.x8),
+          agents.when(
+            loading: () => const Padding(padding: EdgeInsets.all(8), child: LinearProgressIndicator()),
+            error: (e, _) => Text('$e', style: t.bodySmall),
+            data: (list) => list.isEmpty
+                ? Text('No agents assigned.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                : Column(
+                    children: list.map((m) {
+                      final a = Map<String, dynamic>.from(m);
+                      final name = '${a['full_name'] ?? 'Agent'}';
+                      return ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          radius: 16,
+                          backgroundColor: AppColors.primaryTint,
+                          child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
+                              style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w700)),
+                        ),
+                        title: Text(name),
+                        subtitle: Text('${a['user_role'] ?? ''}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                        trailing: IconButton(
+                            icon: const Icon(Icons.close, size: 18),
+                            tooltip: 'Revoke',
+                            onPressed: () => _revoke(context, ref, '${a['agent_id']}')),
+                      );
+                    }).toList(),
+                  ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _AssignAgentDialog extends ConsumerStatefulWidget {
+  const _AssignAgentDialog({required this.propertyId});
+  final String propertyId;
+  @override
+  ConsumerState<_AssignAgentDialog> createState() => _AssignAgentDialogState();
+}
+
+class _AssignAgentDialogState extends ConsumerState<_AssignAgentDialog> {
+  final _q = TextEditingController();
+  List<dynamic> _results = [];
+  bool _loading = false;
+  int _seq = 0;
+
+  @override
+  void dispose() {
+    _q.dispose();
+    super.dispose();
+  }
+
+  Future<void> _search(String q) async {
+    final term = q.trim();
+    final seq = ++_seq; // ignore out-of-order responses from earlier keystrokes
+    if (term.length < 2) {
+      setState(() {
+        _results = [];
+        _loading = false;
+      });
+      return;
+    }
+    setState(() => _loading = true);
+    try {
+      final d = await ref.read(apiClientProvider).get('/users/search', query: {'q': term});
+      if (!mounted || seq != _seq) return; // a newer keystroke superseded this one
+      setState(() => _results = d is List ? d : []);
+    } catch (_) {
+      if (mounted && seq == _seq) setState(() => _results = []);
+    } finally {
+      if (mounted && seq == _seq) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _assign(String agentId) async {
+    try {
+      await ref.read(apiClientProvider)
+          .post('/properties/${widget.propertyId}/agents', body: {'agent_id': agentId});
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return AlertDialog(
+      title: const Text('Assign an agent'),
+      content: SizedBox(
+        width: 360,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(
+            controller: _q,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Search by name', prefixIcon: Icon(Icons.search)),
+            onChanged: _search,
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          if (_loading)
+            const LinearProgressIndicator()
+          else if (_results.isEmpty)
+            Padding(padding: const EdgeInsets.all(12), child: Text('Type a name to search.', style: t.bodySmall))
+          else
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 280),
+              child: ListView(
+                shrinkWrap: true,
+                children: _results.map((m) {
+                  final u = Map<String, dynamic>.from(m);
+                  return ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.person_outline),
+                    title: Text('${u['full_name'] ?? 'User'}'),
+                    subtitle: Text('${u['role'] ?? ''}'),
+                    onTap: () => _assign('${u['id']}'),
+                  );
+                }).toList(),
+              ),
+            ),
+        ]),
+      ),
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Close'))],
     );
   }
 }
