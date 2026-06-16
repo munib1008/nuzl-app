@@ -132,7 +132,12 @@ class _Detail extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.x4),
                         Text('${l['community']}', style: t.bodyLarge?.copyWith(color: AppColors.textMuted)),
                       ],
-                      if (brokerId.isNotEmpty && ref.watch(authControllerProvider).user?.id == brokerId) ...[
+                      // Owner-management actions (edit / documents / ownership / publish /
+                      // agents) are hidden in Customer/buyer mode (owner #12) — gated by the
+                      // same capability as the listings FAB, not just broker identity.
+                      if (brokerId.isNotEmpty &&
+                          ref.watch(authControllerProvider).user?.id == brokerId &&
+                          ref.watch(personaProvider).canListProperty) ...[
                         const SizedBox(height: AppSpacing.x12),
                         Align(
                           alignment: Alignment.centerLeft,
