@@ -55,7 +55,6 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
           : (MediaQuery.sizeOf(context).width >= 1000 ? const SizedBox.shrink() : const NuzlLogo(size: 28)),
       actions: [
         ...?actions,
-        const _RoleSwitcher(),
         IconButton(
           tooltip: 'Toggle light / dark',
           icon: Icon(Theme.of(context).brightness == Brightness.dark
@@ -134,51 +133,63 @@ class _Bell extends StatelessWidget {
   }
 }
 
-/// Top-nav role switcher (UAT #3) — shown only when the account holds >1
-/// approved role. Switching writes the active role server-side (survives
-/// devices) and reloads nav + dashboard.
-class _RoleSwitcher extends ConsumerWidget {
-  const _RoleSwitcher();
+/// Role chip under the logo in the sidebar/drawer — the SINGLE place the current
+/// role is shown (no duplicate in the app bar). Always shows the active role;
+/// when the account holds >1 approved role it becomes a tap-to-switch menu
+/// (writes active_role server-side, survives devices, reloads nav + dashboard).
+class _RoleChip extends ConsumerWidget {
+  const _RoleChip({this.inDrawer = false});
+  final bool inDrawer;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authControllerProvider).user;
+    final persona = ref.watch(personaProvider);
     final roles = user?.approvedRoles ?? const [];
-    if (roles.length < 2) return const SizedBox.shrink();
-    final active = (user?.activeRole?.isNotEmpty == true) ? user!.activeRole! : roles.first;
+    final active = (user?.activeRole?.isNotEmpty == true)
+        ? user!.activeRole!
+        : (roles.isNotEmpty ? roles.first : null);
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final accent = dark ? AppColors.dPrimary : AppColors.primary;
+    final tint = dark ? AppColors.dPrimaryTint : AppColors.primaryTint;
     final t = Theme.of(context).textTheme;
+    final multi = roles.length >= 2;
+
+    final pill = Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x12, vertical: 5),
+      decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(persona.label, style: t.bodySmall?.copyWith(color: accent, fontWeight: FontWeight.w600)),
+        if (multi) ...[
+          const SizedBox(width: 6),
+          Icon(Icons.swap_horiz, size: 15, color: accent),
+        ],
+      ]),
+    );
+    if (!multi) return pill;
+
     return PopupMenuButton<String>(
       tooltip: 'Switch role',
-      offset: const Offset(0, 44),
+      offset: const Offset(0, 40),
       onSelected: (r) async {
         if (r == active) return;
         await ref.read(authControllerProvider.notifier).switchRole(r);
-        if (context.mounted) context.go('/dashboard');
+        if (!context.mounted) return;
+        if (inDrawer) Navigator.pop(context); // close the drawer after switching
+        context.go('/dashboard');
       },
       itemBuilder: (_) => roles
           .map((r) => PopupMenuItem<String>(
                 value: r,
                 child: Row(children: [
                   Icon(r == active ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                      size: 16, color: r == active ? AppColors.primary : AppColors.textMuted),
+                      size: 16, color: r == active ? accent : AppColors.textMuted),
                   const SizedBox(width: 8),
                   Text(personaFromRole(r).label),
                 ]),
               ))
           .toList(),
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: AppColors.primaryTint,
-          borderRadius: BorderRadius.circular(AppSpacing.rFull),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.swap_horiz, size: 16, color: AppColors.primary),
-          const SizedBox(width: 4),
-          Text(personaFromRole(active).label,
-              style: t.bodySmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
-        ]),
-      ),
+      child: pill,
     );
   }
 }
@@ -225,7 +236,6 @@ class NuzlSidebarBody extends ConsumerWidget {
     final persona = ref.watch(personaProvider);
     final items = navItemsFor(persona);
     final location = GoRouterState.of(context).matchedLocation;
-    final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final accent = dark ? AppColors.dPrimary : AppColors.primary;
     final tint = dark ? AppColors.dPrimaryTint : AppColors.primaryTint;
@@ -245,14 +255,7 @@ class NuzlSidebarBody extends ConsumerWidget {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x20),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x12, vertical: 4),
-              decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-              child: Text(persona.label, style: t.bodySmall?.copyWith(color: accent, fontWeight: FontWeight.w600)),
-            ),
-          ),
+          child: Align(alignment: Alignment.centerLeft, child: _RoleChip(inDrawer: inDrawer)),
         ),
         const SizedBox(height: AppSpacing.x8),
         Expanded(
