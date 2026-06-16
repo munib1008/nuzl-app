@@ -77,17 +77,21 @@ class _ConversationTile extends StatelessWidget {
               style: t.labelSmall?.copyWith(color: AppColors.textMuted)),
           const SizedBox(height: 4),
           if (unread)
+            // Fixed-height, width-capped pill — can never stretch to a full-width bar.
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1),
-              constraints: const BoxConstraints(minWidth: 20),
+              height: 20,
+              constraints: const BoxConstraints(minWidth: 20, maxWidth: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 6),
               decoration: BoxDecoration(
                   color: AppColors.primary, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
               alignment: Alignment.center,
-              child: Text('${c.unread}',
-                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
+              child: Text(c.unread > 99 ? '99+' : '${c.unread}',
+                  maxLines: 1,
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700, height: 1.0)),
             )
           else
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
         ],
       ),
       onTap: () => context.push('/messages/${c.id}'),
