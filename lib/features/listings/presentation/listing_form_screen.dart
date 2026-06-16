@@ -44,6 +44,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   final List<String> imageUrls = []; // uploaded photo URLs (first = cover)
   bool uploading = false;
   bool saving = false;
+  bool aiBusy = false;
   String? error;
 
   @override
@@ -172,6 +173,70 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
           ),
       ]);
 
+  /// AI Deal Assistant — paste a WhatsApp-style blurb and pre-fill the form.
+  Future<void> _aiFill() async {
+    final ctrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Auto-fill from a message'),
+        content: SizedBox(
+          width: 420,
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Paste a WhatsApp-style property message — we’ll extract the details.',
+                style: TextStyle(fontSize: 13)),
+            const SizedBox(height: AppSpacing.x12),
+            TextField(
+              controller: ctrl, autofocus: true, maxLines: 5,
+              decoration: const InputDecoration(
+                  hintText: 'e.g. Burj Crown 2BR 1066 sqft Canal View AED 3.1M',
+                  border: OutlineInputBorder()),
+            ),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Extract')),
+        ],
+      ),
+    );
+    if (ok != true || ctrl.text.trim().isEmpty || !mounted) return;
+    setState(() => aiBusy = true);
+    try {
+      final res = await ref.read(apiClientProvider).post('/deal-assistant/parse', body: {'text': ctrl.text.trim()});
+      final d = (res is Map && res['draft'] is Map) ? Map<String, dynamic>.from(res['draft']) : <String, dynamic>{};
+      final src = res is Map ? '${res['source'] ?? ''}' : '';
+      setState(() {
+        if (d['building_name'] != null) building.text = '${d['building_name']}';
+        if (d['unit_no'] != null) unitNo.text = '${d['unit_no']}';
+        if (d['price'] is num) price.text = (d['price'] as num).toStringAsFixed(0);
+        if (d['bedrooms'] != null) beds.text = '${d['bedrooms']}';
+        if (d['bathrooms'] != null) baths.text = '${d['bathrooms']}';
+        if (d['size_sqft'] is num) size.text = (d['size_sqft'] as num).toStringAsFixed(0);
+        const types = ['apartment', 'villa', 'townhouse', 'office', 'retail', 'warehouse', 'land'];
+        if (types.contains('${d['property_type']}')) propertyType = '${d['property_type']}';
+        if (d['purpose'] == 'rent' || d['purpose'] == 'sale') purpose = '${d['purpose']}';
+        // Fold view / community / status into the description if it's still empty.
+        final extra = [
+          if (d['view'] != null) '${d['view']}',
+          if (d['community'] != null) '${d['community']}',
+          if (d['status'] != null) 'Status: ${d['status']}',
+        ].where((s) => s.isNotEmpty).join(' · ');
+        if (extra.isNotEmpty && description.text.trim().isEmpty) description.text = extra;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(src == 'heuristic'
+                ? 'Filled what we could — please review the fields.'
+                : 'Filled from your message — review and adjust.')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not parse: $e')));
+    } finally {
+      if (mounted) setState(() => aiBusy = false);
+    }
+  }
+
   Future<void> _save() async {
     final editing = widget.editId != null;
     // Building name + unit number are mandatory (owner #1). Unit number is only
@@ -252,6 +317,22 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.x16),
           children: [
+            // AI Deal Assistant — paste a message to auto-fill (create only).
+            if (widget.editId == null) ...[
+              Card(
+                color: AppColors.primaryTint,
+                child: ListTile(
+                  leading: const Icon(Icons.auto_awesome, color: AppColors.primary),
+                  title: const Text('Auto-fill from a message'),
+                  subtitle: const Text('Paste a WhatsApp deal — we extract the details'),
+                  trailing: aiBusy
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.chevron_right),
+                  onTap: aiBusy ? null : _aiFill,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x16),
+            ],
             // Photos — at least 3 to publish a live listing. First photo is the cover.
             Text('Photos', style: t.titleSmall),
             const SizedBox(height: 2),
