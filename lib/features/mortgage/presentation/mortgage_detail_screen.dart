@@ -102,6 +102,8 @@ class MortgageDetailScreen extends ConsumerWidget {
                 )),
               ],
               const SizedBox(height: AppSpacing.x24),
+              _RateHistory(id: id, isl: isl),
+              const SizedBox(height: AppSpacing.x24),
               Text(isl ? 'Rental history' : 'Payment history', style: t.titleMedium),
               const SizedBox(height: AppSpacing.x8),
               _PaymentList(id: id, isl: isl),
@@ -202,6 +204,99 @@ class MortgageDetailScreen extends ConsumerWidget {
     ref.invalidate(mortgageDetailProvider(id));
     ref.invalidate(mortgagePaymentsProvider(id));
     ref.invalidate(mortgagesProvider);
+  }
+}
+
+/// Variable-rate reset history + an add action (mortgage owner only).
+class _RateHistory extends ConsumerWidget {
+  const _RateHistory({required this.id, required this.isl});
+  final String id;
+  final bool isl;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hist = ref.watch(mortgageRateHistoryProvider(id));
+    final t = Theme.of(context).textTheme;
+    final muted = Theme.of(context).hintColor;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Text(isl ? 'Profit rate history' : 'Interest rate history', style: t.titleMedium),
+        const Spacer(),
+        TextButton.icon(
+          onPressed: () => _add(context, ref),
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('Add'),
+        ),
+      ]),
+      const SizedBox(height: AppSpacing.x8),
+      hist.when(
+        loading: () => const LinearProgressIndicator(),
+        error: (e, _) => Text('$e', style: t.bodySmall),
+        data: (list) => list.isEmpty
+            ? Text('No rate changes logged yet.', style: t.bodySmall?.copyWith(color: muted))
+            : Column(children: [
+                for (final r in list)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Text('${(num.tryParse('${r['rate']}') ?? 0).toStringAsFixed(2)}%', style: t.titleSmall),
+                      Text(_fmt('${r['effective_from']}'), style: t.bodySmall?.copyWith(color: muted)),
+                    ]),
+                  ),
+              ]),
+      ),
+    ]);
+  }
+
+  String _fmt(String iso) {
+    final dt = DateTime.tryParse(iso);
+    return dt == null ? iso : DateFormat.yMMMd().format(dt);
+  }
+
+  Future<void> _add(BuildContext context, WidgetRef ref) async {
+    final rateCtrl = TextEditingController();
+    var picked = DateTime.now();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Text(isl ? 'Add profit rate change' : 'Add interest rate change'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+              controller: rateCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Rate (% / yr)'),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            InkWell(
+              onTap: () async {
+                final d = await showDatePicker(
+                    context: ctx, initialDate: picked, firstDate: DateTime(2000), lastDate: DateTime(2100));
+                if (d != null) setLocal(() => picked = d);
+              },
+              child: InputDecorator(
+                decoration: const InputDecoration(labelText: 'Effective from'),
+                child: Text(DateFormat.yMMMd().format(picked)),
+              ),
+            ),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return;
+    final rate = double.tryParse(rateCtrl.text.trim());
+    if (rate == null) return;
+    try {
+      await ref.read(mortgageRepositoryProvider).addRateChange(id, rate, DateFormat('yyyy-MM-dd').format(picked));
+      ref.invalidate(mortgageRateHistoryProvider(id));
+      ref.invalidate(mortgageDetailProvider(id));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
   }
 }
 
