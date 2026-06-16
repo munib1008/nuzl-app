@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -41,6 +42,7 @@ class ViewingCrmScreen extends ConsumerWidget {
             final activities = (d['activities'] is List) ? List.from(d['activities']) : const [];
             final stage = '${v['crm_stage'] ?? 'new_inquiry'}';
             final isAssigned = myId != null && '${v['assigned_agent_id']}' == myId;
+            final isCustomer = myId != null && '${v['requested_by']}' == myId;
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
@@ -71,6 +73,24 @@ class ViewingCrmScreen extends ConsumerWidget {
                     ),
                 ]),
                 const SizedBox(height: AppSpacing.x20),
+
+                // Communication — only the assigned agent and the customer (#23).
+                if (isAssigned || isCustomer) ...[
+                  Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
+                    FilledButton.icon(
+                      onPressed: () => _openChat(context, ref),
+                      icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                      label: Text(isAssigned ? 'Message customer' : 'Message agent'),
+                    ),
+                    if (isAssigned)
+                      OutlinedButton.icon(
+                        onPressed: () => _scheduleCall(context, ref),
+                        icon: const Icon(Icons.call_outlined, size: 18),
+                        label: const Text('Schedule call'),
+                      ),
+                  ]),
+                  const SizedBox(height: AppSpacing.x20),
+                ],
 
                 Row(children: [
                   Text('Activity & communications', style: t.titleSmall),
@@ -116,6 +136,34 @@ class ViewingCrmScreen extends ConsumerWidget {
         ),
       ]),
     );
+  }
+
+  Future<void> _openChat(BuildContext context, WidgetRef ref) async {
+    try {
+      final convId = await ref.read(viewingLeadsRepoProvider).openConversation(id);
+      if (context.mounted) context.push('/messages/$convId');
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _scheduleCall(BuildContext context, WidgetRef ref) async {
+    final now = DateTime.now();
+    final date = await showDatePicker(
+        context: context, initialDate: now, firstDate: now, lastDate: now.add(const Duration(days: 365)));
+    if (date == null || !context.mounted) return;
+    final time = await showTimePicker(
+        context: context, initialTime: TimeOfDay.fromDateTime(now.add(const Duration(hours: 1))));
+    if (time == null || !context.mounted) return;
+    final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    final note = 'Call scheduled for ${DateFormat('EEE d MMM, h:mm a').format(dt)}';
+    try {
+      await ref.read(viewingLeadsRepoProvider).scheduleCall(id, dt.toIso8601String(), note);
+      ref.invalidate(viewingCrmProvider(id));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(note)));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
   }
 
   Future<void> _setStage(BuildContext context, WidgetRef ref, String stage) async {
