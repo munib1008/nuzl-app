@@ -16,6 +16,7 @@ import '../../features/listings/presentation/listings_screen.dart';
 import '../../features/listings/presentation/listing_form_screen.dart';
 import '../../features/listings/presentation/listing_detail_screen.dart';
 import '../../features/documents/property_docs_screen.dart';
+import '../../features/opportunities/opportunities_screen.dart';
 import '../../features/leads/presentation/leads_screen.dart';
 import '../../features/leads/presentation/lead_crm_screen.dart';
 import '../../features/leads/presentation/post_lead_screen.dart';
@@ -147,6 +148,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/my-properties', builder: (_, __) => const MyPropertiesScreen()),
       GoRoute(path: '/lead-matches', builder: (_, __) => const LeadMatchesScreen()),
       GoRoute(path: '/crm', builder: (_, __) => const CrmScreen()),
+      GoRoute(path: '/opportunities', builder: (_, __) => const OpportunitiesScreen()),
       GoRoute(path: '/activities', builder: (_, __) => const ActivitiesScreen()),
       GoRoute(path: '/messages', builder: (_, __) => const MessagesScreen()),
       GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
