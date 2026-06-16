@@ -11,6 +11,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../messages/data/messaging_repository.dart';
 import '../../saved/saved_screen.dart';
+import '../../collaboration/collaboration_repository.dart';
 import 'listing_ribbons.dart';
 
 final _detailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
@@ -306,6 +307,38 @@ class _AgentCard extends ConsumerWidget {
     return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
 
+  Future<void> _requestCollab(BuildContext context, WidgetRef ref) async {
+    final split = TextEditingController();
+    final msg = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Request collaboration'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('Propose a commission split to co-broke this listing.', style: TextStyle(fontSize: 13)),
+          const SizedBox(height: AppSpacing.x12),
+          TextField(controller: split, keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Your split (%)')),
+          const SizedBox(height: AppSpacing.x8),
+          TextField(controller: msg, maxLines: 2, decoration: const InputDecoration(labelText: 'Message (optional)')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(collabRepoProvider).request(listingId, double.tryParse(split.text.trim()), msg.text.trim());
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request sent to the listing agent')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
   Future<void> _requestViewing(BuildContext context, WidgetRef ref) async {
     final dt = await _pickDateTime(context);
     if (dt == null || !context.mounted) return;
@@ -394,6 +427,17 @@ class _AgentCard extends ConsumerWidget {
                   label: const Text('Message agent'),
                 ),
               ),
+              if (ref.watch(personaProvider).canListProperty) ...[
+                const SizedBox(height: AppSpacing.x8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _requestCollab(context, ref),
+                    icon: const Icon(Icons.diversity_3_outlined, size: 18),
+                    label: const Text('Request collaboration'),
+                  ),
+                ),
+              ],
             ],
             const SizedBox(height: AppSpacing.x12),
             ref.watch(_myViewingProvider(listingId)).maybeWhen(
