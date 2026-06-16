@@ -30,12 +30,19 @@ class LeadsScreen extends ConsumerWidget {
             )
           : null,
       body: RefreshIndicator(
-        onRefresh: () async => ref.refresh(leadsProvider.future),
+        onRefresh: () {
+          ref.invalidate(leadOffersProvider);
+          return ref.refresh(leadsProvider.future);
+        },
         child: AsyncView<List<Lead>>(
           value: leads,
-          onRetry: () => ref.refresh(leadsProvider),
+          onRetry: () {
+            ref.invalidate(leadsProvider);
+            ref.invalidate(leadOffersProvider);
+          },
           data: (items) {
-            if (items.isEmpty) {
+            final offers = ref.watch(leadOffersProvider).asData?.value ?? const <Lead>[];
+            if (items.isEmpty && offers.isEmpty) {
               return EmptyState(
                 icon: Icons.people_outline,
                 title: 'No leads yet',
@@ -44,11 +51,25 @@ class LeadsScreen extends ConsumerWidget {
                 onAction: canManage ? () => context.push('/leads/new') : null,
               );
             }
-            return ListView.separated(
+            final t = Theme.of(context).textTheme;
+            return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x12),
-              itemBuilder: (_, i) => _LeadCard(items[i]),
+              children: [
+                if (offers.isNotEmpty) ...[
+                  Text('Offered to you — first to accept gets it',
+                      style: t.titleSmall?.copyWith(color: AppColors.primary)),
+                  const SizedBox(height: AppSpacing.x8),
+                  for (final o in offers)
+                    Padding(padding: const EdgeInsets.only(bottom: AppSpacing.x12), child: _OfferCard(o)),
+                  const SizedBox(height: AppSpacing.x4),
+                  const Divider(),
+                  const SizedBox(height: AppSpacing.x12),
+                  Text('My leads', style: t.titleSmall),
+                  const SizedBox(height: AppSpacing.x8),
+                ],
+                for (final l in items)
+                  Padding(padding: const EdgeInsets.only(bottom: AppSpacing.x12), child: _LeadCard(l)),
+              ],
             );
           },
         ),
@@ -106,7 +127,10 @@ class _LeadCard extends StatelessWidget {
     ].whereType<String>().join('  ·  ');
 
     return Card(
-      child: Padding(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push('/leads/${lead.id}'),
+        child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,6 +200,75 @@ class _LeadCard extends StatelessWidget {
             ]),
           ],
         ),
+      ),
+      ),
+    );
+  }
+}
+
+/// A lead offered to several agents — first to tap Accept claims it (agent #6).
+class _OfferCard extends ConsumerStatefulWidget {
+  const _OfferCard(this.lead);
+  final Lead lead;
+  @override
+  ConsumerState<_OfferCard> createState() => _OfferCardState();
+}
+
+class _OfferCardState extends ConsumerState<_OfferCard> {
+  bool _busy = false;
+
+  Future<void> _accept() async {
+    setState(() => _busy = true);
+    try {
+      await ref.read(leadsRepositoryProvider).accept(widget.lead.id);
+      ref.invalidate(leadOffersProvider);
+      ref.invalidate(leadsProvider);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lead accepted — it is yours')));
+      context.push('/leads/${widget.lead.id}');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      ref.invalidate(leadOffersProvider); // it may have just been claimed by someone else
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final lead = widget.lead;
+    final f = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
+    final budget = (lead.minBudget != null && lead.maxBudget != null)
+        ? '${f.format(lead.minBudget)} – ${f.format(lead.maxBudget)}'
+        : null;
+    final details = [
+      if (lead.community != null) lead.community,
+      if (lead.propertyType != null) lead.propertyType!.replaceAll('_', ' '),
+      if (budget != null) budget,
+    ].whereType<String>().join('  ·  ');
+    return Card(
+      color: AppColors.primaryTint,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(lead.buyerName ?? 'New lead', style: t.titleMedium),
+              if (details.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(details, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              ],
+            ]),
+          ),
+          const SizedBox(width: AppSpacing.x12),
+          FilledButton(
+            onPressed: _busy ? null : _accept,
+            child: _busy
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Text('Accept'),
+          ),
+        ]),
       ),
     );
   }

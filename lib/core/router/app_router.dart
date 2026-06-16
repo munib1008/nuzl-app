@@ -16,6 +16,7 @@ import '../../features/listings/presentation/listings_screen.dart';
 import '../../features/listings/presentation/listing_form_screen.dart';
 import '../../features/listings/presentation/listing_detail_screen.dart';
 import '../../features/leads/presentation/leads_screen.dart';
+import '../../features/leads/presentation/lead_crm_screen.dart';
 import '../../features/leads/presentation/post_lead_screen.dart';
 import '../../features/deals/presentation/deals_screen.dart';
 import '../../features/customers/customers_screen.dart';
@@ -84,7 +85,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (loc == '/' || loc == '/login' || loc == '/register') return '/dashboard';
       // Lead posting/pipeline is for agents / agency / freelancer (+ lead-gen) only.
       // Customers are active users but don't run a lead pipeline — bounce them out.
-      if (loc == '/leads' || loc == '/leads/new') {
+      if (loc == '/leads' || loc.startsWith('/leads/')) {
         if (!ref.read(personaProvider).canManageLeads) return '/dashboard';
       }
       return null;
@@ -123,6 +124,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/listings/:id', builder: (_, st) => ListingDetailScreen(id: st.pathParameters['id']!)),
       GoRoute(path: '/leads', builder: (_, __) => const LeadsScreen()),
       GoRoute(path: '/leads/new', builder: (_, __) => const PostLeadScreen()),
+      GoRoute(path: '/leads/:id', builder: (_, st) => LeadCrmScreen(id: st.pathParameters['id']!)),
       GoRoute(path: '/deals', builder: (_, __) => const DealsScreen()),
       GoRoute(path: '/customers', builder: (_, __) => const CustomersScreen()),
       GoRoute(path: '/team', builder: (_, __) => const TeamScreen()),
