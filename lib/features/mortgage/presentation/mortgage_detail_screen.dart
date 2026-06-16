@@ -28,6 +28,8 @@ class MortgageDetailScreen extends ConsumerWidget {
         data: (d) {
           final s = Map<String, dynamic>.from(d['summary'] ?? {});
           final m = Map<String, dynamic>.from(d['mortgage'] ?? {});
+          final isl = m['finance_type'] == 'islamic';
+          final rateValid = DateTime.tryParse('${m['rate_valid_until'] ?? ''}');
           double n(v) => v is num ? v.toDouble() : double.tryParse('$v') ?? 0;
           final progress = (n(s['progress_pct']) / 100).clamp(0, 1).toDouble();
           return ListView(
@@ -39,7 +41,7 @@ class MortgageDetailScreen extends ConsumerWidget {
               Card(child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.x16),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Due this month', style: t.bodyMedium),
+                  Text(isl ? 'Rental due this month' : 'Due this month', style: t.bodyMedium),
                   const SizedBox(height: 2),
                   Text(aed.format(n(s['current_month_payment'] ?? s['monthly_payment'])), style: t.headlineMedium),
                   const SizedBox(height: AppSpacing.x12),
@@ -62,12 +64,15 @@ class MortgageDetailScreen extends ConsumerWidget {
                         backgroundColor: Theme.of(context).dividerColor),
                   ),
                   const SizedBox(height: AppSpacing.x16),
-                  _row('Outstanding', aed.format(n(s['outstanding'])), t),
-                  _row('Monthly payment', aed.format(n(s['monthly_payment'])), t),
-                  _row('Principal paid', aed.format(n(s['principal_paid'])), t),
-                  _row('Interest paid', aed.format(n(s['interest_paid'])), t),
-                  _row('Payments made', '${s['payments_made'] ?? 0}', t),
-                  _row('Projected total interest', aed.format(n(s['projected_total_interest'])), t),
+                  _row(isl ? 'Outstanding (fixed rental balance)' : 'Outstanding', aed.format(n(s['outstanding'])), t),
+                  _row(isl ? 'Profit rate' : 'Interest rate',
+                      '${n(m['interest_rate']).toStringAsFixed(2)}%'
+                      '${rateValid != null ? ' · to ${DateFormat.yMMMd().format(rateValid)}' : ''}', t),
+                  _row(isl ? 'Monthly rental' : 'Monthly payment', aed.format(n(s['monthly_payment'])), t),
+                  _row(isl ? 'Fixed rental paid' : 'Principal paid', aed.format(n(s['principal_paid'])), t),
+                  _row(isl ? 'Variable rental (profit) paid' : 'Interest paid', aed.format(n(s['interest_paid'])), t),
+                  _row(isl ? 'Rentals paid' : 'Payments made', '${s['payments_made'] ?? 0}', t),
+                  _row(isl ? 'Projected total profit' : 'Projected total interest', aed.format(n(s['projected_total_interest'])), t),
                 ]),
               )),
               if (n(s['total_project_value']) > 0 || n(s['down_payment']) > 0) ...[
@@ -89,16 +94,17 @@ class MortgageDetailScreen extends ConsumerWidget {
                           child: _row('• ${mp['label'] ?? 'Split'}', aed.format(n(mp['amount'])), t),
                         );
                       }),
-                    _row('Loan amount', aed.format(n(m['principal'])), t),
-                    _row('Term', _term(_intv(s['term_months'])), t),
-                    if (n(s['insurance_monthly']) > 0) _row('Insurance (per month)', aed.format(n(s['insurance_monthly'])), t),
+                    _row(isl ? 'Finance amount' : 'Loan amount', aed.format(n(m['principal'])), t),
+                    _row(isl ? 'Ijarah period' : 'Term', _term(_intv(s['term_months'])), t),
+                    if (n(s['insurance_monthly']) > 0)
+                      _row(isl ? 'Takaful (per month)' : 'Insurance (per month)', aed.format(n(s['insurance_monthly'])), t),
                   ]),
                 )),
               ],
               const SizedBox(height: AppSpacing.x24),
-              Text('Payment history', style: t.titleMedium),
+              Text(isl ? 'Rental history' : 'Payment history', style: t.titleMedium),
               const SizedBox(height: AppSpacing.x8),
-              _PaymentList(id: id),
+              _PaymentList(id: id, isl: isl),
             ],
           );
         },
@@ -132,26 +138,67 @@ class MortgageDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _logPayment(BuildContext context, WidgetRef ref) async {
-    final ctrl = TextEditingController();
-    final amount = await showDialog<double>(
+    // Relabel the split fields to match an Islamic statement when applicable.
+    final d = ref.read(mortgageDetailProvider(id)).asData?.value;
+    final isl = d?['mortgage'] is Map && (d!['mortgage'] as Map)['finance_type'] == 'islamic';
+    final amount = TextEditingController();
+    final principal = TextEditingController();
+    final profit = TextEditingController();
+    final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Log a payment'),
-        content: TextField(
-          controller: ctrl, keyboardType: TextInputType.number, autofocus: true,
-          decoration: const InputDecoration(hintText: 'Amount (AED)'),
+        title: Text(isl ? 'Log a rental payment' : 'Log a payment'),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            TextField(
+              controller: amount, autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Amount (AED)', prefixText: 'AED '),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            Text(
+              isl
+                  ? 'Optional: enter the Fixed + Variable rental split exactly as your statement shows, to keep the balance accurate.'
+                  : 'Optional: enter the principal / interest split from your statement to keep the balance accurate.',
+              style: Theme.of(ctx).textTheme.bodySmall,
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: principal,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                      labelText: isl ? 'Fixed rental' : 'Principal', prefixText: 'AED ', isDense: true),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(
+                child: TextField(
+                  controller: profit,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                      labelText: isl ? 'Variable rental' : 'Interest', prefixText: 'AED ', isDense: true),
+                ),
+              ),
+            ]),
+          ]),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, double.tryParse(ctrl.text)),
-            child: const Text('Save'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
         ],
       ),
     );
-    if (amount == null || amount <= 0) return;
-    await ref.read(mortgageRepositoryProvider).addPayment(id, {'amount': amount});
+    if (ok != true) return;
+    final amt = double.tryParse(amount.text.trim());
+    if (amt == null || amt <= 0) return;
+    final body = <String, dynamic>{'amount': amt};
+    final pr = double.tryParse(principal.text.trim());
+    final pf = double.tryParse(profit.text.trim());
+    if (pr != null) body['principal_part'] = pr;
+    if (pf != null) body['interest_part'] = pf;
+    await ref.read(mortgageRepositoryProvider).addPayment(id, body);
     ref.invalidate(mortgageDetailProvider(id));
     ref.invalidate(mortgagePaymentsProvider(id));
     ref.invalidate(mortgagesProvider);
@@ -159,26 +206,29 @@ class MortgageDetailScreen extends ConsumerWidget {
 }
 
 class _PaymentList extends ConsumerWidget {
-  const _PaymentList({required this.id});
+  const _PaymentList({required this.id, this.isl = false});
   final String id;
+  final bool isl;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final payments = ref.watch(mortgagePaymentsProvider(id));
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
     final t = Theme.of(context).textTheme;
+    final principalWord = isl ? 'fixed' : 'principal';
+    final interestWord = isl ? 'variable' : 'interest';
     return payments.when(
       loading: () => const Padding(padding: EdgeInsets.all(AppSpacing.x16), child: LinearProgressIndicator()),
       error: (e, _) => Text('$e', style: t.bodySmall),
       data: (list) {
-        if (list.isEmpty) return Text('No payments logged yet.', style: t.bodySmall);
+        if (list.isEmpty) return Text(isl ? 'No rentals logged yet.' : 'No payments logged yet.', style: t.bodySmall);
         return Column(
           children: list.map((p) => ListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(aed.format(p.amount), style: t.titleMedium),
             subtitle: Text([
               if (p.paidOn != null) DateFormat.yMMMd().format(p.paidOn!),
-              if (p.principalPart != null) 'principal ${aed.format(p.principalPart)}',
-              if (p.interestPart != null) 'interest ${aed.format(p.interestPart)}',
+              if (p.principalPart != null) '$principalWord ${aed.format(p.principalPart)}',
+              if (p.interestPart != null) '$interestWord ${aed.format(p.interestPart)}',
             ].join('  ·  '), style: t.bodySmall),
           )).toList(),
         );
