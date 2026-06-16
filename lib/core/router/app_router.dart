@@ -18,6 +18,7 @@ import '../../features/listings/presentation/listing_detail_screen.dart';
 import '../../features/documents/property_docs_screen.dart';
 import '../../features/opportunities/opportunities_screen.dart';
 import '../../features/dashboard/owner_cockpit_screen.dart';
+import '../../features/admin/post_moderation_screen.dart';
 import '../../features/leads/presentation/leads_screen.dart';
 import '../../features/leads/presentation/lead_crm_screen.dart';
 import '../../features/leads/presentation/post_lead_screen.dart';
@@ -151,6 +152,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/crm', builder: (_, __) => const CrmScreen()),
       GoRoute(path: '/opportunities', builder: (_, __) => const OpportunitiesScreen()),
       GoRoute(path: '/owner-cockpit', builder: (_, __) => const OwnerCockpitScreen()),
+      GoRoute(path: '/post-moderation', builder: (_, __) => const PostModerationScreen()),
       GoRoute(path: '/activities', builder: (_, __) => const ActivitiesScreen()),
       GoRoute(path: '/messages', builder: (_, __) => const MessagesScreen()),
       GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),

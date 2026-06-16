@@ -187,6 +187,11 @@ class _PostCard extends ConsumerWidget {
                 ]),
               ),
               StatusBadge(label, tone: tone),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textMuted),
+                onSelected: (v) { if (v == 'report') _report(context, ref); },
+                itemBuilder: (_) => const [PopupMenuItem(value: 'report', child: Text('Report post'))],
+              ),
             ]),
             if (title.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.x12),
@@ -223,6 +228,43 @@ class _PostCard extends ConsumerWidget {
       await ref.read(apiClientProvider).post('/posts/${p['id']}/like');
       ref.invalidate(feedPostsProvider);
     } catch (_) {/* ignore */}
+  }
+
+  Future<void> _report(BuildContext context, WidgetRef ref) async {
+    var reason = 'spam';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text('Report post'),
+          content: DropdownButtonFormField<String>(
+            initialValue: reason,
+            decoration: const InputDecoration(labelText: 'Reason'),
+            items: const [
+              DropdownMenuItem(value: 'spam', child: Text('Spam')),
+              DropdownMenuItem(value: 'inappropriate', child: Text('Inappropriate')),
+              DropdownMenuItem(value: 'misleading', child: Text('Misleading')),
+              DropdownMenuItem(value: 'duplicate', child: Text('Duplicate')),
+              DropdownMenuItem(value: 'other', child: Text('Other')),
+            ],
+            onChanged: (v) => setS(() => reason = v ?? 'spam'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Report')),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(apiClientProvider).post('/posts/${p['id']}/report', body: {'reason': reason});
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reported — thank you')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
   }
 
   void _openComments(BuildContext context, WidgetRef ref) {

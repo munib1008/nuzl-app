@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
+import 'profile_completion_banner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_dialog.dart';
@@ -294,6 +295,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 720),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  const ProfileCompletionBanner(),
+                  const SizedBox(height: AppSpacing.x12),
                   // ── Identity header ──────────────────────────────
                   Center(child: Column(children: [
                     Stack(children: [
