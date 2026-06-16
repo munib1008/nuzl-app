@@ -35,6 +35,22 @@ class MortgageDetailScreen extends ConsumerWidget {
             children: [
               Text(m['label'] ?? m['lender'] ?? 'Mortgage', style: t.headlineSmall),
               const SizedBox(height: AppSpacing.x16),
+              // This month — simplified at-a-glance view (#17).
+              Card(child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.x16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Due this month', style: t.bodyMedium),
+                  const SizedBox(height: 2),
+                  Text(aed.format(n(s['current_month_payment'] ?? s['monthly_payment'])), style: t.headlineMedium),
+                  const SizedBox(height: AppSpacing.x12),
+                  Row(children: [
+                    Expanded(child: _stat('${n(s['progress_pct']).toStringAsFixed(0)}%', 'paid off', t)),
+                    Expanded(child: _stat(_term(_intv(s['remaining_term'])), 'remaining', t)),
+                    Expanded(child: _stat(aed.format(n(s['outstanding'])), 'outstanding', t)),
+                  ]),
+                ]),
+              )),
+              const SizedBox(height: AppSpacing.x16),
               Card(child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.x16),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -54,6 +70,31 @@ class MortgageDetailScreen extends ConsumerWidget {
                   _row('Projected total interest', aed.format(n(s['projected_total_interest'])), t),
                 ]),
               )),
+              if (n(s['total_project_value']) > 0 || n(s['down_payment']) > 0) ...[
+                const SizedBox(height: AppSpacing.x16),
+                Card(child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.x16),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Purchase & financing', style: t.titleMedium),
+                    const SizedBox(height: AppSpacing.x8),
+                    if (n(s['total_project_value']) > 0) _row('Total project value', aed.format(n(s['total_project_value'])), t),
+                    if (n(s['dld_charges']) > 0) _row('DLD charges', aed.format(n(s['dld_charges'])), t),
+                    if (n(s['processing_fees']) > 0) _row('Processing fees', aed.format(n(s['processing_fees'])), t),
+                    if (n(s['down_payment']) > 0) _row('Down payment', aed.format(n(s['down_payment'])), t),
+                    if (s['down_payment_splits'] is List)
+                      ...(s['down_payment_splits'] as List).map((sp) {
+                        final mp = Map<String, dynamic>.from(sp as Map);
+                        return Padding(
+                          padding: const EdgeInsets.only(left: AppSpacing.x16),
+                          child: _row('• ${mp['label'] ?? 'Split'}', aed.format(n(mp['amount'])), t),
+                        );
+                      }),
+                    _row('Loan amount', aed.format(n(m['principal'])), t),
+                    _row('Term', _term(_intv(s['term_months'])), t),
+                    if (n(s['insurance_monthly']) > 0) _row('Insurance (per month)', aed.format(n(s['insurance_monthly'])), t),
+                  ]),
+                )),
+              ],
               const SizedBox(height: AppSpacing.x24),
               Text('Payment history', style: t.titleMedium),
               const SizedBox(height: AppSpacing.x8),
@@ -68,9 +109,27 @@ class MortgageDetailScreen extends ConsumerWidget {
   Widget _row(String k, String v, TextTheme t) => Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(k, style: t.bodyMedium), Text(v, style: t.titleMedium),
+          Flexible(child: Text(k, style: t.bodyMedium)), Text(v, style: t.titleMedium),
         ]),
       );
+
+  Widget _stat(String value, String label, TextTheme t) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value, style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(label, style: t.bodySmall),
+        ],
+      );
+
+  int _intv(dynamic v) => v is int ? v : int.tryParse('$v') ?? 0;
+
+  /// Human term: "8 mo", "3y", "3y 2m".
+  String _term(int months) {
+    if (months <= 0) return 'Done';
+    if (months < 12) return '$months mo';
+    final y = months ~/ 12, m = months % 12;
+    return m == 0 ? '${y}y' : '${y}y ${m}m';
+  }
 
   Future<void> _logPayment(BuildContext context, WidgetRef ref) async {
     final ctrl = TextEditingController();
