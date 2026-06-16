@@ -86,13 +86,13 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
         ),
         const SizedBox(height: AppSpacing.x24),
         _slider('Property price', _aed.format(price), price, 300000, 15000000, 50000,
-            (v) => setState(() => price = v)),
+            (v) => setState(() => price = v), decimals: 0, title: 'property price (AED)'),
         _slider('Down payment', '${downPct.toStringAsFixed(0)}%', downPct, 0, 80, 1,
-            (v) => setState(() => downPct = v)),
+            (v) => setState(() => downPct = v), decimals: 0, title: 'down payment (%)'),
         _slider('Interest rate', '${ratePct.toStringAsFixed(2)}%', ratePct, 1, 10, 0.25,
-            (v) => setState(() => ratePct = v)),
+            (v) => setState(() => ratePct = v), decimals: 2, title: 'interest rate (%)'),
         _slider('Term', '$years years', years.toDouble(), 5, 30, 1,
-            (v) => setState(() => years = v.round())),
+            (v) => setState(() => years = v.round()), decimals: 0, title: 'term (years)'),
         const SizedBox(height: AppSpacing.x16),
         Card(child: Padding(
           padding: const EdgeInsets.all(AppSpacing.x16),
@@ -135,11 +135,24 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
       );
 
   Widget _slider(String label, String value, double v, double min, double max,
-      double step, ValueChanged<double> onChanged) {
+      double step, ValueChanged<double> onChanged, {int decimals = 0, String title = ''}) {
+    final t = Theme.of(context).textTheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: Theme.of(context).textTheme.bodyMedium),
-        Text(value, style: Theme.of(context).textTheme.titleMedium),
+        Text(label, style: t.bodyMedium),
+        // Tap the value to type an exact number (the slider only moves in steps).
+        InkWell(
+          borderRadius: BorderRadius.circular(AppSpacing.rSm),
+          onTap: () => _edit(title.isEmpty ? label : title, v, min, max, decimals, onChanged),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Text(value, style: t.titleMedium),
+              const SizedBox(width: 4),
+              Icon(Icons.edit_outlined, size: 15, color: Theme.of(context).hintColor),
+            ]),
+          ),
+        ),
       ]),
       Slider(
         value: v.clamp(min, max),
@@ -150,4 +163,38 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
       const SizedBox(height: AppSpacing.x8),
     ]);
   }
+
+  /// Type an exact value (supports fractions the slider's steps can't reach).
+  Future<void> _edit(String title, double current, double min, double max, int decimals,
+      ValueChanged<double> onChanged) async {
+    final ctrl = TextEditingController(
+        text: decimals == 0 ? current.round().toString() : current.toStringAsFixed(decimals));
+    final result = await showDialog<double>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Enter $title'),
+        content: TextField(
+          controller: ctrl,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(
+            helperText: 'From ${_bound(min, decimals)} to ${_bound(max, decimals)}',
+          ),
+          onSubmitted: (_) => Navigator.pop(ctx, double.tryParse(ctrl.text.trim())),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, double.tryParse(ctrl.text.trim())),
+            child: const Text('Set'),
+          ),
+        ],
+      ),
+    );
+    ctrl.dispose();
+    if (result != null) onChanged(result.clamp(min, max).toDouble());
+  }
+
+  String _bound(double v, int decimals) =>
+      decimals == 0 ? NumberFormat.decimalPattern().format(v) : v.toStringAsFixed(decimals);
 }
