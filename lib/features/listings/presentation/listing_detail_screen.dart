@@ -92,7 +92,10 @@ class _Detail extends ConsumerWidget {
       if (l['size_sqft'] != null) ('Size', '${(num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0)} sqft'),
       if (l['furnishing'] != null) ('Furnishing', _cap('${l['furnishing']}')),
       if (l['community'] != null) ('Community', '${l['community']}'),
-      if (l['building'] != null) ('Building', '${l['building']}'),
+      if (l['building'] != null)
+        ('Building', '${l['building']}')
+      else if ('${l['building_name'] ?? ''}'.trim().isNotEmpty)
+        ('Building', '${l['building_name']}'),
       if (l['unit_no'] != null) ('Unit', '${l['unit_no']}'),
       if (l['status'] != null) ('Status', _cap('${l['status']}')),
     ];
@@ -171,7 +174,10 @@ class _Detail extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.x20),
                       Text('Location', style: t.titleMedium),
                       const SizedBox(height: AppSpacing.x8),
-                      const _MapPlaceholder(),
+                      _MapPlaceholder(
+                        lat: double.tryParse('${l['latitude'] ?? ''}'),
+                        lng: double.tryParse('${l['longitude'] ?? ''}'),
+                      ),
                       const SizedBox(height: AppSpacing.x24),
                     ],
                   ),
@@ -764,9 +770,12 @@ class _AssignAgentDialogState extends ConsumerState<_AssignAgentDialog> {
 }
 
 class _MapPlaceholder extends StatelessWidget {
-  const _MapPlaceholder();
+  const _MapPlaceholder({this.lat, this.lng});
+  final double? lat;
+  final double? lng;
   @override
   Widget build(BuildContext context) {
+    final pinned = lat != null && lng != null;
     return Container(
       height: 160,
       decoration: BoxDecoration(
@@ -774,13 +783,19 @@ class _MapPlaceholder extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppSpacing.rMd),
         border: Border.all(color: Theme.of(context).dividerColor),
       ),
-      child: const Center(
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.map_outlined, size: 32, color: AppColors.textSubtle),
-            SizedBox(height: 6),
-            Text('Map view coming soon', style: TextStyle(color: AppColors.textSubtle)),
+            Icon(pinned ? Icons.place : Icons.map_outlined, size: 32,
+                color: pinned ? AppColors.primary : AppColors.textSubtle),
+            const SizedBox(height: 6),
+            Text(
+              pinned
+                  ? 'Pinned at ${lat!.toStringAsFixed(5)}, ${lng!.toStringAsFixed(5)}'
+                  : 'No location pinned',
+              style: const TextStyle(color: AppColors.textSubtle),
+            ),
           ],
         ),
       ),

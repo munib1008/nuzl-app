@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -38,11 +37,11 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   final ownerPhone = TextEditingController();
   final description = TextEditingController();
   final permit = TextEditingController();
+  final building = TextEditingController();
+  final location = TextEditingController(); // a Google Maps link or "lat, lng"
   final Set<int> selectedAmenities = {};
 
-  Uint8List? imageBytes;
-  String? imageName;
-  String? coverUrl;
+  final List<String> imageUrls = []; // uploaded photo URLs (first = cover)
   bool uploading = false;
   bool saving = false;
   String? error;
@@ -64,8 +63,18 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       unitNo.text = '${m['unit_no'] ?? ''}';
       description.text = '${m['description'] ?? ''}';
       permit.text = '${m['permit_number'] ?? ''}';
+      building.text = '${m['building_name'] ?? ''}';
+      final lat = m['latitude'], lng = m['longitude'];
+      if (lat != null && lng != null) location.text = '$lat, $lng';
+      final imgs = m['images'];
+      if (imgs is List) {
+        for (final e in imgs) {
+          final s = '$e';
+          if (s.isNotEmpty && !imageUrls.contains(s)) imageUrls.add(s);
+        }
+      }
       final cov = '${m['cover_image'] ?? ''}';
-      if (cov.isNotEmpty) coverUrl = cov;
+      if (cov.isNotEmpty && !imageUrls.contains(cov)) imageUrls.insert(0, cov);
       final am = m['amenities'];
       if (am is List) {
         for (final e in am) {
@@ -80,35 +89,93 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   @override
   void dispose() {
     price.dispose(); beds.dispose(); baths.dispose(); size.dispose(); unitNo.dispose();
-    ownerName.dispose(); ownerPhone.dispose(); description.dispose(); permit.dispose(); super.dispose();
+    ownerName.dispose(); ownerPhone.dispose(); description.dispose(); permit.dispose();
+    building.dispose(); location.dispose(); super.dispose();
   }
 
-  Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1600, imageQuality: 80);
+  /// Pick + upload one photo, appended to the gallery. Compressed (1280px/q60)
+  /// so the base64 body stays well under Vercel's ~4.5MB request cap.
+  Future<void> _addPhoto() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1280, imageQuality: 60);
     if (picked == null) return;
-    final bytes = await picked.readAsBytes();
-    setState(() { imageBytes = bytes; imageName = picked.name; uploading = true; });
+    setState(() => uploading = true);
     try {
+      final bytes = await picked.readAsBytes();
       final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
-      setState(() { coverUrl = url; uploading = false; });
-      if (url == null && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Server returned no image URL — listing will save without a photo.')));
-      }
+      if (url == null) throw Exception('the server returned no URL');
+      setState(() => imageUrls.add(url));
     } catch (e) {
-      // Keep the local preview, but the listing will save without a stored photo.
-      // Surface the real reason (e.g. uploads not configured / image too large).
-      setState(() { coverUrl = null; uploading = false; });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Photo not uploaded: $e\nThe listing will save without a photo.')));
-      }
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Photo not uploaded: $e')));
+    } finally {
+      if (mounted) setState(() => uploading = false);
     }
   }
+
+  /// Parse "lat, lng" or a Google Maps link (which contains @lat,lng) → coords.
+  (double, double)? _coords() {
+    final m = RegExp(r'(-?\d{1,3}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)').firstMatch(location.text);
+    if (m == null) return null;
+    final lat = double.tryParse(m.group(1)!), lng = double.tryParse(m.group(2)!);
+    if (lat == null || lng == null || lat.abs() > 90 || lng.abs() > 180) return null;
+    return (lat, lng);
+  }
+
+  Widget _addPhotoTile(TextTheme t) => GestureDetector(
+        onTap: uploading ? null : _addPhoto,
+        child: Container(
+          width: 96,
+          height: 96,
+          decoration: BoxDecoration(
+            color: AppColors.surface2,
+            borderRadius: BorderRadius.circular(AppSpacing.rMd),
+            border: Border.all(color: Theme.of(context).dividerColor),
+          ),
+          child: uploading
+              ? const Center(child: SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2)))
+              : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  const Icon(Icons.add_a_photo_outlined, color: AppColors.textMuted),
+                  const SizedBox(height: 4),
+                  Text('Add', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                ]),
+        ),
+      );
+
+  Widget _photoThumb(int index, String url) => Stack(children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppSpacing.rMd),
+          child: Image.network(url,
+              width: 96, height: 96, fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                  width: 96, height: 96, color: AppColors.surface2,
+                  child: const Icon(Icons.broken_image_outlined, color: AppColors.textSubtle))),
+        ),
+        Positioned(
+          right: 2, top: 2,
+          child: GestureDetector(
+            onTap: () => setState(() => imageUrls.removeAt(index)),
+            child: const CircleAvatar(
+                radius: 11, backgroundColor: Colors.black54,
+                child: Icon(Icons.close, size: 14, color: Colors.white)),
+          ),
+        ),
+        if (index == 0)
+          Positioned(
+            left: 4, bottom: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(AppSpacing.rFull),
+              ),
+              child: const Text('Cover', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
+            ),
+          ),
+      ]);
 
   Future<void> _save() async {
     setState(() { saving = true; error = null; });
     final editing = widget.editId != null;
+    final coords = _coords();
     final body = <String, dynamic>{
       'property_type': propertyType,
       'purpose': purpose,
@@ -118,10 +185,13 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       'bathrooms': int.tryParse(baths.text),
       'size_sqft': double.tryParse(size.text),
       'description': description.text.trim(),
+      'building_name': building.text.trim(),
       'amenities': selectedAmenities.toList(),
       if (permit.text.trim().isNotEmpty) 'permit_number': permit.text.trim(),
-      if (coverUrl != null) 'cover_image': coverUrl,
-      if (coverUrl != null) 'images': [coverUrl],
+      if (coords != null) 'latitude': coords.$1,
+      if (coords != null) 'longitude': coords.$2,
+      if (imageUrls.isNotEmpty) 'cover_image': imageUrls.first,
+      'images': imageUrls,
     };
     try {
       Map<String, dynamic>? created;
@@ -172,32 +242,22 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.x16),
           children: [
-            // image picker
-            GestureDetector(
-              onTap: uploading ? null : _pickImage,
-              child: Container(
-                height: 180,
-                decoration: BoxDecoration(
-                  color: AppColors.surface2,
-                  borderRadius: BorderRadius.circular(AppSpacing.rLg),
-                  border: Border.all(color: Theme.of(context).dividerColor),
-                  image: imageBytes != null ? DecorationImage(image: MemoryImage(imageBytes!), fit: BoxFit.cover) : null,
-                ),
-                child: uploading
-                    ? const Center(child: CircularProgressIndicator())
-                    : imageBytes == null
-                        ? Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                            const Icon(Icons.add_a_photo_outlined, size: 32, color: AppColors.textMuted),
-                            const SizedBox(height: AppSpacing.x8),
-                            Text('Add photo', style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
-                          ])
-                        : Align(
-                            alignment: Alignment.topRight,
-                            child: IconButton(
-                              icon: const CircleAvatar(backgroundColor: Colors.black54, child: Icon(Icons.edit, color: Colors.white, size: 18)),
-                              onPressed: _pickImage,
-                            )),
-              ),
+            // Photos — at least 3 to publish a live listing. First photo is the cover.
+            Text('Photos', style: t.titleSmall),
+            const SizedBox(height: 2),
+            Text(
+              '${imageUrls.length} added · at least 3 to publish',
+              style: t.bodySmall?.copyWith(
+                  color: imageUrls.length >= 3 ? AppColors.success : AppColors.textMuted),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            Wrap(
+              spacing: AppSpacing.x8,
+              runSpacing: AppSpacing.x8,
+              children: [
+                for (var i = 0; i < imageUrls.length; i++) _photoThumb(i, imageUrls[i]),
+                _addPhotoTile(t),
+              ],
             ),
             const SizedBox(height: AppSpacing.x16),
             DropdownButtonFormField<String>(
@@ -232,6 +292,25 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
               const SizedBox(width: AppSpacing.x12),
               Expanded(child: TextField(controller: size, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Size (sqft)'))),
             ]),
+            const SizedBox(height: AppSpacing.x12),
+            TextField(
+              controller: building,
+              decoration: const InputDecoration(labelText: 'Building name', hintText: 'e.g. Marina Heights, Tower B'),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            TextField(
+              controller: location,
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                labelText: 'Location pin',
+                hintText: 'Paste a Google Maps link, or "25.0772, 55.1335"',
+                prefixIcon: const Icon(Icons.place_outlined),
+                helperText: _coords() != null
+                    ? 'Pinned at ${_coords()!.$1.toStringAsFixed(5)}, ${_coords()!.$2.toStringAsFixed(5)}'
+                    : 'Used for the map view',
+                helperStyle: _coords() != null ? const TextStyle(color: AppColors.success) : null,
+              ),
+            ),
             if (widget.editId == null) ...[
               const SizedBox(height: AppSpacing.x12),
               TextField(controller: unitNo, decoration: const InputDecoration(labelText: 'Unit number')),
