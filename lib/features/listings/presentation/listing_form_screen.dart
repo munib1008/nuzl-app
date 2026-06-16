@@ -173,8 +173,18 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       ]);
 
   Future<void> _save() async {
-    setState(() { saving = true; error = null; });
     final editing = widget.editId != null;
+    // Building name + unit number are mandatory (owner #1). Unit number is only
+    // captured on create (it identifies the property), so require it there.
+    if (building.text.trim().isEmpty) {
+      setState(() => error = 'Building name is required.');
+      return;
+    }
+    if (!editing && unitNo.text.trim().isEmpty) {
+      setState(() => error = 'Unit number is required.');
+      return;
+    }
+    setState(() { saving = true; error = null; });
     final coords = _coords();
     final body = <String, dynamic>{
       'property_type': propertyType,
@@ -295,7 +305,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
             const SizedBox(height: AppSpacing.x12),
             TextField(
               controller: building,
-              decoration: const InputDecoration(labelText: 'Building name', hintText: 'e.g. Marina Heights, Tower B'),
+              decoration: const InputDecoration(labelText: 'Building name *', hintText: 'e.g. Marina Heights, Tower B'),
             ),
             const SizedBox(height: AppSpacing.x12),
             TextField(
@@ -313,7 +323,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
             ),
             if (widget.editId == null) ...[
               const SizedBox(height: AppSpacing.x12),
-              TextField(controller: unitNo, decoration: const InputDecoration(labelText: 'Unit number')),
+              TextField(controller: unitNo, decoration: const InputDecoration(labelText: 'Unit number *')),
               const SizedBox(height: AppSpacing.x12),
               if (isOwner)
                 Container(

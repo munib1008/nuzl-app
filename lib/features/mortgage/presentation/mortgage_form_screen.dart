@@ -90,13 +90,20 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
                 final mp = Map<String, dynamic>.from(e);
                 final pid = '${mp['property_id'] ?? ''}';
                 if (pid.isEmpty || !seen.add(pid)) continue;
-                items.add(DropdownMenuItem(
-                    value: pid, child: Text('${mp['community'] ?? 'Property'}', overflow: TextOverflow.ellipsis)));
+                // Show "Building name - Unit number" so the owner recognises which
+                // property this is, not a generic label (owner #13).
+                final bn = '${mp['building_name'] ?? ''}'.trim();
+                final un = '${mp['unit_no'] ?? ''}'.trim();
+                final comm = '${mp['community'] ?? ''}'.trim();
+                final label = bn.isNotEmpty
+                    ? (un.isNotEmpty ? '$bn - $un' : bn)
+                    : (un.isNotEmpty ? 'Unit $un' : (comm.isNotEmpty ? comm : 'Property'));
+                items.add(DropdownMenuItem(value: pid, child: Text(label, overflow: TextOverflow.ellipsis)));
               }
               return DropdownButtonFormField<String?>(
                 initialValue: _propertyId,
                 isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Property (optional — shows in its Finance view)'),
+                decoration: const InputDecoration(labelText: 'Link to a property (optional)'),
                 items: items,
                 onChanged: (v) => setState(() => _propertyId = v),
               );
@@ -104,30 +111,32 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
             orElse: () => const SizedBox.shrink(),
           ),
           const SizedBox(height: AppSpacing.x12),
-          TextField(controller: _label, decoration: const InputDecoration(hintText: 'Label (e.g. Marina apartment)')),
+          TextField(controller: _label, decoration: const InputDecoration(
+              labelText: 'Name this mortgage', hintText: 'e.g. Marina apartment')),
           const SizedBox(height: AppSpacing.x12),
-          TextField(controller: _lender, decoration: const InputDecoration(hintText: 'Lender (e.g. Emirates NBD)')),
+          TextField(controller: _lender, decoration: const InputDecoration(
+              labelText: 'Lender', hintText: 'e.g. Emirates NBD')),
           const SizedBox(height: AppSpacing.x12),
           TextField(controller: _principal, keyboardType: TextInputType.number,
-              onChanged: (_) => setState(() {}), decoration: const InputDecoration(hintText: 'Loan amount (AED)')),
+              onChanged: (_) => setState(() {}), decoration: const InputDecoration(labelText: 'Loan amount (AED)')),
           const SizedBox(height: AppSpacing.x12),
           TextField(controller: _rate, keyboardType: TextInputType.number,
-              onChanged: (_) => setState(() {}), decoration: const InputDecoration(hintText: 'Interest rate (% per year)')),
+              onChanged: (_) => setState(() {}), decoration: const InputDecoration(labelText: 'Interest rate (% per year)')),
           const SizedBox(height: AppSpacing.x12),
           TextField(controller: _years, keyboardType: TextInputType.number,
-              onChanged: (_) => setState(() {}), decoration: const InputDecoration(hintText: 'Term (years)')),
+              onChanged: (_) => setState(() {}), decoration: const InputDecoration(labelText: 'Term (years)')),
           const SizedBox(height: AppSpacing.x12),
           Text('Variable rate (optional)', style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
           const SizedBox(height: AppSpacing.x8),
           Row(children: [
             Expanded(
               child: TextField(controller: _fixedMonths, keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(hintText: 'Fixed for (months)')),
+                  decoration: const InputDecoration(labelText: 'Fixed for (months)')),
             ),
             const SizedBox(width: AppSpacing.x12),
             Expanded(
               child: TextField(controller: _rateAfter, keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(hintText: 'Rate after (%)')),
+                  decoration: const InputDecoration(labelText: 'Rate after (%)')),
             ),
           ]),
           const SizedBox(height: AppSpacing.x20),
