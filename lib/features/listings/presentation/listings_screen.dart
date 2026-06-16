@@ -274,6 +274,20 @@ class _ListingCard extends StatelessWidget {
                         style: t.bodySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
                   ),
                 ),
+                if (l['is_visible'] == false)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning.withValues(alpha: 0.95),
+                        borderRadius: BorderRadius.circular(AppSpacing.rFull),
+                      ),
+                      child: Text('Draft',
+                          style: t.bodySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
               ],
             ),
             Padding(

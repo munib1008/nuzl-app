@@ -9,8 +9,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/sticky_save_bar.dart';
+import '../../auth/application/auth_controller.dart';
 import '../../shell/app_shell.dart';
 import '../data/listings_repository.dart' show listingsProvider, amenitiesProvider;
+import 'listings_screen.dart' show listingsRawProvider;
 
 class ListingFormScreen extends ConsumerStatefulWidget {
   const ListingFormScreen({super.key, this.editId, this.initial});
@@ -122,16 +124,31 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       if (coverUrl != null) 'images': [coverUrl],
     };
     try {
+      Map<String, dynamic>? created;
       if (editing) {
         await ref.read(apiClientProvider).patch('/listings/${widget.editId}', body: body);
       } else {
+        // For an owner listing their own property, the owner IS them — don't ask;
+        // default the owner name from their profile. Agents enter the real owner.
+        final u = ref.read(authControllerProvider).user;
+        final isOwner = u?.activeRole == 'owner';
         body['unit_no'] = unitNo.text.trim();
-        body['owner_name'] = ownerName.text.trim();
-        body['owner_phone'] = ownerPhone.text.trim();
-        await ref.read(apiClientProvider).post('/listings', body: body);
+        body['owner_name'] = isOwner ? u!.fullName : ownerName.text.trim();
+        body['owner_phone'] = isOwner ? '' : ownerPhone.text.trim();
+        final res = await ref.read(apiClientProvider).post('/listings', body: body);
+        created = res is Map ? Map<String, dynamic>.from(res) : null;
       }
       ref.invalidate(listingsProvider);
-      if (mounted) {
+      ref.invalidate(listingsRawProvider);
+      if (!mounted) return;
+      // An owner's new listing is a draft until a title deed is submitted + published;
+      // take them straight to the listing so they can do that (it won't show in the
+      // public browse yet, only under "My listings").
+      if (!editing && created?['is_visible'] == false && created?['id'] != null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Saved as a draft — submit a title deed, then publish it to go live.')));
+        context.go('/listings/${created!['id']}');
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(editing ? 'Listing updated' : 'Listing added')));
         context.go('/properties');
       }
@@ -145,6 +162,9 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final user = ref.watch(authControllerProvider).user;
+    final isOwner = user?.activeRole == 'owner';
+    final ownerFullName = user?.fullName ?? '';
     return Scaffold(
       appBar: NuzlAppBar(title: widget.editId != null ? 'Edit listing' : 'Add listing'),
       drawer: const NuzlDrawer(),
@@ -216,11 +236,30 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
               const SizedBox(height: AppSpacing.x12),
               TextField(controller: unitNo, decoration: const InputDecoration(labelText: 'Unit number')),
               const SizedBox(height: AppSpacing.x12),
-              Row(children: [
-                Expanded(child: TextField(controller: ownerName, decoration: const InputDecoration(labelText: 'Owner name'))),
-                const SizedBox(width: AppSpacing.x12),
-                Expanded(child: TextField(controller: ownerPhone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Owner phone'))),
-              ]),
+              if (isOwner)
+                Container(
+                  padding: const EdgeInsets.all(AppSpacing.x12),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface2,
+                    borderRadius: BorderRadius.circular(AppSpacing.rMd),
+                  ),
+                  child: Row(children: [
+                    const Icon(Icons.person_outline, size: 18, color: AppColors.textMuted),
+                    const SizedBox(width: AppSpacing.x8),
+                    Expanded(
+                      child: Text(
+                        'Listed as owner: ${ownerFullName.isEmpty ? 'you' : ownerFullName}',
+                        style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+                      ),
+                    ),
+                  ]),
+                )
+              else
+                Row(children: [
+                  Expanded(child: TextField(controller: ownerName, decoration: const InputDecoration(labelText: 'Owner name'))),
+                  const SizedBox(width: AppSpacing.x12),
+                  Expanded(child: TextField(controller: ownerPhone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Owner phone'))),
+                ]),
             ],
             const SizedBox(height: AppSpacing.x12),
             TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'Description')),
