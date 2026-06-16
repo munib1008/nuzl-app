@@ -33,7 +33,18 @@ class _PostLeadScreenState extends ConsumerState<PostLeadScreen> {
   @override
   void dispose() { name.dispose(); phone.dispose(); minBudget.dispose(); maxBudget.dispose(); propertyType.dispose(); super.dispose(); }
 
+  String? _validate() {
+    if (name.text.trim().isEmpty) return 'Enter the buyer / client name.';
+    if (phone.text.trim().isEmpty) return 'Enter a contact phone number.';
+    final mn = double.tryParse(minBudget.text.trim());
+    final mx = double.tryParse(maxBudget.text.trim());
+    if (mn != null && mx != null && mx < mn) return 'Max budget cannot be less than min budget.';
+    return null;
+  }
+
   Future<void> _save() async {
+    final problem = _validate();
+    if (problem != null) { setState(() => error = problem); return; }
     setState(() { saving = true; error = null; });
     try {
       await ref.read(apiClientProvider).post('/buyer-requirements', body: {
@@ -66,9 +77,9 @@ class _PostLeadScreenState extends ConsumerState<PostLeadScreen> {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.x16),
           children: [
-            TextField(controller: name, decoration: const InputDecoration(labelText: 'Buyer / client name')),
+            TextField(controller: name, decoration: const InputDecoration(labelText: 'Buyer / client name *')),
             const SizedBox(height: AppSpacing.x12),
-            TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone', hintText: '+971 …')),
+            TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone *', hintText: '+971 …')),
             const SizedBox(height: AppSpacing.x12),
             DropdownButtonFormField<String>(
               initialValue: buyerType,
