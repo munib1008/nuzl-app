@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
@@ -123,6 +124,8 @@ class _PropertyFinancials extends ConsumerWidget {
           data: (m) => _SummaryCard(summary: m['summary'] is Map ? Map<String, dynamic>.from(m['summary']) : const {}),
           orElse: () => const Padding(padding: EdgeInsets.all(16), child: Center(child: CircularProgressIndicator())),
         ),
+        const SizedBox(height: AppSpacing.x24),
+        _MortgageCard(propertyId: propertyId),
         const SizedBox(height: AppSpacing.x24),
         Row(
           children: [
@@ -271,6 +274,103 @@ class _PropertyFinancials extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
+  }
+}
+
+final _mortgageProvider = FutureProvider.autoDispose.family<List<dynamic>, String>((ref, id) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/mortgages/by-property/$id');
+    return d is List ? d : [];
+  } catch (_) {
+    return [];
+  }
+});
+
+/// The property's mortgage, folded into its Finance view (owner #5): live
+/// balance, monthly payment, and the fixed-then-floating rate schedule.
+class _MortgageCard extends ConsumerWidget {
+  const _MortgageCard({required this.propertyId});
+  final String propertyId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final m = ref.watch(_mortgageProvider(propertyId));
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.account_balance_outlined, size: 20, color: AppColors.primary),
+            const SizedBox(width: 8),
+            Expanded(child: Text('Mortgage', style: t.titleMedium)),
+            TextButton(onPressed: () => context.push('/mortgages'), child: const Text('Manage')),
+          ]),
+          m.when(
+            loading: () => const Padding(padding: EdgeInsets.all(8), child: LinearProgressIndicator()),
+            error: (e, _) => Text('$e', style: t.bodySmall),
+            data: (list) => list.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text('No mortgage linked. Add one under Mortgages and select this property.',
+                        style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
+                  )
+                : Column(children: list.map((e) => _MortgageRows(m: Map<String, dynamic>.from(e))).toList()),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _MortgageRows extends StatelessWidget {
+  const _MortgageRows({required this.m});
+  final Map<String, dynamic> m;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final proj = m['projection'] is Map ? Map<String, dynamic>.from(m['projection']) : const {};
+    final rate = num.tryParse('${m['interest_rate']}') ?? 0;
+    final fixedMonths = proj['fixed_months'];
+    final rateAfter = proj['rate_after'];
+    final afterMonthly = proj['after_monthly'];
+    final paid = num.tryParse('${m['progress_pct']}') ?? 0;
+    final rows = <(String, String)>[
+      ('Lender', '${m['lender'] ?? m['label'] ?? '—'}'),
+      ('Outstanding', _money(m['outstanding'])),
+      ('Monthly payment', _money(proj['monthly_payment'])),
+      ('Rate', (fixedMonths != null && rateAfter != null)
+          ? '$rate% fixed $fixedMonths mo → then $rateAfter%'
+          : '$rate%'),
+      if (afterMonthly != null) ('After fixed period', '${_money(afterMonthly)} / mo'),
+    ];
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        ...rows.map((r) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text(r.$1, style: t.bodyMedium?.copyWith(color: Theme.of(context).hintColor)),
+                Flexible(
+                    child: Text(r.$2,
+                        style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600), textAlign: TextAlign.right)),
+              ]),
+            )),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+              value: (paid / 100).clamp(0, 1).toDouble(),
+              minHeight: 6,
+              backgroundColor: AppColors.surface,
+              color: AppColors.primary),
+        ),
+        const SizedBox(height: 2),
+        Text('${paid.toStringAsFixed(0)}% paid down',
+            style: t.labelSmall?.copyWith(color: Theme.of(context).hintColor)),
+      ]),
+    );
   }
 }
 
