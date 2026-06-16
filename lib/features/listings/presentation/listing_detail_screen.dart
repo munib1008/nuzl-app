@@ -11,6 +11,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../messages/data/messaging_repository.dart';
 import '../../saved/saved_screen.dart';
+import 'listing_ribbons.dart';
 
 final _detailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
   final d = await ref.read(apiClientProvider).get('/listings/$id');
@@ -132,6 +133,8 @@ class _Detail extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.x4),
                         Text('${l['community']}', style: t.bodyLarge?.copyWith(color: AppColors.textMuted)),
                       ],
+                      const SizedBox(height: AppSpacing.x8),
+                      ListingRibbons(listing: l),
                       // Owner-management actions (edit / documents / ownership / publish /
                       // agents) are hidden in Customer/buyer mode (owner #12) — gated by the
                       // same capability as the listings FAB, not just broker identity.
@@ -400,7 +403,7 @@ class _AgentCard extends ConsumerWidget {
                       child: FilledButton.icon(
                         onPressed: () => _requestViewing(context, ref),
                         icon: const Icon(Icons.event_available_outlined),
-                        label: const Text('Request viewing'),
+                        label: const Text('Schedule viewing'),
                       ),
                     )
                   : _BookingBox(v: v, onChange: () => _reschedule(context, ref, '${v['id']}')),
@@ -409,7 +412,7 @@ class _AgentCard extends ConsumerWidget {
                 child: FilledButton.icon(
                   onPressed: null,
                   icon: const Icon(Icons.event_available_outlined),
-                  label: const Text('Request viewing'),
+                  label: const Text('Schedule viewing'),
                 ),
               ),
             ),

@@ -10,6 +10,7 @@ import '../../../core/widgets/empty_state.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../saved/saved_searches.dart';
 import '../../shell/app_shell.dart';
+import 'listing_ribbons.dart';
 
 final listingsRawProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   try {
@@ -288,6 +289,8 @@ class _ListingCard extends StatelessWidget {
                           style: t.bodySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
                     ),
                   ),
+                // Status ribbons (Verified / Exclusive / Hot deal / Price reduced / New).
+                Positioned(left: 8, bottom: 8, right: 8, child: ListingRibbons(listing: l)),
               ],
             ),
             Padding(
