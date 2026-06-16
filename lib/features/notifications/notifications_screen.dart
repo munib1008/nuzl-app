@@ -91,6 +91,8 @@ String? _deepLink(Map<String, dynamic> n) {
       return '/listings/$id';
     case 'buyer_requirements':
       return '/crm';
+    case 'viewings':
+      return '/viewings/$id/crm';
     case 'deals':
       return '/deals';
     default:

@@ -45,6 +45,8 @@ import '../../features/messages/messages_screen.dart';
 import '../../features/messages/chat_thread_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/viewings/viewings_screen.dart';
+import '../../features/viewings/viewing_leads_screen.dart';
+import '../../features/viewings/viewing_crm_screen.dart';
 import '../../features/saved/saved_screen.dart';
 import '../../features/saved/saved_searches.dart';
 import '../../features/marketplace/marketplace_screen.dart';
@@ -149,6 +151,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/messages', builder: (_, __) => const MessagesScreen()),
       GoRoute(path: '/notifications', builder: (_, __) => const NotificationsScreen()),
       GoRoute(path: '/viewings', builder: (_, __) => const ViewingsScreen()),
+      GoRoute(path: '/viewing-leads', builder: (_, __) => const ViewingLeadsScreen()),
+      GoRoute(path: '/viewings/:id/crm', builder: (_, st) => ViewingCrmScreen(id: st.pathParameters['id']!)),
       GoRoute(path: '/saved', builder: (_, __) => const SavedScreen()),
       GoRoute(path: '/saved-searches', builder: (_, __) => const SavedSearchesScreen()),
       GoRoute(path: '/marketplace', builder: (_, __) => const MarketplaceScreen()),
