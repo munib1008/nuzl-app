@@ -8,6 +8,7 @@ import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/nuzl_logo.dart';
+import '../../../core/widgets/follow_button.dart';
 
 final _orgProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, slug) async {
   final d = await ref.read(apiClientProvider).get('/public/orgs/$slug');
@@ -115,6 +116,10 @@ class _Body extends StatelessWidget {
                     ),
                   ]),
                   const SizedBox(height: AppSpacing.x16),
+                  if (org['id'] != null) ...[
+                    FollowButton(targetId: '${org['id']}', isOrg: true),
+                    const SizedBox(height: AppSpacing.x16),
+                  ],
 
                   // contact / links
                   if (website.isNotEmpty || phone.isNotEmpty || email.isNotEmpty)

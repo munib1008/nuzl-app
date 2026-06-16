@@ -8,6 +8,7 @@ import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/nuzl_logo.dart';
+import '../../../core/widgets/follow_button.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../messages/data/messaging_repository.dart';
 
@@ -121,6 +122,8 @@ class _Body extends ConsumerWidget {
                         ),
                       const SizedBox(height: AppSpacing.x12),
                       Text(name, style: t.headlineSmall, textAlign: TextAlign.center),
+                      const SizedBox(height: AppSpacing.x8),
+                      Center(child: FollowButton(targetId: id)),
                       const SizedBox(height: AppSpacing.x8),
                       Wrap(
                         spacing: AppSpacing.x8,
