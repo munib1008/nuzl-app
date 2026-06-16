@@ -108,6 +108,7 @@ List<NavItem> navItemsFor(Persona p) {
     case Persona.owner:
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
+        NavItem(Icons.space_dashboard_outlined, 'Cockpit', '/owner-cockpit'),
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.vpn_key_outlined, 'Rentals', '/rentals'),
         NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
