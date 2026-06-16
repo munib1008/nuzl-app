@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/upload_service.dart';
@@ -142,6 +142,17 @@ class _Detail extends ConsumerWidget {
                             label: const Text('Edit listing'),
                           ),
                         ),
+                        if ('${l['property_id'] ?? ''}'.isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.x8),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: OutlinedButton.icon(
+                              onPressed: () => context.push('/properties/${l['property_id']}/documents'),
+                              icon: const Icon(Icons.folder_open_outlined, size: 18),
+                              label: const Text('Documents'),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: AppSpacing.x12),
                         _OwnershipCard(listingId: id, listing: l),
                         _PublishRow(listingId: id, listing: l),
@@ -461,12 +472,26 @@ class _OwnershipCardState extends ConsumerState<_OwnershipCard> {
   Future<void> _submit() async {
     if (_busy) return;
     try {
-      final picked = await ImagePicker()
-          .pickImage(source: ImageSource.gallery, maxWidth: 2200, imageQuality: 85);
-      if (picked == null) return;
+      // Accept a PDF or an image for the title deed (#3).
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+      final f = result.files.first;
+      final bytes = f.bytes;
+      if (bytes == null) throw Exception('Could not read the file.');
       setState(() => _busy = true);
-      final bytes = await picked.readAsBytes();
-      final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
+      final ext = (f.extension ?? '').toLowerCase();
+      final ct = ext == 'pdf'
+          ? 'application/pdf'
+          : ext == 'png'
+              ? 'image/png'
+              : ext == 'webp'
+                  ? 'image/webp'
+                  : 'image/jpeg';
+      final url = await ref.read(uploadServiceProvider).upload(bytes, f.name, ct);
       if (url == null) throw Exception('Upload failed — please try again.');
       await ref.read(apiClientProvider)
           .post('/listings/${widget.listingId}/ownership', body: {'doc_url': url});

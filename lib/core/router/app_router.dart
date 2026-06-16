@@ -15,6 +15,7 @@ import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/listings/presentation/listings_screen.dart';
 import '../../features/listings/presentation/listing_form_screen.dart';
 import '../../features/listings/presentation/listing_detail_screen.dart';
+import '../../features/documents/property_docs_screen.dart';
 import '../../features/leads/presentation/leads_screen.dart';
 import '../../features/leads/presentation/lead_crm_screen.dart';
 import '../../features/leads/presentation/post_lead_screen.dart';
@@ -121,6 +122,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/properties/:id/edit', builder: (_, st) => ListingFormScreen(
             editId: st.pathParameters['id'],
             initial: st.extra is Map<String, dynamic> ? st.extra as Map<String, dynamic> : null)),
+      GoRoute(path: '/properties/:id/documents',
+            builder: (_, st) => PropertyDocsScreen(propertyId: st.pathParameters['id']!)),
       GoRoute(path: '/listings/:id', builder: (_, st) => ListingDetailScreen(id: st.pathParameters['id']!)),
       GoRoute(path: '/leads', builder: (_, __) => const LeadsScreen()),
       GoRoute(path: '/leads/new', builder: (_, __) => const PostLeadScreen()),
