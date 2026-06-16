@@ -72,7 +72,17 @@ class FinancialsScreen extends ConsumerWidget {
             for (final e in list) {
               final m = Map<String, dynamic>.from(e);
               final pid = '${m['property_id'] ?? m['id']}';
-              propMap.putIfAbsent(pid, () => '${m['community'] ?? 'Property'} · ${_money(m['price'])}');
+              // Show "Building name - Unit number" so the property is recognisable,
+              // not a generic "Property" label (owner #13).
+              propMap.putIfAbsent(pid, () {
+                final bn = '${m['building_name'] ?? ''}'.trim();
+                final un = '${m['unit_no'] ?? ''}'.trim();
+                final comm = '${m['community'] ?? ''}'.trim();
+                final name = bn.isNotEmpty
+                    ? (un.isNotEmpty ? '$bn - $un' : bn)
+                    : (un.isNotEmpty ? 'Unit $un' : (comm.isNotEmpty ? comm : 'Property'));
+                return '$name · ${_money(m['price'])}';
+              });
             }
             if (propMap.isEmpty) {
               return const Center(
@@ -215,7 +225,12 @@ class _PropertyFinancials extends ConsumerWidget {
     );
     if (ok != true) return;
     final amt = num.tryParse(amount.text.trim());
-    if (amt == null) return;
+    if (amt == null || amt <= 0) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid amount (greater than 0).')));
+      }
+      return;
+    }
     try {
       await ref.read(apiClientProvider).post('/properties/$propertyId/transactions', body: {
         'kind': kind,
@@ -262,7 +277,12 @@ class _PropertyFinancials extends ConsumerWidget {
     );
     if (ok != true) return;
     final amt = num.tryParse(amount.text.trim());
-    if (amt == null) return;
+    if (amt == null || amt <= 0) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid amount (greater than 0).')));
+      }
+      return;
+    }
     try {
       await ref.read(apiClientProvider).post('/properties/$propertyId/events', body: {
         'category': category,

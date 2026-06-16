@@ -147,22 +147,27 @@ class _Detail extends ConsumerWidget {
                             label: const Text('Edit listing'),
                           ),
                         ),
-                        if ('${l['property_id'] ?? ''}'.isNotEmpty) ...[
-                          const SizedBox(height: AppSpacing.x8),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: OutlinedButton.icon(
-                              onPressed: () => context.push('/properties/${l['property_id']}/documents'),
-                              icon: const Icon(Icons.folder_open_outlined, size: 18),
-                              label: const Text('Documents'),
-                            ),
-                          ),
-                        ],
                         const SizedBox(height: AppSpacing.x12),
                         _OwnershipCard(listingId: id, listing: l),
                         _PublishRow(listingId: id, listing: l),
                         if ('${l['property_id'] ?? ''}'.isNotEmpty)
                           _PropertyAgentsCard(propertyId: '${l['property_id']}'),
+                      ],
+                      // Document collaboration is open to ANY property party — owner,
+                      // lister, or a delegated agent (owner #9) — but only in lister
+                      // modes (hidden for customers, like the owner actions).
+                      if (l['viewer_can_docs'] == true &&
+                          '${l['property_id'] ?? ''}'.isNotEmpty &&
+                          ref.watch(personaProvider).canListProperty) ...[
+                        const SizedBox(height: AppSpacing.x12),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: OutlinedButton.icon(
+                            onPressed: () => context.push('/properties/${l['property_id']}/documents'),
+                            icon: const Icon(Icons.folder_open_outlined, size: 18),
+                            label: const Text('Documents'),
+                          ),
+                        ),
                       ],
                       const SizedBox(height: AppSpacing.x16),
                       Text('Key facts', style: t.titleMedium),
