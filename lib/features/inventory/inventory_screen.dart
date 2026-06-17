@@ -19,6 +19,15 @@ final inventoryProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async 
   }
 });
 
+final blockRequestsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/inventory/block-requests');
+    return d is List ? d : [];
+  } catch (_) {
+    return [];
+  }
+});
+
 BadgeTone _tone(String s) => switch (s) {
       'available' => BadgeTone.success,
       'reserved' => BadgeTone.warning,
@@ -42,7 +51,9 @@ class InventoryScreen extends ConsumerWidget {
         label: const Text('New project'),
       ),
       body: ResponsiveCenter(
-        child: inventory.when(
+        child: Column(children: [
+          const _BlockRequestsPanel(),
+          Expanded(child: inventory.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
           error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
           data: (list) {
@@ -76,7 +87,8 @@ class InventoryScreen extends ConsumerWidget {
               },
             );
           },
-        ),
+        )),
+        ]),
       ),
     );
   }
@@ -148,10 +160,18 @@ class _UnitTile extends ConsumerWidget {
           StatusBadge(status, tone: _tone(status)),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
-            onSelected: (s) => _setStatus(context, ref, '${unit['id']}', s),
-            itemBuilder: (_) => _unitStatuses
-                .map((s) => PopupMenuItem(value: s, child: Text('Set ${_humanize(s)}')))
-                .toList(),
+            onSelected: (v) {
+              if (v == 'request_block') {
+                _requestBlock(context, ref, '${unit['id']}');
+              } else if (v.startsWith('status:')) {
+                _setStatus(context, ref, '${unit['id']}', v.substring(7));
+              }
+            },
+            itemBuilder: (_) => [
+              ..._unitStatuses.map((s) => PopupMenuItem(value: 'status:$s', child: Text('Set ${_humanize(s)}'))),
+              const PopupMenuDivider(),
+              const PopupMenuItem(value: 'request_block', child: Text('Request to block')),
+            ],
           ),
         ]),
       ),
@@ -165,6 +185,90 @@ class _UnitTile extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
+  }
+
+  Future<void> _requestBlock(BuildContext context, WidgetRef ref, String id) async {
+    final note = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Request to block'),
+        content: TextField(controller: note, maxLines: 2,
+            decoration: const InputDecoration(labelText: 'Note (client / reservation)')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(apiClientProvider).post('/inventory/units/$id/block-request', body: {'note': note.text.trim()});
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Block request sent')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+}
+
+/// Developer-facing pending unit-block requests with approve / reject.
+class _BlockRequestsPanel extends ConsumerWidget {
+  const _BlockRequestsPanel();
+
+  Future<void> _decide(BuildContext context, WidgetRef ref, String id, String action) async {
+    try {
+      await ref.read(apiClientProvider).post('/inventory/block-requests/$id/decide', body: {'action': action});
+      ref.invalidate(blockRequestsProvider);
+      ref.invalidate(inventoryProvider);
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reqs = ref.watch(blockRequestsProvider);
+    return reqs.maybeWhen(
+      data: (list) {
+        if (list.isEmpty) return const SizedBox.shrink();
+        final t = Theme.of(context).textTheme;
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x16, AppSpacing.x16, 0),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.x12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Block requests (${list.length})', style: t.titleSmall),
+                for (final m in list)
+                  Builder(builder: (_) {
+                    final r = Map<String, dynamic>.from(m);
+                    return ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text('${r['unit_no'] ?? 'Unit'} · ${r['project'] ?? ''}'),
+                      subtitle: Text([
+                        if (r['agent_name'] != null) 'by ${r['agent_name']}',
+                        if ('${r['note'] ?? ''}'.isNotEmpty) '${r['note']}',
+                      ].join('  ·  ')),
+                      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                        TextButton(onPressed: () => _decide(context, ref, '${r['id']}', 'approve'), child: const Text('Approve')),
+                        TextButton(
+                          style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
+                          onPressed: () => _decide(context, ref, '${r['id']}', 'reject'),
+                          child: const Text('Reject'),
+                        ),
+                      ]),
+                    );
+                  }),
+              ]),
+            ),
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
   }
 }
 
