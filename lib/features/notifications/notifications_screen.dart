@@ -99,6 +99,8 @@ String? _deepLink(Map<String, dynamic> n) {
       return '/collaboration';
     case 'deals':
       return '/deals';
+    case 'deal_broadcasts':
+      return '/deal-board';
     case 'posts':
       return '/feed';
     default:
