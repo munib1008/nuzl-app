@@ -139,6 +139,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.verified_user_outlined, 'Verification', '/verification-queue'),
         NavItem(Icons.flag_outlined, 'Moderation', '/post-moderation'),
         NavItem(Icons.badge_outlined, 'Nuzler Team', '/nuzler-team'),
+        NavItem(Icons.workspace_premium_outlined, 'Founding Owners', '/founding-owners'),
         NavItem(Icons.receipt_long_outlined, 'Audit Logs', '/audit'),
         NavItem(Icons.workspace_premium_outlined, 'Plans', '/plans'),
         NavItem(Icons.speed_outlined, 'Usage Limits', '/limits'),

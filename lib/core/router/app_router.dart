@@ -19,6 +19,7 @@ import '../../features/documents/property_docs_screen.dart';
 import '../../features/opportunities/opportunities_screen.dart';
 import '../../features/dashboard/owner_cockpit_screen.dart';
 import '../../features/admin/post_moderation_screen.dart';
+import '../../features/admin/founding_owners_screen.dart';
 import '../../features/collaboration/collaboration_screen.dart';
 import '../../features/deal_board/deal_board_screen.dart';
 import '../../features/leads/presentation/leads_screen.dart';
@@ -158,6 +159,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/contacts', builder: (_, __) => const ContactsScreen()),
       GoRoute(path: '/owner-cockpit', builder: (_, __) => const OwnerCockpitScreen()),
       GoRoute(path: '/post-moderation', builder: (_, __) => const PostModerationScreen()),
+      GoRoute(path: '/founding-owners', builder: (_, __) => const FoundingOwnersScreen()),
       GoRoute(path: '/collaboration', builder: (_, __) => const CollaborationScreen()),
       GoRoute(path: '/deal-board', builder: (_, __) => const DealBoardScreen()),
       GoRoute(path: '/activities', builder: (_, __) => const ActivitiesScreen()),
