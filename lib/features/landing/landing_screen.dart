@@ -117,11 +117,13 @@ class _LandingScreenState extends State<LandingScreen> {
                 child: Column(
                   children: [
                     const _Hero(),
+                    const _EcosystemTrust(),
                     const _TrustMetrics(),
                     KeyedSubtree(key: _kFeatured, child: const _FeaturedListings()),
                     const _WhoAreYou(),
                     const _Ecosystem(),
                     const _WhyNuzl(),
+                    const _PropertyTimeline(),
                     KeyedSubtree(key: _kModules, child: const _MainModules()),
                     KeyedSubtree(key: _kMarket, child: const _MarketIntelligence()),
                     const _HowItWorks(),
@@ -479,6 +481,7 @@ class _EcosystemState extends State<_Ecosystem> {
     (role: 'Service Provider', title: 'Maintenance', icon: Icons.build_outlined, tags: ['Repair', 'Cleaning', 'Inspection'], color: AppColors.warning),
     (role: 'Supplier', title: 'Products', icon: Icons.inventory_2_outlined, tags: ['Furniture', 'Materials', 'Equipment'], color: AppColors.accentGold),
     (role: 'Tenant', title: 'Lease Management', icon: Icons.description_outlined, tags: ['Rent', 'Payments', 'Documents'], color: AppColors.primaryBright),
+    (role: 'Developer', title: 'Project Inventory', icon: Icons.domain_outlined, tags: ['Units', 'Sales progress', 'Handover'], color: AppColors.info),
   ];
 
   int? _active; // hovered pillar — drives the central record's highlight
@@ -506,22 +509,23 @@ class _EcosystemState extends State<_Ecosystem> {
 
   // Wide: two rows of three pillars connected to a central PROPERTY RECORD band.
   Widget _wide(BuildContext context, List<Widget> cards) {
-    Widget row(int a, int b, int c) => Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: cards[a]),
-            const SizedBox(width: AppSpacing.x16),
-            Expanded(child: cards[b]),
-            const SizedBox(width: AppSpacing.x16),
-            Expanded(child: cards[c]),
-          ],
-        );
+    Widget rowOf(Iterable<Widget> items) {
+      final list = items.toList();
+      return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        for (var i = 0; i < list.length; i++) ...[
+          if (i > 0) const SizedBox(width: AppSpacing.x16),
+          Expanded(child: list[i]),
+        ],
+      ]);
+    }
+
+    // Split around the central record: first three above, the rest below.
     return Column(children: [
-      row(0, 1, 2),
+      rowOf(cards.take(3)),
       _connector(context),
       _recordBand(context),
       _connector(context),
-      row(3, 4, 5),
+      rowOf(cards.skip(3)),
     ]);
   }
 
@@ -667,60 +671,201 @@ class _PillarCard extends StatelessWidget {
 // ── Section 5 — Why NUZL ─────────────────────────────────────────────────────
 class _WhyNuzl extends StatelessWidget {
   const _WhyNuzl();
+  // The differentiation is the lifecycle: portals dead-end at the deal; NUZL
+  // keeps going. Shown as two side-by-side journeys, not a feature checklist.
   static const _traditional = [
-    'Find listings',
-    'Contact an agent',
-    'The trail ends there',
+    (Icons.search, 'Search property'),
+    (Icons.call_outlined, 'Contact an agent'),
+    (Icons.vpn_key_outlined, 'Buy or rent'),
+    (Icons.block, 'End of journey'),
   ];
-  static const _nuzl = [
-    'Find properties',
-    'Buy or rent',
-    'Track your mortgage',
-    'Manage ownership',
-    'Manage tenants',
-    'Track payments',
-    'Book services',
-    'Buy products',
+  static const _lifecycle = [
+    (Icons.search, 'Search property'),
+    (Icons.vpn_key_outlined, 'Buy or rent'),
+    (Icons.account_balance_outlined, 'Mortgage tracking'),
+    (Icons.description_outlined, 'Ownership records'),
+    (Icons.groups_outlined, 'Tenant management'),
+    (Icons.build_outlined, 'Maintenance'),
+    (Icons.shopping_bag_outlined, 'Marketplace'),
+    (Icons.insights_outlined, 'Portfolio insights'),
+    (Icons.verified, 'Lifetime management'),
+  ];
+  static const _stats = [
+    ('1', 'Property'),
+    ('7', 'Connected roles'),
+    ('1', 'Shared record'),
+    ('∞', 'Lifetime management'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final wide = MediaQuery.of(context).size.width >= 900;
+    return _section(
+      context,
+      title: 'Why property owners choose NUZL',
+      subtitle: 'Traditional platforms help you buy or rent. NUZL manages everything that happens after.',
+      child: Column(children: [
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: AppSpacing.x32, runSpacing: AppSpacing.x16,
+          children: [for (final s in _stats) _stat(context, s.$1, s.$2)],
+        ),
+        const SizedBox(height: AppSpacing.x32),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: AppSpacing.x16, runSpacing: AppSpacing.x16,
+          children: [
+            _journey(context, 'Traditional property portals', _traditional, good: false, wide: wide),
+            _journey(context, 'The NUZL property lifecycle', _lifecycle, good: true, wide: wide),
+          ],
+        ),
+      ]),
+    );
+  }
+
+  Widget _stat(BuildContext context, String value, String label) {
+    final t = Theme.of(context).textTheme;
+    return SizedBox(
+      width: 130,
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text(value, style: t.displaySmall?.copyWith(color: _primary(context), fontWeight: FontWeight.w800)),
+        const SizedBox(height: 2),
+        Text(label, textAlign: TextAlign.center, style: t.bodySmall?.copyWith(color: _muted(context))),
+      ]),
+    );
+  }
+
+  Widget _journey(BuildContext context, String title, List<(IconData, String)> steps,
+      {required bool good, required bool wide}) {
+    final t = Theme.of(context).textTheme;
+    final dark = _isDark(context);
+    final stepColor = good ? AppColors.secondary : _subtle(context);
+    final endColor = good ? AppColors.success : AppColors.danger;
+    final bg = good
+        ? AppColors.success.withValues(alpha: dark ? 0.10 : 0.06)
+        : (dark ? Colors.white10 : AppColors.surface2);
+    return Container(
+      width: wide ? 420 : double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.x20),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(_kCardR),
+        border: Border.all(color: good ? AppColors.success.withValues(alpha: 0.35) : _border(context)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: _onBg(context))),
+        const SizedBox(height: AppSpacing.x16),
+        for (var i = 0; i < steps.length; i++) ...[
+          Row(children: [
+            Container(
+              width: 30, height: 30,
+              decoration: BoxDecoration(
+                color: (i == steps.length - 1) ? endColor : stepColor.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(steps[i].$1,
+                  size: 16, color: (i == steps.length - 1) ? Colors.white : stepColor),
+            ),
+            const SizedBox(width: AppSpacing.x12),
+            Expanded(
+              child: Text(steps[i].$2,
+                  style: t.bodyMedium?.copyWith(
+                      color: (i == steps.length - 1) ? endColor : _onBg(context),
+                      fontWeight: (i == steps.length - 1) ? FontWeight.w700 : FontWeight.w500)),
+            ),
+          ]),
+          if (i < steps.length - 1)
+            Padding(
+              padding: const EdgeInsets.only(left: 14),
+              child: Container(width: 2, height: 14, color: _border(context)),
+            ),
+        ],
+      ]),
+    );
+  }
+}
+
+// ── Section 5b — The property timeline (discovery → ownership) ────────────────
+class _PropertyTimeline extends StatelessWidget {
+  const _PropertyTimeline();
+  static const _steps = [
+    (Icons.search, 'Find'),
+    (Icons.vpn_key_outlined, 'Buy'),
+    (Icons.account_balance_outlined, 'Finance'),
+    (Icons.verified_user_outlined, 'Own'),
+    (Icons.groups_outlined, 'Lease'),
+    (Icons.build_outlined, 'Maintain'),
+    (Icons.trending_up, 'Grow'),
   ];
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final wide = MediaQuery.of(context).size.width >= 900;
-
-    Widget panel(String title, List<String> items, bool good) => Container(
-          width: wide ? 420 : double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.x20),
-          decoration: BoxDecoration(
-            color: _surface(context),
-            borderRadius: BorderRadius.circular(_kCardR),
-            border: Border.all(color: good ? _primary(context).withValues(alpha: 0.4) : _border(context)),
-          ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title,
-                style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w600, color: _onBg(context))),
-            const SizedBox(height: AppSpacing.x12),
-            ...items.map((line) => Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.x8),
-                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2, right: AppSpacing.x8),
-                      child: Icon(good ? Icons.check_circle : Icons.cancel_outlined,
-                          size: 18, color: good ? AppColors.success : _subtle(context)),
-                    ),
-                    Expanded(child: Text(line, style: t.bodyMedium?.copyWith(color: _muted(context), height: 1.4))),
-                  ]),
-                )),
-          ]),
-        );
-
     return _section(
       context,
-      title: 'Why NUZL',
-      subtitle: 'Traditional platforms stop at listings. NUZL runs the whole property lifecycle.',
-      child: Wrap(spacing: AppSpacing.x16, runSpacing: AppSpacing.x16, children: [
-        panel('Traditional platforms', _traditional, false),
-        panel('NUZL', _nuzl, true),
-      ]),
+      title: 'The property timeline',
+      subtitle: 'From discovery to ownership — one record at every stage.',
+      bg: _surface(context),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: AppSpacing.x8, runSpacing: AppSpacing.x16,
+        children: [
+          for (var i = 0; i < _steps.length; i++) ...[
+            Column(mainAxisSize: MainAxisSize.min, children: [
+              CircleAvatar(
+                radius: 26,
+                backgroundColor: _primary(context).withValues(alpha: 0.10),
+                child: Icon(_steps[i].$1, color: _primary(context), size: 24),
+              ),
+              const SizedBox(height: 6),
+              Text(_steps[i].$2, style: t.labelLarge?.copyWith(color: _onBg(context))),
+            ]),
+            if (i < _steps.length - 1) Icon(Icons.arrow_forward, size: 18, color: _subtle(context)),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Section 1b — Built for the UAE property ecosystem (trust strip) ───────────
+class _EcosystemTrust extends StatelessWidget {
+  const _EcosystemTrust();
+  static const _roles = [
+    (Icons.home_work_outlined, 'Owners'),
+    (Icons.handshake_outlined, 'Agents'),
+    (Icons.vpn_key_outlined, 'Tenants'),
+    (Icons.build_outlined, 'Service Providers'),
+    (Icons.domain_outlined, 'Developers'),
+    (Icons.trending_up, 'Investors'),
+  ];
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return _section(
+      context,
+      title: 'Built for the UAE property ecosystem',
+      subtitle: 'Every party in a property’s life — working from one shared record.',
+      bg: _surface(context),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: AppSpacing.x12, runSpacing: AppSpacing.x12,
+        children: [
+          for (final r in _roles)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x12),
+              decoration: BoxDecoration(
+                color: _isDark(context) ? Colors.white10 : AppColors.surface2,
+                borderRadius: BorderRadius.circular(AppSpacing.rFull),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(r.$1, size: 18, color: _primary(context)),
+                const SizedBox(width: AppSpacing.x8),
+                Text(r.$2, style: t.bodyMedium?.copyWith(color: _onBg(context), fontWeight: FontWeight.w600)),
+              ]),
+            ),
+        ],
+      ),
     );
   }
 }
