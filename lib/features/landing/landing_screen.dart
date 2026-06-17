@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -68,34 +69,63 @@ Widget _section(BuildContext context,
 }
 
 /// Public landing page — outcome-first information architecture.
-class LandingScreen extends StatelessWidget {
+class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
+  @override
+  State<LandingScreen> createState() => _LandingScreenState();
+}
+
+class _LandingScreenState extends State<LandingScreen> {
+  final _scroll = ScrollController();
+  final _kFeatured = GlobalKey();
+  final _kModules = GlobalKey();
+  final _kMarket = GlobalKey();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  /// Top-nav targets: scroll to a section, or route for Pricing (no landing section).
+  void _onNav(String id) {
+    if (id == 'pricing') {
+      context.go('/info/pricing');
+      return;
+    }
+    final key = const {'properties': 0, 'marketplace': 1, 'insights': 2}[id];
+    final ctx = [_kFeatured, _kModules, _kMarket][key ?? 0].currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 450), curve: Curves.easeInOut);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       body: SafeArea(
         bottom: false,
         child: Column(
           children: [
-            _StickyTopBar(), // stays pinned while content scrolls
+            _StickyTopBar(onNav: _onNav), // stays pinned while content scrolls
             Expanded(
               child: SingleChildScrollView(
+                controller: _scroll,
                 child: Column(
                   children: [
-                    _Hero(),
-                    _TrustMetrics(),
-                    _FeaturedListings(),
-                    _WhoAreYou(),
-                    _Ecosystem(),
-                    _WhyNuzl(),
-                    _MainModules(),
-                    _MarketIntelligence(),
-                    _HowItWorks(),
-                    _CalculatorSection(),
-                    _Testimonials(),
-                    _FinalCta(),
-                    _Footer(),
+                    const _Hero(),
+                    const _TrustMetrics(),
+                    KeyedSubtree(key: _kFeatured, child: const _FeaturedListings()),
+                    const _WhoAreYou(),
+                    const _Ecosystem(),
+                    const _WhyNuzl(),
+                    KeyedSubtree(key: _kModules, child: const _MainModules()),
+                    KeyedSubtree(key: _kMarket, child: const _MarketIntelligence()),
+                    const _HowItWorks(),
+                    const _CalculatorSection(),
+                    const _Testimonials(),
+                    const _FinalCta(),
+                    const _Footer(),
                   ],
                 ),
               ),
@@ -108,8 +138,9 @@ class LandingScreen extends StatelessWidget {
 }
 
 class _StickyTopBar extends ConsumerWidget {
-  const _StickyTopBar();
-  static const _nav = [('Properties', '/login'), ('Marketplace', '/login'), ('Insights', '/login'), ('Pricing', '/info/pricing')];
+  const _StickyTopBar({this.onNav});
+  final void Function(String id)? onNav;
+  static const _nav = [('Properties', 'properties'), ('Marketplace', 'marketplace'), ('Insights', 'insights'), ('Pricing', 'pricing')];
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final wide = MediaQuery.of(context).size.width >= 760;
@@ -137,7 +168,7 @@ class _StickyTopBar extends ConsumerWidget {
                       if (wide)
                         for (final l in _nav)
                           TextButton(
-                            onPressed: () => context.go(l.$2),
+                            onPressed: () => onNav?.call(l.$2),
                             child: Text(l.$1,
                                 style: GoogleFonts.poppins(color: _onBg(context), fontWeight: FontWeight.w500)),
                           ),
@@ -426,13 +457,95 @@ class _WhoAreYou extends StatelessWidget {
 }
 
 // ── Section 3 — Everything connected ─────────────────────────────────────────
-class _Ecosystem extends StatelessWidget {
+class _Ecosystem extends StatefulWidget {
   const _Ecosystem();
-  static const _nodes = [
-    'Owner', 'Agent', 'Customer', 'Tenant', 'Service Provider', 'Supplier', 'Mortgage Advisor'
-  ];
+  @override
+  State<_Ecosystem> createState() => _EcosystemState();
+}
+
+class _EcosystemState extends State<_Ecosystem> with SingleTickerProviderStateMixin {
+  late final AnimationController _c =
+      AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat();
+  static const _nodes = ['Owner', 'Agent', 'Customer', 'Tenant', 'Service Provider', 'Supplier'];
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final wide = MediaQuery.of(context).size.width >= 760;
+    return _section(
+      context,
+      title: 'Everything connected',
+      subtitle: 'Single source of truth. One property. One platform — every party works off the same record.',
+      bg: _surface(context),
+      child: wide ? _diagram(context) : _chips(context),
+    );
+  }
+
+  // Animated hub-and-spoke: roles orbit a central NUZL hub with pulses flowing in.
+  Widget _diagram(BuildContext context) {
+    return SizedBox(
+      height: 360,
+      child: LayoutBuilder(builder: (ctx, cons) {
+        final w = cons.maxWidth;
+        const h = 360.0;
+        final center = Offset(w / 2, h / 2);
+        final r = (math.min(w, h) / 2) - 80;
+        final pts = <Offset>[
+          for (var i = 0; i < _nodes.length; i++)
+            Offset(
+              center.dx + r * math.cos(-math.pi / 2 + i * (2 * math.pi / _nodes.length)),
+              center.dy + r * math.sin(-math.pi / 2 + i * (2 * math.pi / _nodes.length)),
+            ),
+        ];
+        return AnimatedBuilder(
+          animation: _c,
+          builder: (_, __) => Stack(children: [
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _EcoPainter(center: center, points: pts, t: _c.value, color: _primary(context)),
+              ),
+            ),
+            Positioned(
+              left: center.dx - 46, top: center.dy - 26, width: 92, height: 52,
+              child: Container(
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                    color: _primary(context),
+                    borderRadius: BorderRadius.circular(AppSpacing.rFull),
+                    boxShadow: _cardShadow(context)),
+                child: Text('NUZL',
+                    style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
+              ),
+            ),
+            for (var i = 0; i < _nodes.length; i++)
+              Positioned(
+                left: pts[i].dx - 66, top: pts[i].dy - 18, width: 132, height: 36,
+                child: Container(
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x8),
+                  decoration: BoxDecoration(
+                    color: _surface(context),
+                    borderRadius: BorderRadius.circular(AppSpacing.rFull),
+                    border: Border.all(color: _primary(context).withValues(alpha: 0.25)),
+                    boxShadow: _cardShadow(context),
+                  ),
+                  child: Text(_nodes[i],
+                      maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(color: _primary(context), fontWeight: FontWeight.w600, fontSize: 12)),
+                ),
+              ),
+          ]),
+        );
+      }),
+    );
+  }
+
+  Widget _chips(BuildContext context) {
     final chips = <Widget>[];
     for (var i = 0; i < _nodes.length; i++) {
       chips.add(Container(
@@ -445,23 +558,39 @@ class _Ecosystem extends StatelessWidget {
         child: Text(_nodes[i],
             style: GoogleFonts.poppins(color: _primary(context), fontWeight: FontWeight.w600, fontSize: 14)),
       ));
-      if (i < _nodes.length - 1) {
-        chips.add(Icon(Icons.sync_alt, size: 16, color: _subtle(context)));
-      }
+      if (i < _nodes.length - 1) chips.add(Icon(Icons.sync_alt, size: 16, color: _subtle(context)));
     }
-    return _section(
-      context,
-      title: 'Everything connected',
-      subtitle: 'Single source of truth. One property. One platform — every party works off the same record.',
-      bg: _surface(context),
-      child: Wrap(
-        spacing: AppSpacing.x8,
-        runSpacing: AppSpacing.x12,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: chips,
-      ),
-    );
+    return Wrap(
+        spacing: AppSpacing.x8, runSpacing: AppSpacing.x12,
+        crossAxisAlignment: WrapCrossAlignment.center, children: chips);
   }
+}
+
+/// Faint spoke lines from the hub to each role, with a pulse dot flowing inward.
+class _EcoPainter extends CustomPainter {
+  _EcoPainter({required this.center, required this.points, required this.t, required this.color});
+  final Offset center;
+  final List<Offset> points;
+  final double t;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final line = Paint()
+      ..color = color.withValues(alpha: 0.25)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+    final dot = Paint()..color = color;
+    for (var i = 0; i < points.length; i++) {
+      canvas.drawLine(center, points[i], line);
+      final tt = (t + i / points.length) % 1.0; // staggered flow node -> hub
+      final p = Offset.lerp(points[i], center, tt)!;
+      canvas.drawCircle(p, 3.0, dot);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_EcoPainter old) => old.t != t || old.center != center;
 }
 
 // ── Section 5 — Why NUZL ─────────────────────────────────────────────────────
