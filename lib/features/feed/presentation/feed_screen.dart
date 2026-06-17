@@ -93,6 +93,7 @@ class FeedScreen extends ConsumerWidget {
     final body = TextEditingController();
     var kind = 'market_update';
     final media = <String>[];
+    final mentions = <Map<String, dynamic>>[]; // {id, name}
     final ok = await AppDialog.show<bool>(
       context,
       title: 'New post',
@@ -132,8 +133,31 @@ class FeedScreen extends ConsumerWidget {
                   icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
                   label: const Text('Photo'),
                 ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await _pickUser(ctx, ref);
+                    if (picked == null) return;
+                    if (mentions.any((m) => m['id'] == picked['id'])) return;
+                    setS(() => mentions.add(picked));
+                  },
+                  icon: const Icon(Icons.alternate_email, size: 18),
+                  label: const Text('Tag'),
+                ),
               ]),
             ),
+            if (mentions.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.x8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(spacing: 6, runSpacing: 6, children: [
+                  for (final m in mentions)
+                    InputChip(
+                      label: Text('@${m['name'] ?? 'user'}'),
+                      onDeleted: () => setS(() => mentions.removeWhere((x) => x['id'] == m['id'])),
+                    ),
+                ]),
+              ),
+            ],
           ]),
         ),
       ],
@@ -151,6 +175,7 @@ class FeedScreen extends ConsumerWidget {
         'title': title.text.trim(),
         'body': body.text.trim(),
         if (media.isNotEmpty) 'media': media,
+        if (mentions.isNotEmpty) 'mentions': mentions.map((m) => m['id']).toList(),
       });
       ref.invalidate(feedPostsProvider);
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Posted to the feed')));
@@ -158,6 +183,66 @@ class FeedScreen extends ConsumerWidget {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
   }
+}
+
+/// Name-search picker used by the composer's "Tag" button. Returns {id, name}.
+Future<Map<String, dynamic>?> _pickUser(BuildContext context, WidgetRef ref) {
+  final search = TextEditingController();
+  var results = <Map<String, dynamic>>[];
+  return showDialog<Map<String, dynamic>>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setS) {
+        Future<void> run(String q) async {
+          if (q.trim().length < 2) {
+            setS(() => results = []);
+            return;
+          }
+          try {
+            final r = await ref.read(apiClientProvider).get('/users/search', query: {'q': q.trim()});
+            setS(() => results = (r as List).cast<Map<String, dynamic>>());
+          } catch (_) {
+            setS(() => results = []);
+          }
+        }
+
+        return AlertDialog(
+          title: const Text('Tag someone'),
+          content: SizedBox(
+            width: 360,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(
+                controller: search,
+                autofocus: true,
+                decoration: const InputDecoration(hintText: 'Search by name…', prefixIcon: Icon(Icons.search)),
+                onChanged: run,
+              ),
+              const SizedBox(height: AppSpacing.x8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 280),
+                child: results.isEmpty
+                    ? const Padding(padding: EdgeInsets.all(16), child: Text('Type at least 2 letters to search'))
+                    : ListView(
+                        shrinkWrap: true,
+                        children: [
+                          for (final u in results)
+                            ListTile(
+                              dense: true,
+                              leading: const CircleAvatar(child: Icon(Icons.person, size: 18)),
+                              title: Text('${u['full_name'] ?? 'User'}'),
+                              subtitle: u['role'] != null ? Text('${u['role']}') : null,
+                              onTap: () => Navigator.pop(ctx, {'id': u['id'], 'name': u['full_name']}),
+                            ),
+                        ],
+                      ),
+              ),
+            ]),
+          ),
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
+        );
+      },
+    ),
+  );
 }
 
 (String, BadgeTone) _tag(String kind) => switch (kind) {
@@ -238,6 +323,20 @@ class _PostCard extends ConsumerWidget {
                     child: Image.network('$m', width: 110, height: 110, fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => const SizedBox.shrink()),
                   ),
+              ]),
+            ],
+            if (p['mention_users'] is List && (p['mention_users'] as List).isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.x8),
+              Row(children: [
+                Icon(Icons.alternate_email, size: 14, color: t.bodySmall?.color),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    (p['mention_users'] as List).map((m) => '@${m['name'] ?? 'user'}').join('  '),
+                    style: t.bodySmall,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ]),
             ],
             const SizedBox(height: AppSpacing.x12),
