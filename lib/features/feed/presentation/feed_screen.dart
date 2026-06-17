@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/upload_service.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -90,6 +92,7 @@ class FeedScreen extends ConsumerWidget {
     final title = TextEditingController();
     final body = TextEditingController();
     var kind = 'market_update';
+    final media = <String>[];
     final ok = await AppDialog.show<bool>(
       context,
       title: 'New post',
@@ -107,6 +110,30 @@ class FeedScreen extends ConsumerWidget {
             TextField(controller: title, decoration: const InputDecoration(labelText: 'Title')),
             const SizedBox(height: AppSpacing.x8),
             TextField(controller: body, maxLines: 4, decoration: const InputDecoration(labelText: 'Share an update…')),
+            const SizedBox(height: AppSpacing.x8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                for (final url in media)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(url, width: 56, height: 56, fit: BoxFit.cover),
+                  ),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1280, imageQuality: 70);
+                    if (picked == null) return;
+                    final bytes = await picked.readAsBytes();
+                    try {
+                      final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
+                      if (url != null) setS(() => media.add(url));
+                    } catch (_) {/* surfaced elsewhere */}
+                  },
+                  icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
+                  label: const Text('Photo'),
+                ),
+              ]),
+            ),
           ]),
         ),
       ],
@@ -123,6 +150,7 @@ class FeedScreen extends ConsumerWidget {
         'post_type': 'need_help',
         'title': title.text.trim(),
         'body': body.text.trim(),
+        if (media.isNotEmpty) 'media': media,
       });
       ref.invalidate(feedPostsProvider);
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Posted to the feed')));
@@ -200,6 +228,17 @@ class _PostCard extends ConsumerWidget {
             if (body.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.x4),
               Text(body, style: t.bodyMedium),
+            ],
+            if (p['media'] is List && (p['media'] as List).isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.x8),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                for (final m in (p['media'] as List))
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network('$m', width: 110, height: 110, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                  ),
+              ]),
             ],
             const SizedBox(height: AppSpacing.x12),
             Row(children: [
