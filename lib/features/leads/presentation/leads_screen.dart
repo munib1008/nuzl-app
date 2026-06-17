@@ -101,6 +101,8 @@ class _LeadCard extends StatelessWidget {
         _ => BadgeTone.neutral,
       };
 
+  Color _scoreColor(int s) => s >= 70 ? AppColors.success : (s >= 40 ? AppColors.warning : AppColors.textMuted);
+
   static String _label(String s) => s.replaceAll('_', ' ');
 
   static String _ago(DateTime? d) {
@@ -153,6 +155,18 @@ class _LeadCard extends StatelessWidget {
                     Text(lead.phone!, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
                 ]),
               ),
+              Tooltip(
+                message: 'Lead score',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                      color: _scoreColor(lead.score).withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                  child: Text('${lead.score}',
+                      style: t.labelSmall?.copyWith(color: _scoreColor(lead.score), fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.x8),
               if (lead.temperature != null) StatusBadge(_label(lead.temperature!), tone: _tempTone),
             ]),
             const SizedBox(height: AppSpacing.x12),
