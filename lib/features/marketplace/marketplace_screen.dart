@@ -7,6 +7,7 @@ import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/hover_lift.dart';
 import '../../core/widgets/status_badge.dart';
 import '../shell/app_shell.dart';
 
@@ -58,6 +59,7 @@ class MarketplaceScreen extends ConsumerWidget {
     final desc = TextEditingController();
     final price = TextEditingController();
     final unit = TextEditingController();
+    final delivery = TextEditingController();
     final contact = TextEditingController();
     final ok = await AppDialog.show<bool>(
       context,
@@ -88,7 +90,16 @@ class MarketplaceScreen extends ConsumerWidget {
               Expanded(child: TextField(controller: unit, decoration: const InputDecoration(labelText: 'Unit', hintText: 'each / from'))),
             ]),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: contact, decoration: const InputDecoration(labelText: 'Contact')),
+            Row(children: [
+              Expanded(
+                child: TextField(
+                    controller: delivery,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Lead time (days)', hintText: 'e.g. 3')),
+              ),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(child: TextField(controller: contact, decoration: const InputDecoration(labelText: 'Contact'))),
+            ]),
           ]),
         ),
       ],
@@ -106,6 +117,7 @@ class MarketplaceScreen extends ConsumerWidget {
         'description': desc.text.trim(),
         'price': num.tryParse(price.text.trim()),
         'price_unit': unit.text.trim(),
+        'delivery_days': int.tryParse(delivery.text.trim()),
         'contact': contact.text.trim(),
       });
       ref.invalidate(marketplaceProvider(kind));
@@ -116,29 +128,94 @@ class MarketplaceScreen extends ConsumerWidget {
   }
 }
 
-class _MarketList extends ConsumerWidget {
+class _MarketList extends ConsumerStatefulWidget {
   const _MarketList({required this.kind});
   final String kind;
+  @override
+  ConsumerState<_MarketList> createState() => _MarketListState();
+}
+
+class _MarketListState extends ConsumerState<_MarketList> {
+  String _q = '';
+  String? _cat;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final items = ref.watch(marketplaceProvider(kind));
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final items = ref.watch(marketplaceProvider(widget.kind));
     return RefreshIndicator(
       onRefresh: () async {
-        ref.invalidate(marketplaceProvider(kind));
-        await ref.read(marketplaceProvider(kind).future);
+        ref.invalidate(marketplaceProvider(widget.kind));
+        await ref.read(marketplaceProvider(widget.kind).future);
       },
       child: items.when(
         loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
         error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text('$e')))]),
-        data: (list) => list.isEmpty
-            ? ListView(children: const [Padding(padding: EdgeInsets.all(48), child: Center(child: Text('Nothing here yet.')))])
-            : ListView.separated(
-                padding: const EdgeInsets.all(AppSpacing.x16),
-                itemCount: list.length,
-                separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x12),
-                itemBuilder: (_, i) => _ItemCard(Map<String, dynamic>.from(list[i])),
+        data: (raw) {
+          final all = raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+          final cats = <String>{
+            for (final m in all)
+              if ('${m['category'] ?? ''}'.trim().isNotEmpty) '${m['category']}'.trim()
+          }.toList()
+            ..sort();
+          final q = _q.trim().toLowerCase();
+          final filtered = all.where((m) {
+            if (_cat != null && '${m['category'] ?? ''}'.trim() != _cat) return false;
+            if (q.isNotEmpty) {
+              final hay =
+                  '${m['title'] ?? ''} ${m['description'] ?? ''} ${m['category'] ?? ''} ${m['supplier_org'] ?? ''} ${m['supplier_name'] ?? ''}'
+                      .toLowerCase();
+              if (!hay.contains(q)) return false;
+            }
+            return true;
+          }).toList();
+
+          return ListView(
+            padding: const EdgeInsets.all(AppSpacing.x16),
+            children: [
+              TextField(
+                onChanged: (v) => setState(() => _q = v),
+                decoration: InputDecoration(
+                  hintText: 'Search ${widget.kind == 'product' ? 'products' : 'services'}, suppliers…',
+                  prefixIcon: const Icon(Icons.search),
+                  isDense: true,
+                ),
               ),
+              if (cats.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.x12),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  ChoiceChip(
+                      label: const Text('All'),
+                      selected: _cat == null,
+                      onSelected: (_) => setState(() => _cat = null)),
+                  for (final c in cats)
+                    ChoiceChip(
+                        label: Text(c),
+                        selected: _cat == c,
+                        onSelected: (_) => setState(() => _cat = _cat == c ? null : c)),
+                ]),
+              ],
+              const SizedBox(height: AppSpacing.x16),
+              if (filtered.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(40),
+                  child: Center(
+                      child: Text(all.isEmpty ? 'Nothing here yet.' : 'No matches — try a different search or category.',
+                          style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
+                )
+              else
+                LayoutBuilder(builder: (ctx, cons) {
+                  final cols = (cons.maxWidth / 320).floor().clamp(1, 4);
+                  final w = (cons.maxWidth - (cols - 1) * AppSpacing.x12) / cols;
+                  return Wrap(
+                    spacing: AppSpacing.x12,
+                    runSpacing: AppSpacing.x12,
+                    children: [for (final m in filtered) SizedBox(width: w, child: _ItemCard(m))],
+                  );
+                }),
+            ],
+          );
+        },
       ),
     );
   }
@@ -153,70 +230,101 @@ class _ItemCard extends ConsumerWidget {
     final t = Theme.of(context).textTheme;
     final price = num.tryParse('${m['price']}') ?? 0;
     final money = price > 0 ? NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price) : '';
-    final unit = '${m['price_unit'] ?? ''}';
-    final category = '${m['category'] ?? ''}';
-    final contact = '${m['contact'] ?? ''}';
+    final unit = '${m['price_unit'] ?? ''}'.trim();
+    final category = '${m['category'] ?? ''}'.trim();
     final img = '${m['image_url'] ?? ''}';
     final isProduct = '${m['kind']}' == 'product';
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.x12),
+    final org = '${m['supplier_org'] ?? ''}'.trim();
+    final person = '${m['supplier_name'] ?? ''}'.trim();
+    final supplier = org.isNotEmpty ? org : person;
+    final rating = num.tryParse('${m['rating'] ?? ''}');
+    final reviews = int.tryParse('${m['review_count'] ?? 0}') ?? 0;
+    final delivery = int.tryParse('${m['delivery_days'] ?? ''}');
+
+    return HoverLift(
+      child: Card(
+        clipBehavior: Clip.antiAlias,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppSpacing.rSm),
+          Stack(children: [
+            AspectRatio(
+              aspectRatio: 16 / 10,
               child: img.isNotEmpty
-                  ? Image.network(img, width: 64, height: 64, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _thumb())
+                  ? Image.network(img, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _thumb())
                   : _thumb(),
             ),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (category.isNotEmpty)
+              Positioned(top: 8, left: 8, child: StatusBadge(category, tone: BadgeTone.neutral)),
+          ]),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.x12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('${m['title'] ?? ''}',
+                  style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  maxLines: 2, overflow: TextOverflow.ellipsis),
+              if (supplier.isNotEmpty) ...[
+                const SizedBox(height: 3),
                 Row(children: [
-                  Expanded(child: Text('${m['title'] ?? ''}', style: t.titleSmall)),
-                  if (category.isNotEmpty) StatusBadge(category, tone: BadgeTone.neutral),
+                  const Icon(Icons.storefront_outlined, size: 13, color: AppColors.textMuted),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(supplier,
+                        style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
                 ]),
-                if ('${m['description'] ?? ''}'.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text('${m['description']}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
-                ],
-                if (money.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text('$money${unit.isNotEmpty ? ' · $unit' : ''}',
-                      style: t.titleMedium?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
-                ],
+              ],
+              if (rating != null && reviews > 0) ...[
+                const SizedBox(height: 4),
+                Row(children: [
+                  for (var i = 1; i <= 5; i++)
+                    Icon(i <= rating.round() ? Icons.star : Icons.star_border, size: 13, color: AppColors.accentGold),
+                  const SizedBox(width: 4),
+                  Text('${rating.toStringAsFixed(1)} ($reviews)',
+                      style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                ]),
+              ],
+              if (money.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Text('$money${unit.isNotEmpty ? ' · $unit' : ''}',
+                    style: t.titleMedium?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+              ],
+              if (delivery != null && delivery > 0) ...[
+                const SizedBox(height: 6),
+                Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(isProduct ? Icons.local_shipping_outlined : Icons.schedule, size: 13, color: AppColors.success),
+                  const SizedBox(width: 4),
+                  Text(isProduct ? '~$delivery-day delivery' : '~$delivery-day lead time',
+                      style: t.bodySmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
+                ]),
+              ],
+              const SizedBox(height: AppSpacing.x12),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _order(context, ref, quote: true),
+                    style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(36), padding: EdgeInsets.zero),
+                    child: const Text('Quote'),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x8),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => _order(context, ref),
+                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(36), padding: EdgeInsets.zero),
+                    child: Text(isProduct ? 'Buy' : 'Book'),
+                  ),
+                ),
               ]),
-            ),
-          ]),
-          const SizedBox(height: AppSpacing.x8),
-          Row(children: [
-            if (contact.isNotEmpty) ...[
-              const Icon(Icons.call_outlined, size: 14, color: AppColors.textMuted),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(contact,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    softWrap: false,
-                    style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
-              ),
-            ] else
-              const Spacer(),
-            const SizedBox(width: AppSpacing.x8),
-            TextButton(onPressed: () => _order(context, ref, quote: true), child: const Text('Quote')),
-            const SizedBox(width: AppSpacing.x4),
-            FilledButton(onPressed: () => _order(context, ref), child: Text(isProduct ? 'Buy' : 'Book')),
-          ]),
+            ]),
+          ),
         ]),
       ),
     );
   }
 
   Widget _thumb() => Container(
-        width: 64,
-        height: 64,
         color: AppColors.surface2,
-        child: const Icon(Icons.storefront_outlined, color: AppColors.textMuted),
+        child: const Center(child: Icon(Icons.storefront_outlined, color: AppColors.textMuted, size: 36)),
       );
 
   /// Place an order (product) or book a service. `quote` records a quotation request.
