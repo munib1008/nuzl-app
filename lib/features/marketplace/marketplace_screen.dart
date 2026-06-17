@@ -244,7 +244,9 @@ class _ItemCard extends ConsumerWidget {
     return HoverLift(
       child: Card(
         clipBehavior: Clip.antiAlias,
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        child: InkWell(
+          onTap: () => context.push('/marketplace/${m['id']}'),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Stack(children: [
             AspectRatio(
               aspectRatio: 16 / 10,
@@ -318,6 +320,7 @@ class _ItemCard extends ConsumerWidget {
             ]),
           ),
         ]),
+        ),
       ),
     );
   }
