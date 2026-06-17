@@ -33,7 +33,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.handshake_outlined, 'Deals', '/deals'),
         NavItem(Icons.diversity_3_outlined, 'Collaboration', '/collaboration'),
         NavItem(Icons.campaign_outlined, 'Deal board', '/deal-board'),
-        NavItem(Icons.contacts_outlined, 'Customers', '/customers'),
+        NavItem(Icons.contacts_outlined, 'Contacts', '/contacts'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.event_note_outlined, 'Activities', '/activities'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
@@ -48,7 +48,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.handshake_outlined, 'Deals', '/deals'),
         NavItem(Icons.diversity_3_outlined, 'Collaboration', '/collaboration'),
         NavItem(Icons.campaign_outlined, 'Deal board', '/deal-board'),
-        NavItem(Icons.contacts_outlined, 'Customers', '/customers'),
+        NavItem(Icons.contacts_outlined, 'Contacts', '/contacts'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.inventory_2_outlined, 'Inventory', '/inventory'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
@@ -69,7 +69,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.account_balance_outlined, 'Mortgages', '/mortgages'),
         NavItem(Icons.trending_up, 'Leads', '/leads'),
-        NavItem(Icons.contacts_outlined, 'Customers', '/customers'),
+        NavItem(Icons.contacts_outlined, 'Contacts', '/contacts'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
@@ -77,7 +77,7 @@ List<NavItem> navItemsFor(Persona p) {
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
-        NavItem(Icons.contacts_outlined, 'Customers', '/customers'),
+        NavItem(Icons.contacts_outlined, 'Contacts', '/contacts'),
         NavItem(Icons.event_note_outlined, 'Activities', '/activities'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
@@ -86,7 +86,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
-        NavItem(Icons.contacts_outlined, 'Customers', '/customers'),
+        NavItem(Icons.contacts_outlined, 'Contacts', '/contacts'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];

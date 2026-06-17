@@ -26,6 +26,7 @@ import '../../features/leads/presentation/lead_crm_screen.dart';
 import '../../features/leads/presentation/post_lead_screen.dart';
 import '../../features/deals/presentation/deals_screen.dart';
 import '../../features/customers/customers_screen.dart';
+import '../../features/contacts/contacts_screen.dart';
 import '../../features/team/team_screen.dart';
 import '../../features/admin/view_as_screen.dart';
 import '../../features/rentals/rentals_screen.dart';
@@ -153,6 +154,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/lead-matches', builder: (_, __) => const LeadMatchesScreen()),
       GoRoute(path: '/crm', builder: (_, __) => const CrmScreen()),
       GoRoute(path: '/opportunities', builder: (_, __) => const OpportunitiesScreen()),
+      GoRoute(path: '/contacts', builder: (_, __) => const ContactsScreen()),
       GoRoute(path: '/owner-cockpit', builder: (_, __) => const OwnerCockpitScreen()),
       GoRoute(path: '/post-moderation', builder: (_, __) => const PostModerationScreen()),
       GoRoute(path: '/collaboration', builder: (_, __) => const CollaborationScreen()),
