@@ -5,8 +5,8 @@ class AppSpacing {
 
   // radius
   static const double rSm = 6, rMd = 10, rLg = 14, rXl = 20, rFull = 9999;
-  // design-system radii: cards/inputs 16, buttons 14
-  static const double rButton = 14, rCard = 16;
+  // design-system radii: cards 20 (premium), inputs 14, buttons 14
+  static const double rButton = 14, rCard = 20, rInput = 14;
 
   // tap target
   static const double tapTarget = 44;

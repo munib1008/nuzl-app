@@ -3,8 +3,9 @@ import 'app_colors.dart';
 import 'app_spacing.dart';
 import 'app_typography.dart';
 
-/// Builds light + dark ThemeData from NUZL DS 3.0 tokens — enterprise SaaS:
-/// flat cards (thin border, no shadow), 8px radius, Inter, gentle motion.
+/// Builds light + dark ThemeData from NUZL DS 3.0 tokens — premium feel:
+/// rounded cards (20px) with a soft low shadow + hairline border, Inter with
+/// open body line-height, gentle easeOutCubic motion.
 class AppTheme {
   static ThemeData light() => _build(Brightness.light);
   static ThemeData dark() => _build(Brightness.dark);
@@ -21,14 +22,16 @@ class AppTheme {
     final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
     final tt = AppTypography.textTheme(text, muted);
 
-    // Enterprise: flat cards (thin border, no shadow), 8px radius, no pills.
+    // Premium: rounded cards (20px) with a soft, low shadow + hairline border.
     final cardShape = RoundedRectangleBorder(
       side: BorderSide(color: border),
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(AppSpacing.rCard),
     );
     final buttonShape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(AppSpacing.rButton),
     );
+    // Soft elevation shadow — subtle in light, deeper in dark so cards lift off the canvas.
+    final cardShadow = dark ? Colors.black.withValues(alpha: 0.55) : Colors.black.withValues(alpha: 0.10);
     const motion = Duration(milliseconds: 250);
 
     final scheme = ColorScheme(
@@ -60,7 +63,9 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: card,
-        elevation: 0,
+        elevation: 3,
+        shadowColor: cardShadow,
+        surfaceTintColor: Colors.transparent, // keep the card colour clean (no M3 elevation tint)
         shape: cardShape,
         margin: EdgeInsets.zero,
       ),
@@ -69,15 +74,15 @@ class AppTheme {
         fillColor: card,
         contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x12),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppSpacing.rInput),
           borderSide: BorderSide(color: border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppSpacing.rInput),
           borderSide: BorderSide(color: border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(AppSpacing.rInput),
           borderSide: BorderSide(color: primary, width: 2),
         ),
         hintStyle: TextStyle(color: muted),
