@@ -26,12 +26,27 @@ final reportsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) a
   }
 });
 
+/// Per-agent leaderboard for organization-scoped personas (manager/broker view).
+final orgLeaderboardProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/reports/org-leaderboard');
+    return d is List ? d.map((e) => Map<String, dynamic>.from(e as Map)).toList() : <Map<String, dynamic>>[];
+  } catch (_) {
+    return <Map<String, dynamic>>[];
+  }
+});
+
+bool _orgPersona(Persona p) =>
+    p == Persona.broker || p == Persona.bank || p == Persona.provider || p == Persona.developer;
+
 class ReportsScreen extends ConsumerWidget {
   const ReportsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final report = ref.watch(reportsProvider);
+    final persona = ref.watch(personaProvider);
+    final showTeam = _orgPersona(persona);
     return Scaffold(
       appBar: const NuzlAppBar(title: 'Reports'),
       drawer: const NuzlDrawer(),
@@ -66,6 +81,25 @@ class ReportsScreen extends ConsumerWidget {
                 Text('Breakdown', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: AppSpacing.x8),
                 ...entries.map((e) => _Bar(label: e.key, value: e.value, max: maxVal)),
+                if (showTeam) ...[
+                  const SizedBox(height: AppSpacing.x24),
+                  Text('Team performance', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: AppSpacing.x8),
+                  Consumer(builder: (context, ref, _) {
+                    final lb = ref.watch(orgLeaderboardProvider);
+                    return lb.when(
+                      loading: () => const Padding(
+                          padding: EdgeInsets.symmetric(vertical: AppSpacing.x8),
+                          child: LinearProgressIndicator()),
+                      error: (_, __) => const SizedBox.shrink(),
+                      data: (rows) => rows.isEmpty
+                          ? const Padding(
+                              padding: EdgeInsets.symmetric(vertical: AppSpacing.x8),
+                              child: Text('No team members yet.'))
+                          : Column(children: [for (final r in rows) _AgentRow(r)]),
+                    );
+                  }),
+                ],
                 const SizedBox(height: AppSpacing.x24),
                 const Card(
                   child: ListTile(
@@ -111,6 +145,48 @@ class _StatCard extends StatelessWidget {
             Text(label, style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AgentRow extends StatelessWidget {
+  const _AgentRow(this.r);
+  final Map<String, dynamic> r;
+  int _n(String k) => int.tryParse('${r[k] ?? 0}') ?? 0;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final name = '${r['name'] ?? 'Agent'}';
+    final designation = '${r['designation'] ?? ''}'.trim();
+    Widget chip(String label, int v, Color c) => Padding(
+          padding: const EdgeInsets.only(left: AppSpacing.x8),
+          child: Column(children: [
+            Text('$v', style: t.titleSmall?.copyWith(color: c, fontWeight: FontWeight.w700)),
+            Text(label, style: t.labelSmall?.copyWith(color: Theme.of(context).hintColor)),
+          ]),
+        );
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x12),
+        child: Row(children: [
+          CircleAvatar(
+            radius: 18,
+            child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
+          ),
+          const SizedBox(width: AppSpacing.x12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(name, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+              if (designation.isNotEmpty)
+                Text(designation, style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
+            ]),
+          ),
+          chip('Listings', _n('listings'), AppColors.primary),
+          chip('Leads', _n('active_leads'), AppColors.info),
+          chip('Deals', _n('active_deals'), AppColors.warning),
+          chip('Won', _n('closed_deals'), AppColors.success),
+        ]),
       ),
     );
   }
