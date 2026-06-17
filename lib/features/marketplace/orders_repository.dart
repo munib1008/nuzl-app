@@ -19,6 +19,8 @@ const orderStatusLabels = <String, String>{
   'completed': 'Completed',
   'closed': 'Closed',
   'cancelled': 'Cancelled',
+  'quote_requested': 'Quote requested',
+  'quoted': 'Quoted',
 };
 
 const _terminal = {'delivered', 'returned', 'completed', 'closed', 'cancelled'};

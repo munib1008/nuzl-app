@@ -186,7 +186,7 @@ class _Detail extends ConsumerWidget {
     try {
       await ref.read(apiClientProvider).post('/marketplace/orders', body: {
         'item_id': id,
-        if (quote) 'note': 'Quotation requested',
+        if (quote) 'quote': true,
       });
       ref.invalidate(marketplaceProvider('${m['kind'] ?? 'service'}'));
       if (context.mounted) {

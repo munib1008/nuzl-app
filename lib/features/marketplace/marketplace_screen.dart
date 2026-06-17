@@ -335,7 +335,7 @@ class _ItemCard extends ConsumerWidget {
     try {
       await ref.read(apiClientProvider).post('/marketplace/orders', body: {
         'item_id': m['id'],
-        if (quote) 'note': 'Quotation requested',
+        if (quote) 'quote': true,
       });
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(

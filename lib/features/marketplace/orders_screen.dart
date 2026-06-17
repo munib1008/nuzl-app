@@ -131,6 +131,57 @@ class _OrderCard extends ConsumerWidget {
     }
   }
 
+  /// Provider sets/updates the price on a quote request.
+  Future<void> _sendQuote(BuildContext context, WidgetRef ref) async {
+    final price = TextEditingController(text: '${o['quoted_price'] ?? ''}');
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Send quote',
+      children: [
+        Text('Quote "${o['title'] ?? 'this request'}" for the customer to accept.'),
+        const SizedBox(height: AppSpacing.x8),
+        TextField(
+            controller: price,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Quote amount (AED)')),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Send quote')),
+      ],
+    );
+    if (ok != true) return;
+    final amt = double.tryParse(price.text.trim());
+    if (amt == null || amt <= 0) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter a valid quote amount.')));
+      return;
+    }
+    try {
+      await ref.read(apiClientProvider).patch('/marketplace/orders/${o['id']}/quote', body: {'quoted_price': amt});
+      ref.invalidate(myOrdersProvider);
+      ref.invalidate(incomingOrdersProvider);
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quote sent.')));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  /// Customer accepts (-> order placed) or declines a quote.
+  Future<void> _respondQuote(BuildContext context, WidgetRef ref, bool accept) async {
+    try {
+      await ref.read(apiClientProvider)
+          .patch('/marketplace/orders/${o['id']}/quote-response', body: {'accept': accept});
+      ref.invalidate(myOrdersProvider);
+      ref.invalidate(incomingOrdersProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(accept ? 'Quote accepted — order placed.' : 'Quote declined.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
   Future<void> _rate(BuildContext context, WidgetRef ref) async {
     var stars = 5;
     final review = TextEditingController();
@@ -218,8 +269,9 @@ class _OrderCard extends ConsumerWidget {
               if (created != null) DateFormat('d MMM').format(created),
             ].join('  ·  '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
           ],
-          // Status progress (the flow, current step highlighted). Hidden when cancelled.
-          if (status != 'cancelled') ...[
+          // Status progress (the flow, current step highlighted). Hidden when
+          // cancelled or still pre-order (quote_requested / quoted → curIdx < 0).
+          if (status != 'cancelled' && curIdx >= 0) ...[
             const SizedBox(height: AppSpacing.x8),
             Wrap(spacing: 6, runSpacing: 4, children: [
               for (var i = 0; i < flow.length; i++)
@@ -242,7 +294,17 @@ class _OrderCard extends ConsumerWidget {
           // Actions (role-aware)
           const SizedBox(height: AppSpacing.x8),
           Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x4, children: [
-            if (!mine && next != null)
+            // Provider: quote a request / revise the quote.
+            if (!mine && status == 'quote_requested')
+              FilledButton(onPressed: () => _sendQuote(context, ref), child: const Text('Send quote')),
+            if (!mine && status == 'quoted')
+              OutlinedButton(onPressed: () => _sendQuote(context, ref), child: const Text('Update quote')),
+            // Customer: accept / decline a quote.
+            if (mine && status == 'quoted') ...[
+              FilledButton(onPressed: () => _respondQuote(context, ref, true), child: const Text('Accept quote')),
+              OutlinedButton(onPressed: () => _respondQuote(context, ref, false), child: const Text('Decline')),
+            ],
+            if (!mine && next != null && status != 'quote_requested' && status != 'quoted')
               FilledButton(
                 onPressed: () => _patch(context, ref, next),
                 child: Text('Mark ${orderStatusLabels[next] ?? next}'),
@@ -259,9 +321,10 @@ class _OrderCard extends ConsumerWidget {
                 icon: const Icon(Icons.star_outline, size: 16),
                 label: const Text('Rate'),
               ),
-            if (mine && !orderIsTerminal(status) && !disputed)
+            if (mine && !orderIsTerminal(status) && !disputed && status != 'quote_requested' && status != 'quoted')
               OutlinedButton(onPressed: () => _dispute(context, ref), child: const Text('Dispute')),
-            if (!orderIsTerminal(status))
+            // Generic cancel — for the customer on a 'quoted' order, Decline covers it.
+            if (!orderIsTerminal(status) && !(mine && status == 'quoted'))
               OutlinedButton(onPressed: () => _patch(context, ref, 'cancelled'), child: const Text('Cancel')),
           ]),
         ]),
