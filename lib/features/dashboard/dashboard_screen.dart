@@ -30,6 +30,17 @@ final dashboardProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref)
   }
 });
 
+/// Market intelligence — latest community snapshots (avg asking price, rental
+/// trend, occupancy). Empty list on error / no data so the widget hides cleanly.
+final _marketIntelProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/intelligence/latest');
+    return d is List ? d.map((e) => Map<String, dynamic>.from(e as Map)).toList() : <Map<String, dynamic>>[];
+  } catch (_) {
+    return <Map<String, dynamic>>[];
+  }
+});
+
 /// Monthly sales series for the Sales overview chart. Scope is decided by the
 /// API from the caller's role (own deals for an agent, whole-org for a broker /
 /// admin). Falls back to a representative sample so the panel is never blank.
@@ -110,7 +121,11 @@ class DashboardScreen extends ConsumerWidget {
               const _ActivityCard(),
             const SizedBox(height: AppSpacing.x16),
 
-            if (persona == Persona.buyer) ...[const _BuyerCta(), const SizedBox(height: AppSpacing.x16)],
+            if (persona == Persona.buyer) ...[
+              const _BuyerCta(),
+              const SizedBox(height: AppSpacing.x16),
+              const _MarketIntelligence(),
+            ],
 
             // Recent properties — owners care about OWNED assets (their KPIs +
             // My Properties), not recently-added/viewed listings.
@@ -676,6 +691,81 @@ class _BuyerCta extends StatelessWidget {
           icon: const Icon(Icons.search),
           label: const Text('Browse the marketplace'),
         ),
+      ]),
+    );
+  }
+}
+
+/// Market-intelligence widget for buyers — latest community snapshots (avg asking
+/// price, rental trend, active listings). Hidden entirely when there's no data.
+class _MarketIntelligence extends ConsumerWidget {
+  const _MarketIntelligence();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final intel = ref.watch(_marketIntelProvider);
+    return intel.maybeWhen(
+      data: (rows) {
+        if (rows.isEmpty) return const SizedBox.shrink();
+        final aed = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
+        final top = rows.take(5).toList();
+        return Column(children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.x16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  const Icon(Icons.insights_outlined, size: 18, color: AppColors.primary),
+                  const SizedBox(width: AppSpacing.x8),
+                  Text('Market intelligence', style: t.titleMedium),
+                ]),
+                const SizedBox(height: AppSpacing.x8),
+                for (final r in top) _IntelRow(r: r, aed: aed),
+              ]),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x16),
+        ]);
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _IntelRow extends StatelessWidget {
+  const _IntelRow({required this.r, required this.aed});
+  final Map<String, dynamic> r;
+  final NumberFormat aed;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final name = '${r['community'] ?? 'Community'}';
+    final price = num.tryParse('${r['avg_asking_price'] ?? ''}');
+    final listings = int.tryParse('${r['active_listings'] ?? 0}') ?? 0;
+    final trend = num.tryParse('${r['rental_trend_pct'] ?? ''}');
+    final up = (trend ?? 0) >= 0;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(name, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text('$listings active listing${listings == 1 ? '' : 's'}',
+                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+          ]),
+        ),
+        const SizedBox(width: AppSpacing.x8),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          if (price != null) Text(aed.format(price), style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+          if (trend != null)
+            Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(up ? Icons.arrow_upward : Icons.arrow_downward, size: 12,
+                  color: up ? AppColors.success : AppColors.danger),
+              Text('${trend.abs().toStringAsFixed(1)}% rent',
+                  style: t.bodySmall?.copyWith(color: up ? AppColors.success : AppColors.danger)),
+            ]),
+        ]),
       ]),
     );
   }
