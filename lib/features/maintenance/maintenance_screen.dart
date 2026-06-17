@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/upload_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -16,6 +17,9 @@ final maintPropertiesProvider = FutureProvider.autoDispose<List<dynamic>>((ref) 
 });
 final providersProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   try { final d = await ref.read(apiClientProvider).get('/service-providers'); return d is List ? d : []; } catch (_) { return []; }
+});
+final maintSummaryProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  try { return Map<String, dynamic>.from(await ref.read(apiClientProvider).get('/maintenance/summary')); } catch (_) { return {}; }
 });
 
 class MaintenanceScreen extends ConsumerWidget {
@@ -34,10 +38,41 @@ class MaintenanceScreen extends ConsumerWidget {
       ),
       body: ResponsiveCenter(
         child: RefreshIndicator(
-          onRefresh: () async { ref.invalidate(jobsProvider); ref.invalidate(providersProvider); },
+          onRefresh: () async {
+            ref.invalidate(jobsProvider);
+            ref.invalidate(providersProvider);
+            ref.invalidate(maintSummaryProvider);
+          },
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.x16),
             children: [
+              ref.watch(maintSummaryProvider).maybeWhen(
+                data: (s) {
+                  final total = num.tryParse('${s['total_cost'] ?? 0}') ?? 0;
+                  final open = s['open'] ?? 0;
+                  final completed = s['completed'] ?? 0;
+                  if (total == 0 && open == 0 && completed == 0) return const SizedBox.shrink();
+                  final aed = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
+                  final tt = Theme.of(context).textTheme;
+                  Widget metric(String label, String value) => Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [Text(value, style: tt.titleLarge),
+                          Text(label, style: tt.bodySmall?.copyWith(color: AppColors.textMuted))],
+                      );
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.x16),
+                    child: Card(child: Padding(
+                      padding: const EdgeInsets.all(AppSpacing.x16),
+                      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                        metric('Total spend', aed.format(total)),
+                        metric('Open', '$open'),
+                        metric('Completed', '$completed'),
+                      ]),
+                    )),
+                  );
+                },
+                orElse: () => const SizedBox.shrink(),
+              ),
               Text('Requests', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: AppSpacing.x8),
               jobs.when(
