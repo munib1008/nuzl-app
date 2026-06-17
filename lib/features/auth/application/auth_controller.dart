@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/network/api_client.dart';
 import '../../../models/user.dart';
 import '../data/auth_repository.dart';
 
@@ -30,13 +31,32 @@ class AuthController extends StateNotifier<AuthState> {
   final Ref _ref;
   AuthRepository get _repo => _ref.read(authRepositoryProvider);
 
-  /// Restore session from stored token on app start.
+  /// Restore session from stored token on app start, and refresh the user after
+  /// profile/role changes. CRITICAL: this must NEVER sign the user out on a
+  /// transient/server error — only a genuine auth rejection (401/403) or a
+  /// missing token clears the session. A 500 or network blip right after a
+  /// profile save used to log the user out; it must not.
   Future<void> bootstrap() async {
     try {
       final user = await _repo.currentUser();
-      state = state.copyWith(user: user, initialized: true);
+      if (user != null) {
+        state = state.copyWith(user: user, initialized: true);
+      } else {
+        // No stored token → genuinely signed out.
+        state = state.copyWith(initialized: true, clearUser: true);
+      }
+    } on ApiException catch (e) {
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        // The token was actually rejected — clear it and sign out.
+        await _repo.logout();
+        state = state.copyWith(initialized: true, clearUser: true);
+      } else {
+        // Server/transient error — keep the existing session intact.
+        state = state.copyWith(initialized: true);
+      }
     } catch (_) {
-      state = state.copyWith(initialized: true, clearUser: true);
+      // Network / unexpected error — keep the current session.
+      state = state.copyWith(initialized: true);
     }
   }
 
