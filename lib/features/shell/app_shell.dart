@@ -237,10 +237,12 @@ class NuzlSidebarBody extends ConsumerWidget {
     final items = navItemsFor(persona);
     final location = GoRouterState.of(context).matchedLocation;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final accent = dark ? AppColors.dPrimary : AppColors.primary;
-    final tint = dark ? AppColors.dPrimaryTint : AppColors.primaryTint;
     final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
     final onSurface = dark ? AppColors.dText : AppColors.text;
+    // Active nav: teal-tint fill + 4px gold left accent — premium and brand-led.
+    final navTint = dark ? AppColors.dPrimaryTint : AppColors.secondary.withValues(alpha: 0.08);
+    final navActive = dark ? AppColors.dPrimary : AppColors.secondary;
+    const navAccent = AppColors.goldAccent;
 
     void go(String route) {
       if (inDrawer) Navigator.pop(context);
@@ -265,15 +267,16 @@ class NuzlSidebarBody extends ConsumerWidget {
               final selected = it.route == '/dashboard'
                   ? location == '/dashboard'
                   : location.startsWith(it.route);
-              // Enterprise: subtle tint + 3px left accent border; monochrome icons except active.
+              // Premium: teal-tint fill + 4px gold left accent; monochrome icons
+              // except the active item, which picks up the brand teal.
               return DecoratedBox(
                 decoration: BoxDecoration(
-                  color: selected ? tint : null,
-                  border: Border(left: BorderSide(color: selected ? accent : Colors.transparent, width: 3)),
+                  color: selected ? navTint : null,
+                  border: Border(left: BorderSide(color: selected ? navAccent : Colors.transparent, width: 4)),
                 ),
                 child: ListTile(
                   dense: true,
-                  leading: Icon(it.icon, size: 20, color: selected ? accent : muted),
+                  leading: Icon(it.icon, size: 20, color: selected ? navActive : muted),
                   title: Text(it.label, style: TextStyle(
                       color: selected ? onSurface : muted,
                       fontWeight: selected ? FontWeight.w600 : FontWeight.w500)),

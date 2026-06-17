@@ -15,6 +15,7 @@ class AppColors {
   static const secondary = Color(0xFF114C5A);    // teal — links / secondary
   static const accentGold = Color(0xFFC8960A);   // readable gold — accent text/icons
   static const accentGoldTint = Color(0xFFFFF4CC);
+  static const goldAccent = Color(0xFFFFC801);   // bright brand gold — structural accents (bars), not text
   static const accentCream = Color(0xFFF1F6F4);  // canvas
   static const accentPlum = Color(0xFF114C5A);   // (legacy slot) → teal
 
@@ -29,12 +30,13 @@ class AppColors {
   static const danger = Color(0xFFC0392B);
   static const info = Color(0xFF114C5A);
 
-  // ── Light neutrals ──
-  static const bg = Color(0xFFF1F6F4);           // canvas
+  // ── Light neutrals ── (de-greened: white cards on a near-neutral page; pale
+  // green is now an accent only, never the dominant background)
+  static const bg = Color(0xFFF8FAFA);           // page — light cool neutral
   static const surface = Color(0xFFFFFFFF);      // cards + sidebar
-  static const surface2 = Color(0xFFE8EFEC);
-  static const border = Color(0xFFD9E8E2);       // mist
-  static const borderStrong = Color(0xFFC2D6CE);
+  static const surface2 = Color(0xFFEDF1F3);     // subtle neutral fill (chips / placeholders)
+  static const border = Color(0xFFE4E9EC);       // neutral hairline
+  static const borderStrong = Color(0xFFD2DADE);
   static const text = Color(0xFF172B36);         // ink
   static const textMuted = Color(0xFF5A6B73);
   static const textSubtle = Color(0xFF8A9BA2);

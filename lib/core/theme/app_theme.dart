@@ -30,8 +30,9 @@ class AppTheme {
     final buttonShape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(AppSpacing.rButton),
     );
-    // Soft elevation shadow — subtle in light, deeper in dark so cards lift off the canvas.
-    final cardShadow = dark ? Colors.black.withValues(alpha: 0.55) : Colors.black.withValues(alpha: 0.10);
+    // Soft elevation shadow — ink-tinted (brand navy) so cards lift off the
+    // near-white canvas with a premium, warm depth rather than a flat grey.
+    final cardShadow = dark ? Colors.black.withValues(alpha: 0.55) : AppColors.primary.withValues(alpha: 0.14);
     const motion = Duration(milliseconds: 250);
 
     final scheme = ColorScheme(

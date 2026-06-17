@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_elevation.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/hover_lift.dart';
 import '../../core/widgets/status_badge.dart';
@@ -50,6 +51,31 @@ final _marketIntelProvider = FutureProvider.autoDispose<List<Map<String, dynamic
   } catch (_) {
     return <Map<String, dynamic>>[];
   }
+});
+
+/// Buyer KPI counters — saved properties, viewings, saved searches, mortgages
+/// tracked. Each endpoint is counted independently and fails soft to 0 so a
+/// missing/forbidden route never blanks the row.
+final _buyerKpisProvider = FutureProvider.autoDispose<Map<String, int>>((ref) async {
+  final api = ref.read(apiClientProvider);
+  Future<int> count(String path) async {
+    try {
+      final d = await api.get(path);
+      if (d is List) return d.length;
+      if (d is Map && d['count'] is num) return (d['count'] as num).toInt();
+      return 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
+  final r = await Future.wait([
+    count('/listings/saved/mine'),
+    count('/viewings'),
+    count('/saved-searches'),
+    count('/mortgages'),
+  ]);
+  return {'saved': r[0], 'viewings': r[1], 'searches': r[2], 'mortgages': r[3]};
 });
 
 /// Monthly sales series for the Sales overview chart. Scope is decided by the
@@ -119,7 +145,12 @@ class DashboardScreen extends ConsumerWidget {
             ],
             const SizedBox(height: AppSpacing.x20),
 
-            // KPI row
+            // KPI row — role report for most personas; buyers get their own
+            // activity counters (saved / viewings / searches / mortgages).
+            if (persona == Persona.buyer) ...[
+              _BuyerKpis(wide: wide),
+              const SizedBox(height: AppSpacing.x16),
+            ],
             if (cards.isNotEmpty) _KpiGrid(cards: cards, wide: wide),
             if (cards.isNotEmpty) const SizedBox(height: AppSpacing.x16),
 
@@ -243,15 +274,32 @@ class _Card {
   final Color color;
 }
 
-Widget _flatBox(BuildContext context, Widget child, {EdgeInsets? padding}) {
-  return Container(
-    padding: padding ?? const EdgeInsets.all(AppSpacing.x16),
-    decoration: BoxDecoration(
-      color: Theme.of(context).cardColor,
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: Theme.of(context).dividerColor),
+/// Premium dashboard surface — white card on the near-neutral page, soft
+/// ink-tinted depth and a hairline border. An optional [accent] paints a 3px
+/// brand-coloured top bar so each card reads as a distinct module at a glance.
+Widget _flatBox(BuildContext context, Widget child, {EdgeInsets? padding, Color? accent}) {
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  final radius = BorderRadius.circular(16);
+  return DecoratedBox(
+    decoration: BoxDecoration(borderRadius: radius, boxShadow: dark ? null : AppShadows.card),
+    child: ClipRRect(
+      borderRadius: radius,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: radius,
+          border: Border.all(color: Theme.of(context).dividerColor, width: 0.5),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (accent != null) Container(height: 3, color: accent),
+            Padding(padding: padding ?? const EdgeInsets.all(AppSpacing.x16), child: child),
+          ],
+        ),
+      ),
     ),
-    child: child,
   );
 }
 
@@ -281,6 +329,7 @@ class _KpiCard extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     return _flatBox(
       context,
+      accent: card.color,
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -296,6 +345,24 @@ class _KpiCard extends StatelessWidget {
         ),
       ]),
     );
+  }
+}
+
+/// Buyer activity counters, colour-anchored like the role KPI grid.
+class _BuyerKpis extends ConsumerWidget {
+  const _BuyerKpis({required this.wide});
+  final bool wide;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final k = ref.watch(_buyerKpisProvider).asData?.value ?? const <String, int>{};
+    int n(String key) => k[key] ?? 0;
+    final cards = [
+      _Card('Saved properties', '${n('saved')}', Icons.bookmark_outline, AppColors.secondary),
+      _Card('Active viewings', '${n('viewings')}', Icons.event_available_outlined, AppColors.primary),
+      _Card('Market alerts', '${n('searches')}', Icons.notifications_active_outlined, AppColors.warning),
+      _Card('Mortgages tracked', '${n('mortgages')}', Icons.account_balance_outlined, AppColors.accentGold),
+    ];
+    return _KpiGrid(cards: cards, wide: wide);
   }
 }
 
@@ -690,13 +757,15 @@ class _BuyerCta extends StatelessWidget {
         gradient: const LinearGradient(
             colors: [AppColors.gradientStart, AppColors.gradientEnd],
             begin: Alignment.centerLeft, end: Alignment.centerRight),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppSpacing.rCard),
+        boxShadow: AppShadows.card,
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Find your next property',
+        Text('Explore opportunities',
             style: t.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
         const SizedBox(height: AppSpacing.x4),
-        Text('12,000+ verified listings across the UAE.', style: t.bodyMedium?.copyWith(color: Colors.white)),
+        Text('Tailored to your property interests — 12,000+ verified listings across the UAE.',
+            style: t.bodyMedium?.copyWith(color: Colors.white)),
         const SizedBox(height: AppSpacing.x12),
         // Search-bar affordance — tapping opens the properties search.
         InkWell(
