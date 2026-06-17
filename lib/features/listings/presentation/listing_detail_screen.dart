@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/upload_service.dart';
 import '../../../core/rbac/persona.dart';
+import '../../../core/util/mortgage_math.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../auth/application/auth_controller.dart';
@@ -194,6 +195,9 @@ class _Detail extends ConsumerWidget {
                       ],
                       _AmenitiesBlock(l: l),
                       _VerificationBlock(l: l),
+                      // Mortgage estimate is shown ONLY on for-sale listings (Customer
+                      // module spec — no standalone calculator for buyers).
+                      if (!isRent) _MortgageEstimate(price: price.toDouble()),
                       const SizedBox(height: AppSpacing.x20),
                       if (brokerId.isNotEmpty) _AgentCard(brokerId: brokerId, listingId: id),
                       const SizedBox(height: AppSpacing.x20),
@@ -1012,6 +1016,95 @@ class _VerificationBlock extends StatelessWidget {
                 textAlign: TextAlign.right)),
         ],
       ),
+    );
+  }
+}
+
+/// In-context mortgage estimate for a FOR-SALE listing (Customer module spec):
+/// the only place buyers see mortgage math — there is no standalone calculator.
+/// Pure client-side amortisation + UAE acquisition costs (DLD 4%, ~1% processing).
+class _MortgageEstimate extends StatefulWidget {
+  const _MortgageEstimate({required this.price});
+  final double price;
+  @override
+  State<_MortgageEstimate> createState() => _MortgageEstimateState();
+}
+
+class _MortgageEstimateState extends State<_MortgageEstimate> {
+  double _downPct = 20;
+  double _ratePct = 4.5;
+  int _years = 25;
+
+  double get _downPayment => widget.price * _downPct / 100;
+  double get _loan => widget.price - _downPayment;
+  double get _monthly => MortgageMath.monthlyPayment(_loan, _ratePct, _years * 12);
+  double get _dld => widget.price * 0.04;
+  double get _processing => _loan * 0.01;
+  double get _acquisition => widget.price + _dld + _processing;
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.price <= 0) return const SizedBox.shrink();
+    final t = Theme.of(context).textTheme;
+    final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
+
+    Widget control(String label, String value, double v, double min, double max, int divisions, ValueChanged<double> onChanged) =>
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text(label, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+            Text(value, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          ]),
+          Slider(value: v, min: min, max: max, divisions: divisions, onChanged: onChanged),
+        ]);
+
+    Widget row(String k, String v, {bool strong = false}) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text(k, style: t.bodyMedium?.copyWith(
+                color: strong ? null : AppColors.textMuted,
+                fontWeight: strong ? FontWeight.w700 : null)),
+            Text(v, style: t.bodyMedium?.copyWith(fontWeight: strong ? FontWeight.w700 : FontWeight.w600)),
+          ]),
+        );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.x16),
+        Row(children: [
+          const Icon(Icons.account_balance_outlined, size: 18, color: AppColors.primary),
+          const SizedBox(width: AppSpacing.x8),
+          Text('Mortgage estimate', style: t.titleMedium),
+        ]),
+        const SizedBox(height: AppSpacing.x8),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.x16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              control('Down payment', '${_downPct.round()}%  ·  ${aed.format(_downPayment)}',
+                  _downPct, 10, 50, 8, (v) => setState(() => _downPct = v)),
+              control('Interest rate', '${_ratePct.toStringAsFixed(2)}%',
+                  _ratePct, 2, 8, 24, (v) => setState(() => _ratePct = v)),
+              control('Loan term', '$_years years',
+                  _years.toDouble(), 5, 30, 25, (v) => setState(() => _years = v.round())),
+              const Divider(height: AppSpacing.x16),
+              Text('Estimated monthly payment', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              Text(aed.format(_monthly),
+                  style: t.headlineSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+              const SizedBox(height: AppSpacing.x8),
+              row('Loan amount', aed.format(_loan)),
+              row('Down payment', aed.format(_downPayment)),
+              row('DLD fee (4%)', aed.format(_dld)),
+              row('Processing fee (~1%)', aed.format(_processing)),
+              const Divider(height: AppSpacing.x16),
+              row('Total acquisition cost', aed.format(_acquisition), strong: true),
+              const SizedBox(height: AppSpacing.x8),
+              Text('Estimate only — final terms depend on the lender.',
+                  style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            ]),
+          ),
+        ),
+      ],
     );
   }
 }

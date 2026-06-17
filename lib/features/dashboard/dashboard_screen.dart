@@ -732,7 +732,7 @@ List<(String, IconData, String)> _toolsFor(Persona p) => switch (p) {
         ],
       Persona.buyer => [
           ('Marketplace', Icons.storefront_outlined, '/marketplace'),
-          ('Mortgage calculator', Icons.calculate_outlined, '/calculator'),
+          ('Saved searches', Icons.bookmark_outline, '/saved-searches'),
           ('Viewings', Icons.event_available_outlined, '/viewings'),
         ],
       Persona.bank => [
