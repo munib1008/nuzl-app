@@ -15,6 +15,7 @@ import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/listings/presentation/listings_screen.dart';
 import '../../features/listings/presentation/listing_form_screen.dart';
 import '../../features/listings/presentation/listing_detail_screen.dart';
+import '../../features/listings/presentation/public_listing_screen.dart';
 import '../../features/documents/property_docs_screen.dart';
 import '../../features/opportunities/opportunities_screen.dart';
 import '../../features/dashboard/owner_cockpit_screen.dart';
@@ -92,7 +93,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (!auth.initialized) return null;
       final loc = state.matchedLocation;
       final isPublic = _publicPaths.contains(loc) || loc.startsWith('/info/') ||
-          loc.startsWith('/u/') || loc.startsWith('/org/');
+          loc.startsWith('/u/') || loc.startsWith('/org/') || loc.startsWith('/property/');
       if (!auth.isAuthenticated) return isPublic ? null : '/login';
       // authed users shouldn't sit on landing/login/register
       if (loc == '/' || loc == '/login' || loc == '/register') return '/dashboard';
@@ -113,6 +114,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/info/:slug', builder: (_, st) => InfoPage(slug: st.pathParameters['slug']!)),
       GoRoute(path: '/u/:id', builder: (_, st) => PublicProfileScreen(id: st.pathParameters['id']!)),
       GoRoute(path: '/org/:slug', builder: (_, st) => PublicOrgScreen(slug: st.pathParameters['slug']!)),
+      GoRoute(path: '/property/:id', builder: (_, st) => PublicListingScreen(id: st.pathParameters['id']!)),
 
       // onboarding (authed, full screen)
       GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),

@@ -12,10 +12,22 @@ import '../../core/widgets/fade_in.dart';
 import '../../core/widgets/gradient_button.dart';
 import '../../core/widgets/hover_lift.dart';
 import '../../core/widgets/nuzl_logo.dart';
+import '../../core/widgets/auth_prompt.dart';
 import '../mortgage/presentation/calculator_screen.dart';
 
 // Theme-aware color helpers — the landing follows light/dark like the rest of the app.
 bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
+
+// A featured card opens the public property page when it's a real listing;
+// sample teasers (no id) fall to the value-prop sign-up prompt.
+void _openListing(BuildContext context, Map<String, dynamic> data) {
+  final id = '${data['id'] ?? ''}'.trim();
+  if (id.isNotEmpty) {
+    context.go('/property/$id');
+  } else {
+    showAuthPrompt(context, action: 'view full property details');
+  }
+}
 Color _surface(BuildContext c) => Theme.of(c).colorScheme.surface;
 Color _border(BuildContext c) => Theme.of(c).dividerColor;
 Color _onBg(BuildContext c) => Theme.of(c).colorScheme.onSurface;
@@ -1332,7 +1344,7 @@ class _FeaturedListings extends ConsumerWidget {
             child: HoverLift(
               child: InkWell(
                 borderRadius: BorderRadius.circular(_kCardR),
-                onTap: () => context.go('/login'),
+                onTap: () => _openListing(context, items[i]),
                 child: _ListingCard(data: items[i], width: cardW),
               ),
             ),
@@ -1502,7 +1514,7 @@ class _ListingCard extends StatelessWidget {
               Row(children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => context.go('/login'),
+                    onPressed: () => _openListing(context, data),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(34),
                       padding: EdgeInsets.zero,
@@ -1515,7 +1527,7 @@ class _ListingCard extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: FilledButton(
-                    onPressed: () => context.go('/login'),
+                    onPressed: () => showAuthPrompt(context, action: 'schedule a viewing'),
                     style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(34), padding: EdgeInsets.zero),
                     child: const Text('Schedule'),
                   ),
