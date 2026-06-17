@@ -48,6 +48,17 @@ final _myViewingProvider = FutureProvider.autoDispose.family<Map<String, dynamic
   }
 });
 
+/// Property Listing 2.0 (phase 1): the property's living-asset history. Party-gated
+/// on the server; the section only renders for property parties (viewer_can_docs).
+final _timelineProvider = FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, propertyId) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/properties/$propertyId/timeline');
+    return d is List ? d.map((e) => Map<String, dynamic>.from(e as Map)).toList() : <Map<String, dynamic>>[];
+  } catch (_) {
+    return <Map<String, dynamic>>[];
+  }
+});
+
 class ListingDetailScreen extends ConsumerWidget {
   const ListingDetailScreen({super.key, required this.id});
   final String id;
@@ -198,6 +209,9 @@ class _Detail extends ConsumerWidget {
                       // Mortgage estimate is shown ONLY on for-sale listings (Customer
                       // module spec — no standalone calculator for buyers).
                       if (!isRent) _MortgageEstimate(price: price.toDouble()),
+                      // Living-asset history — property parties only (Listing 2.0).
+                      if (l['viewer_can_docs'] == true && '${l['property_id'] ?? ''}'.isNotEmpty)
+                        _TimelineBlock(propertyId: '${l['property_id']}'),
                       const SizedBox(height: AppSpacing.x20),
                       if (brokerId.isNotEmpty) _AgentCard(brokerId: brokerId, listingId: id),
                       const SizedBox(height: AppSpacing.x20),
@@ -1105,6 +1119,98 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Property Listing 2.0 (phase 1): the living-asset timeline section.
+class _TimelineBlock extends ConsumerWidget {
+  const _TimelineBlock({required this.propertyId});
+  final String propertyId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final tl = ref.watch(_timelineProvider(propertyId));
+    return tl.maybeWhen(
+      data: (events) {
+        if (events.isEmpty) return const SizedBox.shrink();
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SizedBox(height: AppSpacing.x16),
+          Row(children: [
+            const Icon(Icons.history_outlined, size: 18, color: AppColors.primary),
+            const SizedBox(width: AppSpacing.x8),
+            Text('Property timeline', style: t.titleMedium),
+          ]),
+          const SizedBox(height: AppSpacing.x8),
+          for (var i = 0; i < events.length; i++) _TimelineRow(e: events[i], isLast: i == events.length - 1),
+        ]);
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+(IconData, String) _eventMeta(String event) => switch (event) {
+      'created' => (Icons.add_home_outlined, 'Property created'),
+      'listed' => (Icons.sell_outlined, 'Listed'),
+      'published' => (Icons.publish_outlined, 'Published — went live'),
+      'unpublished' => (Icons.visibility_off_outlined, 'Taken offline'),
+      'price_changed' => (Icons.trending_down, 'Price changed'),
+      'viewed' => (Icons.visibility_outlined, 'Viewing'),
+      'held' => (Icons.lock_clock_outlined, 'Placed on hold'),
+      'offer_submitted' => (Icons.local_offer_outlined, 'Offer submitted'),
+      'offer_accepted' => (Icons.handshake_outlined, 'Offer accepted'),
+      'sold' => (Icons.done_all, 'Sold'),
+      'leased' => (Icons.vpn_key_outlined, 'Leased'),
+      'maintenance' => (Icons.build_outlined, 'Maintenance'),
+      'tenant_change' => (Icons.people_outline, 'Tenant change'),
+      'ownership_verified' => (Icons.verified_user_outlined, 'Ownership verified'),
+      _ => (Icons.circle_outlined, _cap(event)),
+    };
+
+class _TimelineRow extends StatelessWidget {
+  const _TimelineRow({required this.e, required this.isLast});
+  final Map<String, dynamic> e;
+  final bool isLast;
+
+  String? _detailText() {
+    final d = e['detail'];
+    if (d is Map && '${e['event']}' == 'price_changed' && d['from'] != null && d['to'] != null) {
+      final f = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
+      return '${f.format(num.tryParse('${d['from']}') ?? 0)} → ${f.format(num.tryParse('${d['to']}') ?? 0)}';
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final (icon, label) = _eventMeta('${e['event']}');
+    final when = DateTime.tryParse('${e['created_at']}');
+    final actor = '${e['actor_name'] ?? ''}'.trim();
+    final detail = _detailText();
+    return IntrinsicHeight(
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Column(children: [
+          CircleAvatar(radius: 14, backgroundColor: AppColors.primaryTint, child: Icon(icon, size: 15, color: AppColors.primary)),
+          if (!isLast) Expanded(child: Container(width: 2, color: Theme.of(context).dividerColor)),
+        ]),
+        const SizedBox(width: AppSpacing.x12),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.x12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              if (detail != null) Text(detail, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              Text([
+                if (when != null) DateFormat('d MMM yyyy').format(when),
+                if (actor.isNotEmpty) actor,
+              ].join('  ·  '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            ]),
+          ),
+        ),
+      ]),
     );
   }
 }
