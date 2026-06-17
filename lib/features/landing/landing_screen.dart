@@ -463,140 +463,167 @@ class _WhoAreYou extends StatelessWidget {
 }
 
 // ── Section 3 — Everything connected ─────────────────────────────────────────
-class _Ecosystem extends StatefulWidget {
+class _Ecosystem extends StatelessWidget {
   const _Ecosystem();
-  @override
-  State<_Ecosystem> createState() => _EcosystemState();
-}
 
-class _EcosystemState extends State<_Ecosystem> with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(seconds: 3))..repeat();
-  static const _nodes = ['Owner', 'Agent', 'Customer', 'Tenant', 'Service Provider', 'Supplier'];
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
+  // Six parties, one shared property record. Material icons approximate the
+  // bespoke NUZL pillar marks (custom SVGs tracked separately).
+  static const _pillars = [
+    (role: 'Owner', title: 'Property Portfolio', icon: Icons.apartment, tags: ['Ownership', 'Tenancy', 'Maintenance'], color: AppColors.secondary),
+    (role: 'Agent', title: 'Deals & Viewings', icon: Icons.handshake_outlined, tags: ['Listings', 'Viewings', 'CRM'], color: AppColors.primary),
+    (role: 'Customer', title: 'Property Search', icon: Icons.search, tags: ['Buy', 'Rent', 'Invest'], color: AppColors.success),
+    (role: 'Service Provider', title: 'Maintenance', icon: Icons.build_outlined, tags: ['Repair', 'Cleaning', 'Inspection'], color: AppColors.warning),
+    (role: 'Supplier', title: 'Products', icon: Icons.inventory_2_outlined, tags: ['Furniture', 'Materials', 'Equipment'], color: AppColors.accentGold),
+    (role: 'Tenant', title: 'Lease Management', icon: Icons.description_outlined, tags: ['Rent', 'Payments', 'Documents'], color: AppColors.primaryBright),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.of(context).size.width >= 760;
+    final cards = [
+      for (final p in _pillars)
+        _PillarCard(role: p.role, title: p.title, icon: p.icon, tags: p.tags, color: p.color),
+    ];
     return _section(
       context,
-      title: 'Everything connected',
-      subtitle: 'One property. One ecosystem. One platform — every party works off the same record.',
+      title: 'One property. One record. One ecosystem.',
+      subtitle:
+          'Ownership, leasing, finance, maintenance, services and transactions all operate from the same property record.',
       bg: _surface(context),
-      child: wide ? _diagram(context) : _chips(context),
+      child: wide ? _wide(context, cards) : _stacked(context, cards),
     );
   }
 
-  // Animated hub-and-spoke: roles orbit a central NUZL hub with pulses flowing in.
-  Widget _diagram(BuildContext context) {
-    return SizedBox(
-      height: 360,
-      child: LayoutBuilder(builder: (ctx, cons) {
-        final w = cons.maxWidth;
-        const h = 360.0;
-        final center = Offset(w / 2, h / 2);
-        final r = (math.min(w, h) / 2) - 80;
-        final pts = <Offset>[
-          for (var i = 0; i < _nodes.length; i++)
-            Offset(
-              center.dx + r * math.cos(-math.pi / 2 + i * (2 * math.pi / _nodes.length)),
-              center.dy + r * math.sin(-math.pi / 2 + i * (2 * math.pi / _nodes.length)),
-            ),
-        ];
-        return AnimatedBuilder(
-          animation: _c,
-          builder: (_, __) => Stack(children: [
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _EcoPainter(center: center, points: pts, t: _c.value, color: _primary(context)),
-              ),
-            ),
-            Positioned(
-              left: center.dx - 46, top: center.dy - 26, width: 92, height: 52,
-              child: Container(
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                    color: _primary(context),
-                    borderRadius: BorderRadius.circular(AppSpacing.rFull),
-                    boxShadow: _cardShadow(context)),
-                child: Text('NUZL',
-                    style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16)),
-              ),
-            ),
-            for (var i = 0; i < _nodes.length; i++)
-              Positioned(
-                left: pts[i].dx - 66, top: pts[i].dy - 18, width: 132, height: 36,
-                child: Container(
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x8),
-                  decoration: BoxDecoration(
-                    color: _surface(context),
-                    borderRadius: BorderRadius.circular(AppSpacing.rFull),
-                    border: Border.all(color: _primary(context).withValues(alpha: 0.25)),
-                    boxShadow: _cardShadow(context),
-                  ),
-                  child: Text(_nodes[i],
-                      maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.poppins(color: _primary(context), fontWeight: FontWeight.w600, fontSize: 12)),
-                ),
-              ),
-          ]),
+  // Wide: two rows of three pillars connected to a central PROPERTY RECORD band.
+  Widget _wide(BuildContext context, List<Widget> cards) {
+    Widget row(int a, int b, int c) => Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: cards[a]),
+            const SizedBox(width: AppSpacing.x16),
+            Expanded(child: cards[b]),
+            const SizedBox(width: AppSpacing.x16),
+            Expanded(child: cards[c]),
+          ],
+        );
+    return Column(children: [
+      row(0, 1, 2),
+      _connector(context),
+      _recordBand(context),
+      _connector(context),
+      row(3, 4, 5),
+    ]);
+  }
+
+  Widget _stacked(BuildContext context, List<Widget> cards) {
+    return Column(children: [
+      _recordBand(context),
+      const SizedBox(height: AppSpacing.x16),
+      LayoutBuilder(builder: (ctx, cons) {
+        final twoCol = cons.maxWidth >= 460;
+        final w = twoCol ? (cons.maxWidth - AppSpacing.x12) / 2 : cons.maxWidth;
+        return Wrap(
+          spacing: AppSpacing.x12,
+          runSpacing: AppSpacing.x12,
+          children: [for (final c in cards) SizedBox(width: w, child: c)],
         );
       }),
-    );
+    ]);
   }
 
-  Widget _chips(BuildContext context) {
-    final chips = <Widget>[];
-    for (var i = 0; i < _nodes.length; i++) {
-      chips.add(Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x12),
-        decoration: BoxDecoration(
-          color: _primary(context).withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(AppSpacing.rFull),
-          border: Border.all(color: _primary(context).withValues(alpha: 0.25)),
+  Widget _connector(BuildContext context) => Center(
+        child: Container(
+          width: 2, height: 18,
+          margin: const EdgeInsets.symmetric(vertical: AppSpacing.x4),
+          color: _border(context),
         ),
-        child: Text(_nodes[i],
-            style: GoogleFonts.poppins(color: _primary(context), fontWeight: FontWeight.w600, fontSize: 14)),
-      ));
-      if (i < _nodes.length - 1) chips.add(Icon(Icons.sync_alt, size: 16, color: _subtle(context)));
-    }
-    return Wrap(
-        spacing: AppSpacing.x8, runSpacing: AppSpacing.x12,
-        crossAxisAlignment: WrapCrossAlignment.center, children: chips);
+      );
+
+  // The source of truth at the centre of the ecosystem.
+  Widget _recordBand(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24, vertical: AppSpacing.x20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+            colors: [AppColors.gradientStart, AppColors.gradientEnd],
+            begin: Alignment.centerLeft, end: Alignment.centerRight),
+        borderRadius: BorderRadius.circular(_kCardR),
+        boxShadow: _cardShadow(context),
+      ),
+      child: Column(children: [
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Icon(Icons.account_tree_outlined, color: AppColors.goldAccent, size: 20),
+          const SizedBox(width: AppSpacing.x8),
+          Text('PROPERTY RECORD',
+              style: GoogleFonts.poppins(
+                  color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18, letterSpacing: 1)),
+        ]),
+        const SizedBox(height: 6),
+        Text('One property. One source of truth. Everyone connected.',
+            textAlign: TextAlign.center,
+            style: t.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.85))),
+      ]),
+    );
   }
 }
 
-/// Faint spoke lines from the hub to each role, with a pulse dot flowing inward.
-class _EcoPainter extends CustomPainter {
-  _EcoPainter({required this.center, required this.points, required this.t, required this.color});
-  final Offset center;
-  final List<Offset> points;
-  final double t;
+/// One ecosystem pillar — icon, role, what they do, and the modules behind it.
+class _PillarCard extends StatelessWidget {
+  const _PillarCard(
+      {required this.role, required this.title, required this.icon, required this.tags, required this.color});
+  final String role, title;
+  final IconData icon;
+  final List<String> tags;
   final Color color;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final line = Paint()
-      ..color = color.withValues(alpha: 0.25)
-      ..strokeWidth = 1.5
-      ..style = PaintingStyle.stroke;
-    final dot = Paint()..color = color;
-    for (var i = 0; i < points.length; i++) {
-      canvas.drawLine(center, points[i], line);
-      final tt = (t + i / points.length) % 1.0; // staggered flow node -> hub
-      final p = Offset.lerp(points[i], center, tt)!;
-      canvas.drawCircle(p, 3.0, dot);
-    }
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return HoverLift(
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        decoration: BoxDecoration(
+          color: _surface(context),
+          borderRadius: BorderRadius.circular(_kCardR),
+          border: Border.all(color: _border(context)),
+          boxShadow: _cardShadow(context),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rMd)),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: AppSpacing.x12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(role.toUpperCase(),
+                    style: t.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                Text(title,
+                    style: t.titleSmall?.copyWith(color: _onBg(context), fontWeight: FontWeight.w700),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+              ]),
+            ),
+          ]),
+          const SizedBox(height: AppSpacing.x12),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final tag in tags)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                    color: _isDark(context) ? Colors.white10 : AppColors.surface2,
+                    borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                child: Text(tag, style: t.labelSmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w500)),
+              ),
+          ]),
+        ]),
+      ),
+    );
   }
-
-  @override
-  bool shouldRepaint(_EcoPainter old) => old.t != t || old.center != center;
 }
 
 // ── Section 5 — Why NUZL ─────────────────────────────────────────────────────
@@ -1062,21 +1089,11 @@ final _featuredListingsProvider = FutureProvider.autoDispose<List<dynamic>>((ref
 // tap through to sign-in (teasers), not to a specific listing. Replace with real
 // featured listings as inventory grows.
 const _sampleListings = [
-  {'property_type': 'Luxury villa', 'community': 'Palm Jumeirah', 'price': 12500000, 'bedrooms': 5, 'bathrooms': 6, 'size_sqft': 7200, 'verified': true, 'rating': 4.9},
-  {'property_type': 'Apartment', 'community': 'Downtown Dubai', 'price': 2100000, 'bedrooms': 2, 'bathrooms': 2, 'size_sqft': 1066, 'verified': true, 'rating': 4.8},
-  {'property_type': 'Townhouse', 'community': 'Arabian Ranches', 'price': 3850000, 'bedrooms': 4, 'bathrooms': 4, 'size_sqft': 2900, 'verified': true, 'rating': 4.7},
-  {'property_type': 'Commercial unit', 'community': 'Business Bay', 'price': 5600000, 'bedrooms': 0, 'bathrooms': 2, 'size_sqft': 3400, 'verified': true, 'rating': 4.6},
+  {'property_type': 'Villa', 'building_name': 'Signature Villas', 'community': 'Palm Jumeirah', 'purpose': 'sale', 'price': 12500000, 'bedrooms': 5, 'bathrooms': 6, 'size_sqft': 7200, 'verified': true, 'status': 'Vacant', 'furnishing': 'Furnished', 'view': 'Sea view', 'agent_name': 'Layla Hassan'},
+  {'property_type': 'Apartment', 'building_name': 'Burj Vista 1', 'community': 'Downtown Dubai', 'purpose': 'sale', 'price': 2100000, 'bedrooms': 2, 'bathrooms': 2, 'size_sqft': 1066, 'verified': true, 'status': 'Vacant', 'furnishing': 'Unfurnished', 'view': 'Burj Khalifa view', 'agent_name': 'Omar Khalid'},
+  {'property_type': 'Townhouse', 'building_name': 'Palmera 3', 'community': 'Arabian Ranches', 'purpose': 'sale', 'price': 3850000, 'bedrooms': 4, 'bathrooms': 4, 'size_sqft': 2900, 'verified': true, 'status': 'Tenanted', 'furnishing': 'Partly furnished', 'agent_name': 'Sara Aziz'},
+  {'property_type': 'Office', 'building_name': 'The Prism', 'community': 'Business Bay', 'purpose': 'sale', 'price': 5600000, 'bedrooms': 0, 'bathrooms': 2, 'size_sqft': 3400, 'verified': true, 'status': 'Vacant', 'view': 'Canal view', 'agent_name': 'Yousef Nair'},
 ];
-
-/// Rough monthly mortgage estimate (75% LTV, 4.5% / 25y) for a teaser line.
-double _estMonthly(num price) {
-  final loan = price * 0.75;
-  const r = 0.045 / 12;
-  const n = 300;
-  if (loan <= 0) return 0;
-  final f = math.pow(1 + r, n).toDouble();
-  return loan * r * f / (f - 1);
-}
 
 // ── Section 4 — Featured properties (horizontal carousel) ────────────────────
 class _FeaturedListings extends ConsumerWidget {
@@ -1096,9 +1113,9 @@ class _FeaturedListings extends ConsumerWidget {
     }
 
     Widget carousel(List<Map<String, dynamic>> items) {
-      final cardW = wide ? 300.0 : (MediaQuery.of(context).size.width - AppSpacing.x24 * 2) * 0.82;
+      final cardW = wide ? 300.0 : math.min((MediaQuery.of(context).size.width - AppSpacing.x24 * 2) * 0.82, 320.0);
       return SizedBox(
-        height: 356,
+        height: 432,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           padding: EdgeInsets.zero,
@@ -1146,105 +1163,199 @@ class _ListingCard extends StatelessWidget {
   const _ListingCard({required this.data, required this.width});
   final Map<String, dynamic> data;
   final double width;
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
     final price = num.tryParse('${data['price']}') ?? 0;
-    final cover = data['cover_image']?.toString();
-    final purpose = (data['purpose'] ?? '').toString();
+    final cover = '${data['cover_image'] ?? ''}';
+    final isRent = '${data['purpose']}' == 'rent';
     final verified = data['verified'] == true || '${data['ownership_status']}' == 'verified';
-    final rating = num.tryParse('${data['rating'] ?? ''}');
-    final estMonthly = _estMonthly(price);
-    final placeholder = ColoredBox(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        child: Icon(Icons.apartment, color: _muted(context), size: 40));
+    final building = '${data['building_name'] ?? ''}'.trim();
+    final community = '${data['community'] ?? ''}'.trim();
+    final ptype = '${data['property_type'] ?? ''}'.trim();
+    final agent = '${data['agent_name'] ?? ''}'.trim();
+    final title = building.isNotEmpty ? building : (ptype.isNotEmpty ? ptype : 'Featured property');
+    String cap(String s) => s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
+    final highlights = <String>[
+      if ('${data['status'] ?? ''}'.trim().isNotEmpty) cap('${data['status']}'),
+      if ('${data['furnishing'] ?? ''}'.trim().isNotEmpty) cap('${data['furnishing']}'.replaceAll('_', ' ')),
+      if ('${data['view'] ?? ''}'.trim().isNotEmpty) '${data['view']}',
+    ];
+
     return Container(
       width: width,
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: _surface(context),
         borderRadius: BorderRadius.circular(_kCardR),
         border: Border.all(color: _border(context)),
         boxShadow: _cardShadow(context),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // ── Image (the hero) — branded placeholder, never a bare icon ──
         Stack(children: [
           AspectRatio(
             aspectRatio: 16 / 10,
-            child: cover != null && cover.isNotEmpty
-                ? Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => placeholder)
-                : placeholder,
+            child: cover.isNotEmpty
+                ? Image.network(cover, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _Placeholder(building: title, community: community))
+                : _Placeholder(building: title, community: community),
           ),
-          Positioned(
-            left: 8, top: 8,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                  color: _primary(context).withValues(alpha: 0.92), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-              child: Text(purpose == 'rent' ? 'For rent' : 'For sale',
-                  style: t.bodySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
-            ),
-          ),
+          Positioned(left: 10, top: 10, child: _pill(context, isRent ? 'For rent' : 'For sale', _primary(context))),
           if (verified)
-            Positioned(
-              right: 8, top: 8,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                    color: AppColors.success.withValues(alpha: 0.95), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.verified, size: 12, color: Colors.white),
-                  const SizedBox(width: 3),
-                  Text('Verified', style: t.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
-                ]),
-              ),
-            ),
+            Positioned(right: 10, top: 10, child: _pill(context, 'Verified', AppColors.success, icon: Icons.verified)),
         ]),
-        Padding(
-          padding: const EdgeInsets.all(AppSpacing.x12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Expanded(
-                child: Text(aed.format(price),
-                    style: t.titleLarge?.copyWith(color: _onBg(context), fontWeight: FontWeight.w700)),
-              ),
-              if (rating != null) ...[
-                const Icon(Icons.star, size: 14, color: AppColors.accentGold),
-                const SizedBox(width: 2),
-                Text(rating.toStringAsFixed(1),
-                    style: t.bodySmall?.copyWith(color: _onBg(context), fontWeight: FontWeight.w600)),
-              ],
-            ]),
-            const SizedBox(height: AppSpacing.x4),
-            Text('${data['property_type'] ?? ''}${data['community'] != null ? ' · ${data['community']}' : ''}',
-                style: t.bodySmall?.copyWith(color: _muted(context)), maxLines: 1, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: AppSpacing.x8),
-            Row(children: [
-              _meta(context, Icons.bed_outlined, '${data['bedrooms'] ?? '-'}'),
-              const SizedBox(width: AppSpacing.x12),
-              _meta(context, Icons.bathtub_outlined, '${data['bathrooms'] ?? '-'}'),
-              const SizedBox(width: AppSpacing.x12),
-              _meta(context, Icons.straighten, '${data['size_sqft'] ?? '-'} sqft'),
-            ]),
-            if (estMonthly > 0) ...[
+        // ── Decision-first details ──
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.x12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(
+                  child: Text(title, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+                if (ptype.isNotEmpty) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                        color: _primary(context).withValues(alpha: 0.08), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                    child: Text(ptype, style: t.labelSmall?.copyWith(color: _primary(context), fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ]),
+              const SizedBox(height: 2),
+              Text('${aed.format(price)}${isRent ? ' / yr' : ''}',
+                  style: t.titleLarge?.copyWith(color: _primary(context), fontWeight: FontWeight.w700)),
               const SizedBox(height: AppSpacing.x8),
               Row(children: [
-                Icon(Icons.account_balance_outlined, size: 13, color: _primary(context)),
-                const SizedBox(width: 4),
-                Text('~${aed.format(estMonthly)}/mo est.',
-                    style: t.bodySmall?.copyWith(color: _primary(context), fontWeight: FontWeight.w600)),
+                _meta(context, Icons.bed_outlined, '${data['bedrooms'] ?? '-'}'),
+                const SizedBox(width: AppSpacing.x12),
+                _meta(context, Icons.bathtub_outlined, '${data['bathrooms'] ?? '-'}'),
+                const SizedBox(width: AppSpacing.x12),
+                _meta(context, Icons.straighten, '${data['size_sqft'] ?? '-'} sqft'),
               ]),
-            ],
-          ]),
+              if (community.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Row(children: [
+                  Icon(Icons.place_outlined, size: 14, color: _muted(context)),
+                  const SizedBox(width: 3),
+                  Expanded(
+                    child: Text(community, style: t.bodySmall?.copyWith(color: _muted(context)),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                ]),
+              ],
+              if (highlights.isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.x8),
+                Wrap(spacing: 6, runSpacing: 4, children: [
+                  for (final h in highlights.take(3))
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                      child: Text(h, style: t.labelSmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
+                    ),
+                ]),
+              ],
+              const Spacer(),
+              if (agent.isNotEmpty) ...[
+                Row(children: [
+                  CircleAvatar(
+                    radius: 11, backgroundColor: _primary(context).withValues(alpha: 0.12),
+                    child: Text(agent[0].toUpperCase(),
+                        style: t.labelSmall?.copyWith(color: _primary(context), fontWeight: FontWeight.w700)),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(agent, style: t.bodySmall?.copyWith(color: _onBg(context), fontWeight: FontWeight.w600),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ),
+                ]),
+                const SizedBox(height: AppSpacing.x8),
+              ],
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => context.go('/login'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(34),
+                      padding: EdgeInsets.zero,
+                      foregroundColor: _onBg(context),
+                      side: BorderSide(color: _borderStrong(context)),
+                    ),
+                    child: const Text('View details'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: () => context.go('/login'),
+                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(34), padding: EdgeInsets.zero),
+                    child: const Text('Schedule'),
+                  ),
+                ),
+              ]),
+            ]),
+          ),
         ),
       ]),
     );
   }
 
-  Widget _meta(BuildContext context, IconData i, String v) => Row(children: [
+  Widget _pill(BuildContext context, String text, Color c, {IconData? icon}) {
+    final t = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: c.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (icon != null) ...[Icon(icon, size: 12, color: Colors.white), const SizedBox(width: 3)],
+        Text(text, style: t.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+      ]),
+    );
+  }
+
+  Widget _meta(BuildContext context, IconData i, String v) => Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(i, size: 14, color: _muted(context)),
         const SizedBox(width: 4),
-        Text(v, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: _muted(context))),
+        Text(v, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w600)),
       ]);
+}
+
+/// Branded "image coming soon" — used instead of a bare building icon so an
+/// image-less listing reads as pending, not low-quality.
+class _Placeholder extends StatelessWidget {
+  const _Placeholder({required this.building, required this.community});
+  final String building, community;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Container(
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft, end: Alignment.bottomRight,
+          colors: [_primary(context).withValues(alpha: 0.10), _primary(context).withValues(alpha: 0.03)],
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.photo_camera_back_outlined, size: 26, color: _primary(context).withValues(alpha: 0.6)),
+          const SizedBox(height: 8),
+          if (building.isNotEmpty)
+            Text(building, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: t.titleSmall?.copyWith(color: _primary(context), fontWeight: FontWeight.w700)),
+          if (community.isNotEmpty)
+            Text(community, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: t.bodySmall?.copyWith(color: _muted(context))),
+          const SizedBox(height: 4),
+          Text('Image coming soon', style: t.labelSmall?.copyWith(color: _subtle(context))),
+        ]),
+      ),
+    );
+  }
 }

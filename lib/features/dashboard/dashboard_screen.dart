@@ -123,6 +123,8 @@ class DashboardScreen extends ConsumerWidget {
     final data = ref.watch(dashboardProvider);
     final cards = _cardsFor(persona, data.asData?.value ?? {});
     final wide = MediaQuery.of(context).size.width >= 1000;
+    final isBuyer = persona == Persona.buyer;
+    final overview = _overviewCard(persona, data.asData?.value ?? {});
 
     return Scaffold(
       appBar: const NuzlAppBar(title: 'Dashboard'),
@@ -138,49 +140,56 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             Text('Welcome back${user?.fullName.isNotEmpty == true ? ', ${user!.fullName.split(' ').first}' : ''}',
                 style: t.headlineSmall),
-            Text("Here's what's happening today", style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            Text(isBuyer ? 'Discover and track your next property' : "Here's what's happening today",
+                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
             if (user?.pendingDeletion == true) ...[
               const SizedBox(height: AppSpacing.x16),
               _DeletionBanner(deletionAt: user!.deletionAt),
             ],
             const SizedBox(height: AppSpacing.x20),
 
-            // KPI row — role report for most personas; buyers get their own
-            // activity counters (saved / viewings / searches / mortgages).
-            if (persona == Persona.buyer) ...[
+            // 1) Headline metrics.
+            if (isBuyer) ...[
               _BuyerKpis(wide: wide),
               const SizedBox(height: AppSpacing.x16),
+            ] else if (cards.isNotEmpty) ...[
+              _KpiGrid(cards: cards, wide: wide),
+              const SizedBox(height: AppSpacing.x16),
             ],
-            if (cards.isNotEmpty) _KpiGrid(cards: cards, wide: wide),
-            if (cards.isNotEmpty) const SizedBox(height: AppSpacing.x16),
 
-            // Sales overview (org / agent) or ROI (owner only) + recent activity.
-            // Sales roles see a sales graph; owners see ROI; everyone else just
-            // gets recent activity full-width.
-            if (_overviewCard(persona, data.asData?.value ?? {}) case final overview?)
-              _twoUp(wide, flexA: 2, a: overview, b: const _ActivityCard())
-            else
-              const _ActivityCard(),
-            const SizedBox(height: AppSpacing.x16),
-
-            if (persona == Persona.buyer) ...[
+            // 2) Buyers act on search first — hero search bar near the top.
+            if (isBuyer) ...[
               const _BuyerCta(),
               const SizedBox(height: AppSpacing.x16),
-              const _RecommendedProperties(),
-              const _MarketIntelligence(),
             ],
 
-            // Recent properties — owners care about OWNED assets (their KPIs +
-            // My Properties), not recently-added/viewed listings.
-            if (persona != Persona.owner) ...[
+            // 3) Primary tasks — moved up from the bottom so "what do I do now"
+            // is answered immediately.
+            _twoUp(wide, flexA: 1,
+                a: _PanelCard(title: 'Quick actions', child: _QuickActions(persona: persona)),
+                b: _PanelCard(title: 'Tools', child: _ToolsList(persona: persona))),
+            const SizedBox(height: AppSpacing.x16),
+
+            // 4) Analytics + activity — sales chart (agent/broker/admin) or ROI
+            // (owner) paired with the activity feed.
+            if (overview != null) ...[
+              _twoUp(wide, flexA: 2, a: overview, b: const _ActivityCard()),
+              const SizedBox(height: AppSpacing.x16),
+            ],
+
+            // 5) Properties — buyers get recommendations; other browsing roles
+            // get recent listings; owners care about owned assets, not these.
+            if (isBuyer) const _RecommendedProperties(),
+            if (!isBuyer && persona != Persona.owner) ...[
               const _RecentProperties(),
               const SizedBox(height: AppSpacing.x16),
             ],
 
-            // Quick actions + tools
-            _twoUp(wide, flexA: 1,
-                a: _PanelCard(title: 'Quick actions', child: _QuickActions(persona: persona)),
-                b: _PanelCard(title: 'Tools', child: _ToolsList(persona: persona))),
+            // 6) Market insights (buyer).
+            if (isBuyer) const _MarketIntelligence(),
+
+            // 7) Recent activity at the bottom for roles without a chart.
+            if (overview == null) const _ActivityCard(),
           ],
         ),
       ),
