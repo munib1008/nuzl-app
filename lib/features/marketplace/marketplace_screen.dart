@@ -10,6 +10,7 @@ import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/hover_lift.dart';
 import '../../core/widgets/status_badge.dart';
 import '../shell/app_shell.dart';
+import 'marketplace_taxonomy.dart';
 
 final marketplaceProvider = FutureProvider.autoDispose.family<List<dynamic>, String>((ref, kind) async {
   try {
@@ -54,8 +55,9 @@ class MarketplaceScreen extends ConsumerWidget {
 
   Future<void> _addDialog(BuildContext context, WidgetRef ref) async {
     var kind = 'service';
+    String? category;
+    String? subcategory;
     final title = TextEditingController();
-    final category = TextEditingController();
     final desc = TextEditingController();
     final price = TextEditingController();
     final unit = TextEditingController();
@@ -75,12 +77,35 @@ class MarketplaceScreen extends ConsumerWidget {
                 DropdownMenuItem(value: 'service', child: Text('Service')),
                 DropdownMenuItem(value: 'product', child: Text('Product')),
               ],
-              onChanged: (v) => setS(() => kind = v ?? 'service'),
+              // Switching kind invalidates the chosen category/subcategory.
+              onChanged: (v) => setS(() { kind = v ?? 'service'; category = null; subcategory = null; }),
             ),
             const SizedBox(height: AppSpacing.x8),
             TextField(controller: title, decoration: const InputDecoration(labelText: 'Title')),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: category, decoration: const InputDecoration(labelText: 'Category')),
+            DropdownButtonFormField<String>(
+              key: ValueKey('cat-$kind'),
+              initialValue: category,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Category'),
+              items: [
+                for (final c in MarketplaceTaxonomy.categories(kind))
+                  DropdownMenuItem(value: c, child: Text(c)),
+              ],
+              onChanged: (v) => setS(() { category = v; subcategory = null; }),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            DropdownButtonFormField<String>(
+              key: ValueKey('sub-$kind-$category'),
+              initialValue: subcategory,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Subcategory'),
+              items: [
+                for (final s in MarketplaceTaxonomy.subcategories(kind, category))
+                  DropdownMenuItem(value: s, child: Text(s)),
+              ],
+              onChanged: category == null ? null : (v) => setS(() => subcategory = v),
+            ),
             const SizedBox(height: AppSpacing.x8),
             TextField(controller: desc, maxLines: 2, decoration: const InputDecoration(labelText: 'Description')),
             const SizedBox(height: AppSpacing.x8),
@@ -108,12 +133,20 @@ class MarketplaceScreen extends ConsumerWidget {
         FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('List')),
       ],
     );
-    if (ok != true || title.text.trim().isEmpty) return;
+    if (ok != true) return;
+    if (title.text.trim().isEmpty || category == null) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Title and category are required.')));
+      }
+      return;
+    }
     try {
       await ref.read(apiClientProvider).post('/marketplace', body: {
         'kind': kind,
         'title': title.text.trim(),
-        'category': category.text.trim(),
+        'category': category,
+        'subcategory': subcategory,
         'description': desc.text.trim(),
         'price': num.tryParse(price.text.trim()),
         'price_unit': unit.text.trim(),
