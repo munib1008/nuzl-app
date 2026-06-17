@@ -9,6 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/hover_lift.dart';
 import '../../../core/widgets/skeleton_loader.dart';
+import '../../saved/saved_screen.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../saved/saved_searches.dart';
 import '../../shell/app_shell.dart';
@@ -263,6 +264,14 @@ class _Drop<T> extends StatelessWidget {
 
 String _cap(String s) => s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
 
+/// Photo count for a listing card overlay (cover + images array).
+int _photoCount(Map<String, dynamic> l) {
+  var n = '${l['cover_image'] ?? ''}'.trim().isNotEmpty ? 1 : 0;
+  final im = l['images'];
+  if (im is List) n += im.length;
+  return n;
+}
+
 class _ListingCard extends StatelessWidget {
   const _ListingCard(this.l);
   final Map<String, dynamic> l;
@@ -327,6 +336,34 @@ class _ListingCard extends StatelessWidget {
                       ),
                       child: Text('Draft',
                           style: t.bodySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                // Save (bookmark) — published listings only (drafts show the Draft chip).
+                if (l['is_visible'] != false)
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.85), shape: BoxShape.circle),
+                      child: SaveListingButton(listingId: '${l['id']}'),
+                    ),
+                  ),
+                // Photo count chip (below the for-sale badge).
+                if (_photoCount(l) > 1)
+                  Positioned(
+                    left: 8,
+                    top: 40,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.55),
+                          borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.photo_library_outlined, size: 12, color: Colors.white),
+                        const SizedBox(width: 3),
+                        Text('${_photoCount(l)}',
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                      ]),
                     ),
                   ),
                 // Status ribbons (Verified / Exclusive / Hot deal / Price reduced / New).
