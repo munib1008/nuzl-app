@@ -682,20 +682,21 @@ class _RentSchedule extends ConsumerWidget {
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted))
               : Column(children: list.map((m) {
                   final p = Map<String, dynamic>.from(m);
-                  final paid = '${p['status']}' == 'paid';
-                  final due = '${p['due_date'] ?? ''}'.split('T').first;
+                  final status = '${p['status']}';
+                  final paid = status == 'paid';
+                  final submitted = !paid && (status == 'submitted' || '${p['proof_url'] ?? ''}'.isNotEmpty);
+                  final due = '${p['due_on'] ?? ''}'.split('T').first;
                   return ListTile(
                     dense: true,
                     contentPadding: EdgeInsets.zero,
-                    leading: Icon(paid ? Icons.check_circle : Icons.schedule,
-                        color: paid ? AppColors.primary : AppColors.accentGold, size: 20),
+                    leading: Icon(
+                        paid ? Icons.check_circle : submitted ? Icons.hourglass_bottom : Icons.schedule,
+                        color: paid ? AppColors.primary : submitted ? AppColors.warning : AppColors.accentGold, size: 20),
                     title: Text(aed.format(num.tryParse('${p['amount']}') ?? 0)),
-                    subtitle: Text('due $due'),
-                    trailing: paid
-                        ? const Text('Paid', style: TextStyle(color: AppColors.primary, fontSize: 12))
-                        : (canManage
-                            ? TextButton(onPressed: () => _markPaid(context, ref, '${p['id']}'), child: const Text('Mark paid'))
-                            : const Text('Due', style: TextStyle(color: AppColors.accentGold, fontSize: 12))),
+                    subtitle: Text(
+                        submitted ? 'due $due · receipt awaiting confirmation' : 'due $due',
+                        style: TextStyle(fontSize: 12, color: submitted ? AppColors.warning : null)),
+                    trailing: _trailing(context, ref, p, paid),
                   );
                 }).toList()),
         ),
@@ -719,5 +720,92 @@ class _RentSchedule extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
+  }
+
+  /// Trailing action per installment — owner verifies/marks paid, tenant uploads a receipt.
+  Widget _trailing(BuildContext context, WidgetRef ref, Map<String, dynamic> p, bool paid) {
+    final id = '${p['id']}';
+    final proofUrl = '${p['proof_url'] ?? ''}';
+    final hasProof = proofUrl.isNotEmpty;
+    final viewBtn = IconButton(
+      tooltip: 'View receipt',
+      visualDensity: VisualDensity.compact,
+      icon: const Icon(Icons.receipt_long, size: 18, color: AppColors.success),
+      onPressed: () => _viewProof(context, proofUrl),
+    );
+    if (paid) {
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        if (hasProof) viewBtn,
+        const Text('Paid', style: TextStyle(color: AppColors.primary, fontSize: 12)),
+      ]);
+    }
+    if (canManage) {
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        if (hasProof) viewBtn,
+        TextButton(onPressed: () => _markPaid(context, ref, id), child: const Text('Mark paid')),
+      ]);
+    }
+    // Tenant: upload (or replace) a payment receipt.
+    return TextButton.icon(
+      onPressed: () => _uploadProof(context, ref, id),
+      icon: Icon(hasProof ? Icons.check_circle : Icons.upload_file,
+          size: 16, color: hasProof ? AppColors.success : null),
+      label: Text(hasProof ? 'Sent · replace' : 'Upload proof'),
+    );
+  }
+
+  Future<void> _uploadProof(BuildContext context, WidgetRef ref, String id) async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 2200, imageQuality: 85);
+    if (picked == null) return;
+    final bytes = await picked.readAsBytes();
+    if (!context.mounted) return;
+    try {
+      final api = ref.read(apiClientProvider);
+      final up = await api.post('/uploads', body: {
+        'filename': picked.name,
+        'contentType': 'image/jpeg',
+        'dataBase64': base64Encode(bytes),
+      });
+      final url = (up is Map) ? up['url'] : null;
+      if (url == null) throw Exception('Upload failed — storage not configured');
+      await api.patch('/rent-payments/$id/proof', body: {'proof_url': url});
+      ref.invalidate(rentPaymentsProvider(tenancyId));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Receipt uploaded — your landlord has been notified.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  void _viewProof(BuildContext context, String url) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Payment receipt'),
+        content: SizedBox(
+          width: 360,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppSpacing.rSm),
+            child: Image.network(url, fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text('Preview unavailable. Copy the link to open it in a new tab.'))),
+          ),
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: url));
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied')));
+            },
+            icon: const Icon(Icons.link, size: 16),
+            label: const Text('Copy link')),
+          FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+        ],
+      ),
+    );
   }
 }
