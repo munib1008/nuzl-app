@@ -913,6 +913,7 @@ class _FinalCta extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: t.bodyLarge?.copyWith(color: _muted(context))),
               const SizedBox(height: AppSpacing.x24),
+              // Two distinct destinations only: explore (sign in) vs create an account.
               Wrap(
                 spacing: AppSpacing.x12,
                 runSpacing: AppSpacing.x12,
@@ -932,12 +933,7 @@ class _FinalCta extends StatelessWidget {
                     ),
                     child: const Padding(
                         padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-                        child: Text('Start managing properties')),
-                  ),
-                  TextButton(
-                    onPressed: () => context.go('/register'),
-                    child: Text('Join NUZL',
-                        style: GoogleFonts.poppins(color: _primary(context), fontWeight: FontWeight.w600)),
+                        child: Text('Join NUZL')),
                   ),
                 ],
               ),

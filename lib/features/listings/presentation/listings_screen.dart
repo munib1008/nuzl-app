@@ -276,6 +276,12 @@ class _ListingCard extends StatelessWidget {
   const _ListingCard(this.l);
   final Map<String, dynamic> l;
 
+  static Widget _pill(String text, Color c, TextTheme t) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(color: c.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+        child: Text(text, style: t.bodySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
+      );
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
@@ -283,12 +289,33 @@ class _ListingCard extends StatelessWidget {
     final money = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price);
     final cover = '${l['cover_image'] ?? ''}';
     final isRent = '${l['purpose']}' == 'rent';
-    final facts = [
-      if (l['property_type'] != null) _cap('${l['property_type']}'),
-      if (l['bedrooms'] != null) '${l['bedrooms']} BR',
-      if (l['bathrooms'] != null) '${l['bathrooms']} BA',
-      if (l['size_sqft'] != null) '${(num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0)} sqft',
-    ].join('  ·  ');
+    final building = '${l['building_name'] ?? ''}'.trim();
+    final unit = '${l['unit_no'] ?? ''}'.trim();
+    final community = '${l['community'] ?? ''}'.trim();
+    final ptype = '${l['property_type'] ?? ''}'.trim();
+    final agent = '${l['agent_name'] ?? ''}'.trim();
+    final score = num.tryParse('${l['agent_score'] ?? ''}');
+    final draft = l['is_visible'] == false;
+    final title = building.isNotEmpty
+        ? (unit.isNotEmpty ? '$building · Unit $unit' : building)
+        : (ptype.isNotEmpty ? _cap(ptype) : 'Property');
+    final beds = '${l['bedrooms'] ?? '-'}';
+    final baths = '${l['bathrooms'] ?? '-'}';
+    final sqft = l['size_sqft'] != null ? '${(num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0)} sqft' : null;
+    final highlights = <String>[
+      if ('${l['furnishing'] ?? ''}'.trim().isNotEmpty) _cap('${l['furnishing']}'),
+      if ('${l['view'] ?? ''}'.trim().isNotEmpty) '${l['view']}',
+      if ('${l['status'] ?? ''}'.trim().isNotEmpty) _cap('${l['status']}'),
+    ];
+
+    Widget placeholder() => Container(
+        color: AppColors.surface2,
+        child: const Center(child: Icon(Icons.apartment_outlined, size: 40, color: AppColors.textSubtle)));
+    Widget metric(IconData i, String v) => Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(i, size: 15, color: AppColors.textMuted),
+          const SizedBox(width: 3),
+          Text(v, style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+        ]);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -297,67 +324,36 @@ class _ListingCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Image with overlays ──
             Stack(
               children: [
                 AspectRatio(
                   aspectRatio: 16 / 9,
                   child: cover.isEmpty
-                      ? Container(
-                          color: AppColors.surface2,
-                          child: const Center(child: Icon(Icons.apartment_outlined, size: 40, color: AppColors.textSubtle)),
-                        )
-                      : Image.network(cover, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                              color: AppColors.surface2,
-                              child: const Center(child: Icon(Icons.apartment_outlined, size: 40, color: AppColors.textSubtle)))),
+                      ? placeholder()
+                      : Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => placeholder()),
                 ),
-                Positioned(
-                  left: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: (isRent ? AppColors.info : AppColors.primary).withValues(alpha: 0.92),
-                      borderRadius: BorderRadius.circular(AppSpacing.rFull),
-                    ),
-                    child: Text(isRent ? 'For rent' : 'For sale',
-                        style: t.bodySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
-                  ),
-                ),
-                if (l['is_visible'] == false)
+                // Trust ribbons (Verified / New / Exclusive / Hot / Price reduced) — top-left.
+                if (draft)
+                  Positioned(left: 8, top: 8, child: _pill('Draft', AppColors.warning, t))
+                else
+                  Positioned(left: 8, top: 8, right: 56, child: ListingRibbons(listing: l)),
+                // Save (top-right) — published only.
+                if (!draft)
                   Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.warning.withValues(alpha: 0.95),
-                        borderRadius: BorderRadius.circular(AppSpacing.rFull),
-                      ),
-                      child: Text('Draft',
-                          style: t.bodySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                // Save (bookmark) — published listings only (drafts show the Draft chip).
-                if (l['is_visible'] != false)
-                  Positioned(
-                    top: 4,
-                    right: 4,
+                    top: 4, right: 4,
                     child: DecoratedBox(
                       decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.85), shape: BoxShape.circle),
                       child: SaveListingButton(listingId: '${l['id']}'),
                     ),
                   ),
-                // Photo count chip (below the for-sale badge).
                 if (_photoCount(l) > 1)
                   Positioned(
-                    left: 8,
-                    top: 40,
+                    top: 54, right: 8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.55),
-                          borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                          color: Colors.black.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
                       child: Row(mainAxisSize: MainAxisSize.min, children: [
                         const Icon(Icons.photo_library_outlined, size: 12, color: Colors.white),
                         const SizedBox(width: 3),
@@ -366,32 +362,105 @@ class _ListingCard extends StatelessWidget {
                       ]),
                     ),
                   ),
-                // Status ribbons (Verified / Exclusive / Hot deal / Price reduced / New).
-                Positioned(left: 8, bottom: 8, right: 8, child: ListingRibbons(listing: l)),
+                // Location scrim overlay (bottom) — community + for-sale/rent.
+                Positioned(
+                  left: 0, right: 0, bottom: 0,
+                  child: Container(
+                    padding: const EdgeInsets.fromLTRB(10, 24, 8, 8),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                          begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                          colors: [Colors.transparent, Color(0x99000000)]),
+                    ),
+                    child: Row(children: [
+                      const Icon(Icons.place, size: 14, color: Colors.white),
+                      const SizedBox(width: 3),
+                      Expanded(
+                        child: Text(community.isNotEmpty ? community : 'UAE',
+                            style: t.bodySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ),
+                      _pill(isRent ? 'For rent' : 'For sale', isRent ? AppColors.info : AppColors.primary, t),
+                    ]),
+                  ),
+                ),
               ],
             ),
+            // ── Decision-first info ──
             Padding(
               padding: const EdgeInsets.all(AppSpacing.x12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Location first — property decisions are location-driven.
-                  if ('${l['building_name'] ?? ''}'.trim().isNotEmpty)
-                    Text('${l['building_name']}',
-                        style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                  if (l['community'] != null)
-                    Text('${l['community']}',
-                        style: t.bodySmall?.copyWith(color: AppColors.textMuted),
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: AppSpacing.x4),
-                  Text('$money${isRent ? ' / yr' : ''}',
-                      style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
-                  const SizedBox(height: 2),
-                  Text(facts, style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                if (community.isNotEmpty)
+                  Text(community, style: t.bodySmall?.copyWith(color: AppColors.textMuted),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: AppSpacing.x4),
+                Row(children: [
+                  Expanded(
+                    child: Text('$money${isRent ? ' / yr' : ''}',
+                        style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
+                  ),
+                  if (ptype.isNotEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                          color: AppColors.surface2, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                      child: Text(_cap(ptype), style: t.labelSmall?.copyWith(color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+                    ),
+                ]),
+                const SizedBox(height: AppSpacing.x8),
+                Row(children: [
+                  metric(Icons.bed_outlined, beds),
+                  const SizedBox(width: AppSpacing.x12),
+                  metric(Icons.bathtub_outlined, baths),
+                  if (sqft != null) ...[
+                    const SizedBox(width: AppSpacing.x12),
+                    metric(Icons.straighten, sqft),
+                  ],
+                ]),
+                if (highlights.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.x8),
+                  Wrap(spacing: 6, runSpacing: 4, children: [
+                    for (final h in highlights.take(3))
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                            color: AppColors.success.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                        child: Text(h, style: t.labelSmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
+                      ),
+                  ]),
                 ],
-              ),
+                if (agent.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.x8),
+                  Row(children: [
+                    CircleAvatar(
+                      radius: 12, backgroundColor: AppColors.primaryTint,
+                      child: Text(agent[0].toUpperCase(),
+                          style: t.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(agent, style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                    if (score != null && score > 0 && score <= 5) ...[
+                      const Icon(Icons.star, size: 13, color: AppColors.accentGold),
+                      const SizedBox(width: 2),
+                      Text(score.toStringAsFixed(1), style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                    ],
+                  ]),
+                ],
+                const SizedBox(height: AppSpacing.x12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => context.push('/listings/${l['id']}'),
+                    child: const Text('View details'),
+                  ),
+                ),
+              ]),
             ),
           ],
         ),
