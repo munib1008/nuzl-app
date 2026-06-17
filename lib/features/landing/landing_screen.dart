@@ -12,7 +12,7 @@ import '../../core/widgets/gradient_button.dart';
 import '../../core/widgets/nuzl_logo.dart';
 import '../mortgage/presentation/calculator_screen.dart';
 
-// Theme-aware color helpers — the landing now follows light/dark like the rest of the app.
+// Theme-aware color helpers — the landing follows light/dark like the rest of the app.
 bool _isDark(BuildContext c) => Theme.of(c).brightness == Brightness.dark;
 Color _surface(BuildContext c) => Theme.of(c).colorScheme.surface;
 Color _border(BuildContext c) => Theme.of(c).dividerColor;
@@ -22,7 +22,42 @@ Color _subtle(BuildContext c) => _isDark(c) ? AppColors.dTextSubtle : AppColors.
 Color _primary(BuildContext c) => Theme.of(c).colorScheme.primary;
 Color _borderStrong(BuildContext c) => _isDark(c) ? AppColors.dBorderStrong : AppColors.borderStrong;
 
-/// Public landing page with a STICKY top bar, hero, features, calculator and footer.
+/// A consistent full-width section: centered, max content width, heading + optional
+/// subtitle (capped to 700px for readability), then the body.
+Widget _section(BuildContext context,
+    {required String title, String? subtitle, required Widget child, Color? bg}) {
+  final t = Theme.of(context).textTheme;
+  final wide = MediaQuery.of(context).size.width >= 900;
+  return Container(
+    width: double.infinity,
+    color: bg,
+    padding: const EdgeInsets.symmetric(vertical: AppSpacing.x40),
+    child: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1040),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title,
+                style: GoogleFonts.poppins(
+                    fontSize: wide ? 30 : 24, fontWeight: FontWeight.w600, color: _onBg(context))),
+            if (subtitle != null) ...[
+              const SizedBox(height: AppSpacing.x4),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 700),
+                child: Text(subtitle, style: t.bodyMedium?.copyWith(color: _muted(context), height: 1.6)),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.x20),
+            child,
+          ]),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Public landing page — outcome-first information architecture.
 class LandingScreen extends StatelessWidget {
   const LandingScreen({super.key});
 
@@ -39,9 +74,16 @@ class LandingScreen extends StatelessWidget {
                 child: Column(
                   children: [
                     _Hero(),
-                    _WhatYouGet(),
+                    _WhoAreYou(),
+                    _Ecosystem(),
                     _FeaturedListings(),
+                    _WhyNuzl(),
+                    _MainModules(),
+                    _MarketIntelligence(),
+                    _HowItWorks(),
                     _CalculatorSection(),
+                    _Testimonials(),
+                    _FinalCta(),
                     _Footer(),
                   ],
                 ),
@@ -72,8 +114,6 @@ class _StickyTopBar extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 InkWell(onTap: () => context.go('/'), child: const NuzlLogo(size: 36)),
-                // Right side: theme toggle · Sign in · Get started.
-                // Wrap so it never overflows on narrow phones — items flow to a new line if tight.
                 Flexible(
                   child: Wrap(
                     alignment: WrapAlignment.end,
@@ -95,7 +135,7 @@ class _StickyTopBar extends ConsumerWidget {
                       FilledButton(
                         onPressed: () => context.go('/register'),
                         style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
-                        child: const Text('Get started'),
+                        child: const Text('Join NUZL'),
                       ),
                     ],
                   ),
@@ -109,6 +149,7 @@ class _StickyTopBar extends ConsumerWidget {
   }
 }
 
+// ── Section 1 — Hero ─────────────────────────────────────────────────────────
 class _Hero extends StatelessWidget {
   const _Hero();
   @override
@@ -117,127 +158,180 @@ class _Hero extends StatelessWidget {
     final wide = MediaQuery.of(context).size.width >= 900;
     return FadeIn(
       child: Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1040),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpacing.x24, AppSpacing.x48, AppSpacing.x24, AppSpacing.x24),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text('The operating system\nfor UAE real estate',
-                style: GoogleFonts.poppins(
-                    fontSize: wide ? 52 : 34, height: 1.1, fontWeight: FontWeight.w700, color: _onBg(context))),
-            const SizedBox(height: AppSpacing.x16),
-            Text(
-              'A verified network connecting brokers, agents and lead generators — capture buyers, match listings, manage viewings, offers and deals, and track mortgages, all in one place.',
-              style: t.bodyLarge?.copyWith(color: _muted(context), height: 1.5),
-            ),
-            const SizedBox(height: AppSpacing.x24),
-            Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x12, children: [
-              GradientButton(
-                onPressed: () => context.go('/register'),
-                label: 'Get started',
-                icon: Icons.arrow_forward,
-              ),
-              OutlinedButton(
-                onPressed: () => context.go('/login'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: _onBg(context),
-                  side: BorderSide(color: _borderStrong(context)),
-                  minimumSize: const Size(0, 48),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1040),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.x24, AppSpacing.x48, AppSpacing.x24, AppSpacing.x40),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('The Real Estate\nOperating System',
+                  style: GoogleFonts.poppins(
+                      fontSize: wide ? 52 : 34, height: 1.1, fontWeight: FontWeight.w700, color: _onBg(context))),
+              const SizedBox(height: AppSpacing.x16),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 700),
+                child: Text(
+                  'Manage properties, ownership, leasing, mortgages, tenancy, services and '
+                  'investments — in one platform. For owners, buyers, tenants, agents, service '
+                  'providers and real-estate professionals.',
+                  style: t.bodyLarge?.copyWith(color: _muted(context), height: 1.6),
                 ),
-                child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16), child: Text('Sign in')),
               ),
+              const SizedBox(height: AppSpacing.x24),
+              Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x12, children: [
+                GradientButton(
+                  onPressed: () => context.go('/login'),
+                  label: 'Explore properties',
+                  icon: Icons.arrow_forward,
+                ),
+                OutlinedButton(
+                  onPressed: () => context.go('/register'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _onBg(context),
+                    side: BorderSide(color: _borderStrong(context)),
+                    minimumSize: const Size(0, 48),
+                  ),
+                  child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16), child: Text('Join NUZL')),
+                ),
+              ]),
             ]),
-            const SizedBox(height: AppSpacing.x48),
-            const _Features(),
-          ]),
+          ),
         ),
-      ),
       ),
     );
   }
 }
 
-class _Features extends StatelessWidget {
-  const _Features();
-  static const _items = [
-    (Icons.dynamic_feed_outlined, 'Opportunity feed', 'See new listings, buyer needs and co-broking in one live stream.'),
-    (Icons.auto_awesome_outlined, 'Smart matching', 'Match buyers to listings automatically — rule-based and AI.'),
-    (Icons.handshake_outlined, 'Deals & viewings', 'Track holds, viewings, offers and deals end to end.'),
-    (Icons.account_balance_outlined, 'Mortgage tools', 'Calculate payments and track real mortgages over time.'),
+// ── Section 2 — Who are you? ─────────────────────────────────────────────────
+class _WhoAreYou extends StatelessWidget {
+  const _WhoAreYou();
+  static const _roles = [
+    (Icons.home_work_outlined, 'Owner', 'Manage properties, tenants, documents, payments and maintenance.'),
+    (Icons.search_outlined, 'Customer', 'Find properties, rent, buy, track tenancy and discover opportunities.'),
+    (Icons.badge_outlined, 'Agent', 'Generate leads, manage listings and close deals.'),
+    (Icons.build_outlined, 'Service Provider', 'Offer maintenance and property-related services.'),
+    (Icons.inventory_2_outlined, 'Product Supplier', 'Sell products and materials to owners and tenants.'),
   ];
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final wide = MediaQuery.of(context).size.width >= 900;
-    final cards = _items.map((it) => Container(
-          width: wide ? 232 : double.infinity,
-          padding: const EdgeInsets.all(AppSpacing.x20),
-          decoration: BoxDecoration(
-            color: _surface(context),
-            borderRadius: BorderRadius.circular(AppSpacing.rLg),
-            border: Border.all(color: _border(context)),
-          ),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(it.$1, color: _primary(context), size: 28),
-            const SizedBox(height: AppSpacing.x12),
-            Text(it.$2, style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w600, color: _onBg(context))),
-            const SizedBox(height: AppSpacing.x4),
-            Text(it.$3, style: t.bodySmall?.copyWith(color: _muted(context), height: 1.4)),
-          ]),
-        )).toList();
-    return Wrap(spacing: AppSpacing.x16, runSpacing: AppSpacing.x16, children: cards);
+    return _section(
+      context,
+      title: 'Who are you?',
+      subtitle: 'One platform that adapts to your role.',
+      child: Wrap(
+        spacing: AppSpacing.x16,
+        runSpacing: AppSpacing.x16,
+        children: _roles
+            .map((r) => Container(
+                  width: wide ? 320 : double.infinity,
+                  height: 150,
+                  padding: const EdgeInsets.all(AppSpacing.x20),
+                  decoration: BoxDecoration(
+                    color: _surface(context),
+                    borderRadius: BorderRadius.circular(AppSpacing.rCard),
+                    border: Border.all(color: _border(context)),
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Icon(r.$1, color: _primary(context), size: 28),
+                    const SizedBox(height: AppSpacing.x12),
+                    Text(r.$2,
+                        style: GoogleFonts.poppins(
+                            fontSize: 17, fontWeight: FontWeight.w600, color: _onBg(context))),
+                    const SizedBox(height: AppSpacing.x4),
+                    Expanded(
+                      child: Text(r.$3,
+                          style: t.bodySmall?.copyWith(color: _muted(context), height: 1.4)),
+                    ),
+                  ]),
+                ))
+            .toList(),
+      ),
+    );
   }
 }
 
-class _WhatYouGet extends StatelessWidget {
-  const _WhatYouGet();
-
-  static const _groups = [
-    ('For brokers & agents', [
-      'Live opportunity feed — never miss a new listing or buyer',
-      'Smart matching of buyers to listings (rule-based + AI)',
-      'Listing availability verification — no dead listings',
-      'Holds & blocking to avoid double-selling a unit',
-      'Viewings, offers and deals tracked end to end',
-      'System-generated reputation that builds trust',
-    ]),
-    ('For owners & investors', [
-      'Portfolio tracking with income, expenses and ROI',
-      'Mortgage calculator and live payment tracker',
-      'Community & building intelligence',
-      'Clear view of every property\'s timeline',
-    ]),
-    ('For lead generators & co-broking', [
-      'Post buyer leads to a verified network',
-      'Referral network with transparent commissions',
-      'Co-broking and "need help" requests',
-      'Activity trail on every opportunity',
-    ]),
+// ── Section 3 — Everything connected ─────────────────────────────────────────
+class _Ecosystem extends StatelessWidget {
+  const _Ecosystem();
+  static const _nodes = [
+    'Owner', 'Agent', 'Customer', 'Tenant', 'Service Provider', 'Supplier', 'Mortgage Advisor'
   ];
+  @override
+  Widget build(BuildContext context) {
+    final chips = <Widget>[];
+    for (var i = 0; i < _nodes.length; i++) {
+      chips.add(Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x12),
+        decoration: BoxDecoration(
+          color: _primary(context).withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(AppSpacing.rFull),
+          border: Border.all(color: _primary(context).withValues(alpha: 0.25)),
+        ),
+        child: Text(_nodes[i],
+            style: GoogleFonts.poppins(color: _primary(context), fontWeight: FontWeight.w600, fontSize: 14)),
+      ));
+      if (i < _nodes.length - 1) {
+        chips.add(Icon(Icons.sync_alt, size: 16, color: _subtle(context)));
+      }
+    }
+    return _section(
+      context,
+      title: 'Everything connected',
+      subtitle: 'Single source of truth. One property. One platform — every party works off the same record.',
+      bg: _surface(context),
+      child: Wrap(
+        spacing: AppSpacing.x8,
+        runSpacing: AppSpacing.x12,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: chips,
+      ),
+    );
+  }
+}
 
+// ── Section 5 — Why NUZL ─────────────────────────────────────────────────────
+class _WhyNuzl extends StatelessWidget {
+  const _WhyNuzl();
+  static const _traditional = [
+    'Only listings',
+    'No ownership management',
+    'No tenancy tracking',
+    'No service coordination',
+  ];
+  static const _nuzl = [
+    'Property discovery',
+    'Ownership management',
+    'Leasing CRM',
+    'Mortgage tracking',
+    'Tenant management',
+    'Service & product marketplace',
+  ];
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final wide = MediaQuery.of(context).size.width >= 900;
 
-    Widget group((String, List<String>) g) => Container(
-          width: wide ? 320 : double.infinity,
+    Widget panel(String title, List<String> items, bool good) => Container(
+          width: wide ? 420 : double.infinity,
           padding: const EdgeInsets.all(AppSpacing.x20),
           decoration: BoxDecoration(
             color: _surface(context),
-            borderRadius: BorderRadius.circular(AppSpacing.rLg),
-            border: Border.all(color: _border(context)),
+            borderRadius: BorderRadius.circular(AppSpacing.rCard),
+            border: Border.all(color: good ? _primary(context).withValues(alpha: 0.4) : _border(context)),
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(g.$1, style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w600, color: _onBg(context))),
+            Text(title,
+                style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w600, color: _onBg(context))),
             const SizedBox(height: AppSpacing.x12),
-            ...g.$2.map((line) => Padding(
+            ...items.map((line) => Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.x8),
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Padding(
                       padding: const EdgeInsets.only(top: 2, right: AppSpacing.x8),
-                      child: Icon(Icons.check_circle, size: 18, color: _primary(context)),
+                      child: Icon(good ? Icons.check_circle : Icons.cancel_outlined,
+                          size: 18, color: good ? AppColors.success : _subtle(context)),
                     ),
                     Expanded(child: Text(line, style: t.bodyMedium?.copyWith(color: _muted(context), height: 1.4))),
                   ]),
@@ -245,20 +339,232 @@ class _WhatYouGet extends StatelessWidget {
           ]),
         );
 
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1040),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24, vertical: AppSpacing.x24),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text('What you get with nuzl',
-                style: GoogleFonts.poppins(fontSize: wide ? 30 : 24, fontWeight: FontWeight.w600, color: _onBg(context))),
-            const SizedBox(height: AppSpacing.x4),
-            Text('One platform for everyone in the deal — not a portal, not a CRM.',
-                style: t.bodyMedium?.copyWith(color: _muted(context))),
-            const SizedBox(height: AppSpacing.x20),
-            Wrap(spacing: AppSpacing.x16, runSpacing: AppSpacing.x16, children: _groups.map(group).toList()),
-          ]),
+    return _section(
+      context,
+      title: 'Why NUZL',
+      subtitle: 'Traditional platforms stop at listings. NUZL runs the whole property lifecycle.',
+      child: Wrap(spacing: AppSpacing.x16, runSpacing: AppSpacing.x16, children: [
+        panel('Traditional platforms', _traditional, false),
+        panel('NUZL', _nuzl, true),
+      ]),
+    );
+  }
+}
+
+// ── Section 6 — Main modules ─────────────────────────────────────────────────
+class _MainModules extends StatelessWidget {
+  const _MainModules();
+  static const _modules = [
+    (Icons.apartment_outlined, 'Properties', 'Buy, sell, rent and invest.'),
+    (Icons.verified_user_outlined, 'Ownership', 'Track documents, tenants and payments.'),
+    (Icons.trending_up, 'Leasing CRM', 'Manage inquiries and deals.'),
+    (Icons.account_balance_outlined, 'Mortgage Finance', 'Track home financing and repayments.'),
+    (Icons.handyman_outlined, 'Services Marketplace', 'Book maintenance and professional services.'),
+    (Icons.shopping_bag_outlined, 'Products Marketplace', 'Purchase products and materials.'),
+  ];
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final wide = MediaQuery.of(context).size.width >= 900;
+    return _section(
+      context,
+      title: 'Everything in one place',
+      subtitle: 'Six core modules cover the entire journey — discover the rest as you go.',
+      bg: _surface(context),
+      child: Wrap(
+        spacing: AppSpacing.x16,
+        runSpacing: AppSpacing.x16,
+        children: _modules
+            .map((m) => Container(
+                  width: wide ? 320 : double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.x20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    borderRadius: BorderRadius.circular(AppSpacing.rCard),
+                    border: Border.all(color: _border(context)),
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Icon(m.$1, color: _primary(context), size: 26),
+                    const SizedBox(height: AppSpacing.x12),
+                    Text(m.$2,
+                        style: GoogleFonts.poppins(
+                            fontSize: 16, fontWeight: FontWeight.w600, color: _onBg(context))),
+                    const SizedBox(height: AppSpacing.x4),
+                    Text(m.$3, style: t.bodySmall?.copyWith(color: _muted(context), height: 1.4)),
+                  ]),
+                ))
+            .toList(),
+      ),
+    );
+  }
+}
+
+// ── Section 7 — Market intelligence ──────────────────────────────────────────
+class _MarketIntelligence extends StatelessWidget {
+  const _MarketIntelligence();
+  static const _items = [
+    (Icons.show_chart, 'Price trends', 'Track sale-price movement by community.'),
+    (Icons.trending_up, 'Rental trends', 'See where yields are rising.'),
+    (Icons.percent, 'Mortgage rates', 'Watch profit / interest rates over time.'),
+    (Icons.location_city_outlined, 'Community insights', 'Supply, occupancy and demand signals.'),
+    (Icons.rocket_launch_outlined, 'New launches', 'Be first to new project releases.'),
+  ];
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final wide = MediaQuery.of(context).size.width >= 900;
+    return _section(
+      context,
+      title: 'Market intelligence',
+      subtitle: 'Stay ahead with the data that drives decisions.',
+      child: Wrap(
+        spacing: AppSpacing.x16,
+        runSpacing: AppSpacing.x16,
+        children: _items
+            .map((it) => Container(
+                  width: wide ? 196 : double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.x16),
+                  decoration: BoxDecoration(
+                    color: _surface(context),
+                    borderRadius: BorderRadius.circular(AppSpacing.rCard),
+                    border: Border.all(color: _border(context)),
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Icon(it.$1, color: _primary(context), size: 24),
+                    const SizedBox(height: AppSpacing.x8),
+                    Text(it.$2,
+                        style: GoogleFonts.poppins(
+                            fontSize: 15, fontWeight: FontWeight.w600, color: _onBg(context))),
+                    const SizedBox(height: AppSpacing.x4),
+                    Text(it.$3, style: t.bodySmall?.copyWith(color: _muted(context), height: 1.4)),
+                  ]),
+                ))
+            .toList(),
+      ),
+    );
+  }
+}
+
+// ── Section 8 — How it works ─────────────────────────────────────────────────
+class _HowItWorks extends StatelessWidget {
+  const _HowItWorks();
+  static const _steps = [
+    'Find a property',
+    'Buy or rent',
+    'Manage ownership',
+    'Track finance',
+    'Manage tenants',
+    'Book services',
+  ];
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final wide = MediaQuery.of(context).size.width >= 900;
+    return _section(
+      context,
+      title: 'How it works',
+      bg: _surface(context),
+      child: Wrap(
+        spacing: AppSpacing.x16,
+        runSpacing: AppSpacing.x16,
+        children: List.generate(_steps.length, (i) {
+          return Container(
+            width: wide ? 300 : double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.x16),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: _primary(context),
+                child: Text('${i + 1}',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+              ),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(
+                child: Text(_steps[i],
+                    style: t.titleMedium?.copyWith(color: _onBg(context), fontWeight: FontWeight.w600)),
+              ),
+            ]),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+// ── Section 9 — Testimonials (placeholder copy — replace with real stories) ──
+class _Testimonials extends StatelessWidget {
+  const _Testimonials();
+  static const _quotes = [
+    ('Property Owner', 'I finally see every property, tenant and payment in one place — no more spreadsheets.'),
+    ('Agent', 'Leads, listings and deals in one pipeline. I close faster and nothing slips.'),
+    ('Tenant', 'My lease, rent schedule and maintenance requests are all in the app.'),
+  ];
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final wide = MediaQuery.of(context).size.width >= 900;
+    return _section(
+      context,
+      title: 'Built for everyone in the deal',
+      child: Wrap(
+        spacing: AppSpacing.x16,
+        runSpacing: AppSpacing.x16,
+        children: _quotes
+            .map((q) => Container(
+                  width: wide ? 320 : double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.x20),
+                  decoration: BoxDecoration(
+                    color: _surface(context),
+                    borderRadius: BorderRadius.circular(AppSpacing.rCard),
+                    border: Border.all(color: _border(context)),
+                  ),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Icon(Icons.format_quote, color: _primary(context), size: 24),
+                    const SizedBox(height: AppSpacing.x8),
+                    Text(q.$2, style: t.bodyMedium?.copyWith(color: _onBg(context), height: 1.5)),
+                    const SizedBox(height: AppSpacing.x12),
+                    Text(q.$1, style: t.bodySmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w600)),
+                  ]),
+                ))
+            .toList(),
+      ),
+    );
+  }
+}
+
+// ── Section 10 — Final CTA ───────────────────────────────────────────────────
+class _FinalCta extends StatelessWidget {
+  const _FinalCta();
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final wide = MediaQuery.of(context).size.width >= 900;
+    return Container(
+      width: double.infinity,
+      color: _surface(context),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.x64),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 700),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
+            child: Column(children: [
+              Text('Your entire property journey in one platform',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                      fontSize: wide ? 34 : 26, fontWeight: FontWeight.w700, color: _onBg(context), height: 1.2)),
+              const SizedBox(height: AppSpacing.x12),
+              Text('Buy. Own. Manage. Lease. Maintain.',
+                  textAlign: TextAlign.center,
+                  style: t.bodyLarge?.copyWith(color: _muted(context))),
+              const SizedBox(height: AppSpacing.x24),
+              GradientButton(
+                onPressed: () => context.go('/register'),
+                label: 'Get started',
+                icon: Icons.arrow_forward,
+              ),
+            ]),
+          ),
         ),
       ),
     );
@@ -269,30 +575,17 @@ class _CalculatorSection extends StatelessWidget {
   const _CalculatorSection();
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    final wide = MediaQuery.of(context).size.width >= 900;
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1040),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24, vertical: AppSpacing.x24),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            Text('Mortgage calculator',
-                style: GoogleFonts.poppins(fontSize: wide ? 30 : 24, fontWeight: FontWeight.w600, color: _onBg(context))),
-            const SizedBox(height: AppSpacing.x4),
-            Text('Estimate a monthly payment instantly — no account needed.',
-                style: t.bodyMedium?.copyWith(color: _muted(context))),
-            const SizedBox(height: AppSpacing.x16),
-            Container(
-              decoration: BoxDecoration(
-                color: _surface(context),
-                borderRadius: BorderRadius.circular(AppSpacing.rLg),
-                border: Border.all(color: _border(context)),
-              ),
-              child: const CalculatorScreen(embedded: true),
-            ),
-          ]),
+    return _section(
+      context,
+      title: 'Mortgage calculator',
+      subtitle: 'Estimate a monthly payment instantly — no account needed.',
+      child: Container(
+        decoration: BoxDecoration(
+          color: _surface(context),
+          borderRadius: BorderRadius.circular(AppSpacing.rCard),
+          border: Border.all(color: _border(context)),
         ),
+        child: const CalculatorScreen(embedded: true),
       ),
     );
   }
@@ -329,7 +622,7 @@ class _Footer extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: _surface(context),
+        color: Theme.of(context).scaffoldBackgroundColor,
         border: Border(top: BorderSide(color: _border(context))),
       ),
       child: Center(
@@ -349,7 +642,7 @@ class _Footer extends StatelessWidget {
                       const SizedBox(height: AppSpacing.x12),
                       SizedBox(
                         width: 280,
-                        child: Text('UAE\'s premier real-estate lead marketplace. Dubai · Abu Dhabi.',
+                        child: Text('The real-estate operating system. Dubai · Abu Dhabi.',
                             style: t.bodySmall?.copyWith(color: _muted(context), height: 1.5)),
                       ),
                     ]),
@@ -391,62 +684,48 @@ final _featuredListingsProvider = FutureProvider.autoDispose<List<dynamic>>((ref
   }
 });
 
+// ── Section 4 — Featured properties ──────────────────────────────────────────
 class _FeaturedListings extends ConsumerWidget {
   const _FeaturedListings();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final t = Theme.of(context).textTheme;
     final wide = MediaQuery.of(context).size.width >= 900;
     final listings = ref.watch(_featuredListingsProvider);
-    return Container(
-      width: double.infinity,
-      color: _surface(context),
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.x48),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1040),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Browse properties',
-                  style: GoogleFonts.poppins(fontSize: wide ? 30 : 24, fontWeight: FontWeight.w700, color: _onBg(context))),
-              const SizedBox(height: AppSpacing.x4),
-              Text('A preview of listings shared by verified agents across the UAE — sign in to view full details.',
-                  style: t.bodyMedium?.copyWith(color: _muted(context))),
-              const SizedBox(height: AppSpacing.x20),
-              listings.when(
-                loading: () => const Padding(
-                    padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
-                error: (e, _) => const _GalleryEmpty(),
-                data: (list) => list.isEmpty
-                    ? const _GalleryEmpty()
-                    : Wrap(
-                        spacing: AppSpacing.x16,
-                        runSpacing: AppSpacing.x16,
-                        children: list.asMap().entries.map((e) {
-                          final w = wide ? 320.0 : MediaQuery.of(context).size.width - (AppSpacing.x24 * 2);
-                          return FadeIn(
-                            delayMs: 60 * e.key,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(AppSpacing.rLg),
-                              onTap: () => context.go('/login'),
-                              child: _ListingCard(data: Map<String, dynamic>.from(e.value), width: w),
-                            ),
-                          );
-                        }).toList()),
-              ),
-              const SizedBox(height: AppSpacing.x24),
-              OutlinedButton(
-                onPressed: () => context.go('/login'),
-                style: OutlinedButton.styleFrom(foregroundColor: _onBg(context), side: BorderSide(color: _borderStrong(context))),
-                child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x8),
-                    child: Text('Sign in to view all listings')),
-              ),
-            ]),
-          ),
+    return _section(
+      context,
+      title: 'Featured properties',
+      subtitle: 'A preview of listings shared by verified agents across the UAE — sign in to view full details.',
+      bg: _surface(context),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        listings.when(
+          loading: () => const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
+          error: (e, _) => const _GalleryEmpty(),
+          data: (list) => list.isEmpty
+              ? const _GalleryEmpty()
+              : Wrap(
+                  spacing: AppSpacing.x16,
+                  runSpacing: AppSpacing.x16,
+                  children: list.asMap().entries.map((e) {
+                    final w = wide ? 320.0 : MediaQuery.of(context).size.width - (AppSpacing.x24 * 2);
+                    return FadeIn(
+                      delayMs: 60 * e.key,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(AppSpacing.rCard),
+                        onTap: () => context.go('/login'),
+                        child: _ListingCard(data: Map<String, dynamic>.from(e.value), width: w),
+                      ),
+                    );
+                  }).toList()),
         ),
-      ),
+        const SizedBox(height: AppSpacing.x24),
+        OutlinedButton(
+          onPressed: () => context.go('/login'),
+          style: OutlinedButton.styleFrom(foregroundColor: _onBg(context), side: BorderSide(color: _borderStrong(context))),
+          child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x8),
+              child: Text('Sign in to view all listings')),
+        ),
+      ]),
     );
   }
 }
@@ -461,7 +740,7 @@ class _GalleryEmpty extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.x40),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(AppSpacing.rLg),
+        borderRadius: BorderRadius.circular(AppSpacing.rCard),
         border: Border.all(color: _border(context)),
       ),
       child: Column(children: [
@@ -494,7 +773,7 @@ class _ListingCard extends StatelessWidget {
       width: width,
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(AppSpacing.rLg),
+        borderRadius: BorderRadius.circular(AppSpacing.rCard),
         border: Border.all(color: _border(context)),
       ),
       clipBehavior: Clip.antiAlias,
