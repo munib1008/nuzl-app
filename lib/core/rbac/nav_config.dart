@@ -52,6 +52,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.inventory_2_outlined, 'Inventory', '/inventory'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
+        NavItem(Icons.business_outlined, 'Organization', '/org-ownership'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
     case Persona.developer:
@@ -60,6 +61,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.domain_outlined, 'Projects', '/projects'),
         NavItem(Icons.inventory_2_outlined, 'Inventory', '/inventory'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
+        NavItem(Icons.business_outlined, 'Organization', '/org-ownership'),
         NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
