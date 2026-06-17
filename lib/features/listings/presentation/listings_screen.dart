@@ -375,10 +375,18 @@ class _ListingCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(money, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 2),
+                  // Location first — property decisions are location-driven.
+                  if ('${l['building_name'] ?? ''}'.trim().isNotEmpty)
+                    Text('${l['building_name']}',
+                        style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
                   if (l['community'] != null)
-                    Text('${l['community']}', style: t.bodyMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text('${l['community']}',
+                        style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: AppSpacing.x4),
+                  Text('$money${isRent ? ' / yr' : ''}',
+                      style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
                   const SizedBox(height: 2),
                   Text(facts, style: t.bodySmall?.copyWith(color: AppColors.textMuted),
                       maxLines: 1, overflow: TextOverflow.ellipsis),

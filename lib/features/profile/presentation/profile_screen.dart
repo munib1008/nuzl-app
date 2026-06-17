@@ -181,7 +181,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile saved')));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not save: $e')));
+      // Never surface a raw "Internal server error" — show a friendly message,
+      // but keep any 4xx validation detail the API returned.
+      final code = e is ApiException ? (e.statusCode ?? 0) : 0;
+      final msg = (e is ApiException && code >= 400 && code < 500 && e.message.trim().isNotEmpty)
+          ? e.message
+          : 'Unable to save profile. Please try again, or contact support if it persists.';
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

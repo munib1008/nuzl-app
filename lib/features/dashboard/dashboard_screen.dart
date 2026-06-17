@@ -693,15 +693,28 @@ class _BuyerCta extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Find your next home', style: t.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+        Text('Find your next property',
+            style: t.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
         const SizedBox(height: AppSpacing.x4),
-        Text('Browse verified listings across the UAE.', style: t.bodyMedium?.copyWith(color: Colors.white70)),
+        Text('12,000+ verified listings across the UAE.', style: t.bodyMedium?.copyWith(color: Colors.white)),
         const SizedBox(height: AppSpacing.x12),
-        FilledButton.icon(
-          style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: AppColors.primary),
-          onPressed: () => context.go('/properties'),
-          icon: const Icon(Icons.search),
-          label: const Text('Browse the marketplace'),
+        // Search-bar affordance — tapping opens the properties search.
+        InkWell(
+          onTap: () => context.go('/properties'),
+          borderRadius: BorderRadius.circular(AppSpacing.rFull),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x12),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+            child: Row(children: [
+              const Icon(Icons.search, color: AppColors.primary, size: 20),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(
+                child: Text('Search by community, building, budget or yield…',
+                    style: t.bodyMedium?.copyWith(color: AppColors.textMuted),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+            ]),
+          ),
         ),
       ]),
     );

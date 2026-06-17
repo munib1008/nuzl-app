@@ -111,11 +111,12 @@ class _ImageCropDialogState extends State<ImageCropDialog> {
                 onPressed: _busy ? null : () => Navigator.of(context).pop(),
                 child: const Text('Cancel')),
               const SizedBox(width: AppSpacing.x8),
-              FilledButton(
+              FilledButton.icon(
                 onPressed: _busy ? null : () => _confirm(side),
-                child: _busy
+                icon: _busy
                     ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Text('Use photo')),
+                    : const Icon(Icons.check, size: 18),
+                label: const Text('Save photo')),
             ]);
           }),
         ]),
