@@ -25,10 +25,11 @@ class _SplitRow {
   void dispose() { label.dispose(); amount.dispose(); }
 }
 
-/// Set up a tracked home finance (owner #16/#17). Speaks your statement's
-/// language: for an Islamic (Ijarah) product it relabels interest -> profit /
-/// rental and insurance -> Takaful, and lays the finance numbers out the way
-/// the bank statement does. Then it powers the payment tracker.
+/// Set up a tracked home finance (owner #16/#17) as a guided 4-step wizard —
+/// Property → Costs → Finance → Schedule. Speaks your statement's language: for
+/// an Islamic (Ijarah) product it relabels interest -> profit / rental and
+/// insurance -> Takaful. The final step previews the amortization before saving,
+/// then the record powers the payment tracker.
 class MortgageFormScreen extends ConsumerStatefulWidget {
   const MortgageFormScreen({super.key});
   @override
@@ -59,8 +60,11 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
   String _insuranceFreq = 'yearly';
   String _financeType = 'ijarah'; // UAE home finance is predominantly Ijarah
   String? _propertyId;
+  int _step = 0;
   bool _saving = false;
   String? _error;
+
+  static const _stepLabels = ['Property', 'Costs', 'Finance', 'Schedule'];
 
   bool get _isl => isIslamicFinance(_financeType);
   bool get _isCash => isCashPurchase(_financeType);
@@ -99,6 +103,11 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
 
   double get _splitTotal => _splits.fold(0.0, (s, r) => s + (double.tryParse(r.amount.text) ?? 0));
 
+  double? _pos(TextEditingController c) {
+    final v = double.tryParse(c.text.trim());
+    return (v == null || v <= 0) ? null : v;
+  }
+
   Future<void> _pickDate(int which) async {
     final now = DateTime.now();
     final current = switch (which) {
@@ -131,52 +140,78 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
     });
   }
 
-  /// First validation problem (mandatory setup fields), or null if all good.
-  String? _validate() {
-    double? pos(TextEditingController c) {
-      final v = double.tryParse(c.text.trim());
-      return (v == null || v <= 0) ? null : v;
-    }
+  /// First validation problem on [step] (0 Property · 1 Costs · 2 Finance), or
+  /// null when the step is complete. The Schedule step has no inputs.
+  String? _validateStep(int step) {
     final fin = _isl ? 'finance amount' : 'loan amount';
     final rate = _isl ? 'profit rate' : 'interest rate';
     final period = _isl ? 'Ijarah period' : 'term';
     final propIns = _isl ? 'property Takaful' : 'property insurance';
     final lifeIns = _isl ? 'life Takaful' : 'life insurance';
-    if (_label.text.trim().isEmpty) return 'Name this finance.';
-    if (_lender.text.trim().isEmpty) {
-      return 'Enter the ${_isDev ? 'developer / provider' : _isCash ? 'seller / source' : 'bank / lender'}.';
+    switch (step) {
+      case 0: // Property
+        if (_label.text.trim().isEmpty) return 'Name this finance.';
+        if (_lender.text.trim().isEmpty) {
+          return 'Enter the ${_isDev ? 'developer / provider' : _isCash ? 'seller / source' : 'bank / lender'}.';
+        }
+        if (_pos(_projectValue) == null) return 'Total property value is required.';
+        return null;
+      case 1: // Costs
+        if (_pos(_dld) == null) return 'DLD charges are required.';
+        if (_pos(_processing) == null) return 'Processing fees are required.';
+        if (_pos(_downPayment) == null) return 'Down payment is required.';
+        if (!_isCash && !_isDev) {
+          if (_pos(_propInsurance) == null) return 'The $propIns is required.';
+          if (_pos(_lifeInsurance) == null) return 'The $lifeIns is required.';
+        }
+        if (_splits.isNotEmpty && _splitTotal > 0) {
+          final dp = double.tryParse(_downPayment.text.trim()) ?? 0;
+          if ((_splitTotal - dp).abs() > 1) {
+            return 'Down-payment splits (AED ${_splitTotal.toStringAsFixed(0)}) must add up to the '
+                'down payment (AED ${dp.toStringAsFixed(0)}).';
+          }
+        }
+        return null;
+      case 2: // Finance (skipped for an outright cash purchase)
+        if (_isCash) return null;
+        if (_pos(_principal) == null) return 'The $fin is required.';
+        if ((double.tryParse(_rate.text.trim()) ?? -1) < 0) return 'Enter a valid $rate.';
+        if ((int.tryParse(_years.text.trim()) ?? 0) <= 0) return 'Enter the $period in years.';
+        if (_loanStart == null) return 'Pick the ${_isl ? 'disbursal' : 'loan start'} date.';
+        if (_firstInstallment == null) return 'Pick the first ${_isl ? 'rental' : 'installment'} date.';
+        return null;
+      default:
+        return null;
     }
-    if (!_isCash) {
-      if (pos(_principal) == null) return 'The $fin is required.';
-      if ((double.tryParse(_rate.text.trim()) ?? -1) < 0) return 'Enter a valid $rate.';
-      if ((int.tryParse(_years.text.trim()) ?? 0) <= 0) return 'Enter the $period in years.';
-      if (_loanStart == null) return 'Pick the ${_isl ? 'disbursal' : 'loan start'} date.';
-      if (_firstInstallment == null) return 'Pick the first ${_isl ? 'rental' : 'installment'} date.';
-      // Insurance/Takaful is required only for bank-financed products.
-      if (!_isDev) {
-        if (pos(_propInsurance) == null) return 'The $propIns is required.';
-        if (pos(_lifeInsurance) == null) return 'The $lifeIns is required.';
+  }
+
+  void _onPrimary() {
+    if (_step < 3) {
+      final problem = _validateStep(_step);
+      if (problem != null) {
+        setState(() => _error = problem);
+        return;
       }
+      setState(() {
+        _step++;
+        _error = null;
+      });
+      return;
     }
-    if (pos(_projectValue) == null) return 'Total property value is required.';
-    if (pos(_dld) == null) return 'DLD charges are required.';
-    if (pos(_processing) == null) return 'Processing fees are required.';
-    if (pos(_downPayment) == null) return 'Down payment is required.';
-    if (_splits.isNotEmpty && _splitTotal > 0) {
-      final dp = double.tryParse(_downPayment.text.trim()) ?? 0;
-      if ((_splitTotal - dp).abs() > 1) {
-        return 'Down-payment splits (AED ${_splitTotal.toStringAsFixed(0)}) must add up to the '
-            'down payment (AED ${dp.toStringAsFixed(0)}).';
-      }
-    }
-    return null;
+    _save();
   }
 
   Future<void> _save() async {
-    final problem = _validate();
-    if (problem != null) {
-      setState(() => _error = problem);
-      return;
+    // Re-validate every input step and jump back to the first with a problem.
+    for (final step in [0, 1, 2]) {
+      final problem = _validateStep(step);
+      if (problem != null) {
+        setState(() {
+          _step = step;
+          _error = problem;
+        });
+        return;
+      }
     }
     setState(() { _saving = true; _error = null; });
     final iso = DateFormat('yyyy-MM-dd');
@@ -228,6 +263,7 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
     }
   }
 
+  // ── Reusable field builders ───────────────────────────────────────────
   Widget _money(TextEditingController c, String label, {bool live = false, String? helper}) => TextField(
         controller: c,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -250,107 +286,231 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
         ),
       );
 
+  Widget _stepIntro(TextTheme t, String title, String subtitle) => Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 2),
+          Text(subtitle, style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
+        ]),
+      );
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     return Scaffold(
       appBar: AppBar(title: const Text('Track a home finance')),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.x16),
-        children: [
-          // Finance type — relabels the whole form (Islamic = profit / finance / Takaful;
-          // Cash hides the finance section; Developer plan relabels the provider).
-          DropdownButtonFormField<String>(
-            initialValue: _financeType,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Finance type'),
-            items: [for (final f in kFinanceTypes) DropdownMenuItem(value: f.$1, child: Text(f.$2))],
-            onChanged: (v) => setState(() => _financeType = v ?? 'conventional'),
-          ),
-          const SizedBox(height: AppSpacing.x12),
-          ref.watch(_ownerPropsProvider).maybeWhen(
-            data: (list) {
-              final items = <DropdownMenuItem<String?>>[
-                const DropdownMenuItem(value: null, child: Text('Not linked to a property')),
-              ];
-              final seen = <String>{};
-              for (final e in list) {
-                final mp = Map<String, dynamic>.from(e);
-                final pid = '${mp['property_id'] ?? ''}';
-                if (pid.isEmpty || !seen.add(pid)) continue;
-                final bn = '${mp['building_name'] ?? ''}'.trim();
-                final un = '${mp['unit_no'] ?? ''}'.trim();
-                final comm = '${mp['community'] ?? ''}'.trim();
-                final label = bn.isNotEmpty
-                    ? (un.isNotEmpty ? '$bn - $un' : bn)
-                    : (un.isNotEmpty ? 'Unit $un' : (comm.isNotEmpty ? comm : 'Property'));
-                items.add(DropdownMenuItem(value: pid, child: Text(label, overflow: TextOverflow.ellipsis)));
-              }
-              return DropdownButtonFormField<String?>(
-                initialValue: _propertyId,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Link to a property (optional)'),
-                items: items,
-                onChanged: (v) => setState(() => _propertyId = v),
-              );
-            },
-            orElse: () => const SizedBox.shrink(),
-          ),
-          const SizedBox(height: AppSpacing.x12),
-          TextField(controller: _label, decoration: const InputDecoration(
-              labelText: 'Name this finance *', hintText: 'e.g. Star by Azizi 619')),
-          const SizedBox(height: AppSpacing.x12),
-          TextField(controller: _lender, decoration: InputDecoration(
-              labelText: _isDev ? 'Developer / provider *' : _isCash ? 'Seller / source *' : 'Bank / lender *',
-              hintText: _isDev ? 'e.g. Emaar, DAMAC' : _isCash ? 'e.g. private seller' : (_isl ? 'e.g. Mashreq Al Islami' : 'e.g. Emirates NBD'))),
-
-          // The whole finance block is hidden for an outright cash purchase.
-          if (!_isCash) ...[
-          // ── Finance (from your statement) ─────────────────────────
-          _sectionTitle(_isl ? 'Finance (from your statement)' : 'Finance', t),
-          _money(_principal, _financeLabel, live: true,
-              helper: _isl ? "Statement: 'Ijarah Finance Amount Disbursed'" : null),
-          const SizedBox(height: AppSpacing.x12),
-          Row(children: [
-            Expanded(
-              child: TextField(controller: _rate, keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                      labelText: _rateLabel,
-                      helperText: _isl ? "Statement: 'Rental Rate' (variable)" : null)),
-            ),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(child: _dateField(_rateValidLabel, _rateValidUntil, () => _pickDate(2))),
-          ]),
-          const SizedBox(height: AppSpacing.x12),
-          TextField(controller: _years, keyboardType: TextInputType.number,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(labelText: _termLabel)),
-          const SizedBox(height: AppSpacing.x12),
-          Row(children: [
-            Expanded(child: _dateField(_startLabel, _loanStart, () => _pickDate(0))),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(child: _dateField(_firstLabel, _firstInstallment, () => _pickDate(1))),
-          ]),
-          const SizedBox(height: AppSpacing.x16),
-          Card(child: Padding(
+      body: Column(children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x16, AppSpacing.x16, AppSpacing.x8),
+          child: _stepHeader(t),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: ListView(
             padding: const EdgeInsets.all(AppSpacing.x16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text(_monthlyLabel, style: t.bodyMedium),
-                Text('AED ${_monthly.toStringAsFixed(0)}', style: t.titleLarge),
-              ]),
-              const SizedBox(height: 4),
-              Text(
-                _isl
-                    ? 'Estimated at the current rate. Log each actual rental (fixed + variable) under Payments.'
-                    : 'Estimated at the current rate. Log each actual installment under Payments.',
-                style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor),
+            children: _stepBody(t),
+          ),
+        ),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x8, AppSpacing.x16, 0),
+            child: Row(children: [
+              Icon(Icons.error_outline, size: 16, color: Theme.of(context).colorScheme.error),
+              const SizedBox(width: 6),
+              Expanded(child: Text(_error!, style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error))),
+            ]),
+          ),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.x16),
+            child: Row(children: [
+              if (_step > 0) ...[
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _saving ? null : () => setState(() { _step--; _error = null; }),
+                    child: const Text('Back'),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x12),
+              ],
+              Expanded(
+                flex: 2,
+                child: FilledButton(
+                  onPressed: _saving ? null : _onPrimary,
+                  child: _saving
+                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : Text(_step < 3 ? 'Continue' : 'Save finance'),
+                ),
               ),
             ]),
-          )),
+          ),
+        ),
+      ]),
+    );
+  }
 
-          // ── Takaful / insurance ───────────────────────────────────
+  // Four-step progress indicator: numbered dots, completed dots show a check,
+  // connectors fill in as you advance.
+  Widget _stepHeader(TextTheme t) {
+    final primary = Theme.of(context).colorScheme.primary;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final border = Theme.of(context).dividerColor;
+    final muted = Theme.of(context).hintColor;
+    Widget dot(int i) {
+      final done = i < _step;
+      final active = i == _step;
+      return Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+          width: 28, height: 28,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: active ? primary : (done ? primary.withValues(alpha: 0.12) : Colors.transparent),
+            shape: BoxShape.circle,
+            border: Border.all(color: (done || active) ? primary : border, width: 1.5),
+          ),
+          child: done
+              ? Icon(Icons.check, size: 16, color: primary)
+              : Text('${i + 1}',
+                  style: t.labelSmall?.copyWith(color: active ? Colors.white : muted, fontWeight: FontWeight.w700)),
+        ),
+        const SizedBox(height: 4),
+        Text(_stepLabels[i],
+            style: t.labelSmall?.copyWith(
+                color: (done || active) ? onSurface : muted,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500)),
+      ]);
+    }
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      for (var i = 0; i < 4; i++) ...[
+        dot(i),
+        if (i < 3)
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 13, left: 4, right: 4),
+              child: Container(height: 2, color: i < _step ? primary : border),
+            ),
+          ),
+      ],
+    ]);
+  }
+
+  List<Widget> _stepBody(TextTheme t) => switch (_step) {
+        0 => _stepProperty(t),
+        1 => _stepCosts(t),
+        2 => _stepFinance(t),
+        _ => _stepSchedule(t),
+      };
+
+  // ── Step 1 — Property ──────────────────────────────────────────────────
+  List<Widget> _stepProperty(TextTheme t) => [
+        _stepIntro(t, 'Which property?', 'Choose the finance type and tell us what you’re buying.'),
+        DropdownButtonFormField<String>(
+          initialValue: _financeType,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'Finance type'),
+          items: [for (final f in kFinanceTypes) DropdownMenuItem(value: f.$1, child: Text(f.$2))],
+          onChanged: (v) => setState(() => _financeType = v ?? 'conventional'),
+        ),
+        const SizedBox(height: AppSpacing.x12),
+        ref.watch(_ownerPropsProvider).maybeWhen(
+              data: (list) {
+                final items = <DropdownMenuItem<String?>>[
+                  const DropdownMenuItem(value: null, child: Text('Not linked to a property')),
+                ];
+                final seen = <String>{};
+                for (final e in list) {
+                  final mp = Map<String, dynamic>.from(e);
+                  final pid = '${mp['property_id'] ?? ''}';
+                  if (pid.isEmpty || !seen.add(pid)) continue;
+                  final bn = '${mp['building_name'] ?? ''}'.trim();
+                  final un = '${mp['unit_no'] ?? ''}'.trim();
+                  final comm = '${mp['community'] ?? ''}'.trim();
+                  final label = bn.isNotEmpty
+                      ? (un.isNotEmpty ? '$bn - $un' : bn)
+                      : (un.isNotEmpty ? 'Unit $un' : (comm.isNotEmpty ? comm : 'Property'));
+                  items.add(DropdownMenuItem(value: pid, child: Text(label, overflow: TextOverflow.ellipsis)));
+                }
+                return DropdownButtonFormField<String?>(
+                  initialValue: _propertyId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Link to a property (optional)'),
+                  items: items,
+                  onChanged: (v) => setState(() => _propertyId = v),
+                );
+              },
+              orElse: () => const SizedBox.shrink(),
+            ),
+        const SizedBox(height: AppSpacing.x12),
+        TextField(
+            controller: _label,
+            decoration: const InputDecoration(labelText: 'Name this finance *', hintText: 'e.g. Star by Azizi 619')),
+        const SizedBox(height: AppSpacing.x12),
+        TextField(
+            controller: _lender,
+            decoration: InputDecoration(
+                labelText: _isDev ? 'Developer / provider *' : _isCash ? 'Seller / source *' : 'Bank / lender *',
+                hintText: _isDev
+                    ? 'e.g. Emaar, DAMAC'
+                    : _isCash
+                        ? 'e.g. private seller'
+                        : (_isl ? 'e.g. Mashreq Al Islami' : 'e.g. Emirates NBD'))),
+        const SizedBox(height: AppSpacing.x12),
+        _money(_projectValue, 'Total property value *', live: true),
+      ];
+
+  // ── Step 2 — Costs ─────────────────────────────────────────────────────
+  List<Widget> _stepCosts(TextTheme t) => [
+        _stepIntro(t, 'Purchase costs', 'Upfront cash${_isCash ? '' : _isl ? ' and Takaful' : ' and insurance'}.'),
+        Row(children: [
+          Expanded(child: _money(_dld, 'DLD charges *', helper: 'e.g. 4% of value')),
+          const SizedBox(width: AppSpacing.x12),
+          Expanded(child: _money(_processing, 'Processing fees *')),
+        ]),
+        const SizedBox(height: AppSpacing.x12),
+        _money(_registration, 'Registration fees'),
+        const SizedBox(height: AppSpacing.x12),
+        _money(_downPayment, 'Down payment *', live: true),
+        const SizedBox(height: AppSpacing.x8),
+        for (var i = 0; i < _splits.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.x8),
+            child: Row(children: [
+              Expanded(
+                flex: 3,
+                child: TextField(
+                    controller: _splits[i].label,
+                    decoration: const InputDecoration(labelText: 'Split', hintText: 'e.g. Booking', isDense: true)),
+              ),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(
+                flex: 2,
+                child: TextField(
+                    controller: _splits[i].amount,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(labelText: 'Amount', prefixText: 'AED ', isDense: true)),
+              ),
+              IconButton(
+                  tooltip: 'Remove',
+                  onPressed: () => setState(() => _splits.removeAt(i).dispose()),
+                  icon: const Icon(Icons.close, size: 18)),
+            ]),
+          ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: () => setState(() => _splits.add(_SplitRow())),
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Add down-payment split'),
+          ),
+        ),
+        if (_splits.isNotEmpty)
+          Text('Splits total: AED ${_splitTotal.toStringAsFixed(0)}',
+              style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
+        // Insurance / Takaful — only for financed products.
+        if (!_isCash) ...[
           _sectionTitle(_isl ? 'Takaful' : 'Insurance', t),
           Row(children: [
             Expanded(child: _money(_propInsurance, _propInsLabel)),
@@ -373,87 +533,229 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
             const SizedBox(width: AppSpacing.x12),
             Expanded(child: _dateField('Renewal date', _insRenewal, () => _pickDate(4))),
           ]),
+        ],
+      ];
 
-          // ── Fixed intro period (optional) ─────────────────────────
-          _sectionTitle('Fixed intro period (optional)', t),
-          Row(children: [
-            Expanded(
-              child: TextField(controller: _fixedMonths, keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Fixed for (months)')),
-            ),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(
-              child: TextField(controller: _rateAfter, keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(labelText: _isl ? 'Profit rate after (%)' : 'Rate after (%)')),
+  // ── Step 3 — Finance ───────────────────────────────────────────────────
+  List<Widget> _stepFinance(TextTheme t) {
+    if (_isCash) {
+      return [
+        _stepIntro(t, 'Financing', 'Cash purchase — nothing to finance.'),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.x16),
+            child: Row(children: [
+              Icon(Icons.payments_outlined, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(
+                child: Text('This is an outright cash purchase, so there is no loan or rental schedule. '
+                    'Continue to review your upfront costs.',
+                    style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
+              ),
+            ]),
+          ),
+        ),
+      ];
+    }
+    return [
+      _stepIntro(t, 'Financing', _isl ? 'Enter the numbers from your statement.' : 'Enter your loan terms.'),
+      _money(_principal, _financeLabel, live: true,
+          helper: _isl ? "Statement: 'Ijarah Finance Amount Disbursed'" : null),
+      const SizedBox(height: AppSpacing.x12),
+      Row(children: [
+        Expanded(
+          child: TextField(
+              controller: _rate,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              onChanged: (_) => setState(() {}),
+              decoration: InputDecoration(
+                  labelText: _rateLabel, helperText: _isl ? "Statement: 'Rental Rate' (variable)" : null)),
+        ),
+        const SizedBox(width: AppSpacing.x12),
+        Expanded(child: _dateField(_rateValidLabel, _rateValidUntil, () => _pickDate(2))),
+      ]),
+      const SizedBox(height: AppSpacing.x12),
+      TextField(
+          controller: _years,
+          keyboardType: TextInputType.number,
+          onChanged: (_) => setState(() {}),
+          decoration: InputDecoration(labelText: _termLabel)),
+      const SizedBox(height: AppSpacing.x12),
+      Row(children: [
+        Expanded(child: _dateField(_startLabel, _loanStart, () => _pickDate(0))),
+        const SizedBox(width: AppSpacing.x12),
+        Expanded(child: _dateField(_firstLabel, _firstInstallment, () => _pickDate(1))),
+      ]),
+      const SizedBox(height: AppSpacing.x16),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.x16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text(_monthlyLabel, style: t.bodyMedium),
+              Text('AED ${_monthly.toStringAsFixed(0)}', style: t.titleLarge),
+            ]),
+            const SizedBox(height: 4),
+            Text(
+              _isl
+                  ? 'Estimated at the current rate. Log each actual rental (fixed + variable) under Payments.'
+                  : 'Estimated at the current rate. Log each actual installment under Payments.',
+              style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor),
             ),
           ]),
-          ], // end if (!_isCash)
+        ),
+      ),
+      _sectionTitle('Fixed intro period (optional)', t),
+      Row(children: [
+        Expanded(
+          child: TextField(
+              controller: _fixedMonths,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Fixed for (months)')),
+        ),
+        const SizedBox(width: AppSpacing.x12),
+        Expanded(
+          child: TextField(
+              controller: _rateAfter,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(labelText: _isl ? 'Profit rate after (%)' : 'Rate after (%)')),
+        ),
+      ]),
+    ];
+  }
 
-          // ── Purchase costs ────────────────────────────────────────
-          _sectionTitle('Purchase costs', t),
-          _money(_projectValue, 'Total property value *'),
-          const SizedBox(height: AppSpacing.x12),
-          Row(children: [
-            Expanded(child: _money(_dld, 'DLD charges *', helper: 'e.g. 4% of value')),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(child: _money(_processing, 'Processing fees *')),
+  // ── Step 4 — Schedule (review + amortization preview) ──────────────────
+  List<Widget> _stepSchedule(TextTheme t) {
+    final hint = Theme.of(context).hintColor;
+    final primary = Theme.of(context).colorScheme.primary;
+    final aed0 = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
+    double n(TextEditingController c) => double.tryParse(c.text.trim()) ?? 0;
+    final upfront = n(_downPayment) + n(_dld) + n(_processing) + n(_registration);
+
+    final widgets = <Widget>[
+      _stepIntro(t, 'Review & schedule', 'Confirm the numbers, then save to start tracking payments.'),
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.x16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Upfront cash', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: AppSpacing.x8),
+            _kv('Down payment', aed0.format(n(_downPayment))),
+            _kv('DLD charges', aed0.format(n(_dld))),
+            _kv('Processing fees', aed0.format(n(_processing))),
+            if (n(_registration) > 0) _kv('Registration fees', aed0.format(n(_registration))),
+            const Divider(height: AppSpacing.x16),
+            _kv('Total upfront', aed0.format(upfront), bold: true),
           ]),
+        ),
+      ),
+    ];
+
+    if (!_isCash) {
+      final p = n(_principal);
+      final rate = double.tryParse(_rate.text) ?? 0;
+      final years = int.tryParse(_years.text) ?? 0;
+      final months = years * 12;
+      if (p > 0 && years > 0) {
+        final monthly = _monthly;
+        final totalPaid = MortgageMath.totalPaid(monthly, months);
+        final totalInterest = MortgageMath.totalInterest(p, monthly, months);
+        widgets.addAll([
           const SizedBox(height: AppSpacing.x12),
-          _money(_registration, 'Registration fees'),
-          const SizedBox(height: AppSpacing.x12),
-          _money(_downPayment, 'Down payment *', live: true),
-          const SizedBox(height: AppSpacing.x8),
-          for (var i = 0; i < _splits.length; i++)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.x8),
-              child: Row(children: [
-                Expanded(
-                  flex: 3,
-                  child: TextField(
-                    controller: _splits[i].label,
-                    decoration: const InputDecoration(
-                        labelText: 'Split', hintText: 'e.g. Booking', isDense: true)),
-                ),
-                const SizedBox(width: AppSpacing.x8),
-                Expanded(
-                  flex: 2,
-                  child: TextField(
-                    controller: _splits[i].amount,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    onChanged: (_) => setState(() {}),
-                    decoration: const InputDecoration(labelText: 'Amount', prefixText: 'AED ', isDense: true)),
-                ),
-                IconButton(
-                  tooltip: 'Remove',
-                  onPressed: () => setState(() => _splits.removeAt(i).dispose()),
-                  icon: const Icon(Icons.close, size: 18)),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.x16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Text(_monthlyLabel, style: t.bodyMedium),
+                  Text(aed0.format(monthly),
+                      style: t.titleLarge?.copyWith(color: primary, fontWeight: FontWeight.w700)),
+                ]),
+                const Divider(height: AppSpacing.x16),
+                _kv(_isl ? 'Finance amount' : 'Loan amount', aed0.format(p)),
+                _kv(_isl ? 'Profit rate' : 'Interest rate', '${rate.toStringAsFixed(2)} %'),
+                _kv('Term', '$years years'),
+                _kv(_isl ? 'Total profit' : 'Total interest', aed0.format(totalInterest)),
+                _kv('Total repayment', aed0.format(totalPaid), bold: true),
               ]),
             ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => setState(() => _splits.add(_SplitRow())),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Add down-payment split'),
-            ),
           ),
-          if (_splits.isNotEmpty)
-            Text('Splits total: AED ${_splitTotal.toStringAsFixed(0)}',
-                style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
+          const SizedBox(height: AppSpacing.x16),
+          Text(_isl ? 'Yearly rental schedule' : 'Yearly amortization',
+              style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: AppSpacing.x8),
+          _amortTable(t, p, rate, months, monthly, aed0),
+          const SizedBox(height: AppSpacing.x8),
+          Text(
+            'Estimated at the current rate. Actual ${_isl ? 'rentals' : 'installments'} are logged under Payments.',
+            style: t.bodySmall?.copyWith(color: hint),
+          ),
+        ]);
+      } else {
+        widgets.add(Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.x12),
+          child: Text('Add the finance amount and term to preview the schedule.',
+              style: t.bodySmall?.copyWith(color: hint)),
+        ));
+      }
+    }
+    return widgets;
+  }
 
-          if (_error != null) ...[
-            const SizedBox(height: AppSpacing.x12),
-            Text(_error!, style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.error)),
-          ],
-          const SizedBox(height: AppSpacing.x20),
-          FilledButton(
-            onPressed: _saving ? null : _save,
-            child: _saving
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('Save'),
-          ),
-        ],
-      ),
+  Widget _kv(String k, String v, {bool bold = false}) {
+    final t = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(children: [
+        Expanded(child: Text(k, style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor))),
+        Text(v,
+            style: (bold ? t.bodyMedium : t.bodySmall)
+                ?.copyWith(fontWeight: bold ? FontWeight.w700 : FontWeight.w600)),
+      ]),
+    );
+  }
+
+  Widget _amortTable(TextTheme t, double p, double rate, int months, double monthly, NumberFormat aed0) {
+    final border = Theme.of(context).dividerColor;
+    final hint = Theme.of(context).hintColor;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final years = (months / 12).ceil();
+    Widget cell(String s, {bool header = false, TextAlign align = TextAlign.right}) => Expanded(
+          child: Text(s,
+              textAlign: align,
+              style: t.labelSmall?.copyWith(
+                  color: header ? onSurface : hint, fontWeight: header ? FontWeight.w700 : FontWeight.w500)),
+        );
+    final rows = <Widget>[
+      Row(children: [
+        cell('Year', header: true, align: TextAlign.left),
+        cell(_isl ? 'Profit' : 'Interest', header: true),
+        cell('Principal', header: true),
+        cell('Balance', header: true),
+      ]),
+      const SizedBox(height: 6),
+    ];
+    for (var y = 1; y <= years; y++) {
+      final bStart = MortgageMath.balanceAfter(p, rate, months, (y - 1) * 12);
+      final bEnd = MortgageMath.balanceAfter(p, rate, months, y * 12);
+      final principalPaid = bStart - bEnd;
+      final paidMonths = (months - (y - 1) * 12) < 12 ? (months - (y - 1) * 12) : 12;
+      final interest = (monthly * paidMonths) - principalPaid;
+      rows.add(Padding(
+        padding: const EdgeInsets.symmetric(vertical: 5),
+        child: Row(children: [
+          cell('$y', align: TextAlign.left),
+          cell(aed0.format(interest < 0 ? 0 : interest)),
+          cell(aed0.format(principalPaid < 0 ? 0 : principalPaid)),
+          cell(aed0.format(bEnd)),
+        ]),
+      ));
+      if (y < years) rows.add(Divider(height: 1, color: border));
+    }
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.x12),
+      decoration: BoxDecoration(border: Border.all(color: border), borderRadius: BorderRadius.circular(AppSpacing.rMd)),
+      child: Column(children: rows),
     );
   }
 }
