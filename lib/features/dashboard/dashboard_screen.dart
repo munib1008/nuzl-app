@@ -7,6 +7,7 @@ import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/hover_lift.dart';
 import '../../core/widgets/status_badge.dart';
 import '../auth/application/auth_controller.dart';
 import '../shell/app_shell.dart';
@@ -27,6 +28,16 @@ final dashboardProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref)
     return (d is Map) ? Map<String, dynamic>.from(d) : {};
   } catch (_) {
     return {};
+  }
+});
+
+/// Recommended properties for a buyer — latest visible listings. Empty on error.
+final _recommendedProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/listings', query: {'limit': '8', 'sort': 'newest'});
+    return d is List ? d.map((e) => Map<String, dynamic>.from(e as Map)).toList() : <Map<String, dynamic>>[];
+  } catch (_) {
+    return <Map<String, dynamic>>[];
   }
 });
 
@@ -124,6 +135,7 @@ class DashboardScreen extends ConsumerWidget {
             if (persona == Persona.buyer) ...[
               const _BuyerCta(),
               const SizedBox(height: AppSpacing.x16),
+              const _RecommendedProperties(),
               const _MarketIntelligence(),
             ],
 
@@ -692,6 +704,91 @@ class _BuyerCta extends StatelessWidget {
           label: const Text('Browse the marketplace'),
         ),
       ]),
+    );
+  }
+}
+
+/// "Recommended for you" — a horizontal strip of fresh listings for buyers.
+class _RecommendedProperties extends ConsumerWidget {
+  const _RecommendedProperties();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final recs = ref.watch(_recommendedProvider);
+    return recs.maybeWhen(
+      data: (list) {
+        if (list.isEmpty) return const SizedBox.shrink();
+        final aed = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Text('Recommended for you', style: t.titleMedium),
+            const Spacer(),
+            TextButton(onPressed: () => context.go('/properties'), child: const Text('See all')),
+          ]),
+          const SizedBox(height: AppSpacing.x8),
+          SizedBox(
+            height: 226,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: list.length,
+              separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.x12),
+              itemBuilder: (_, i) => _RecCard(l: list[i], aed: aed),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.x16),
+        ]);
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _RecCard extends StatelessWidget {
+  const _RecCard({required this.l, required this.aed});
+  final Map<String, dynamic> l;
+  final NumberFormat aed;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final price = num.tryParse('${l['price']}') ?? 0;
+    final cover = '${l['cover_image'] ?? ''}';
+    final isRent = '${l['purpose']}' == 'rent';
+    final beds = '${l['bedrooms'] ?? '-'}';
+    return SizedBox(
+      width: 240,
+      child: HoverLift(
+        child: Card(
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: () => context.push('/listings/${l['id']}'),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              AspectRatio(
+                aspectRatio: 16 / 9,
+                child: cover.isEmpty
+                    ? Container(color: AppColors.surface2,
+                        child: const Center(child: Icon(Icons.apartment_outlined, color: AppColors.textSubtle)))
+                    : Image.network(cover, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(color: AppColors.surface2,
+                            child: const Center(child: Icon(Icons.apartment_outlined, color: AppColors.textSubtle)))),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.x12),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(aed.format(price), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text('${l['community'] ?? l['property_type'] ?? ''}',
+                      style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 2),
+                  Text('$beds BR  ·  ${isRent ? 'For rent' : 'For sale'}',
+                      style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                ]),
+              ),
+            ]),
+          ),
+        ),
+      ),
     );
   }
 }
