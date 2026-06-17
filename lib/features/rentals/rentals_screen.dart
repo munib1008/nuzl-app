@@ -15,6 +15,10 @@ final chequesProvider = FutureProvider.autoDispose.family<List<dynamic>, String>
   try { final d = await ref.read(apiClientProvider).get('/tenancies/$id/cheques'); return d is List ? d : []; } catch (_) { return []; }
 });
 
+final rentPaymentsProvider = FutureProvider.autoDispose.family<List<dynamic>, String>((ref, id) async {
+  try { final d = await ref.read(apiClientProvider).get('/tenancies/$id/payments'); return d is List ? d : []; } catch (_) { return []; }
+});
+
 class RentalsScreen extends ConsumerWidget {
   const RentalsScreen({super.key});
   @override
@@ -42,7 +46,11 @@ class RentalsScreen extends ConsumerWidget {
                       return Card(child: ExpansionTile(
                         title: Text(tc['tenant_name'] ?? 'Tenant'),
                         subtitle: Text('${aed.format(num.tryParse('${tc['rent_amount']}') ?? 0)} / yr · ${tc['status']}'),
-                        children: [_Renewal(tc: tc), _Cheques(tenancyId: tc['id'].toString())],
+                        children: [
+                          _Renewal(tc: tc),
+                          _RentSchedule(tenancyId: tc['id'].toString()),
+                          _Cheques(tenancyId: tc['id'].toString()),
+                        ],
                       ));
                     }).toList(),
                   ),
@@ -339,5 +347,72 @@ class _Cheques extends ConsumerWidget {
       'cheque_no': no.text.trim(), 'bank': bank.text.trim(), 'amount': double.tryParse(amount.text), 'due_date': due.text.trim(),
     });
     ref.invalidate(chequesProvider(tenancyId));
+  }
+}
+
+/// Rent payment schedule (due / paid) for a tenancy — generate + mark paid.
+class _RentSchedule extends ConsumerWidget {
+  const _RentSchedule({required this.tenancyId});
+  final String tenancyId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final payments = ref.watch(rentPaymentsProvider(tenancyId));
+    final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.x16, 0, AppSpacing.x16, AppSpacing.x12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          const Text('Rent schedule', style: TextStyle(fontWeight: FontWeight.w600)),
+          payments.maybeWhen(
+            data: (l) => l.isEmpty
+                ? TextButton.icon(onPressed: () => _generate(context, ref),
+                    icon: const Icon(Icons.event_repeat, size: 18), label: const Text('Generate'))
+                : const SizedBox.shrink(),
+            orElse: () => const SizedBox.shrink(),
+          ),
+        ]),
+        payments.when(
+          loading: () => const LinearProgressIndicator(),
+          error: (e, _) => Text('$e'),
+          data: (list) => list.isEmpty
+              ? const Text('No schedule yet — generate one to track due/paid installments.')
+              : Column(children: list.map((m) {
+                  final p = Map<String, dynamic>.from(m);
+                  final paid = '${p['status']}' == 'paid';
+                  final due = '${p['due_date'] ?? ''}'.split('T').first;
+                  return ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(paid ? Icons.check_circle : Icons.schedule,
+                        color: paid ? AppColors.primary : AppColors.accentGold, size: 20),
+                    title: Text(aed.format(num.tryParse('${p['amount']}') ?? 0)),
+                    subtitle: Text('due $due'),
+                    trailing: paid
+                        ? const Text('Paid', style: TextStyle(color: AppColors.primary, fontSize: 12))
+                        : TextButton(onPressed: () => _markPaid(context, ref, '${p['id']}'), child: const Text('Mark paid')),
+                  );
+                }).toList()),
+        ),
+      ]),
+    );
+  }
+
+  Future<void> _generate(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(apiClientProvider).post('/tenancies/$tenancyId/schedule');
+      ref.invalidate(rentPaymentsProvider(tenancyId));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _markPaid(BuildContext context, WidgetRef ref, String id) async {
+    try {
+      await ref.read(apiClientProvider).patch('/rent-payments/$id/paid');
+      ref.invalidate(rentPaymentsProvider(tenancyId));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
   }
 }
