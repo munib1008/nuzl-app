@@ -63,6 +63,7 @@ import '../../features/saved/saved_screen.dart';
 import '../../features/saved/saved_searches.dart';
 import '../../features/marketplace/marketplace_screen.dart';
 import '../../features/marketplace/marketplace_item_screen.dart';
+import '../../features/marketing/pricing_screen.dart';
 import '../../features/network/network_screen.dart';
 import '../../features/admin/organizations_screen.dart';
 import '../../features/admin/verification_queue_screen.dart';
@@ -83,7 +84,7 @@ class _AuthRefresh extends ChangeNotifier {
 }
 
 /// Public routes (no login). The mortgage calculator + marketing pages included.
-const _publicPaths = {'/', '/login', '/register', '/forgot', '/reset'};
+const _publicPaths = {'/', '/login', '/register', '/forgot', '/reset', '/pricing'};
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _AuthRefresh(ref);
@@ -117,6 +118,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/u/:id', builder: (_, st) => PublicProfileScreen(id: st.pathParameters['id']!)),
       GoRoute(path: '/org/:slug', builder: (_, st) => PublicOrgScreen(slug: st.pathParameters['slug']!)),
       GoRoute(path: '/property/:id', builder: (_, st) => PublicListingScreen(id: st.pathParameters['id']!)),
+      GoRoute(path: '/pricing', builder: (_, __) => const PricingScreen()),
 
       // onboarding (authed, full screen)
       GoRoute(path: '/onboarding', builder: (_, __) => const OnboardingScreen()),

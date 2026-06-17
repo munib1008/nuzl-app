@@ -105,7 +105,7 @@ class _LandingScreenState extends State<LandingScreen> {
   /// Top-nav targets: scroll to a section, or route for Pricing (no landing section).
   void _onNav(String id) {
     if (id == 'pricing') {
-      context.go('/info/pricing');
+      context.go('/pricing');
       return;
     }
     final key = const {'properties': 0, 'marketplace': 1, 'insights': 2}[id];
@@ -1230,7 +1230,7 @@ class _Footer extends StatelessWidget {
         );
 
     final columns = [
-      col('Product', [('Marketplace', '/info/marketplace'), ('Tools', '/info/tools'), ('Pricing', '/info/pricing'), ('Get started', '/register')]),
+      col('Product', [('Marketplace', '/info/marketplace'), ('Tools', '/info/tools'), ('Pricing', '/pricing'), ('Get started', '/register')]),
       col('Company', [('About', '/info/about'), ('Blog', '/info/blog'), ('Partners', '/info/partners'), ('Contact', '/info/contact')]),
       col('Legal', [('Privacy', '/info/privacy'), ('Terms', '/info/terms'), ('Cookies', '/info/cookies')]),
     ];
