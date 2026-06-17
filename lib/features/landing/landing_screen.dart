@@ -1146,11 +1146,14 @@ final _featuredListingsProvider = FutureProvider.autoDispose<List<dynamic>>((ref
 // Showcase samples — used to top up the carousel so it never looks sparse. These
 // tap through to sign-in (teasers), not to a specific listing. Replace with real
 // featured listings as inventory grows.
+// Teaser previews for the public landing carousel (clearly labelled "preview …
+// sign in to view full details"). Representative stock imagery, as every portal
+// uses for marketing showcases; real listings carry their own uploaded photos.
 const _sampleListings = [
-  {'property_type': 'Villa', 'building_name': 'Signature Villas', 'community': 'Palm Jumeirah', 'purpose': 'sale', 'price': 12500000, 'bedrooms': 5, 'bathrooms': 6, 'size_sqft': 7200, 'verified': true, 'status': 'Vacant', 'furnishing': 'Furnished', 'view': 'Sea view', 'agent_name': 'Layla Hassan'},
-  {'property_type': 'Apartment', 'building_name': 'Burj Vista 1', 'community': 'Downtown Dubai', 'purpose': 'sale', 'price': 2100000, 'bedrooms': 2, 'bathrooms': 2, 'size_sqft': 1066, 'verified': true, 'status': 'Vacant', 'furnishing': 'Unfurnished', 'view': 'Burj Khalifa view', 'agent_name': 'Omar Khalid'},
-  {'property_type': 'Townhouse', 'building_name': 'Palmera 3', 'community': 'Arabian Ranches', 'purpose': 'sale', 'price': 3850000, 'bedrooms': 4, 'bathrooms': 4, 'size_sqft': 2900, 'verified': true, 'status': 'Tenanted', 'furnishing': 'Partly furnished', 'agent_name': 'Sara Aziz'},
-  {'property_type': 'Office', 'building_name': 'The Prism', 'community': 'Business Bay', 'purpose': 'sale', 'price': 5600000, 'bedrooms': 0, 'bathrooms': 2, 'size_sqft': 3400, 'verified': true, 'status': 'Vacant', 'view': 'Canal view', 'agent_name': 'Yousef Nair'},
+  {'property_type': 'Villa', 'building_name': 'Signature Villas', 'community': 'Palm Jumeirah', 'purpose': 'sale', 'price': 12500000, 'bedrooms': 5, 'bathrooms': 6, 'size_sqft': 7200, 'verified': true, 'status': 'Vacant', 'furnishing': 'Furnished', 'view': 'Sea view', 'agent_name': 'Layla Hassan', 'cover_image': 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?auto=format&fit=crop&w=800&q=70'},
+  {'property_type': 'Apartment', 'building_name': 'Burj Vista 1', 'community': 'Downtown Dubai', 'purpose': 'sale', 'price': 2100000, 'bedrooms': 2, 'bathrooms': 2, 'size_sqft': 1066, 'verified': true, 'status': 'Vacant', 'furnishing': 'Unfurnished', 'view': 'Burj Khalifa view', 'agent_name': 'Omar Khalid', 'cover_image': 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=800&q=70'},
+  {'property_type': 'Townhouse', 'building_name': 'Palmera 3', 'community': 'Arabian Ranches', 'purpose': 'sale', 'price': 3850000, 'bedrooms': 4, 'bathrooms': 4, 'size_sqft': 2900, 'verified': true, 'status': 'Tenanted', 'furnishing': 'Partly furnished', 'agent_name': 'Sara Aziz', 'cover_image': 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=800&q=70'},
+  {'property_type': 'Office', 'building_name': 'The Prism', 'community': 'Business Bay', 'purpose': 'sale', 'price': 5600000, 'bedrooms': 0, 'bathrooms': 2, 'size_sqft': 3400, 'verified': true, 'status': 'Vacant', 'view': 'Canal view', 'agent_name': 'Yousef Nair', 'cover_image': 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=800&q=70'},
 ];
 
 // ── Section 4 — Featured properties (horizontal carousel) ────────────────────
@@ -1383,8 +1386,9 @@ class _ListingCard extends StatelessWidget {
       ]);
 }
 
-/// Branded "image coming soon" — used instead of a bare building icon so an
-/// image-less listing reads as pending, not low-quality.
+/// Branded cover for an image-less listing — a deep NUZL gradient with the
+/// building name, so it reads as an intentional designed cover (like an
+/// off-plan card) rather than a missing/low-quality photo.
 class _Placeholder extends StatelessWidget {
   const _Placeholder({required this.building, required this.community});
   final String building, community;
@@ -1393,25 +1397,23 @@ class _Placeholder extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     return Container(
       alignment: Alignment.center,
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [_primary(context).withValues(alpha: 0.10), _primary(context).withValues(alpha: 0.03)],
+          colors: [AppColors.gradientStart, AppColors.gradientEnd],
         ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.photo_camera_back_outlined, size: 26, color: _primary(context).withValues(alpha: 0.6)),
+          Icon(Icons.apartment_rounded, size: 30, color: Colors.white.withValues(alpha: 0.85)),
           const SizedBox(height: 8),
           if (building.isNotEmpty)
             Text(building, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: t.titleSmall?.copyWith(color: _primary(context), fontWeight: FontWeight.w700)),
+                style: t.titleSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
           if (community.isNotEmpty)
             Text(community, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: t.bodySmall?.copyWith(color: _muted(context))),
-          const SizedBox(height: 4),
-          Text('Image coming soon', style: t.labelSmall?.copyWith(color: _subtle(context))),
+                style: t.bodySmall?.copyWith(color: Colors.white.withValues(alpha: 0.75))),
         ]),
       ),
     );
