@@ -34,7 +34,8 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authControllerProvider).user;
     return AppBar(
-      titleSpacing: 0,
+      // Gutter so a page title doesn't collide with the sidebar divider on wide.
+      titleSpacing: MediaQuery.sizeOf(context).width >= 1000 ? AppSpacing.x32 : AppSpacing.x16,
       // Solid, premium app bar with a hairline separator (no glassmorphism).
       backgroundColor: Theme.of(context).colorScheme.surface,
       surfaceTintColor: Colors.transparent,
@@ -159,6 +160,8 @@ class _RoleChip extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x12, vertical: 5),
       decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.account_circle_outlined, size: 15, color: accent),
+        const SizedBox(width: 6),
         Text(persona.label, style: t.bodySmall?.copyWith(color: accent, fontWeight: FontWeight.w600)),
         if (multi) ...[
           const SizedBox(width: 6),

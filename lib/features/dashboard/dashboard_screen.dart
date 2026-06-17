@@ -125,9 +125,13 @@ class DashboardScreen extends ConsumerWidget {
     final wide = MediaQuery.of(context).size.width >= 1000;
     final isBuyer = persona == Persona.buyer;
     final overview = _overviewCard(persona, data.asData?.value ?? {});
+    final hour = DateTime.now().hour;
+    final greet = hour < 12 ? 'Good morning' : (hour < 17 ? 'Good afternoon' : 'Good evening');
+    final gutter = wide ? AppSpacing.x32 : AppSpacing.x20;
 
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Dashboard'),
+      // No "Dashboard" title — the nav already says where you are (Stripe/Linear style).
+      appBar: const NuzlAppBar(),
       drawer: const NuzlDrawer(),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -136,45 +140,47 @@ class DashboardScreen extends ConsumerWidget {
           ref.invalidate(_activityProvider);
         },
         child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.x20),
+          padding: EdgeInsets.fromLTRB(gutter, AppSpacing.x24, gutter, AppSpacing.x24),
           children: [
-            Text('Welcome back${user?.fullName.isNotEmpty == true ? ', ${user!.fullName.split(' ').first}' : ''}',
+            // Time-based greeting — the page heading (no redundant "Dashboard").
+            Text('$greet${user?.fullName.isNotEmpty == true ? ', ${user!.fullName.split(' ').first}' : ''}',
                 style: t.headlineSmall),
-            Text(isBuyer ? 'Discover and track your next property' : "Here's what's happening today",
-                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            const SizedBox(height: 2),
+            Text(isBuyer ? 'Discover and track your next property.' : "Here's what's happening today.",
+                style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
             if (user?.pendingDeletion == true) ...[
               const SizedBox(height: AppSpacing.x16),
               _DeletionBanner(deletionAt: user!.deletionAt),
             ],
-            const SizedBox(height: AppSpacing.x20),
+            const SizedBox(height: AppSpacing.x24),
 
             // 1) Headline metrics.
             if (isBuyer) ...[
               _BuyerKpis(wide: wide),
-              const SizedBox(height: AppSpacing.x16),
+              const SizedBox(height: AppSpacing.x24),
             ] else if (cards.isNotEmpty) ...[
               _KpiGrid(cards: cards, wide: wide),
-              const SizedBox(height: AppSpacing.x16),
+              const SizedBox(height: AppSpacing.x24),
             ],
 
-            // 2) Buyers act on search first — hero search bar near the top.
-            if (isBuyer) ...[
-              const _BuyerCta(),
-              const SizedBox(height: AppSpacing.x16),
-            ],
-
-            // 3) Primary tasks — moved up from the bottom so "what do I do now"
-            // is answered immediately.
+            // 2) Primary tasks — the actions a user actually performs, up top
+            // (above the search banner for customers).
             _twoUp(wide, flexA: 1,
                 a: _PanelCard(title: 'Quick actions', child: _QuickActions(persona: persona)),
                 b: _PanelCard(title: 'Tools', child: _ToolsList(persona: persona))),
-            const SizedBox(height: AppSpacing.x16),
+            const SizedBox(height: AppSpacing.x24),
+
+            // 3) Buyer search banner.
+            if (isBuyer) ...[
+              const _BuyerCta(),
+              const SizedBox(height: AppSpacing.x24),
+            ],
 
             // 4) Analytics + activity — sales chart (agent/broker/admin) or ROI
             // (owner) paired with the activity feed.
             if (overview != null) ...[
               _twoUp(wide, flexA: 2, a: overview, b: const _ActivityCard()),
-              const SizedBox(height: AppSpacing.x16),
+              const SizedBox(height: AppSpacing.x24),
             ],
 
             // 5) Properties — buyers get recommendations; other browsing roles
@@ -182,7 +188,7 @@ class DashboardScreen extends ConsumerWidget {
             if (isBuyer) const _RecommendedProperties(),
             if (!isBuyer && persona != Persona.owner) ...[
               const _RecentProperties(),
-              const SizedBox(height: AppSpacing.x16),
+              const SizedBox(height: AppSpacing.x24),
             ],
 
             // 6) Market insights (buyer).
@@ -680,9 +686,10 @@ class _QuickActions extends StatelessWidget {
           ('My properties', Icons.home_work_outlined, '/my-properties'),
         ],
       Persona.buyer => [
-          ('Browse properties', Icons.storefront_outlined, '/properties'),
+          ('Search properties', Icons.search, '/properties'),
           ('Saved properties', Icons.bookmark_outline, '/saved'),
           ('Messages', Icons.chat_bubble_outline, '/messages'),
+          ('Viewings', Icons.event_available_outlined, '/viewings'),
         ],
       _ => [
           ('Add listing', Icons.add_home_work_outlined, '/properties/new'),
@@ -767,10 +774,10 @@ class _BuyerCta extends StatelessWidget {
         boxShadow: AppShadows.card,
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Explore opportunities',
+        Text('Find your next property',
             style: t.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
         const SizedBox(height: AppSpacing.x4),
-        Text('Tailored to your property interests — 12,000+ verified listings across the UAE.',
+        Text('Search by community, building, budget or travel time.',
             style: t.bodyMedium?.copyWith(color: Colors.white)),
         const SizedBox(height: AppSpacing.x12),
         // Search-bar affordance — tapping opens the properties search.

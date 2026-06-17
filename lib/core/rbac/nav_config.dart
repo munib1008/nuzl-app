@@ -127,14 +127,15 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
     case Persona.buyer:
+      // Customer priority flow: search → save → contact → finance → purchase.
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
+        NavItem(Icons.bookmark_outline, 'Saved', '/saved'),
+        NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
+        NavItem(Icons.account_balance_outlined, 'My Mortgage', '/mortgages'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
         NavItem(Icons.receipt_long_outlined, 'Orders', '/orders'),
-        NavItem(Icons.bookmark_outline, 'Saved', '/saved'),
-        NavItem(Icons.account_balance_outlined, 'My Mortgage', '/mortgages'),
-        NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
     case Persona.admin:
       return const [
