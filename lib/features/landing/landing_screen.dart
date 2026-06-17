@@ -1255,43 +1255,70 @@ class _ListingCard extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // ── Image (the hero) — branded placeholder, never a bare icon ──
-        Stack(children: [
-          AspectRatio(
-            aspectRatio: 16 / 10,
-            child: cover.isNotEmpty
-                ? Image.network(cover, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _Placeholder(building: title, community: community))
-                : _Placeholder(building: title, community: community),
-          ),
-          Positioned(left: 10, top: 10, child: _pill(context, isRent ? 'For rent' : 'For sale', _primary(context))),
-          if (verified)
-            Positioned(right: 10, top: 10, child: _pill(context, 'Verified', AppColors.success, icon: Icons.verified)),
-        ]),
-        // ── Decision-first details ──
+        // ── Hero image: building, location and price overlaid on a scrim ──
+        AspectRatio(
+          aspectRatio: 4 / 3,
+          child: Stack(fit: StackFit.expand, children: [
+            cover.isNotEmpty
+                ? Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const _Placeholder())
+                : const _Placeholder(),
+            // Legibility scrim — darkens the lower half for the white overlay text.
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.transparent, Color(0xD9000000)],
+                  stops: [0.42, 1.0],
+                ),
+              ),
+            ),
+            // Badges — purpose (+ type) top-left, verification top-right.
+            Positioned(
+              top: 10, left: 10,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                _pill(context, isRent ? 'For rent' : 'For sale', _primary(context)),
+                if (ptype.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  _pill(context, ptype, Colors.black54),
+                ],
+              ]),
+            ),
+            if (verified)
+              Positioned(top: 10, right: 10, child: _pill(context, 'Verified', AppColors.success, icon: Icons.verified)),
+            // Overlay: building → location → price.
+            Positioned(
+              left: 14, right: 14, bottom: 12,
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                Text(title,
+                    style: t.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                if (community.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Row(children: [
+                    const Icon(Icons.place, size: 13, color: Colors.white70),
+                    const SizedBox(width: 3),
+                    Expanded(
+                      child: Text(community,
+                          style: t.bodySmall?.copyWith(color: Colors.white70),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                  ]),
+                ],
+                if (price > 0) ...[
+                  const SizedBox(height: 4),
+                  Text('${aed.format(price)}${isRent ? ' / yr' : ''}',
+                      style: t.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w800)),
+                ],
+              ]),
+            ),
+          ]),
+        ),
+        // ── Body: specs · highlights · agent · actions ──
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.x12),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Expanded(
-                  child: Text(title, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                ),
-                if (ptype.isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    decoration: BoxDecoration(
-                        color: _primary(context).withValues(alpha: 0.08), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                    child: Text(ptype, style: t.labelSmall?.copyWith(color: _primary(context), fontWeight: FontWeight.w600)),
-                  ),
-                ],
-              ]),
-              const SizedBox(height: 2),
-              Text('${aed.format(price)}${isRent ? ' / yr' : ''}',
-                  style: t.titleLarge?.copyWith(color: _primary(context), fontWeight: FontWeight.w700)),
-              const SizedBox(height: AppSpacing.x8),
               Row(children: [
                 _meta(context, Icons.bed_outlined, '${data['bedrooms'] ?? '-'}'),
                 const SizedBox(width: AppSpacing.x12),
@@ -1299,17 +1326,6 @@ class _ListingCard extends StatelessWidget {
                 const SizedBox(width: AppSpacing.x12),
                 _meta(context, Icons.straighten, '${data['size_sqft'] ?? '-'} sqft'),
               ]),
-              if (community.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                Row(children: [
-                  Icon(Icons.place_outlined, size: 14, color: _muted(context)),
-                  const SizedBox(width: 3),
-                  Expanded(
-                    child: Text(community, style: t.bodySmall?.copyWith(color: _muted(context)),
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ),
-                ]),
-              ],
               if (highlights.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.x8),
                 Wrap(spacing: 6, runSpacing: 4, children: [
@@ -1386,36 +1402,19 @@ class _ListingCard extends StatelessWidget {
       ]);
 }
 
-/// Branded cover for an image-less listing — a deep NUZL gradient with the
-/// building name, so it reads as an intentional designed cover (like an
-/// off-plan card) rather than a missing/low-quality photo.
+/// Branded cover for an image-less listing — a deep NUZL gradient backdrop;
+/// the card's overlay (building / location / price) renders on top, so it reads
+/// as an intentional designed cover rather than a missing photo.
 class _Placeholder extends StatelessWidget {
-  const _Placeholder({required this.building, required this.community});
-  final String building, community;
+  const _Placeholder();
   @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    return Container(
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [AppColors.gradientStart, AppColors.gradientEnd],
+  Widget build(BuildContext context) => const DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [AppColors.gradientStart, AppColors.gradientEnd],
+          ),
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.x16),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.apartment_rounded, size: 30, color: Colors.white.withValues(alpha: 0.85)),
-          const SizedBox(height: 8),
-          if (building.isNotEmpty)
-            Text(building, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: t.titleSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
-          if (community.isNotEmpty)
-            Text(community, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: t.bodySmall?.copyWith(color: Colors.white.withValues(alpha: 0.75))),
-        ]),
-      ),
-    );
-  }
+        child: Center(child: Icon(Icons.apartment_rounded, size: 44, color: Colors.white24)),
+      );
 }
