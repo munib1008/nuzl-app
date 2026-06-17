@@ -99,6 +99,59 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   void _leave() => context.canPop() ? context.pop() : context.go('/dashboard');
 
+  Future<void> _createOrg(BuildContext context) async {
+    final name = TextEditingController();
+    final email = TextEditingController();
+    final phone = TextEditingController();
+    var type = 'agency';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text('Create an organization'),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(controller: name, decoration: const InputDecoration(labelText: 'Organization name')),
+              const SizedBox(height: AppSpacing.x8),
+              DropdownButtonFormField<String>(
+                initialValue: type,
+                decoration: const InputDecoration(labelText: 'Type'),
+                items: const [
+                  DropdownMenuItem(value: 'agency', child: Text('Agency')),
+                  DropdownMenuItem(value: 'developer', child: Text('Developer')),
+                  DropdownMenuItem(value: 'bank', child: Text('Bank')),
+                  DropdownMenuItem(value: 'service', child: Text('Service')),
+                ],
+                onChanged: (v) => setS(() => type = v ?? 'agency'),
+              ),
+              const SizedBox(height: AppSpacing.x8),
+              TextField(controller: email, decoration: const InputDecoration(labelText: 'Official email')),
+              const SizedBox(height: AppSpacing.x8),
+              TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone')),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Create')),
+          ],
+        ),
+      ),
+    );
+    if (ok != true || name.text.trim().isEmpty) return;
+    try {
+      await ref.read(apiClientProvider).post('/organizations/mine', body: {
+        'name': name.text.trim(), 'org_type': type, 'email': email.text.trim(), 'phone': phone.text.trim(),
+      });
+      ref.invalidate(_meProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Organization created — pending verification. Reload to manage it.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
@@ -406,6 +459,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ]),
                   ]),
                   const SizedBox(height: AppSpacing.x16),
+
+                  if (user?.organizationId == null) ...[
+                    _section('Organization', null, [
+                      Text('You are not part of an organization yet.',
+                          style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                      const SizedBox(height: AppSpacing.x8),
+                      OutlinedButton.icon(
+                        onPressed: () => _createOrg(context),
+                        icon: const Icon(Icons.business_outlined, size: 18),
+                        label: const Text('Create an organization'),
+                      ),
+                    ]),
+                    const SizedBox(height: AppSpacing.x16),
+                  ],
 
                   // ── Expertise ────────────────────────────────────
                   _section('Expertise', 'Helps buyers find the right match', [
