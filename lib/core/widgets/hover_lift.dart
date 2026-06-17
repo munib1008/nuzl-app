@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// Premium hover affordance for web: lifts (scales) the child slightly on pointer
-/// hover and shows the click cursor. A no-op on touch platforms (no hover events).
+/// Premium hover affordance for web: lifts the child a few px on pointer hover
+/// (translateY) and shows the click cursor. A no-op on touch platforms.
 class HoverLift extends StatefulWidget {
-  const HoverLift({super.key, required this.child, this.scale = 1.02});
+  const HoverLift({super.key, required this.child, this.lift = 4});
   final Widget child;
-  final double scale;
+  final double lift;
 
   @override
   State<HoverLift> createState() => _HoverLiftState();
@@ -20,10 +20,10 @@ class _HoverLiftState extends State<HoverLift> {
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
-      child: AnimatedScale(
-        scale: _hover ? widget.scale : 1.0,
-        duration: const Duration(milliseconds: 160),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
         curve: Curves.easeOut,
+        transform: Matrix4.translationValues(0, _hover ? -widget.lift : 0, 0),
         child: widget.child,
       ),
     );
