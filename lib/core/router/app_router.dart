@@ -39,6 +39,7 @@ import '../../features/maintenance/maintenance_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/common/stub_screen.dart';
 import '../../features/mortgage/presentation/calculator_screen.dart';
+import '../../features/mortgage/presentation/finance_planner_screen.dart';
 import '../../features/mortgage/presentation/mortgage_list_screen.dart';
 import '../../features/mortgage/presentation/mortgage_form_screen.dart';
 import '../../features/mortgage/presentation/mortgage_detail_screen.dart';
@@ -192,6 +193,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // mortgages
       GoRoute(path: '/calculator', builder: (_, __) => const CalculatorScreen()),
+      GoRoute(path: '/finance-planner', builder: (_, __) => const FinancePlannerScreen()),
       GoRoute(path: '/mortgages', builder: (_, __) => const MortgageListScreen()),
       GoRoute(path: '/mortgages/new', builder: (_, __) => const MortgageFormScreen()),
       GoRoute(path: '/mortgages/:id', builder: (_, s) => MortgageDetailScreen(id: s.pathParameters['id']!)),

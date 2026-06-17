@@ -133,7 +133,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.bookmark_outline, 'Saved', '/saved'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
-        NavItem(Icons.account_balance_outlined, 'My Mortgage', '/mortgages'),
+        NavItem(Icons.calculate_outlined, 'Finance Planner', '/finance-planner'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
         NavItem(Icons.receipt_long_outlined, 'Orders', '/orders'),
       ];
