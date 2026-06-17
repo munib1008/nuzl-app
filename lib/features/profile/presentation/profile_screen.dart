@@ -276,19 +276,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   // ── Account deletion (soft delete) ────────────────────────────
   Future<void> _deleteAccount() async {
+    final confirm = TextEditingController();
     final ok = await AppDialog.show<bool>(
       context,
       title: 'Delete account?',
-      children: const [Text(
-        'Your account will be deactivated and you will be signed out. You have 14 days '
-        'to sign back in and reactivate — after that it is permanently deleted.')],
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Delete')),
+      children: [
+        StatefulBuilder(
+          builder: (ctx, setS) {
+            final enabled = confirm.text.trim().toUpperCase() == 'DELETE';
+            return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text(
+                'Your account will be deactivated and you will be signed out. You have 14 days '
+                'to sign back in and reactivate — after that it is permanently deleted.'),
+              const SizedBox(height: AppSpacing.x12),
+              const Text('Type DELETE to confirm.', style: TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: AppSpacing.x8),
+              TextField(
+                controller: confirm,
+                autofocus: true,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(hintText: 'DELETE'),
+                onChanged: (_) => setS(() {}),
+              ),
+              const SizedBox(height: AppSpacing.x16),
+              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                const SizedBox(width: AppSpacing.x8),
+                FilledButton(
+                  style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+                  onPressed: enabled ? () => Navigator.pop(ctx, true) : null,
+                  child: const Text('Delete'),
+                ),
+              ]),
+            ]);
+          },
+        ),
       ],
+      actions: const [],
     );
     if (ok != true) return;
     try {
