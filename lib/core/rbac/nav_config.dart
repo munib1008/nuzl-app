@@ -36,6 +36,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.contacts_outlined, 'Contacts', '/contacts'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.event_note_outlined, 'Activities', '/activities'),
+        NavItem(Icons.query_stats_outlined, 'Lead analytics', '/lead-analytics'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
     case Persona.broker:
@@ -53,6 +54,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.inventory_2_outlined, 'Inventory', '/inventory'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
         NavItem(Icons.business_outlined, 'Organization', '/org-ownership'),
+        NavItem(Icons.query_stats_outlined, 'Lead analytics', '/lead-analytics'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
     case Persona.developer:
