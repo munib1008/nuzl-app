@@ -131,6 +131,36 @@ class _OrderCard extends ConsumerWidget {
     }
   }
 
+  /// Provider resolves (clears) a dispute the customer raised.
+  Future<void> _resolveDispute(BuildContext context, WidgetRef ref) async {
+    final note = TextEditingController();
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Resolve dispute',
+      children: [
+        const Text('Mark this dispute as resolved. The customer is notified.'),
+        const SizedBox(height: AppSpacing.x12),
+        TextField(controller: note, maxLines: 2, decoration: const InputDecoration(labelText: 'Resolution note (optional)')),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Resolve')),
+      ],
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(apiClientProvider)
+          .patch('/marketplace/orders/${o['id']}/dispute-resolve', body: {'note': note.text.trim()});
+      ref.invalidate(myOrdersProvider);
+      ref.invalidate(incomingOrdersProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dispute resolved.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
   /// Provider sets/updates the price on a quote request.
   Future<void> _sendQuote(BuildContext context, WidgetRef ref) async {
     final price = TextEditingController(text: '${o['quoted_price'] ?? ''}');
@@ -236,6 +266,8 @@ class _OrderCard extends ConsumerWidget {
     final next = nextStatus(kind, status);
     final rating = int.tryParse('${o['rating'] ?? ''}');
     final disputed = o['disputed'] == true;
+    final disputeReason = '${o['dispute_reason'] ?? ''}'.trim();
+    final resolution = '${o['dispute_resolution'] ?? ''}'.trim();
     final providerId = '${o['provider_id'] ?? ''}';
 
     return Card(
@@ -291,9 +323,23 @@ class _OrderCard extends ConsumerWidget {
                 Icon(i <= rating ? Icons.star : Icons.star_border, size: 14, color: AppColors.accentGold),
             ]),
           ],
+          if (disputed && disputeReason.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.x8),
+            Text('Dispute: $disputeReason', style: t.bodySmall?.copyWith(color: AppColors.danger)),
+          ],
+          if (!disputed && resolution.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.x8),
+            Text('Resolved: $resolution', style: t.bodySmall?.copyWith(color: AppColors.success)),
+          ],
           // Actions (role-aware)
           const SizedBox(height: AppSpacing.x8),
           Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x4, children: [
+            if (!mine && disputed)
+              OutlinedButton(
+                onPressed: () => _resolveDispute(context, ref),
+                style: OutlinedButton.styleFrom(foregroundColor: AppColors.success),
+                child: const Text('Resolve dispute'),
+              ),
             // Provider: quote a request / revise the quote.
             if (!mine && status == 'quote_requested')
               FilledButton(onPressed: () => _sendQuote(context, ref), child: const Text('Send quote')),
