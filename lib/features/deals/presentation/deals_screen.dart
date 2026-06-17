@@ -49,11 +49,45 @@ class DealsScreen extends ConsumerWidget {
                     itemBuilder: (_, i) {
                       final d = Map<String, dynamic>.from(list[i]);
                       final stage = (d['stage'] ?? 'lead').toString();
-                      return Card(child: ListTile(
-                        title: Text(d['listing_price'] != null ? aed.format(num.tryParse('${d['listing_price']}') ?? 0) : 'Deal'),
-                        subtitle: Text('Commission: ${d['commission_amount'] ?? '—'}'),
-                        trailing: _StageChip(stage: stage),
-                        onTap: () => _changeStage(context, ref, d['id'].toString(), stage),
+                      final id = d['id'].toString();
+                      final commAmt = num.tryParse('${d['commission_amount']}');
+                      final split = (d['commission_split'] ?? '').toString();
+                      final agreed = num.tryParse('${d['agreed_amount']}');
+                      final price = agreed ?? num.tryParse('${d['listing_price']}');
+                      return Card(child: Padding(
+                        padding: const EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x12, AppSpacing.x8, AppSpacing.x8),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Row(children: [
+                            Expanded(child: Text(price != null ? aed.format(price) : 'Deal',
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
+                            _StageChip(stage: stage),
+                          ]),
+                          const SizedBox(height: AppSpacing.x8),
+                          Row(children: [
+                            Icon(Icons.payments_outlined, size: 16, color: Theme.of(context).hintColor),
+                            const SizedBox(width: 6),
+                            Expanded(child: Text.rich(TextSpan(children: [
+                              const TextSpan(text: 'Commission  '),
+                              TextSpan(
+                                text: commAmt != null ? aed.format(commAmt) : 'Not set',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: commAmt != null ? AppColors.success : Theme.of(context).hintColor)),
+                              if (split.isNotEmpty) TextSpan(text: '   ·   split $split'),
+                            ]), style: TextStyle(fontSize: 13, color: Theme.of(context).textTheme.bodyMedium?.color))),
+                          ]),
+                          const SizedBox(height: AppSpacing.x4),
+                          Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                            TextButton.icon(
+                              onPressed: () => _editCommission(context, ref, id, commAmt, split),
+                              icon: const Icon(Icons.edit_outlined, size: 16),
+                              label: const Text('Commission')),
+                            TextButton.icon(
+                              onPressed: () => _changeStage(context, ref, id, stage),
+                              icon: const Icon(Icons.swap_horiz, size: 16),
+                              label: const Text('Stage')),
+                          ]),
+                        ]),
                       ));
                     }),
           ),
@@ -77,6 +111,46 @@ class DealsScreen extends ConsumerWidget {
     if (picked == null || picked == current) return;
     try {
       await ref.read(apiClientProvider).patch('/deals/$id/stage', body: {'stage': picked});
+      ref.invalidate(dealsProvider);
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _editCommission(BuildContext context, WidgetRef ref, String id, num? amount, String split) async {
+    final amtCtrl = TextEditingController(text: amount != null ? '$amount' : '');
+    final splitCtrl = TextEditingController(text: split);
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit commission'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(
+            controller: amtCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'Commission amount (AED)', prefixText: 'AED '),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          TextField(
+            controller: splitCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Split', hintText: 'e.g. 50% / 50%'),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+        ],
+      ),
+    );
+    if (saved != true) return;
+    final amtText = amtCtrl.text.trim();
+    final body = <String, dynamic>{
+      'commission_amount': amtText.isEmpty ? null : num.tryParse(amtText),
+      'commission_split': splitCtrl.text.trim().isEmpty ? null : splitCtrl.text.trim(),
+    };
+    try {
+      await ref.read(apiClientProvider).patch('/deals/$id', body: body);
       ref.invalidate(dealsProvider);
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
