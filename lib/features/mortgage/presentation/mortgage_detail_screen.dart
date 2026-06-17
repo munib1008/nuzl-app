@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/async_view.dart';
+import '../domain/finance_type.dart';
 import '../data/mortgage_repository.dart';
 
 /// Mortgage detail: progress summary + payment history + log a payment.
@@ -28,7 +29,7 @@ class MortgageDetailScreen extends ConsumerWidget {
         data: (d) {
           final s = Map<String, dynamic>.from(d['summary'] ?? {});
           final m = Map<String, dynamic>.from(d['mortgage'] ?? {});
-          final isl = m['finance_type'] == 'islamic';
+          final isl = isIslamicFinance('${m['finance_type'] ?? ''}');
           final rateValid = DateTime.tryParse('${m['rate_valid_until'] ?? ''}');
           double n(v) => v is num ? v.toDouble() : double.tryParse('$v') ?? 0;
           final progress = (n(s['progress_pct']) / 100).clamp(0, 1).toDouble();
@@ -36,6 +37,11 @@ class MortgageDetailScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(AppSpacing.x16),
             children: [
               Text(m['label'] ?? m['lender'] ?? 'Mortgage', style: t.headlineSmall),
+              const SizedBox(height: 2),
+              Text([
+                financeTypeLabel('${m['finance_type'] ?? ''}'),
+                if ('${m['lender'] ?? ''}'.trim().isNotEmpty) '${m['lender']}',
+              ].join('  ·  '), style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
               const SizedBox(height: AppSpacing.x16),
               // This month — simplified at-a-glance view (#17).
               Card(child: Padding(
@@ -101,6 +107,10 @@ class MortgageDetailScreen extends ConsumerWidget {
                   ]),
                 )),
               ],
+              if (n(s['term_months']) > 0 && n(s['monthly_payment']) > 0) ...[
+                const SizedBox(height: AppSpacing.x24),
+                _PaymentSchedule(m: m, s: s, isl: isl),
+              ],
               const SizedBox(height: AppSpacing.x24),
               _RateHistory(id: id, isl: isl),
               const SizedBox(height: AppSpacing.x24),
@@ -142,7 +152,7 @@ class MortgageDetailScreen extends ConsumerWidget {
   Future<void> _logPayment(BuildContext context, WidgetRef ref) async {
     // Relabel the split fields to match an Islamic statement when applicable.
     final d = ref.read(mortgageDetailProvider(id)).asData?.value;
-    final isl = d?['mortgage'] is Map && (d!['mortgage'] as Map)['finance_type'] == 'islamic';
+    final isl = d?['mortgage'] is Map && isIslamicFinance('${(d!['mortgage'] as Map)['finance_type'] ?? ''}');
     final amount = TextEditingController();
     final principal = TextEditingController();
     final profit = TextEditingController();
@@ -297,6 +307,61 @@ class _RateHistory extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
+  }
+}
+
+/// Forward-looking installment schedule (Month | Due | Amount | Status), generated
+/// client-side from the finance terms. Rows up to the paid count show as Paid; the
+/// rest are Pending. Windowed to ~12 rows around the current position.
+class _PaymentSchedule extends StatelessWidget {
+  const _PaymentSchedule({required this.m, required this.s, required this.isl});
+  final Map<String, dynamic> m;
+  final Map<String, dynamic> s;
+  final bool isl;
+
+  double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse('$v') ?? 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
+    final term = _n(s['term_months']).round();
+    final monthly = _n(s['monthly_payment']);
+    final paid = _n(s['payments_made']).round();
+    final first = DateTime.tryParse('${m['first_installment_date'] ?? m['start_date'] ?? ''}') ?? DateTime.now();
+    // Window: keep ~12 rows, biased to show a couple already-paid then upcoming.
+    const window = 12;
+    var start = (paid - 2).clamp(0, term > window ? term - window : 0);
+    final end = (start + window).clamp(0, term);
+    final rows = <Widget>[];
+    for (var i = start + 1; i <= end; i++) {
+      final due = DateTime(first.year, first.month + (i - 1), first.day);
+      final isPaid = i <= paid;
+      rows.add(Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(children: [
+          SizedBox(width: 88, child: Text(DateFormat('MMM yyyy').format(due), style: t.bodyMedium)),
+          Expanded(child: Text(aed.format(monthly), style: t.bodyMedium)),
+          Text(isPaid ? 'Paid' : 'Pending',
+              style: t.bodySmall?.copyWith(
+                  color: isPaid ? Theme.of(context).colorScheme.primary : Theme.of(context).hintColor,
+                  fontWeight: isPaid ? FontWeight.w700 : FontWeight.w400)),
+        ]),
+      ));
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(isl ? 'Rental schedule' : 'Payment schedule', style: t.titleMedium),
+        Text('$paid of $term paid', style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
+      ]),
+      const SizedBox(height: AppSpacing.x4),
+      ...rows,
+      if (end < term)
+        Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.x4),
+          child: Text('… ${term - end} more', style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
+        ),
+    ]);
   }
 }
 

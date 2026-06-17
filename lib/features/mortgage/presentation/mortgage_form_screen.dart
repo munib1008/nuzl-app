@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/util/mortgage_math.dart';
+import '../domain/finance_type.dart';
 import '../data/mortgage_repository.dart';
 
 final _ownerPropsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
@@ -53,12 +54,14 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
   DateTime? _firstInstallment;
   DateTime? _rateValidUntil;
   String _insuranceFreq = 'yearly';
-  String _financeType = 'islamic'; // UAE home finance is predominantly Ijarah
+  String _financeType = 'ijarah'; // UAE home finance is predominantly Ijarah
   String? _propertyId;
   bool _saving = false;
   String? _error;
 
-  bool get _isl => _financeType == 'islamic';
+  bool get _isl => isIslamicFinance(_financeType);
+  bool get _isCash => isCashPurchase(_financeType);
+  bool get _isDev => isDeveloperPlan(_financeType);
 
   // ── Statement-aware lexicon ────────────────────────────────────────────
   String get _financeLabel => _isl ? 'Finance amount (AED) *' : 'Loan amount (AED) *';
@@ -126,14 +129,21 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
     final propIns = _isl ? 'property Takaful' : 'property insurance';
     final lifeIns = _isl ? 'life Takaful' : 'life insurance';
     if (_label.text.trim().isEmpty) return 'Name this finance.';
-    if (_lender.text.trim().isEmpty) return 'Enter the bank / lender.';
-    if (pos(_principal) == null) return 'The $fin is required.';
-    if ((double.tryParse(_rate.text.trim()) ?? -1) < 0) return 'Enter a valid $rate.';
-    if ((int.tryParse(_years.text.trim()) ?? 0) <= 0) return 'Enter the $period in years.';
-    if (_loanStart == null) return 'Pick the ${_isl ? 'disbursal' : 'loan start'} date.';
-    if (_firstInstallment == null) return 'Pick the first ${_isl ? 'rental' : 'installment'} date.';
-    if (pos(_propInsurance) == null) return 'The $propIns is required.';
-    if (pos(_lifeInsurance) == null) return 'The $lifeIns is required.';
+    if (_lender.text.trim().isEmpty) {
+      return 'Enter the ${_isDev ? 'developer / provider' : _isCash ? 'seller / source' : 'bank / lender'}.';
+    }
+    if (!_isCash) {
+      if (pos(_principal) == null) return 'The $fin is required.';
+      if ((double.tryParse(_rate.text.trim()) ?? -1) < 0) return 'Enter a valid $rate.';
+      if ((int.tryParse(_years.text.trim()) ?? 0) <= 0) return 'Enter the $period in years.';
+      if (_loanStart == null) return 'Pick the ${_isl ? 'disbursal' : 'loan start'} date.';
+      if (_firstInstallment == null) return 'Pick the first ${_isl ? 'rental' : 'installment'} date.';
+      // Insurance/Takaful is required only for bank-financed products.
+      if (!_isDev) {
+        if (pos(_propInsurance) == null) return 'The $propIns is required.';
+        if (pos(_lifeInsurance) == null) return 'The $lifeIns is required.';
+      }
+    }
     if (pos(_projectValue) == null) return 'Total property value is required.';
     if (pos(_dld) == null) return 'DLD charges are required.';
     if (pos(_processing) == null) return 'Processing fees are required.';
@@ -162,25 +172,31 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
           {'label': r.label.text.trim(), 'amount': double.tryParse(r.amount.text) ?? 0}
     ];
     double n(TextEditingController c) => double.tryParse(c.text.trim()) ?? 0;
+    // A cash purchase carries no finance — zero out the loan fields (the inputs are
+    // hidden but their controllers still hold defaults).
+    final principal = _isCash ? 0.0 : n(_principal);
+    final rate = _isCash ? 0.0 : (double.tryParse(_rate.text) ?? 0);
+    final termMonths = _isCash ? 0 : (int.tryParse(_years.text) ?? 0) * 12;
+    final monthly = _isCash ? 0.0 : double.parse(_monthly.toStringAsFixed(2));
     try {
       await ref.read(mortgageRepositoryProvider).create({
         'finance_type': _financeType,
         'label': _label.text.trim(),
         'lender': _lender.text.trim(),
-        'principal': n(_principal),
-        'interest_rate': double.tryParse(_rate.text) ?? 0,
-        'term_months': (int.tryParse(_years.text) ?? 0) * 12,
-        'monthly_payment': double.parse(_monthly.toStringAsFixed(2)),
+        'principal': principal,
+        'interest_rate': rate,
+        'term_months': termMonths,
+        'monthly_payment': monthly,
         'total_project_value': n(_projectValue),
         'dld_charges': n(_dld),
         'processing_fees': n(_processing),
         'down_payment': n(_downPayment),
         if (splits.isNotEmpty) 'down_payment_splits': splits,
-        'start_date': iso.format(_loanStart!),
-        'first_installment_date': iso.format(_firstInstallment!),
+        if (_loanStart != null) 'start_date': iso.format(_loanStart!),
+        if (_firstInstallment != null) 'first_installment_date': iso.format(_firstInstallment!),
         if (_rateValidUntil != null) 'rate_valid_until': iso.format(_rateValidUntil!),
-        'property_insurance_cost': n(_propInsurance),
-        'life_insurance_cost': n(_lifeInsurance),
+        if (!_isCash) 'property_insurance_cost': n(_propInsurance),
+        if (!_isCash) 'life_insurance_cost': n(_lifeInsurance),
         'insurance_frequency': _insuranceFreq,
         if (_propertyId != null) 'property_id': _propertyId,
         if (_fixedMonths.text.trim().isNotEmpty) 'fixed_months': int.tryParse(_fixedMonths.text.trim()),
@@ -225,14 +241,14 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.x16),
         children: [
-          // Finance type — relabels the whole form (Islamic = Ijarah / profit / Takaful).
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'conventional', label: Text('Conventional'), icon: Icon(Icons.account_balance_outlined)),
-              ButtonSegment(value: 'islamic', label: Text('Islamic (Ijarah)'), icon: Icon(Icons.mosque_outlined)),
-            ],
-            selected: {_financeType},
-            onSelectionChanged: (s) => setState(() => _financeType = s.first),
+          // Finance type — relabels the whole form (Islamic = profit / finance / Takaful;
+          // Cash hides the finance section; Developer plan relabels the provider).
+          DropdownButtonFormField<String>(
+            initialValue: _financeType,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Finance type'),
+            items: [for (final f in kFinanceTypes) DropdownMenuItem(value: f.$1, child: Text(f.$2))],
+            onChanged: (v) => setState(() => _financeType = v ?? 'conventional'),
           ),
           const SizedBox(height: AppSpacing.x12),
           ref.watch(_ownerPropsProvider).maybeWhen(
@@ -268,8 +284,11 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
               labelText: 'Name this finance *', hintText: 'e.g. Star by Azizi 619')),
           const SizedBox(height: AppSpacing.x12),
           TextField(controller: _lender, decoration: InputDecoration(
-              labelText: 'Bank / lender *', hintText: _isl ? 'e.g. Mashreq Al Islami' : 'e.g. Emirates NBD')),
+              labelText: _isDev ? 'Developer / provider *' : _isCash ? 'Seller / source *' : 'Bank / lender *',
+              hintText: _isDev ? 'e.g. Emaar, DAMAC' : _isCash ? 'e.g. private seller' : (_isl ? 'e.g. Mashreq Al Islami' : 'e.g. Emirates NBD'))),
 
+          // The whole finance block is hidden for an outright cash purchase.
+          if (!_isCash) ...[
           // ── Finance (from your statement) ─────────────────────────
           _sectionTitle(_isl ? 'Finance (from your statement)' : 'Finance', t),
           _money(_principal, _financeLabel, live: true,
@@ -345,6 +364,7 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
                   decoration: InputDecoration(labelText: _isl ? 'Profit rate after (%)' : 'Rate after (%)')),
             ),
           ]),
+          ], // end if (!_isCash)
 
           // ── Purchase costs ────────────────────────────────────────
           _sectionTitle('Purchase costs', t),

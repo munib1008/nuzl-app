@@ -1,7 +1,7 @@
 class Mortgage {
   Mortgage({required this.id, this.label, this.lender, required this.principal,
     required this.interestRate, required this.termMonths, this.monthlyPayment,
-    this.outstanding, this.paymentsMade = 0});
+    this.outstanding, this.paymentsMade = 0, this.financeType});
   final String id;
   final String? label;
   final String? lender;
@@ -11,6 +11,7 @@ class Mortgage {
   final num? monthlyPayment;
   final num? outstanding;
   final int paymentsMade;
+  final String? financeType;
 
   factory Mortgage.fromJson(Map<String, dynamic> j) => Mortgage(
         id: j['id'].toString(),
@@ -22,6 +23,7 @@ class Mortgage {
         monthlyPayment: _n(j['monthly_payment']),
         outstanding: _n(j['outstanding']),
         paymentsMade: j['payments_made'] is int ? j['payments_made'] : int.tryParse('${j['payments_made']}') ?? 0,
+        financeType: j['finance_type']?.toString(),
       );
   static num? _n(v) => v is num ? v : num.tryParse('$v');
 }

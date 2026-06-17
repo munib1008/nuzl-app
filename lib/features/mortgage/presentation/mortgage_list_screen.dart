@@ -7,6 +7,7 @@ import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../data/mortgage_repository.dart';
 import '../domain/mortgage.dart';
+import '../domain/finance_type.dart';
 import '../../shell/app_shell.dart';
 
 /// INSIDE tracker — list of the user's saved mortgages + progress.
@@ -66,6 +67,7 @@ class _MortgageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
+    final isCash = isCashPurchase(m.financeType);
     final paid = m.outstanding != null && m.principal > 0
         ? (1 - (m.outstanding! / m.principal)).clamp(0, 1).toDouble()
         : 0.0;
@@ -78,20 +80,25 @@ class _MortgageCard extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Expanded(child: Text(m.label ?? m.lender ?? 'Mortgage', style: t.titleMedium)),
-              Text('${m.interestRate}%', style: t.bodySmall),
+              if (!isCash && m.interestRate > 0) Text('${m.interestRate}%', style: t.bodySmall),
             ]),
-            const SizedBox(height: AppSpacing.x4),
-            Text('${aed.format(m.monthlyPayment ?? 0)} / month  ·  ${(m.termMonths / 12).round()} yrs',
-                style: t.bodyMedium),
-            const SizedBox(height: AppSpacing.x12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppSpacing.rFull),
-              child: LinearProgressIndicator(
-                  value: paid, minHeight: 6, backgroundColor: Theme.of(context).dividerColor),
-            ),
-            const SizedBox(height: AppSpacing.x4),
-            Text('${(paid * 100).toStringAsFixed(1)}% paid  ·  ${aed.format(m.outstanding ?? m.principal)} left',
-                style: t.bodySmall),
+            const SizedBox(height: 2),
+            Text(financeTypeLabel(m.financeType),
+                style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
+            if (!isCash) ...[
+              const SizedBox(height: AppSpacing.x4),
+              Text('${aed.format(m.monthlyPayment ?? 0)} / month  ·  ${(m.termMonths / 12).round()} yrs',
+                  style: t.bodyMedium),
+              const SizedBox(height: AppSpacing.x12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppSpacing.rFull),
+                child: LinearProgressIndicator(
+                    value: paid, minHeight: 6, backgroundColor: Theme.of(context).dividerColor),
+              ),
+              const SizedBox(height: AppSpacing.x4),
+              Text('${(paid * 100).toStringAsFixed(1)}% paid  ·  ${aed.format(m.outstanding ?? m.principal)} left',
+                  style: t.bodySmall),
+            ],
           ]),
         ),
       ),
