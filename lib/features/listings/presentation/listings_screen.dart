@@ -6,7 +6,6 @@ import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
-import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/hover_lift.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../saved/saved_screen.dart';
@@ -49,6 +48,7 @@ class ListingsScreen extends ConsumerWidget {
     final mine = ref.watch(_fMine);
     final query = ref.watch(_fQuery).trim().toLowerCase();
     final myId = ref.watch(authControllerProvider).user?.id;
+    final t = Theme.of(context).textTheme;
 
     return Scaffold(
       appBar: NuzlAppBar(title: 'Properties', actions: [
@@ -90,7 +90,8 @@ class ListingsScreen extends ConsumerWidget {
               if (priceMax != null && priceOf(m) > priceMax) return false;
               if (query.isNotEmpty) {
                 final hay = '${m['community'] ?? ''} ${m['property_type'] ?? ''} '
-                        '${m['building_name'] ?? ''} ${m['description'] ?? ''}'
+                        '${m['building_name'] ?? ''} ${m['unit_no'] ?? ''} '
+                        '${m['ref_code'] ?? ''} ${m['description'] ?? ''}'
                     .toLowerCase();
                 if (!hay.contains(query)) return false;
               }
@@ -103,37 +104,92 @@ class ListingsScreen extends ConsumerWidget {
               items.sort((a, b) => priceOf(b).compareTo(priceOf(a)));
             }
 
+            // Popular communities (most-listed) for quick-search chips.
+            final counts = <String, int>{};
+            for (final m in all) {
+              final c = '${m['community'] ?? ''}'.trim();
+              if (c.isNotEmpty) counts[c] = (counts[c] ?? 0) + 1;
+            }
+            final topCommunities = (counts.keys.toList()
+                  ..sort((a, b) => counts[b]!.compareTo(counts[a]!)))
+                .take(6)
+                .toList();
+            final filtersActive = purpose != 'all' || type != 'all' || beds != null ||
+                priceMin != null || priceMax != null || query.isNotEmpty || mine;
+
+            Widget grid(List<Map<String, dynamic>> data) => LayoutBuilder(
+                  builder: (ctx, c) {
+                    final cols = c.maxWidth >= 980 ? 3 : (c.maxWidth >= 620 ? 2 : 1);
+                    final cardW = cols == 1 ? c.maxWidth : (c.maxWidth - (cols - 1) * AppSpacing.x16) / cols;
+                    return Wrap(
+                      spacing: AppSpacing.x16,
+                      runSpacing: AppSpacing.x16,
+                      children: data
+                          .map((m) => SizedBox(width: cardW, child: HoverLift(child: _ListingCard(m))))
+                          .toList(),
+                    );
+                  },
+                );
+
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
-                _FilterBar(types: types.toList()),
-                const SizedBox(height: AppSpacing.x12),
+                _DiscoveryHeader(
+                  types: types.toList(),
+                  popular: topCommunities,
+                  resultCount: items.length,
+                  filtersActive: filtersActive,
+                ),
+                const SizedBox(height: AppSpacing.x16),
                 if (items.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 40),
-                    child: EmptyState(
-                      icon: Icons.search_off_outlined,
-                      title: 'No matching properties',
-                      message: 'Try widening your filters to see more listings.',
+                  Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1100),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
+                          child: Center(
+                            child: Column(children: [
+                              const Icon(Icons.search_off_outlined, size: 40, color: AppColors.textMuted),
+                              const SizedBox(height: AppSpacing.x8),
+                              Text('No properties match your filters',
+                                  style: t.titleMedium, textAlign: TextAlign.center),
+                              const SizedBox(height: 4),
+                              Text('Try a higher budget, a wider area, or fewer bedrooms.',
+                                  textAlign: TextAlign.center, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                              if (filtersActive) ...[
+                                const SizedBox(height: AppSpacing.x12),
+                                FilledButton.icon(
+                                  onPressed: () {
+                                    ref.read(_fPurpose.notifier).state = 'all';
+                                    ref.read(_fType.notifier).state = 'all';
+                                    ref.read(_fBeds.notifier).state = null;
+                                    ref.read(_fPriceMin.notifier).state = null;
+                                    ref.read(_fPriceMax.notifier).state = null;
+                                    ref.read(_fQuery.notifier).state = '';
+                                    ref.read(_fMine.notifier).state = false;
+                                  },
+                                  icon: const Icon(Icons.refresh, size: 18),
+                                  label: const Text('Clear filters'),
+                                ),
+                              ],
+                            ]),
+                          ),
+                        ),
+                        if (all.isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.x8),
+                          Text('Recommended', style: t.titleMedium),
+                          const SizedBox(height: AppSpacing.x8),
+                          grid(all.take(6).toList()),
+                        ],
+                      ]),
                     ),
                   )
                 else
                   Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1100),
-                      child: LayoutBuilder(
-                        builder: (ctx, c) {
-                          final cols = c.maxWidth >= 980 ? 3 : (c.maxWidth >= 620 ? 2 : 1);
-                          final cardW = cols == 1 ? c.maxWidth : (c.maxWidth - (cols - 1) * AppSpacing.x16) / cols;
-                          return Wrap(
-                            spacing: AppSpacing.x16,
-                            runSpacing: AppSpacing.x16,
-                            children: items
-                                .map((m) => SizedBox(width: cardW, child: HoverLift(child: _ListingCard(m))))
-                                .toList(),
-                          );
-                        },
-                      ),
+                      child: grid(items),
                     ),
                   ),
               ],
@@ -145,26 +201,101 @@ class ListingsScreen extends ConsumerWidget {
   }
 }
 
-class _FilterBar extends ConsumerWidget {
-  const _FilterBar({required this.types});
+/// Premium discovery header: search (community / building / area / ref),
+/// popular-community shortcuts, explore-by-goal, the compact filter pills, and a
+/// live result count with a clear-all. Replaces the ERP-style filter row.
+class _DiscoveryHeader extends ConsumerStatefulWidget {
+  const _DiscoveryHeader({
+    required this.types,
+    required this.popular,
+    required this.resultCount,
+    required this.filtersActive,
+  });
   final List<String> types;
+  final List<String> popular;
+  final int resultCount;
+  final bool filtersActive;
+  @override
+  ConsumerState<_DiscoveryHeader> createState() => _DiscoveryHeaderState();
+}
+
+class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
+  late final TextEditingController _qc = TextEditingController(text: ref.read(_fQuery));
+  @override
+  void dispose() {
+    _qc.dispose();
+    super.dispose();
+  }
+
+  void _goal(String purpose, String? sort) {
+    ref.read(_fPurpose.notifier).state = purpose;
+    if (sort != null) ref.read(_fSort.notifier).state = sort;
+  }
+
+  void _clear() {
+    ref.read(_fPurpose.notifier).state = 'all';
+    ref.read(_fType.notifier).state = 'all';
+    ref.read(_fBeds.notifier).state = null;
+    ref.read(_fPriceMin.notifier).state = null;
+    ref.read(_fPriceMax.notifier).state = null;
+    ref.read(_fQuery.notifier).state = '';
+    ref.read(_fMine.notifier).state = false;
+  }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final q = ref.watch(_fQuery);
+    // Keep the field's text in sync when the query is set elsewhere (chips / clear).
+    if (_qc.text != q) {
+      _qc.value = TextEditingValue(text: q, selection: TextSelection.collapsed(offset: q.length));
+    }
+    Widget heading(String s) => Text(s,
+        style: t.labelSmall?.copyWith(color: AppColors.textMuted, fontWeight: FontWeight.w700, letterSpacing: 0.5));
+
+    const goals = [
+      ('Buy a home', Icons.home_outlined, 'sale', null),
+      ('Rent', Icons.vpn_key_outlined, 'rent', null),
+      ('Invest', Icons.trending_up, 'sale', 'price_asc'),
+    ];
+
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       TextField(
-        decoration: const InputDecoration(
-          hintText: 'Search area, community or building…',
-          prefixIcon: Icon(Icons.search),
+        controller: _qc,
+        onChanged: (v) => ref.read(_fQuery.notifier).state = v,
+        decoration: InputDecoration(
+          hintText: 'Search community, building, area or ref…',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: q.isEmpty
+              ? null
+              : IconButton(icon: const Icon(Icons.close), onPressed: () => ref.read(_fQuery.notifier).state = ''),
           isDense: true,
         ),
-        onChanged: (v) => ref.read(_fQuery.notifier).state = v,
       ),
-      const SizedBox(height: AppSpacing.x8),
+      if (widget.popular.isNotEmpty) ...[
+        const SizedBox(height: AppSpacing.x12),
+        heading('POPULAR SEARCHES'),
+        const SizedBox(height: 6),
+        Wrap(spacing: 6, runSpacing: 6, children: [
+          for (final c in widget.popular)
+            ActionChip(label: Text(c), onPressed: () => ref.read(_fQuery.notifier).state = c),
+        ]),
+      ],
+      const SizedBox(height: AppSpacing.x12),
+      heading('EXPLORE BY GOAL'),
+      const SizedBox(height: 6),
+      Wrap(spacing: 6, runSpacing: 6, children: [
+        for (final g in goals)
+          ActionChip(
+            avatar: Icon(g.$2, size: 16, color: AppColors.primary),
+            label: Text(g.$1),
+            onPressed: () => _goal(g.$3, g.$4),
+          ),
+      ]),
+      const SizedBox(height: AppSpacing.x12),
       SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
+        scrollDirection: Axis.horizontal,
+        child: Row(children: [
           _Drop<String>(
             label: 'Purpose',
             value: ref.watch(_fPurpose),
@@ -175,7 +306,7 @@ class _FilterBar extends ConsumerWidget {
           _Drop<String>(
             label: 'Type',
             value: ref.watch(_fType),
-            items: types.map((t) => (t, t == 'all' ? 'Any type' : _cap(t))).toList(),
+            items: widget.types.map((tp) => (tp, tp == 'all' ? 'Any type' : _cap(tp))).toList(),
             onChanged: (v) => ref.read(_fType.notifier).state = v ?? 'all',
           ),
           const SizedBox(width: AppSpacing.x8),
@@ -213,9 +344,9 @@ class _FilterBar extends ConsumerWidget {
           ),
           const SizedBox(width: AppSpacing.x8),
           _Drop<String>(
-            label: 'Sort',
+            label: 'Sort by',
             value: ref.watch(_fSort),
-            items: const [('latest', 'Latest'), ('price_asc', 'Price: low→high'), ('price_desc', 'Price: high→low')],
+            items: const [('latest', 'Newest'), ('price_asc', 'Price: low → high'), ('price_desc', 'Price: high → low')],
             onChanged: (v) => ref.read(_fSort.notifier).state = v ?? 'latest',
           ),
           if (ref.watch(personaProvider).canListProperty) ...[
@@ -226,9 +357,17 @@ class _FilterBar extends ConsumerWidget {
               onSelected: (v) => ref.read(_fMine.notifier).state = v,
             ),
           ],
-        ],
+        ]),
       ),
-      ),
+      const SizedBox(height: AppSpacing.x8),
+      Row(children: [
+        Expanded(
+          child: Text('${widget.resultCount} ${widget.resultCount == 1 ? 'property' : 'properties'} found',
+              style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+        ),
+        if (widget.filtersActive)
+          TextButton.icon(onPressed: _clear, icon: const Icon(Icons.close, size: 16), label: const Text('Clear')),
+      ]),
     ]);
   }
 }
