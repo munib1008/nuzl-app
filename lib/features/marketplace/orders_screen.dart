@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
+import '../messages/data/messaging_repository.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
@@ -91,6 +93,44 @@ class _OrderCard extends ConsumerWidget {
     }
   }
 
+  Future<void> _message(BuildContext context, WidgetRef ref, String providerId) async {
+    try {
+      final convId = await ref
+          .read(messagingRepositoryProvider)
+          .startDirect(providerId, contextTable: 'marketplace_orders', contextId: '${o['id']}');
+      if (convId.isNotEmpty && context.mounted) context.push('/messages/$convId');
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _dispute(BuildContext context, WidgetRef ref) async {
+    final reason = TextEditingController();
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Raise a dispute',
+      children: [
+        TextField(controller: reason, maxLines: 3, decoration: const InputDecoration(labelText: 'What went wrong?')),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Submit')),
+      ],
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(apiClientProvider)
+          .post('/marketplace/orders/${o['id']}/dispute', body: {'reason': reason.text.trim()});
+      ref.invalidate(myOrdersProvider);
+      ref.invalidate(incomingOrdersProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dispute submitted')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
   Future<void> _rate(BuildContext context, WidgetRef ref) async {
     var stars = 5;
     final review = TextEditingController();
@@ -144,6 +184,8 @@ class _OrderCard extends ConsumerWidget {
     final curIdx = flow.indexOf(status);
     final next = nextStatus(kind, status);
     final rating = int.tryParse('${o['rating'] ?? ''}');
+    final disputed = o['disputed'] == true;
+    final providerId = '${o['provider_id'] ?? ''}';
 
     return Card(
       child: Padding(
@@ -162,6 +204,10 @@ class _OrderCard extends ConsumerWidget {
             ),
             const SizedBox(width: AppSpacing.x8),
             Expanded(child: Text(title, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis)),
+            if (disputed) ...[
+              const StatusBadge('Disputed', tone: BadgeTone.danger),
+              const SizedBox(width: 4),
+            ],
             StatusBadge(orderStatusLabels[status] ?? status, tone: _statusTone(status)),
           ]),
           if (counterpart.isNotEmpty || price != null || created != null) ...[
@@ -193,29 +239,31 @@ class _OrderCard extends ConsumerWidget {
                 Icon(i <= rating ? Icons.star : Icons.star_border, size: 14, color: AppColors.accentGold),
             ]),
           ],
-          // Actions
-          if (!orderIsTerminal(status)) ...[
-            const SizedBox(height: AppSpacing.x8),
-            Row(children: [
-              if (!mine && next != null)
-                FilledButton(
-                  onPressed: () => _patch(context, ref, next),
-                  child: Text('Mark ${orderStatusLabels[next] ?? next}'),
-                ),
-              if (!mine && next != null) const SizedBox(width: AppSpacing.x8),
-              OutlinedButton(
-                onPressed: () => _patch(context, ref, 'cancelled'),
-                child: const Text('Cancel'),
+          // Actions (role-aware)
+          const SizedBox(height: AppSpacing.x8),
+          Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x4, children: [
+            if (!mine && next != null)
+              FilledButton(
+                onPressed: () => _patch(context, ref, next),
+                child: Text('Mark ${orderStatusLabels[next] ?? next}'),
               ),
-            ]),
-          ] else if (mine && orderIsRateable(status) && rating == null) ...[
-            const SizedBox(height: AppSpacing.x8),
-            OutlinedButton.icon(
-              onPressed: () => _rate(context, ref),
-              icon: const Icon(Icons.star_outline, size: 18),
-              label: const Text('Rate'),
-            ),
-          ],
+            if (mine && providerId.isNotEmpty)
+              OutlinedButton.icon(
+                onPressed: () => _message(context, ref, providerId),
+                icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                label: const Text('Message'),
+              ),
+            if (mine && orderIsRateable(status) && rating == null)
+              OutlinedButton.icon(
+                onPressed: () => _rate(context, ref),
+                icon: const Icon(Icons.star_outline, size: 16),
+                label: const Text('Rate'),
+              ),
+            if (mine && !orderIsTerminal(status) && !disputed)
+              OutlinedButton(onPressed: () => _dispute(context, ref), child: const Text('Dispute')),
+            if (!orderIsTerminal(status))
+              OutlinedButton(onPressed: () => _patch(context, ref, 'cancelled'), child: const Text('Cancel')),
+          ]),
         ]),
       ),
     );
