@@ -9,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/theme_mode_provider.dart';
 import '../../core/widgets/fade_in.dart';
 import '../../core/widgets/gradient_button.dart';
+import '../../core/widgets/hover_lift.dart';
 import '../../core/widgets/nuzl_logo.dart';
 import '../mortgage/presentation/calculator_screen.dart';
 
@@ -709,10 +710,12 @@ class _FeaturedListings extends ConsumerWidget {
                     final w = wide ? 320.0 : MediaQuery.of(context).size.width - (AppSpacing.x24 * 2);
                     return FadeIn(
                       delayMs: 60 * e.key,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(AppSpacing.rCard),
-                        onTap: () => context.go('/login'),
-                        child: _ListingCard(data: Map<String, dynamic>.from(e.value), width: w),
+                      child: HoverLift(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(AppSpacing.rCard),
+                          onTap: () => context.go('/login'),
+                          child: _ListingCard(data: Map<String, dynamic>.from(e.value), width: w),
+                        ),
                       ),
                     );
                   }).toList()),

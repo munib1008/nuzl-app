@@ -7,6 +7,8 @@ import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/hover_lift.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../saved/saved_searches.dart';
 import '../../shell/app_shell.dart';
@@ -70,7 +72,8 @@ class ListingsScreen extends ConsumerWidget {
       body: RefreshIndicator(
         onRefresh: () async => ref.refresh(listingsRawProvider.future),
         child: listings.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const Padding(
+              padding: EdgeInsets.all(AppSpacing.x16), child: SkeletonListingGrid()),
           error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
           data: (raw) {
             final all = raw.map((e) => Map<String, dynamic>.from(e)).toList();
@@ -125,7 +128,7 @@ class ListingsScreen extends ConsumerWidget {
                             spacing: AppSpacing.x16,
                             runSpacing: AppSpacing.x16,
                             children: items
-                                .map((m) => SizedBox(width: cardW, child: _ListingCard(m)))
+                                .map((m) => SizedBox(width: cardW, child: HoverLift(child: _ListingCard(m))))
                                 .toList(),
                           );
                         },
