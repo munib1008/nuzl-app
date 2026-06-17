@@ -609,43 +609,40 @@ class _PropertyMiniCard extends StatelessWidget {
     final community = '${m['community'] ?? ''}';
     return SizedBox(
       width: 230,
-      child: InkWell(
-        onTap: () => context.go('/listings/$id'),
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Theme.of(context).dividerColor),
-          ),
+      child: HoverLift(
+        child: Card(
           clipBehavior: Clip.antiAlias,
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Stack(children: [
-              cover.isNotEmpty
-                  ? Image.network(cover, height: 110, width: double.infinity, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(height: 110, color: AppColors.surface2))
-                  : Container(height: 110, width: double.infinity, color: AppColors.surface2,
-                      child: const Icon(Icons.apartment_outlined, color: AppColors.textMuted)),
-              Positioned(
-                top: 8, left: 8,
-                child: StatusBadge(isRent ? 'For Rent' : 'For Sale', tone: isRent ? BadgeTone.warning : BadgeTone.success),
+          child: InkWell(
+            onTap: () => context.go('/listings/$id'),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Stack(children: [
+                cover.isNotEmpty
+                    ? Image.network(cover, height: 110, width: double.infinity, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Container(height: 110, color: AppColors.surface2))
+                    : Container(height: 110, width: double.infinity, color: AppColors.surface2,
+                        child: const Icon(Icons.apartment_outlined, color: AppColors.textMuted)),
+                Positioned(
+                  top: 8, left: 8,
+                  child: StatusBadge(isRent ? 'For Rent' : 'For Sale', tone: isRent ? BadgeTone.warning : BadgeTone.success),
+                ),
+              ]),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.x12),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  if (money.isNotEmpty)
+                    Text(money, style: t.titleSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                  if (community.isNotEmpty)
+                    Text(community, style: t.bodySmall?.copyWith(color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    if (beds != null) _spec(Icons.bed_outlined, '$beds'),
+                    if (baths != null) _spec(Icons.bathtub_outlined, '$baths'),
+                    if (sqft != null) _spec(Icons.straighten, '$sqft'),
+                  ]),
+                ]),
               ),
             ]),
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.x12),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                if (money.isNotEmpty)
-                  Text(money, style: t.titleSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
-                if (community.isNotEmpty)
-                  Text(community, style: t.bodySmall?.copyWith(color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 6),
-                Row(children: [
-                  if (beds != null) _spec(Icons.bed_outlined, '$beds'),
-                  if (baths != null) _spec(Icons.bathtub_outlined, '$baths'),
-                  if (sqft != null) _spec(Icons.straighten, '$sqft'),
-                ]),
-              ]),
-            ),
-          ]),
+          ),
         ),
       ),
     );
