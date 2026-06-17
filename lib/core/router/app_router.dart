@@ -27,6 +27,7 @@ import '../../features/leads/presentation/post_lead_screen.dart';
 import '../../features/deals/presentation/deals_screen.dart';
 import '../../features/customers/customers_screen.dart';
 import '../../features/contacts/contacts_screen.dart';
+import '../../features/marketplace/orders_screen.dart';
 import '../../features/team/team_screen.dart';
 import '../../features/admin/view_as_screen.dart';
 import '../../features/rentals/rentals_screen.dart';
@@ -168,6 +169,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/saved', builder: (_, __) => const SavedScreen()),
       GoRoute(path: '/saved-searches', builder: (_, __) => const SavedSearchesScreen()),
       GoRoute(path: '/marketplace', builder: (_, __) => const MarketplaceScreen()),
+      GoRoute(path: '/orders', builder: (_, __) => const OrdersScreen()),
       GoRoute(path: '/network', builder: (_, __) => const NetworkScreen()),
       GoRoute(path: '/organizations', builder: (_, __) => const OrganizationsScreen()),
       GoRoute(path: '/verification-queue', builder: (_, __) => const VerificationQueueScreen()),

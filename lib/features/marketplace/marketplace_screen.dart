@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
@@ -156,6 +157,7 @@ class _ItemCard extends ConsumerWidget {
     final category = '${m['category'] ?? ''}';
     final contact = '${m['contact'] ?? ''}';
     final img = '${m['image_url'] ?? ''}';
+    final isProduct = '${m['kind']}' == 'product';
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x12),
@@ -201,7 +203,9 @@ class _ItemCard extends ConsumerWidget {
             ] else
               const Spacer(),
             const SizedBox(width: AppSpacing.x8),
-            FilledButton(onPressed: () => _request(context, ref), child: const Text('Request')),
+            TextButton(onPressed: () => _order(context, ref, quote: true), child: const Text('Quote')),
+            const SizedBox(width: AppSpacing.x4),
+            FilledButton(onPressed: () => _order(context, ref), child: Text(isProduct ? 'Buy' : 'Book')),
           ]),
         ]),
       ),
@@ -215,11 +219,18 @@ class _ItemCard extends ConsumerWidget {
         child: const Icon(Icons.storefront_outlined, color: AppColors.textMuted),
       );
 
-  Future<void> _request(BuildContext context, WidgetRef ref) async {
+  /// Place an order (product) or book a service. `quote` records a quotation request.
+  Future<void> _order(BuildContext context, WidgetRef ref, {bool quote = false}) async {
     try {
-      await ref.read(apiClientProvider).post('/marketplace/${m['id']}/request');
+      await ref.read(apiClientProvider).post('/marketplace/orders', body: {
+        'item_id': m['id'],
+        if (quote) 'note': 'Quotation requested',
+      });
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request sent — the provider will reach out.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(quote ? 'Quotation requested — track it in Orders.' : 'Order placed — track it in Orders.'),
+          action: SnackBarAction(label: 'View', onPressed: () => context.go('/orders')),
+        ));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));

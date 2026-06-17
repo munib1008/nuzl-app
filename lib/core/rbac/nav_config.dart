@@ -77,6 +77,7 @@ List<NavItem> navItemsFor(Persona p) {
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
+        NavItem(Icons.receipt_long_outlined, 'Orders', '/orders'),
         NavItem(Icons.contacts_outlined, 'Contacts', '/contacts'),
         NavItem(Icons.event_note_outlined, 'Activities', '/activities'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
@@ -85,6 +86,7 @@ List<NavItem> navItemsFor(Persona p) {
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
+        NavItem(Icons.receipt_long_outlined, 'Orders', '/orders'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
         NavItem(Icons.contacts_outlined, 'Contacts', '/contacts'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
@@ -125,6 +127,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
+        NavItem(Icons.receipt_long_outlined, 'Orders', '/orders'),
         NavItem(Icons.bookmark_outline, 'Saved', '/saved'),
         NavItem(Icons.account_balance_outlined, 'My Mortgage', '/mortgages'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
