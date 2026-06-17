@@ -80,7 +80,8 @@ final _buyerKpisProvider = FutureProvider.autoDispose<Map<String, int>>((ref) as
 
 /// Monthly sales series for the Sales overview chart. Scope is decided by the
 /// API from the caller's role (own deals for an agent, whole-org for a broker /
-/// admin). Falls back to a representative sample so the panel is never blank.
+/// admin). Returns an EMPTY series when there's no real data — the card then
+/// shows an honest empty state rather than fabricated numbers (audit 2026-06-17).
 final _salesSeriesProvider = FutureProvider.autoDispose<List<double>>((ref) async {
   final persona = ref.watch(personaProvider);
   final scope = (persona == Persona.broker || persona == Persona.admin) ? 'org' : 'agent';
@@ -91,7 +92,7 @@ final _salesSeriesProvider = FutureProvider.autoDispose<List<double>>((ref) asyn
       if (s.length >= 2 && s.any((v) => v > 0)) return s;
     }
   } catch (_) {}
-  return const [22, 30, 26, 38, 34, 46, 44, 58, 54, 66];
+  return const <double>[];
 });
 
 final _recentListingsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
@@ -408,21 +409,37 @@ class _SalesCard extends ConsumerWidget {
   final String title;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final primary = ref.watch(_salesSeriesProvider).asData?.value ??
-        const [22, 30, 26, 38, 34, 46, 44, 58, 54, 66];
-    // Secondary trend line trails the primary for visual depth.
-    final secondary = primary.map((v) => v * 0.82).toList();
+    final t = Theme.of(context).textTheme;
+    final async = ref.watch(_salesSeriesProvider);
     return _PanelCard(
       title: title,
       child: SizedBox(
         height: 140,
-        child: Stack(children: [
-          Positioned.fill(child: CustomPaint(painter: _SparkPainter(secondary, AppColors.secondary))),
-          Positioned.fill(child: CustomPaint(painter: _SparkPainter(primary, AppColors.primary))),
-        ]),
+        child: async.when(
+          loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          error: (_, __) => _empty(t),
+          data: (series) {
+            final hasData = series.length >= 2 && series.any((v) => v > 0);
+            if (!hasData) return _empty(t);
+            final secondary = series.map((v) => v * 0.82).toList();
+            return Stack(children: [
+              Positioned.fill(child: CustomPaint(painter: _SparkPainter(secondary, AppColors.secondary))),
+              Positioned.fill(child: CustomPaint(painter: _SparkPainter(series, AppColors.primary))),
+            ]);
+          },
+        ),
       ),
     );
   }
+
+  Widget _empty(TextTheme t) => Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.show_chart, size: 28, color: AppColors.textSubtle),
+          const SizedBox(height: AppSpacing.x8),
+          Text('No sales recorded yet', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+          Text('Closed deals will chart here.', style: t.bodySmall?.copyWith(color: AppColors.textSubtle)),
+        ]),
+      );
 }
 
 /// Owner-only ROI summary. Derives a simple return on the equity held across the
@@ -690,6 +707,27 @@ class _QuickActions extends StatelessWidget {
           ('Saved properties', Icons.bookmark_outline, '/saved'),
           ('Messages', Icons.chat_bubble_outline, '/messages'),
           ('Viewings', Icons.event_available_outlined, '/viewings'),
+        ],
+      Persona.tenant => [
+          ('My tenancy', Icons.vpn_key_outlined, '/rentals'),
+          ('Request maintenance', Icons.build_outlined, '/maintenance'),
+          ('Documents', Icons.folder_outlined, '/documents'),
+          ('Messages', Icons.chat_bubble_outline, '/messages'),
+        ],
+      Persona.salesperson => [
+          ('Marketplace', Icons.storefront_outlined, '/marketplace'),
+          ('Orders', Icons.receipt_long_outlined, '/orders'),
+          ('Activities', Icons.event_note_outlined, '/activities'),
+        ],
+      Persona.provider => [
+          ('Marketplace', Icons.storefront_outlined, '/marketplace'),
+          ('Orders', Icons.receipt_long_outlined, '/orders'),
+          ('Team', Icons.groups_outlined, '/team'),
+        ],
+      Persona.bank => [
+          ('Mortgages', Icons.account_balance_outlined, '/mortgages'),
+          ('Reports', Icons.insights_outlined, '/reports'),
+          ('Contacts', Icons.contacts_outlined, '/contacts'),
         ],
       _ => [
           ('Add listing', Icons.add_home_work_outlined, '/properties/new'),
