@@ -153,6 +153,11 @@ class _Detail extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.x4),
                         Text('${l['community']}', style: t.bodyLarge?.copyWith(color: AppColors.textMuted)),
                       ],
+                      if ('${l['ref_code'] ?? ''}'.trim().isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text('Ref ${l['ref_code']}',
+                            style: t.bodySmall?.copyWith(color: AppColors.textSubtle, fontWeight: FontWeight.w600)),
+                      ],
                       const SizedBox(height: AppSpacing.x8),
                       ListingRibbons(listing: l),
                       // Owner-management actions (edit / documents / ownership / publish /

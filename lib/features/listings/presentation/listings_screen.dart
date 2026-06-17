@@ -395,6 +395,9 @@ class _ListingCard extends StatelessWidget {
                 if (community.isNotEmpty)
                   Text(community, style: t.bodySmall?.copyWith(color: AppColors.textMuted),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
+                if ('${l['ref_code'] ?? ''}'.trim().isNotEmpty)
+                  Text('Ref ${l['ref_code']}',
+                      style: t.bodySmall?.copyWith(color: AppColors.textSubtle, fontWeight: FontWeight.w600)),
                 const SizedBox(height: AppSpacing.x4),
                 Row(children: [
                   Expanded(

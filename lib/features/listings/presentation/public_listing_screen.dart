@@ -110,6 +110,7 @@ class _Body extends ConsumerWidget {
         : (ptype.isNotEmpty ? _cap(ptype) : 'Property');
     final desc = '${m['description'] ?? ''}'.trim();
     final verified = '${m['ownership_status']}' == 'verified';
+    final refCode = '${m['ref_code'] ?? ''}'.trim();
     final est = _estMonthly(price);
 
     final highlights = <String>[
@@ -140,6 +141,10 @@ class _Body extends ConsumerWidget {
           const SizedBox(width: 4),
           Text(community, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
         ]),
+      ],
+      if (refCode.isNotEmpty) ...[
+        const SizedBox(height: 4),
+        Text('Ref $refCode', style: t.bodySmall?.copyWith(color: AppColors.textSubtle, fontWeight: FontWeight.w600)),
       ],
       const SizedBox(height: AppSpacing.x12),
       Text('${aed.format(price)}${isRent ? ' / yr' : ''}',
