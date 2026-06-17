@@ -9,6 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/sticky_save_bar.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../profile/presentation/profile_completion_banner.dart';
 import '../../shell/app_shell.dart';
 import '../data/listings_repository.dart' show listingsProvider, amenitiesProvider;
 import 'listings_screen.dart' show listingsRawProvider;
@@ -245,6 +246,16 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
 
   Future<void> _save() async {
     final editing = widget.editId != null;
+    // Profile-completion gate (#15): a complete profile is required to post a new listing.
+    if (!editing) {
+      final pc = await ref.read(profileCompletionProvider.future).catchError((_) => <String, dynamic>{'complete': true});
+      if (pc['complete'] != true) {
+        final missing = (pc['missing'] is List) ? (pc['missing'] as List).join(', ') : 'some fields';
+        if (!mounted) return;
+        setState(() => error = 'Complete your profile ($missing) before posting — see Profile.');
+        return;
+      }
+    }
     // Building name + unit number are mandatory (owner #1). Unit number is only
     // captured on create (it identifies the property), so require it there.
     if (building.text.trim().isEmpty) {

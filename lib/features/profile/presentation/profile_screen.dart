@@ -55,6 +55,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final whatsapp = TextEditingController();
   final bio = TextEditingController();
   final reraBrn = TextEditingController();
+  final nationality = TextEditingController();
+  final country = TextEditingController();
+  final city = TextEditingController();
   final areas = <String>{};
   final languages = <String>{};
   final specialties = <String>{};
@@ -65,7 +68,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void dispose() {
     fullName.dispose(); company.dispose(); phone.dispose(); whatsapp.dispose();
-    bio.dispose(); reraBrn.dispose(); super.dispose();
+    bio.dispose(); reraBrn.dispose(); nationality.dispose(); country.dispose(); city.dispose();
+    super.dispose();
   }
 
   void _markDirty() { if (!_dirty) setState(() => _dirty = true); }
@@ -105,6 +109,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         'whatsapp': whatsapp.text.trim(),
         'bio': bio.text.trim(),
         'rera_brn': reraBrn.text.trim().isEmpty ? null : reraBrn.text.trim(),
+        'nationality': nationality.text.trim(),
+        'country': country.text.trim(),
+        'city': city.text.trim(),
         'areas': areas.toList(),
         'languages': languages.toList(),
         'specialties': specialties.toList(),
@@ -113,6 +120,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       // header user, so the user sees confirmed values.
       if (res is Map) _applyServer(Map<String, dynamic>.from(res));
       ref.invalidate(_meProvider);
+      ref.invalidate(profileCompletionProvider);
       await ref.read(authControllerProvider.notifier).bootstrap();
       _dirty = false;
       if (mounted) {
@@ -133,6 +141,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     whatsapp.text = '${m['whatsapp'] ?? ''}';
     bio.text = '${m['bio'] ?? ''}';
     reraBrn.text = '${m['rera_brn'] ?? ''}';
+    nationality.text = '${m['nationality'] ?? ''}';
+    country.text = '${m['country'] ?? ''}';
+    city.text = '${m['city'] ?? ''}';
     void fill(Set<String> set, dynamic v) { set.clear(); if (v is List) set.addAll(v.map((e) => '$e')); }
     fill(areas, m['areas']); fill(languages, m['languages']); fill(specialties, m['specialties']);
   }
@@ -245,6 +256,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     whatsapp.text = '${m['whatsapp'] ?? ''}';
     bio.text = '${m['bio'] ?? ''}';
     reraBrn.text = '${m['rera_brn'] ?? ''}';
+    nationality.text = '${m['nationality'] ?? ''}';
+    country.text = '${m['country'] ?? ''}';
+    city.text = '${m['city'] ?? ''}';
     void fill(Set<String> set, dynamic v) { if (v is List) set.addAll(v.map((e) => '$e')); }
     fill(areas, m['areas']); fill(languages, m['languages']); fill(specialties, m['specialties']);
   }
@@ -379,6 +393,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: AppSpacing.x12),
                     TextField(controller: whatsapp, onChanged: (_) => _markDirty(), keyboardType: TextInputType.phone,
                         decoration: const InputDecoration(labelText: 'WhatsApp', hintText: '+971 …', prefixIcon: Icon(Icons.chat_outlined))),
+                    const SizedBox(height: AppSpacing.x12),
+                    TextField(controller: nationality, onChanged: (_) => _markDirty(),
+                        decoration: const InputDecoration(labelText: 'Nationality *', prefixIcon: Icon(Icons.flag_outlined))),
+                    const SizedBox(height: AppSpacing.x12),
+                    Row(children: [
+                      Expanded(child: TextField(controller: country, onChanged: (_) => _markDirty(),
+                          decoration: const InputDecoration(labelText: 'Country *'))),
+                      const SizedBox(width: AppSpacing.x12),
+                      Expanded(child: TextField(controller: city, onChanged: (_) => _markDirty(),
+                          decoration: const InputDecoration(labelText: 'City *'))),
+                    ]),
                   ]),
                   const SizedBox(height: AppSpacing.x16),
 
