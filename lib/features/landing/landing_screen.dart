@@ -484,19 +484,27 @@ class _Ecosystem extends StatefulWidget {
 }
 
 class _EcosystemState extends State<_Ecosystem> {
-  // Six parties, one shared property record. Material icons approximate the
-  // bespoke NUZL pillar marks (custom SVGs tracked separately).
+  // The Developer is the ORIGIN of inventory — projects become property records.
+  // Everyone else (incl. agents, who are a sales channel, not the owner of stock)
+  // connects to that record. Material icons approximate the bespoke NUZL marks.
+  static const _developer = (
+    role: 'Developer',
+    title: 'Project creation & inventory',
+    icon: Icons.domain_outlined,
+    tags: ['Communities', 'Projects', 'Inventory', 'Sales channels', 'Reservations', 'Handover'],
+    color: AppColors.info,
+  );
   static const _pillars = [
     (role: 'Owner', title: 'Property Portfolio', icon: Icons.apartment, tags: ['Ownership', 'Tenancy', 'Maintenance'], color: AppColors.secondary),
-    (role: 'Agent', title: 'Deals & Viewings', icon: Icons.handshake_outlined, tags: ['Listings', 'Viewings', 'CRM'], color: AppColors.primary),
+    (role: 'Agent', title: 'Sales Channel', icon: Icons.handshake_outlined, tags: ['Listings', 'Viewings', 'Offers'], color: AppColors.primary),
     (role: 'Customer', title: 'Property Search', icon: Icons.search, tags: ['Buy', 'Rent', 'Invest'], color: AppColors.success),
-    (role: 'Service Provider', title: 'Maintenance', icon: Icons.build_outlined, tags: ['Repair', 'Cleaning', 'Inspection'], color: AppColors.warning),
-    (role: 'Supplier', title: 'Products', icon: Icons.inventory_2_outlined, tags: ['Furniture', 'Materials', 'Equipment'], color: AppColors.accentGold),
     (role: 'Tenant', title: 'Lease Management', icon: Icons.description_outlined, tags: ['Rent', 'Payments', 'Documents'], color: AppColors.primaryBright),
-    (role: 'Developer', title: 'Project Inventory', icon: Icons.domain_outlined, tags: ['Units', 'Sales progress', 'Handover'], color: AppColors.info),
+    (role: 'Supplier', title: 'Products', icon: Icons.inventory_2_outlined, tags: ['Furniture', 'Materials', 'Equipment'], color: AppColors.accentGold),
+    (role: 'Service Provider', title: 'Maintenance', icon: Icons.build_outlined, tags: ['Repair', 'Cleaning', 'Inspection'], color: AppColors.warning),
   ];
 
   int? _active; // hovered pillar — drives the central record's highlight
+  bool _devActive = false; // hovered developer origin card
 
   @override
   Widget build(BuildContext context) {
@@ -513,13 +521,13 @@ class _EcosystemState extends State<_Ecosystem> {
       context,
       title: 'One property. One record. One ecosystem.',
       subtitle:
-          'Ownership, leasing, finance, maintenance, services and transactions all operate from the same property record.',
+          'Developers create the inventory. Every project becomes a property record that owners, agents, customers, tenants, suppliers and service providers all work from.',
       bg: _surface(context),
       child: wide ? _wide(context, cards) : _stacked(context, cards),
     );
   }
 
-  // Wide: two rows of three pillars connected to a central PROPERTY RECORD band.
+  // Wide: Developer origin → PROPERTY RECORD → two rows of three participants.
   Widget _wide(BuildContext context, List<Widget> cards) {
     Widget rowOf(Iterable<Widget> items) {
       final list = items.toList();
@@ -531,18 +539,21 @@ class _EcosystemState extends State<_Ecosystem> {
       ]);
     }
 
-    // Split around the central record: first three above, the rest below.
     return Column(children: [
-      rowOf(cards.take(3)),
-      _connector(context),
+      Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 540), child: _originCard(context))),
+      _creates(context),
       _recordBand(context),
       _connector(context),
+      rowOf(cards.take(3)),
+      const SizedBox(height: AppSpacing.x16),
       rowOf(cards.skip(3)),
     ]);
   }
 
   Widget _stacked(BuildContext context, List<Widget> cards) {
     return Column(children: [
+      _originCard(context),
+      _creates(context),
       _recordBand(context),
       const SizedBox(height: AppSpacing.x16),
       LayoutBuilder(builder: (ctx, cons) {
@@ -557,6 +568,93 @@ class _EcosystemState extends State<_Ecosystem> {
     ]);
   }
 
+  // Developer = the inventory source. Distinct from the participant pillars: it
+  // sits above the record with a "SOURCE OF INVENTORY" mark and a "creates" link.
+  Widget _originCard(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    const dev = AppColors.info;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _devActive = true),
+      onExit: (_) => setState(() => _devActive = false),
+      child: HoverLift(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.all(AppSpacing.x20),
+          decoration: BoxDecoration(
+            color: _surface(context),
+            borderRadius: BorderRadius.circular(_kCardR),
+            border: Border.all(color: _devActive ? dev : _border(context), width: _devActive ? 1.5 : 1),
+            boxShadow: _devActive
+                ? [BoxShadow(color: dev.withValues(alpha: 0.25), blurRadius: 24, offset: const Offset(0, 10))]
+                : _cardShadow(context),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                    color: dev.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rMd)),
+                child: Icon(_developer.icon, color: dev, size: 24),
+              ),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, runSpacing: 4, children: [
+                    Text('DEVELOPER',
+                        style: t.labelSmall?.copyWith(color: dev, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                          color: dev.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                      child: Text('SOURCE OF INVENTORY',
+                          style: t.labelSmall?.copyWith(color: dev, fontWeight: FontWeight.w700, fontSize: 9, letterSpacing: 0.5)),
+                    ),
+                  ]),
+                  Text(_developer.title,
+                      style: t.titleSmall?.copyWith(color: _onBg(context), fontWeight: FontWeight.w700)),
+                ]),
+              ),
+            ]),
+            const SizedBox(height: AppSpacing.x12),
+            Wrap(spacing: 6, runSpacing: 6, children: [
+              for (final tag in _developer.tags)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                      color: _isDark(context) ? Colors.white10 : AppColors.surface2,
+                      borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                  child: Text(tag, style: t.labelSmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w500)),
+                ),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  // Developer → record link, labelled "creates".
+  Widget _creates(BuildContext context) {
+    final on = _devActive ? AppColors.info : _muted(context);
+    return Center(
+      child: Column(children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 2, height: 14,
+          margin: const EdgeInsets.only(top: AppSpacing.x4),
+          color: _devActive ? AppColors.info : _border(context),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Text('CREATES',
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: on, fontWeight: FontWeight.w700, letterSpacing: 1.5, fontSize: 10)),
+        ),
+        Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: on),
+      ]),
+    );
+  }
+
   Widget _connector(BuildContext context) => Center(
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -566,11 +664,12 @@ class _EcosystemState extends State<_Ecosystem> {
         ),
       );
 
-  // The source of truth at the centre — glows in the hovered pillar's colour.
+  // The source of truth at the centre — glows in the hovered party's colour.
   Widget _recordBand(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final active = _active != null ? _pillars[_active!].color : null;
-    final activeRole = _active != null ? _pillars[_active!].role : null;
+    final active = _devActive ? AppColors.info : (_active != null ? _pillars[_active!].color : null);
+    final activeRole = _devActive ? 'Developer' : (_active != null ? _pillars[_active!].role : null);
+    final verb = _devActive ? 'creates this record' : 'works from this record';
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOut,
@@ -597,7 +696,7 @@ class _EcosystemState extends State<_Ecosystem> {
         const SizedBox(height: 6),
         Text(
             activeRole != null
-                ? '$activeRole works from this record'
+                ? '$activeRole $verb'
                 : 'One property. One source of truth. Everyone connected.',
             textAlign: TextAlign.center,
             style: t.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.85))),
