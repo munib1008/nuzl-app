@@ -463,9 +463,13 @@ class _WhoAreYou extends StatelessWidget {
 }
 
 // ── Section 3 — Everything connected ─────────────────────────────────────────
-class _Ecosystem extends StatelessWidget {
+class _Ecosystem extends StatefulWidget {
   const _Ecosystem();
+  @override
+  State<_Ecosystem> createState() => _EcosystemState();
+}
 
+class _EcosystemState extends State<_Ecosystem> {
   // Six parties, one shared property record. Material icons approximate the
   // bespoke NUZL pillar marks (custom SVGs tracked separately).
   static const _pillars = [
@@ -477,13 +481,19 @@ class _Ecosystem extends StatelessWidget {
     (role: 'Tenant', title: 'Lease Management', icon: Icons.description_outlined, tags: ['Rent', 'Payments', 'Documents'], color: AppColors.primaryBright),
   ];
 
+  int? _active; // hovered pillar — drives the central record's highlight
+
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.of(context).size.width >= 760;
-    final cards = [
-      for (final p in _pillars)
-        _PillarCard(role: p.role, title: p.title, icon: p.icon, tags: p.tags, color: p.color),
-    ];
+    final cards = List<Widget>.generate(_pillars.length, (i) {
+      final p = _pillars[i];
+      return _PillarCard(
+        role: p.role, title: p.title, icon: p.icon, tags: p.tags, color: p.color,
+        active: _active == i,
+        onHover: (h) => setState(() => _active = h ? i : (_active == i ? null : _active)),
+      );
+    });
     return _section(
       context,
       title: 'One property. One record. One ecosystem.',
@@ -532,17 +542,22 @@ class _Ecosystem extends StatelessWidget {
   }
 
   Widget _connector(BuildContext context) => Center(
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
           width: 2, height: 18,
           margin: const EdgeInsets.symmetric(vertical: AppSpacing.x4),
-          color: _border(context),
+          color: _active != null ? _pillars[_active!].color : _border(context),
         ),
       );
 
-  // The source of truth at the centre of the ecosystem.
+  // The source of truth at the centre — glows in the hovered pillar's colour.
   Widget _recordBand(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return Container(
+    final active = _active != null ? _pillars[_active!].color : null;
+    final activeRole = _active != null ? _pillars[_active!].role : null;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24, vertical: AppSpacing.x20),
       decoration: BoxDecoration(
@@ -550,7 +565,10 @@ class _Ecosystem extends StatelessWidget {
             colors: [AppColors.gradientStart, AppColors.gradientEnd],
             begin: Alignment.centerLeft, end: Alignment.centerRight),
         borderRadius: BorderRadius.circular(_kCardR),
-        boxShadow: _cardShadow(context),
+        border: Border.all(color: active ?? Colors.transparent, width: 2),
+        boxShadow: active != null
+            ? [BoxShadow(color: active.withValues(alpha: 0.45), blurRadius: 28, offset: const Offset(0, 10))]
+            : _cardShadow(context),
       ),
       child: Column(children: [
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -561,7 +579,10 @@ class _Ecosystem extends StatelessWidget {
                   color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18, letterSpacing: 1)),
         ]),
         const SizedBox(height: 6),
-        Text('One property. One source of truth. Everyone connected.',
+        Text(
+            activeRole != null
+                ? '$activeRole works from this record'
+                : 'One property. One source of truth. Everyone connected.',
             textAlign: TextAlign.center,
             style: t.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.85))),
       ]),
@@ -570,57 +591,74 @@ class _Ecosystem extends StatelessWidget {
 }
 
 /// One ecosystem pillar — icon, role, what they do, and the modules behind it.
+/// Reports hover so the central record can highlight, and lights up itself.
 class _PillarCard extends StatelessWidget {
   const _PillarCard(
-      {required this.role, required this.title, required this.icon, required this.tags, required this.color});
+      {required this.role,
+      required this.title,
+      required this.icon,
+      required this.tags,
+      required this.color,
+      this.active = false,
+      this.onHover});
   final String role, title;
   final IconData icon;
   final List<String> tags;
   final Color color;
+  final bool active;
+  final ValueChanged<bool>? onHover;
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return HoverLift(
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.x16),
-        decoration: BoxDecoration(
-          color: _surface(context),
-          borderRadius: BorderRadius.circular(_kCardR),
-          border: Border.all(color: _border(context)),
-          boxShadow: _cardShadow(context),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          Row(children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rMd)),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(role.toUpperCase(),
-                    style: t.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
-                Text(title,
-                    style: t.titleSmall?.copyWith(color: _onBg(context), fontWeight: FontWeight.w700),
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-              ]),
-            ),
-          ]),
-          const SizedBox(height: AppSpacing.x12),
-          Wrap(spacing: 6, runSpacing: 6, children: [
-            for (final tag in tags)
+    return MouseRegion(
+      onEnter: (_) => onHover?.call(true),
+      onExit: (_) => onHover?.call(false),
+      child: HoverLift(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.all(AppSpacing.x16),
+          decoration: BoxDecoration(
+            color: _surface(context),
+            borderRadius: BorderRadius.circular(_kCardR),
+            border: Border.all(color: active ? color : _border(context), width: active ? 1.5 : 1),
+            boxShadow: active
+                ? [BoxShadow(color: color.withValues(alpha: 0.25), blurRadius: 24, offset: const Offset(0, 10))]
+                : _cardShadow(context),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            Row(children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                    color: _isDark(context) ? Colors.white10 : AppColors.surface2,
-                    borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                child: Text(tag, style: t.labelSmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w500)),
+                    color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rMd)),
+                child: Icon(icon, color: color, size: 22),
               ),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(role.toUpperCase(),
+                      style: t.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                  Text(title,
+                      style: t.titleSmall?.copyWith(color: _onBg(context), fontWeight: FontWeight.w700),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                ]),
+              ),
+            ]),
+            const SizedBox(height: AppSpacing.x12),
+            Wrap(spacing: 6, runSpacing: 6, children: [
+              for (final tag in tags)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                      color: _isDark(context) ? Colors.white10 : AppColors.surface2,
+                      borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                  child: Text(tag, style: t.labelSmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w500)),
+                ),
+            ]),
           ]),
-        ]),
+        ),
       ),
     );
   }
@@ -690,18 +728,21 @@ class _WhyNuzl extends StatelessWidget {
 // ── Section 6 — Main modules ─────────────────────────────────────────────────
 class _MainModules extends StatelessWidget {
   const _MainModules();
+  // Each module is colour-anchored (top accent + tinted icon) so the eye can
+  // navigate by colour — mirrors the in-app dashboard KPI anchors.
   static const _modules = [
-    (Icons.apartment_outlined, 'Properties', 'Buy, sell, rent and invest.'),
-    (Icons.verified_user_outlined, 'Ownership', 'Documents, tenants and payments.'),
-    (Icons.trending_up, 'Leasing CRM', 'Inquiries, leads and deals.'),
-    (Icons.account_balance_outlined, 'Mortgage Finance', 'Track financing and repayments.'),
-    (Icons.handyman_outlined, 'Services', 'Book maintenance and pro services.'),
-    (Icons.shopping_bag_outlined, 'Marketplace', 'Buy products and materials.'),
+    (Icons.apartment_outlined, 'Properties', 'Buy, sell, rent and invest.', AppColors.secondary),
+    (Icons.verified_user_outlined, 'Ownership', 'Documents, tenants and payments.', AppColors.primary),
+    (Icons.trending_up, 'Leasing CRM', 'Inquiries, leads and deals.', AppColors.success),
+    (Icons.account_balance_outlined, 'Mortgage Finance', 'Track financing and repayments.', AppColors.accentGold),
+    (Icons.handyman_outlined, 'Services', 'Book maintenance and pro services.', AppColors.warning),
+    (Icons.shopping_bag_outlined, 'Marketplace', 'Buy products and materials.', AppColors.primaryBright),
   ];
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final wide = MediaQuery.of(context).size.width >= 900;
+    final r = BorderRadius.circular(_kCardR);
     return _section(
       context,
       title: 'Everything in one place',
@@ -710,33 +751,50 @@ class _MainModules extends StatelessWidget {
       child: Wrap(
         spacing: AppSpacing.x16,
         runSpacing: AppSpacing.x16,
-        children: _modules
-            .map((m) => HoverLift(
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(_kCardR),
-                    onTap: () => context.go('/login'),
-                    child: Container(
-                      width: wide ? 232 : double.infinity,
-                      padding: const EdgeInsets.all(AppSpacing.x16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        borderRadius: BorderRadius.circular(_kCardR),
-                        border: Border.all(color: _border(context)),
-                        boxShadow: _cardShadow(context),
+        children: _modules.map((m) {
+          final accent = m.$4;
+          return HoverLift(
+            child: SizedBox(
+              width: wide ? 232 : double.infinity,
+              child: DecoratedBox(
+                decoration: BoxDecoration(borderRadius: r, boxShadow: _cardShadow(context)),
+                child: Container(
+                  decoration: BoxDecoration(borderRadius: r, border: Border.all(color: _border(context))),
+                  child: ClipRRect(
+                    borderRadius: r,
+                    child: Material(
+                      color: _surface(context),
+                      child: InkWell(
+                        onTap: () => context.go('/login'),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Container(height: 3, color: accent),
+                          Padding(
+                            padding: const EdgeInsets.all(AppSpacing.x16),
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                    color: accent.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(AppSpacing.rMd)),
+                                child: Icon(m.$1, color: accent, size: 22),
+                              ),
+                              const SizedBox(height: AppSpacing.x12),
+                              Text(m.$2,
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 15, fontWeight: FontWeight.w600, color: _onBg(context))),
+                              const SizedBox(height: AppSpacing.x4),
+                              Text(m.$3, style: t.bodySmall?.copyWith(color: _body(context), height: 1.4)),
+                            ]),
+                          ),
+                        ]),
                       ),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Icon(m.$1, color: _primary(context), size: 24),
-                        const SizedBox(height: AppSpacing.x8),
-                        Text(m.$2,
-                            style: GoogleFonts.poppins(
-                                fontSize: 15, fontWeight: FontWeight.w600, color: _onBg(context))),
-                        const SizedBox(height: AppSpacing.x4),
-                        Text(m.$3, style: t.bodySmall?.copyWith(color: _body(context), height: 1.4)),
-                      ]),
                     ),
                   ),
-                ))
-            .toList(),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
