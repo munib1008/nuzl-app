@@ -24,9 +24,11 @@ final listingsRawProvider = FutureProvider.autoDispose<List<dynamic>>((ref) asyn
 final _fPurpose = StateProvider.autoDispose<String>((ref) => 'all');
 final _fType = StateProvider.autoDispose<String>((ref) => 'all');
 final _fBeds = StateProvider.autoDispose<int?>((ref) => null);
+final _fPriceMin = StateProvider.autoDispose<double?>((ref) => null);
 final _fPriceMax = StateProvider.autoDispose<double?>((ref) => null);
 final _fSort = StateProvider.autoDispose<String>((ref) => 'latest');
 final _fMine = StateProvider.autoDispose<bool>((ref) => false);
+final _fQuery = StateProvider.autoDispose<String>((ref) => '');
 
 class ListingsScreen extends ConsumerWidget {
   const ListingsScreen({super.key});
@@ -38,9 +40,11 @@ class ListingsScreen extends ConsumerWidget {
     final purpose = ref.watch(_fPurpose);
     final type = ref.watch(_fType);
     final beds = ref.watch(_fBeds);
+    final priceMin = ref.watch(_fPriceMin);
     final priceMax = ref.watch(_fPriceMax);
     final sort = ref.watch(_fSort);
     final mine = ref.watch(_fMine);
+    final query = ref.watch(_fQuery).trim().toLowerCase();
     final myId = ref.watch(authControllerProvider).user?.id;
 
     return Scaffold(
@@ -49,7 +53,9 @@ class ListingsScreen extends ConsumerWidget {
           if (purpose != 'all') 'purpose': purpose,
           if (type != 'all') 'property_type': type,
           if (beds != null) 'min_bedrooms': beds,
+          if (priceMin != null) 'min_price': priceMin,
           if (priceMax != null) 'max_price': priceMax,
+          if (query.isNotEmpty) 'q': query,
         }),
         const SavedSearchAlertsBell(),
       ]),
@@ -76,7 +82,14 @@ class ListingsScreen extends ConsumerWidget {
               if (purpose != 'all' && '${m['purpose']}' != purpose) return false;
               if (type != 'all' && '${m['property_type']}' != type) return false;
               if (beds != null && (bedsOf(m) ?? -1) < beds) return false;
+              if (priceMin != null && priceOf(m) < priceMin) return false;
               if (priceMax != null && priceOf(m) > priceMax) return false;
+              if (query.isNotEmpty) {
+                final hay = '${m['community'] ?? ''} ${m['property_type'] ?? ''} '
+                        '${m['building_name'] ?? ''} ${m['description'] ?? ''}'
+                    .toLowerCase();
+                if (!hay.contains(query)) return false;
+              }
               return true;
             }).toList();
             // sort — 'latest' keeps the server order (created_at desc)
@@ -134,7 +147,17 @@ class _FilterBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return SingleChildScrollView(
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      TextField(
+        decoration: const InputDecoration(
+          hintText: 'Search area, community or building…',
+          prefixIcon: Icon(Icons.search),
+          isDense: true,
+        ),
+        onChanged: (v) => ref.read(_fQuery.notifier).state = v,
+      ),
+      const SizedBox(height: AppSpacing.x8),
+      SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
@@ -157,6 +180,19 @@ class _FilterBar extends ConsumerWidget {
             value: ref.watch(_fBeds),
             items: const [(null, 'Any beds'), (0, 'Studio'), (1, '1+'), (2, '2+'), (3, '3+'), (4, '4+')],
             onChanged: (v) => ref.read(_fBeds.notifier).state = v,
+          ),
+          const SizedBox(width: AppSpacing.x8),
+          _Drop<double?>(
+            label: 'Min price',
+            value: ref.watch(_fPriceMin),
+            items: const [
+              (null, 'Any min'),
+              (500000.0, '≥ 500K'),
+              (1000000.0, '≥ 1M'),
+              (2000000.0, '≥ 2M'),
+              (3000000.0, '≥ 3M'),
+            ],
+            onChanged: (v) => ref.read(_fPriceMin.notifier).state = v,
           ),
           const SizedBox(width: AppSpacing.x8),
           _Drop<double?>(
@@ -188,7 +224,8 @@ class _FilterBar extends ConsumerWidget {
           ],
         ],
       ),
-    );
+      ),
+    ]);
   }
 }
 
