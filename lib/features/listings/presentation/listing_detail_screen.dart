@@ -105,6 +105,13 @@ class _Detail extends ConsumerWidget {
       if (l['bathrooms'] != null) ('Bathrooms', '${l['bathrooms']}'),
       if (l['size_sqft'] != null) ('Size', '${(num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0)} sqft'),
       if (l['furnishing'] != null) ('Furnishing', _cap('${l['furnishing']}')),
+      if ('${l['developer'] ?? ''}'.trim().isNotEmpty) ('Developer', '${l['developer']}'),
+      if ('${l['view'] ?? ''}'.trim().isNotEmpty) ('View', '${l['view']}'),
+      if (l['parking'] != null) ('Parking', '${l['parking']}'),
+      if (l['service_charge'] != null)
+        ('Service charge', 'AED ${(num.tryParse('${l['service_charge']}') ?? 0).toStringAsFixed(0)}/sqft/yr'),
+      if ('${l['handover_date'] ?? ''}'.trim().isNotEmpty)
+        ('Handover', '${l['handover_date']}'.split('T').first),
       if (l['community'] != null) ('Community', '${l['community']}'),
       if (l['building'] != null)
         ('Building', '${l['building']}')

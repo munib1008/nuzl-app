@@ -41,6 +41,11 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   final building = TextEditingController();
   final location = TextEditingController(); // a Google Maps link or "lat, lng"
   final originalPrice = TextEditingController();
+  final developer = TextEditingController();
+  final view = TextEditingController();
+  final parking = TextEditingController();
+  final serviceCharge = TextEditingController();
+  DateTime? handover;
   final Set<int> selectedAmenities = {};
 
   final List<String> imageUrls = []; // uploaded photo URLs (first = cover)
@@ -72,6 +77,11 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       isExclusive = m['is_exclusive'] == true;
       isHotDeal = m['is_hot_deal'] == true;
       if (m['original_price'] != null) originalPrice.text = '${m['original_price']}';
+      developer.text = '${m['developer'] ?? ''}';
+      view.text = '${m['view'] ?? ''}';
+      parking.text = m['parking'] != null ? '${m['parking']}' : '';
+      serviceCharge.text = m['service_charge'] != null ? '${m['service_charge']}' : '';
+      handover = DateTime.tryParse('${m['handover_date'] ?? ''}');
       final lat = m['latitude'], lng = m['longitude'];
       if (lat != null && lng != null) location.text = '$lat, $lng';
       final imgs = m['images'];
@@ -98,7 +108,9 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   void dispose() {
     price.dispose(); beds.dispose(); baths.dispose(); size.dispose(); unitNo.dispose();
     ownerName.dispose(); ownerPhone.dispose(); description.dispose(); permit.dispose();
-    building.dispose(); location.dispose(); originalPrice.dispose(); super.dispose();
+    building.dispose(); location.dispose(); originalPrice.dispose();
+    developer.dispose(); view.dispose(); parking.dispose(); serviceCharge.dispose();
+    super.dispose();
   }
 
   /// Pick + upload one photo, appended to the gallery. Compressed (1280px/q60)
@@ -281,6 +293,12 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       'is_exclusive': isExclusive,
       'is_hot_deal': isHotDeal,
       if (originalPrice.text.trim().isNotEmpty) 'original_price': double.tryParse(originalPrice.text.trim()),
+      if (developer.text.trim().isNotEmpty) 'developer': developer.text.trim(),
+      if (view.text.trim().isNotEmpty) 'view': view.text.trim(),
+      if (parking.text.trim().isNotEmpty) 'parking': int.tryParse(parking.text.trim()),
+      if (serviceCharge.text.trim().isNotEmpty) 'service_charge': double.tryParse(serviceCharge.text.trim()),
+      if (handover != null)
+        'handover_date': '${handover!.year}-${handover!.month.toString().padLeft(2, '0')}-${handover!.day.toString().padLeft(2, '0')}',
       'amenities': selectedAmenities.toList(),
       if (permit.text.trim().isNotEmpty) 'permit_number': permit.text.trim(),
       if (coords != null) 'latitude': coords.$1,
@@ -459,6 +477,44 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
               decoration: const InputDecoration(
                 labelText: 'Permit number (Trakheesi / RERA)',
                 helperText: 'Required to publish a live listing',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x16),
+            Text('Property details', style: t.titleSmall),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(child: TextField(controller: developer, decoration: const InputDecoration(labelText: 'Developer', hintText: 'e.g. Emaar'))),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(child: TextField(controller: view, decoration: const InputDecoration(labelText: 'View', hintText: 'e.g. Marina'))),
+            ]),
+            const SizedBox(height: AppSpacing.x12),
+            Row(children: [
+              Expanded(child: TextField(controller: parking, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Parking spaces'))),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(child: TextField(controller: serviceCharge, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Service charge (AED/sqft/yr)'))),
+            ]),
+            const SizedBox(height: AppSpacing.x12),
+            InkWell(
+              onTap: () async {
+                final now = DateTime.now();
+                final d = await showDatePicker(
+                  context: context,
+                  initialDate: handover ?? now,
+                  firstDate: DateTime(now.year - 10),
+                  lastDate: DateTime(now.year + 15),
+                  helpText: 'Handover date',
+                );
+                if (d != null) setState(() => handover = d);
+              },
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                    labelText: 'Handover date', suffixIcon: Icon(Icons.calendar_today_outlined, size: 18)),
+                child: Text(
+                  handover == null
+                      ? 'Select date (off-plan / ready)'
+                      : '${handover!.year}-${handover!.month.toString().padLeft(2, '0')}-${handover!.day.toString().padLeft(2, '0')}',
+                  style: TextStyle(color: handover == null ? Theme.of(context).hintColor : null),
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.x16),
