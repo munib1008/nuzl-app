@@ -1314,73 +1314,158 @@ const _sampleListings = [
 ];
 
 // ── Section 4 — Featured properties (horizontal carousel) ────────────────────
-class _FeaturedListings extends ConsumerWidget {
+class _FeaturedListings extends ConsumerStatefulWidget {
   const _FeaturedListings();
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_FeaturedListings> createState() => _FeaturedListingsState();
+}
+
+class _FeaturedListingsState extends ConsumerState<_FeaturedListings> {
+  final _sc = ScrollController();
+  String _filter = 'all';
+  static const _height = 440.0;
+
+  @override
+  void dispose() {
+    _sc.dispose();
+    super.dispose();
+  }
+
+  void _scrollBy(double dx) {
+    if (!_sc.hasClients) return;
+    final target = (_sc.offset + dx).clamp(0.0, _sc.position.maxScrollExtent);
+    _sc.animateTo(target, duration: const Duration(milliseconds: 320), curve: Curves.easeOut);
+  }
+
+  List<Map<String, dynamic>> _topUp(List<dynamic> raw) {
+    final out = raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    for (final s in _sampleListings) {
+      if (out.length >= 6) break;
+      out.add(Map<String, dynamic>.from(s));
+    }
+    return out;
+  }
+
+  bool _match(Map<String, dynamic> m) {
+    switch (_filter) {
+      case 'sale':
+        return '${m['purpose']}' == 'sale';
+      case 'rent':
+        return '${m['purpose']}' == 'rent';
+      case 'offplan':
+        return '${m['handover_date'] ?? ''}'.trim().isNotEmpty || '${m['developer'] ?? ''}'.trim().isNotEmpty;
+      case 'commercial':
+        final ty = '${m['property_type'] ?? ''}'.toLowerCase();
+        return ty.contains('office') || ty.contains('commercial') || ty.contains('retail') ||
+            ty.contains('shop') || ty.contains('warehouse');
+      default:
+        return true;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final wide = MediaQuery.of(context).size.width >= 900;
+    final t = Theme.of(context).textTheme;
     final listings = ref.watch(_featuredListingsProvider);
 
-    List<Map<String, dynamic>> topUp(List<dynamic> raw) {
-      final out = raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-      for (final s in _sampleListings) {
-        if (out.length >= 4) break;
-        out.add(Map<String, dynamic>.from(s));
-      }
-      return out;
-    }
-
-    Widget carousel(List<Map<String, dynamic>> items) {
+    Widget carousel(List<Map<String, dynamic>> all) {
+      final items = all.where(_match).toList();
       final cardW = wide ? 300.0 : math.min((MediaQuery.of(context).size.width - AppSpacing.x24 * 2) * 0.82, 320.0);
-      return SizedBox(
-        height: 432,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          padding: EdgeInsets.zero,
-          itemCount: items.length,
-          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.x16),
-          itemBuilder: (_, i) => FadeIn(
-            delayMs: 50 * i,
-            child: HoverLift(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(_kCardR),
-                onTap: () => _openListing(context, items[i]),
-                child: _ListingCard(data: items[i], width: cardW),
-              ),
-            ),
+      if (items.isEmpty) {
+        return SizedBox(
+          height: _height,
+          child: Center(
+            child: Text('More featured listings coming soon.',
+                style: t.bodyMedium?.copyWith(color: _muted(context))),
           ),
+        );
+      }
+      final list = ListView.separated(
+        controller: _sc,
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 48),
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.x16),
+        itemBuilder: (_, i) => FadeIn(
+          delayMs: 40 * i,
+          child: _ListingCard(data: items[i], width: cardW, onOpen: () => _openListing(context, items[i])),
         ),
+      );
+      // Soft edge fade so partial cards melt out instead of being hard-clipped.
+      final faded = ShaderMask(
+        shaderCallback: (rect) => const LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [Colors.transparent, Colors.black, Colors.black, Colors.transparent],
+          stops: [0.0, 0.06, 0.94, 1.0],
+        ).createShader(rect),
+        blendMode: BlendMode.dstIn,
+        child: list,
+      );
+      return SizedBox(
+        height: _height,
+        child: Stack(children: [
+          Positioned.fill(child: faded),
+          if (wide) ...[
+            Positioned(left: 4, top: 0, bottom: 0, child: Center(child: _arrow(Icons.chevron_left, () => _scrollBy(-(cardW + 16) * 2)))),
+            Positioned(right: 4, top: 0, bottom: 0, child: Center(child: _arrow(Icons.chevron_right, () => _scrollBy((cardW + 16) * 2)))),
+          ],
+        ]),
       );
     }
 
+    const quick = [('all', 'All'), ('sale', 'For sale'), ('rent', 'For rent'), ('offplan', 'Off-plan'), ('commercial', 'Commercial')];
+
     return _section(
       context,
-      title: 'Featured properties',
-      subtitle: 'A preview of homes across the UAE — sign in to view full details.',
+      title: 'Featured opportunities',
+      subtitle: 'Verified homes, investment opportunities and rental listings across the UAE.',
       bg: _surface(context),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final q in quick)
+            ChoiceChip(label: Text(q.$2), selected: _filter == q.$1, onSelected: (_) => setState(() => _filter = q.$1)),
+        ]),
+        const SizedBox(height: AppSpacing.x16),
         listings.when(
-          loading: () => const SizedBox(height: 356, child: Center(child: CircularProgressIndicator())),
-          error: (e, _) => carousel(topUp(const [])),
-          data: (list) => carousel(topUp(list)),
+          loading: () => const SizedBox(height: _height, child: Center(child: CircularProgressIndicator())),
+          error: (e, _) => carousel(_topUp(const [])),
+          data: (list) => carousel(_topUp(list)),
         ),
         const SizedBox(height: AppSpacing.x24),
-        OutlinedButton(
-          onPressed: () => context.go('/login'),
-          style: OutlinedButton.styleFrom(foregroundColor: _onBg(context), side: BorderSide(color: _borderStrong(context))),
-          child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x8),
-              child: Text('Sign in to view all listings')),
+        Center(
+          child: OutlinedButton(
+            onPressed: () => context.go('/login'),
+            style: OutlinedButton.styleFrom(foregroundColor: _onBg(context), side: BorderSide(color: _borderStrong(context))),
+            child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x8),
+                child: Text('Sign in to view all listings')),
+          ),
         ),
       ]),
     );
   }
+
+  Widget _arrow(IconData icon, VoidCallback onTap) => Material(
+        color: _surface(context),
+        shape: const CircleBorder(),
+        elevation: 2,
+        shadowColor: Colors.black26,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: onTap,
+          child: Padding(padding: const EdgeInsets.all(8), child: Icon(icon, color: _onBg(context))),
+        ),
+      );
 }
 
 class _ListingCard extends StatelessWidget {
-  const _ListingCard({required this.data, required this.width});
+  const _ListingCard({required this.data, required this.width, required this.onOpen});
   final Map<String, dynamic> data;
   final double width;
+  final VoidCallback onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -1394,149 +1479,107 @@ class _ListingCard extends StatelessWidget {
     final community = '${data['community'] ?? ''}'.trim();
     final ptype = '${data['property_type'] ?? ''}'.trim();
     final agent = '${data['agent_name'] ?? ''}'.trim();
-    final title = building.isNotEmpty ? building : (ptype.isNotEmpty ? ptype : 'Featured property');
+    final refCode = '${data['ref_code'] ?? ''}'.trim();
     String cap(String s) => s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
-    final highlights = <String>[
-      if ('${data['status'] ?? ''}'.trim().isNotEmpty) cap('${data['status']}'),
-      if ('${data['furnishing'] ?? ''}'.trim().isNotEmpty) cap('${data['furnishing']}'.replaceAll('_', ' ')),
+    final title = building.isNotEmpty ? building : (ptype.isNotEmpty ? cap(ptype) : 'Featured property');
+    final specs = <String>[
+      if (data['bedrooms'] != null) '${data['bedrooms']} Bed',
+      if (data['bathrooms'] != null) '${data['bathrooms']} Bath',
+      if (data['size_sqft'] != null) '${data['size_sqft']} sqft',
+    ].join(' • ');
+    // At most TWO tags (view + status) — the rest is noise on a card.
+    final tags = <String>[
       if ('${data['view'] ?? ''}'.trim().isNotEmpty) '${data['view']}',
-    ];
+      if ('${data['status'] ?? ''}'.trim().isNotEmpty) cap('${data['status']}'),
+    ].take(2).toList();
 
-    return Container(
-      width: width,
-      decoration: BoxDecoration(
-        color: _surface(context),
-        borderRadius: BorderRadius.circular(_kCardR),
-        border: Border.all(color: _border(context)),
-        boxShadow: _cardShadow(context),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // ── Hero image: building, location and price overlaid on a scrim ──
-        AspectRatio(
-          aspectRatio: 4 / 3,
-          child: Stack(fit: StackFit.expand, children: [
-            cover.isNotEmpty
-                ? Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const _Placeholder())
-                : const _Placeholder(),
-            // Legibility scrim — darkens the lower half for the white overlay text.
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Color(0xD9000000)],
-                  stops: [0.42, 1.0],
-                ),
-              ),
-            ),
-            // Badges — purpose (+ type) top-left, verification top-right.
-            Positioned(
-              top: 10, left: 10,
+    return HoverLift(
+      child: Container(
+        width: width,
+        decoration: BoxDecoration(
+          color: _surface(context),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: _border(context)),
+          // Lighter single shadow — the 3-layer one was visual clutter.
+          boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 14, offset: Offset(0, 6))],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Image — only For sale/rent + Verified badges (no type pill, no scrim).
+          AspectRatio(
+            aspectRatio: 16 / 10,
+            child: Stack(fit: StackFit.expand, children: [
+              cover.isNotEmpty
+                  ? Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const _Placeholder())
+                  : const _Placeholder(),
+              Positioned(top: 10, left: 10, child: _pill(context, isRent ? 'For rent' : 'For sale', _primary(context))),
+              if (verified)
+                Positioned(top: 10, right: 10, child: _pill(context, 'Verified', AppColors.success, icon: Icons.verified)),
+            ]),
+          ),
+          // Body — property first; agent + actions last.
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.x12),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _pill(context, isRent ? 'For rent' : 'For sale', _primary(context)),
-                if (ptype.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  _pill(context, ptype, Colors.black54),
-                ],
-              ]),
-            ),
-            if (verified)
-              Positioned(top: 10, right: 10, child: _pill(context, 'Verified', AppColors.success, icon: Icons.verified)),
-            // Overlay: building → location → price.
-            Positioned(
-              left: 14, right: 14, bottom: 12,
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                Text(title,
-                    style: t.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                Text(title, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                     maxLines: 1, overflow: TextOverflow.ellipsis),
-                if (community.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Row(children: [
-                    const Icon(Icons.place, size: 13, color: Colors.white70),
-                    const SizedBox(width: 3),
-                    Expanded(
-                      child: Text(community,
-                          style: t.bodySmall?.copyWith(color: Colors.white70),
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ),
+                if (community.isNotEmpty)
+                  Text(community, style: t.bodySmall?.copyWith(color: _muted(context)),
+                      maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: AppSpacing.x4),
+                if (price > 0)
+                  Text('${aed.format(price)}${isRent ? ' / yr' : ''}',
+                      style: t.titleLarge?.copyWith(color: _primary(context), fontWeight: FontWeight.w800)),
+                if (specs.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.x8),
+                  Text(specs, style: t.bodySmall?.copyWith(color: _onBg(context))),
+                ],
+                if (tags.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.x8),
+                  Wrap(spacing: 6, runSpacing: 4, children: [
+                    for (final h in tags)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                            color: AppColors.success.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                        child: Text(h, style: t.labelSmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
+                      ),
                   ]),
                 ],
-                if (price > 0) ...[
-                  const SizedBox(height: 4),
-                  Text('${aed.format(price)}${isRent ? ' / yr' : ''}',
-                      style: t.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w800)),
-                ],
-              ]),
-            ),
-          ]),
-        ),
-        // ── Body: specs · highlights · agent · actions ──
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.x12),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                _meta(context, Icons.bed_outlined, '${data['bedrooms'] ?? '-'}'),
-                const SizedBox(width: AppSpacing.x12),
-                _meta(context, Icons.bathtub_outlined, '${data['bathrooms'] ?? '-'}'),
-                const SizedBox(width: AppSpacing.x12),
-                _meta(context, Icons.straighten, '${data['size_sqft'] ?? '-'} sqft'),
-              ]),
-              if (highlights.isNotEmpty) ...[
+                const Spacer(),
+                if (refCode.isNotEmpty)
+                  Text('Ref: $refCode', style: t.labelSmall?.copyWith(color: _subtle(context))),
+                if (agent.isNotEmpty)
+                  Text('Listed by $agent',
+                      style: t.bodySmall?.copyWith(color: _muted(context)), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: AppSpacing.x8),
-                Wrap(spacing: 6, runSpacing: 4, children: [
-                  for (final h in highlights.take(3))
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                      child: Text(h, style: t.labelSmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
-                    ),
-                ]),
-              ],
-              const Spacer(),
-              if (agent.isNotEmpty) ...[
                 Row(children: [
-                  CircleAvatar(
-                    radius: 11, backgroundColor: _primary(context).withValues(alpha: 0.12),
-                    child: Text(agent[0].toUpperCase(),
-                        style: t.labelSmall?.copyWith(color: _primary(context), fontWeight: FontWeight.w700)),
-                  ),
-                  const SizedBox(width: 6),
                   Expanded(
-                    child: Text(agent, style: t.bodySmall?.copyWith(color: _onBg(context), fontWeight: FontWeight.w600),
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                    child: FilledButton(
+                      onPressed: onOpen,
+                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(36)),
+                      child: const Text('View property'),
+                    ),
                   ),
-                ]),
-                const SizedBox(height: AppSpacing.x8),
-              ],
-              Row(children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _openListing(context, data),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    onPressed: () => showAuthPrompt(context, action: 'save this property'),
                     style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(34),
-                      padding: EdgeInsets.zero,
+                      minimumSize: const Size.fromHeight(36),
                       foregroundColor: _onBg(context),
                       side: BorderSide(color: _borderStrong(context)),
                     ),
-                    child: const Text('View details'),
+                    icon: const Icon(Icons.favorite_border, size: 16),
+                    label: const Text('Save'),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: () => showAuthPrompt(context, action: 'schedule a viewing'),
-                    style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(34), padding: EdgeInsets.zero),
-                    child: const Text('Schedule'),
-                  ),
-                ),
+                ]),
               ]),
-            ]),
+            ),
           ),
-        ),
-      ]),
+        ]),
+      ),
     );
   }
 
@@ -1551,12 +1594,6 @@ class _ListingCard extends StatelessWidget {
       ]),
     );
   }
-
-  Widget _meta(BuildContext context, IconData i, String v) => Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(i, size: 14, color: _muted(context)),
-        const SizedBox(width: 4),
-        Text(v, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w600)),
-      ]);
 }
 
 /// Branded cover for an image-less listing — a deep NUZL gradient backdrop;
