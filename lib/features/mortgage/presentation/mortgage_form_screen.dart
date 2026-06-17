@@ -46,6 +46,7 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
   final _projectValue = TextEditingController();
   final _dld = TextEditingController();
   final _processing = TextEditingController();
+  final _registration = TextEditingController();
   final _downPayment = TextEditingController();
   final _propInsurance = TextEditingController();
   final _lifeInsurance = TextEditingController();
@@ -53,6 +54,8 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
   DateTime? _loanStart;
   DateTime? _firstInstallment;
   DateTime? _rateValidUntil;
+  DateTime? _insStart;
+  DateTime? _insRenewal;
   String _insuranceFreq = 'yearly';
   String _financeType = 'ijarah'; // UAE home finance is predominantly Ijarah
   String? _propertyId;
@@ -78,7 +81,7 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
   @override
   void dispose() {
     for (final c in [_label, _lender, _principal, _rate, _years, _fixedMonths, _rateAfter,
-        _projectValue, _dld, _processing, _downPayment, _propInsurance, _lifeInsurance]) {
+        _projectValue, _dld, _processing, _registration, _downPayment, _propInsurance, _lifeInsurance]) {
       c.dispose();
     }
     for (final s in _splits) {
@@ -98,7 +101,13 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
 
   Future<void> _pickDate(int which) async {
     final now = DateTime.now();
-    final current = which == 0 ? _loanStart : which == 1 ? _firstInstallment : _rateValidUntil;
+    final current = switch (which) {
+      0 => _loanStart,
+      1 => _firstInstallment,
+      2 => _rateValidUntil,
+      3 => _insStart,
+      _ => _insRenewal,
+    };
     final d = await showDatePicker(
       context: context,
       initialDate: current ?? now,
@@ -107,12 +116,17 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
     );
     if (d == null) return;
     setState(() {
-      if (which == 0) {
-        _loanStart = d;
-      } else if (which == 1) {
-        _firstInstallment = d;
-      } else {
-        _rateValidUntil = d;
+      switch (which) {
+        case 0:
+          _loanStart = d;
+        case 1:
+          _firstInstallment = d;
+        case 2:
+          _rateValidUntil = d;
+        case 3:
+          _insStart = d;
+        default:
+          _insRenewal = d;
       }
     });
   }
@@ -190,6 +204,9 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
         'total_project_value': n(_projectValue),
         'dld_charges': n(_dld),
         'processing_fees': n(_processing),
+        'registration_fees': n(_registration),
+        if (!_isCash && _insStart != null) 'insurance_start_date': iso.format(_insStart!),
+        if (!_isCash && _insRenewal != null) 'insurance_renewal_date': iso.format(_insRenewal!),
         'down_payment': n(_downPayment),
         if (splits.isNotEmpty) 'down_payment_splits': splits,
         if (_loanStart != null) 'start_date': iso.format(_loanStart!),
@@ -350,6 +367,12 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
             ],
             onChanged: (v) => setState(() => _insuranceFreq = v ?? 'yearly'),
           ),
+          const SizedBox(height: AppSpacing.x12),
+          Row(children: [
+            Expanded(child: _dateField(_isl ? 'Takaful start' : 'Insurance start', _insStart, () => _pickDate(3))),
+            const SizedBox(width: AppSpacing.x12),
+            Expanded(child: _dateField('Renewal date', _insRenewal, () => _pickDate(4))),
+          ]),
 
           // ── Fixed intro period (optional) ─────────────────────────
           _sectionTitle('Fixed intro period (optional)', t),
@@ -375,6 +398,8 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
             const SizedBox(width: AppSpacing.x12),
             Expanded(child: _money(_processing, 'Processing fees *')),
           ]),
+          const SizedBox(height: AppSpacing.x12),
+          _money(_registration, 'Registration fees'),
           const SizedBox(height: AppSpacing.x12),
           _money(_downPayment, 'Down payment *', live: true),
           const SizedBox(height: AppSpacing.x8),

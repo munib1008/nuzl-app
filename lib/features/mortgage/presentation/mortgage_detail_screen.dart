@@ -33,6 +33,14 @@ class MortgageDetailScreen extends ConsumerWidget {
           final rateValid = DateTime.tryParse('${m['rate_valid_until'] ?? ''}');
           double n(v) => v is num ? v.toDouble() : double.tryParse('$v') ?? 0;
           final progress = (n(s['progress_pct']) / 100).clamp(0, 1).toDouble();
+          // Next installment date: first installment + (payments made) months.
+          final firstInst = DateTime.tryParse('${m['first_installment_date'] ?? m['start_date'] ?? ''}');
+          final paidCount = n(s['payments_made']).round();
+          final remainingTerm = n(s['remaining_term']).round();
+          final nextPay = (firstInst != null && remainingTerm > 0)
+              ? DateTime(firstInst.year, firstInst.month + paidCount, firstInst.day)
+              : null;
+          final insRenewal = DateTime.tryParse('${s['insurance_renewal_date'] ?? ''}');
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.x16),
             children: [
@@ -75,6 +83,10 @@ class MortgageDetailScreen extends ConsumerWidget {
                       '${n(m['interest_rate']).toStringAsFixed(2)}%'
                       '${rateValid != null ? ' · to ${DateFormat.yMMMd().format(rateValid)}' : ''}', t),
                   _row(isl ? 'Monthly rental' : 'Monthly payment', aed.format(n(s['monthly_payment'])), t),
+                  if (nextPay != null)
+                    _row(isl ? 'Next rental due' : 'Next payment due', DateFormat.yMMMd().format(nextPay), t),
+                  if (insRenewal != null)
+                    _row(isl ? 'Takaful renewal' : 'Insurance renewal', DateFormat.yMMMd().format(insRenewal), t),
                   _row(isl ? 'Fixed rental paid' : 'Principal paid', aed.format(n(s['principal_paid'])), t),
                   _row(isl ? 'Variable rental (profit) paid' : 'Interest paid', aed.format(n(s['interest_paid'])), t),
                   _row(isl ? 'Rentals paid' : 'Payments made', '${s['payments_made'] ?? 0}', t),
@@ -91,6 +103,7 @@ class MortgageDetailScreen extends ConsumerWidget {
                     if (n(s['total_project_value']) > 0) _row('Total project value', aed.format(n(s['total_project_value'])), t),
                     if (n(s['dld_charges']) > 0) _row('DLD charges', aed.format(n(s['dld_charges'])), t),
                     if (n(s['processing_fees']) > 0) _row('Processing fees', aed.format(n(s['processing_fees'])), t),
+                    if (n(s['registration_fees']) > 0) _row('Registration fees', aed.format(n(s['registration_fees'])), t),
                     if (n(s['down_payment']) > 0) _row('Down payment', aed.format(n(s['down_payment'])), t),
                     if (s['down_payment_splits'] is List)
                       ...(s['down_payment_splits'] as List).map((sp) {
