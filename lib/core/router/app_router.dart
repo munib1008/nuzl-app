@@ -68,6 +68,8 @@ import '../../features/network/network_screen.dart';
 import '../../features/admin/organizations_screen.dart';
 import '../../features/admin/verification_queue_screen.dart';
 import '../../features/admin/company_verifications_screen.dart';
+import '../../features/tenders/tenders_screen.dart';
+import '../../features/tenders/tender_detail_screen.dart';
 import '../../features/admin/nuzler_team_screen.dart';
 import '../../features/admin/audit_screen.dart';
 import '../../features/admin/limits_screen.dart';
@@ -184,6 +186,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/marketplace', builder: (_, __) => const MarketplaceScreen()),
       GoRoute(path: '/marketplace/:id', builder: (_, st) => MarketplaceItemScreen(id: st.pathParameters['id']!)),
       GoRoute(path: '/orders', builder: (_, __) => const OrdersScreen()),
+      GoRoute(path: '/tenders', builder: (_, __) => const TendersScreen()),
+      GoRoute(path: '/tenders/:id', builder: (_, st) => TenderDetailScreen(id: st.pathParameters['id']!)),
       GoRoute(path: '/network', builder: (_, __) => const NetworkScreen()),
       GoRoute(path: '/organizations', builder: (_, __) => const OrganizationsScreen()),
       GoRoute(path: '/verification-queue', builder: (_, __) => const VerificationQueueScreen()),

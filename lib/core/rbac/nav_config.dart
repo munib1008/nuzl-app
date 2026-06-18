@@ -90,6 +90,7 @@ List<NavItem> navItemsFor(Persona p) {
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
+        NavItem(Icons.assignment_outlined, 'Requests', '/tenders'),
         NavItem(Icons.receipt_long_outlined, 'Orders', '/orders'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
         NavItem(Icons.contacts_outlined, 'Contacts', '/contacts'),
@@ -101,6 +102,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.vpn_key_outlined, 'My Tenancy', '/rentals'),
         NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
+        NavItem(Icons.assignment_outlined, 'Requests', '/tenders'),
         NavItem(Icons.folder_outlined, 'Documents', '/documents'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
@@ -121,6 +123,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.vpn_key_outlined, 'Rentals', '/rentals'),
         NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
+        NavItem(Icons.assignment_outlined, 'Requests', '/tenders'),
         NavItem(Icons.account_balance_wallet_outlined, 'Financials', '/financials'),
         NavItem(Icons.account_balance_outlined, 'Mortgages', '/mortgages'),
         NavItem(Icons.folder_outlined, 'Documents', '/documents'),
