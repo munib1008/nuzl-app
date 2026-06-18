@@ -374,6 +374,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         'country': _coCountry.text.trim().isEmpty ? null : _coCountry.text.trim(),
         'about': _coDesc.text.trim().isEmpty ? null : _coDesc.text.trim(),
       });
+      // Creating a company grants the matching role server-side — refresh the
+      // session so the new role + workspace is active immediately.
+      await ref.read(authControllerProvider.notifier).bootstrap();
       if (mounted) setState(() => _companyCreated = true);
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));

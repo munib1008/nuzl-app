@@ -71,23 +71,33 @@ Widget _section(BuildContext context,
           child: Column(
             crossAxisAlignment: centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
             children: [
-              // Gold kicker — premium accent tier above the heading.
+              // Gold kicker — premium accent tier above the heading. Use the
+              // bright gold on dark backgrounds and the deeper readable gold on
+              // light ones (bright yellow on near-white is invisible).
               if (eyebrow != null) ...[
-                Row(
-                  mainAxisAlignment:
-                      centered ? MainAxisAlignment.center : MainAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(width: 18, height: 2, color: AppColors.goldAccent),
-                    const SizedBox(width: AppSpacing.x8),
-                    Text(eyebrow.toUpperCase(),
-                        style: t.labelMedium?.copyWith(
-                            color: AppColors.accentGold,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.4)),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.x8),
+                Builder(builder: (ctx) {
+                  final gold = _isDark(ctx) ? AppColors.goldAccent : AppColors.accentGold;
+                  return Row(
+                    mainAxisAlignment:
+                        centered ? MainAxisAlignment.center : MainAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 30,
+                        height: 3,
+                        decoration: BoxDecoration(
+                            color: gold, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                      ),
+                      const SizedBox(width: AppSpacing.x12),
+                      Text(eyebrow.toUpperCase(),
+                          style: t.labelLarge?.copyWith(
+                              color: gold,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.6)),
+                    ],
+                  );
+                }),
+                const SizedBox(height: AppSpacing.x12),
               ],
               Text(title,
                   textAlign: centered ? TextAlign.center : TextAlign.start,
