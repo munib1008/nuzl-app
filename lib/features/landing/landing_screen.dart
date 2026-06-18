@@ -259,22 +259,53 @@ class _Hero extends StatelessWidget {
         ),
       ]),
     ]);
-    return FadeIn(
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1040),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpacing.x24, AppSpacing.x48, AppSpacing.x24, AppSpacing.x40),
-            child: wide
-                ? Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                    Expanded(flex: 5, child: textCol),
-                    const SizedBox(width: AppSpacing.x32),
-                    const Expanded(flex: 4, child: _HeroPreview()),
-                  ])
-                : textCol,
-          ),
+    final dark = _isDark(context);
+    return DecoratedBox(
+      // Premium gradient wash + a soft gold glow top-right (borrowed from the
+      // old build's hero treatment, kept on the teal+gold brand).
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: dark
+              ? [AppColors.primary.withValues(alpha: 0.22), Colors.transparent]
+              : [AppColors.secondary.withValues(alpha: 0.06), Colors.transparent],
         ),
       ),
+      child: Stack(children: [
+        Positioned(
+          top: -60, right: -40,
+          child: IgnorePointer(
+            child: Container(
+              width: 380, height: 380,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(colors: [
+                  AppColors.goldAccent.withValues(alpha: dark ? 0.22 : 0.18),
+                  Colors.transparent,
+                ]),
+              ),
+            ),
+          ),
+        ),
+        FadeIn(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1040),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.x24, AppSpacing.x48, AppSpacing.x24, AppSpacing.x40),
+                child: wide
+                    ? Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                        Expanded(flex: 5, child: textCol),
+                        const SizedBox(width: AppSpacing.x32),
+                        const Expanded(flex: 4, child: _HeroPreview()),
+                      ])
+                    : textCol,
+              ),
+            ),
+          ),
+        ),
+      ]),
     );
   }
 }
