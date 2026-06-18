@@ -50,8 +50,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final languages = <String>{};
   final specialties = <String>{};
 
-  // One PRIMARY role (UAT #3). Agency/Bank/etc. are org TYPES (chosen later via
-  // your organization), not user roles; Nuzler is auto-assigned to @nuzl.ae.
+  // One PRIMARY role (UAT #3). The last three are company-based: picking one
+  // takes you straight to "Create company" with the matching business type, and
+  // the company sets up the role + workspace for you.
   static const _roleOptions = [
     ('owner', 'Owner'),
     ('tenant', 'Tenant'),
@@ -59,7 +60,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     ('salesperson', 'Salesperson'),
     ('lead', 'Customer'),
     ('developer', 'Developer'),
+    ('agency', 'Real estate agency'),
+    ('provider', 'Service provider'),
+    ('supplier', 'Supplier'),
   ];
+
+  /// Company-based roles → the business type their "Create company" step starts on.
+  static const _companyRoleBiz = {
+    'agency': 'agency',
+    'provider': 'maintenance',
+    'supplier': 'supplier',
+  };
   static const _emirates = ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Fujairah', 'Umm Al Quwain', 'Al Ain'];
   static const _langs = ['English', 'Arabic', 'Hindi', 'Urdu', 'Tagalog', 'Malayalam', 'Tamil', 'French', 'Russian', 'Chinese'];
   static const _specs = ['Villas', 'Apartments', 'Penthouses', 'Townhouses', 'Commercial', 'Off-Plan', 'Luxury', 'Investment', 'Short Term Rentals', 'Holiday Homes'];
@@ -84,9 +95,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   /// Agent / Salesperson / Developer can name the organization they work with.
   bool get _isOrg => const ['salesperson', 'developer'].contains(role);
 
-  /// Org-affiliated roles (salesperson, developer) get the company-association
-  /// step (join an existing company or create one).
-  bool get _needsCompany => _isOrg;
+  /// Company-based roles created via the company step (agency / service / supplier).
+  bool get _isCompanyRole => _companyRoleBiz.containsKey(role);
+
+  /// Org-affiliated roles get the company-association step (join or create).
+  bool get _needsCompany => _isOrg || _isCompanyRole;
 
   /// The visible steps — the company step only appears for org-affiliated roles.
   List<Widget Function(TextTheme)> get _stepBuilders =>
@@ -118,7 +131,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     try {
       await ref.read(apiClientProvider).patch('/users/me', body: body);
       // Persist the primary role server-side (UAT #3) so it survives devices.
-      if (role != null) await ref.read(authControllerProvider.notifier).setPrimaryRole(role!);
+      // Company-based roles are granted by creating the company (don't double-set).
+      if (role != null && !_isCompanyRole) {
+        await ref.read(authControllerProvider.notifier).setPrimaryRole(role!);
+      }
     } catch (_) {/* non-blocking: continue to dashboard */}
     if (mounted) context.go('/dashboard');
   }
@@ -172,8 +188,35 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           items: _roleOptions
               .map((r) => DropdownMenuItem(value: r.$1, child: Text(r.$2)))
               .toList(),
-          onChanged: (v) => setState(() => role = v),
+          onChanged: (v) => setState(() {
+            role = v;
+            // Company-based role → jump straight to creating a company with the
+            // right business type, so the path is obvious.
+            final biz = _companyRoleBiz[v];
+            if (biz != null) {
+              _companyChoice = 'create';
+              _bizType = biz;
+            }
+          }),
         ),
+        if (_isCompanyRole) ...[
+          const SizedBox(height: AppSpacing.x12),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.x12),
+            decoration: BoxDecoration(
+              color: AppColors.primaryTint,
+              borderRadius: BorderRadius.circular(AppSpacing.rMd),
+            ),
+            child: Row(children: [
+              const Icon(Icons.info_outline, size: 18, color: AppColors.primary),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(
+                child: Text("Next, set up your company — that's all it takes to start as a ${_roleOptions.firstWhere((r) => r.$1 == role).$2.toLowerCase()}.",
+                    style: t.bodySmall?.copyWith(color: AppColors.primary)),
+              ),
+            ]),
+          ),
+        ],
         if (role == 'agent') ...[
           const SizedBox(height: AppSpacing.x12),
           DropdownButtonFormField<String>(
