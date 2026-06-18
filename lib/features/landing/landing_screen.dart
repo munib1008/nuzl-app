@@ -505,6 +505,59 @@ class _EcosystemState extends State<_Ecosystem> {
   int? _active; // hovered pillar — drives the central record's highlight
   bool _devActive = false; // hovered developer origin card
 
+  // What each role manages from the shared property record — shown when a role is
+  // tapped (no login required), with a CTA into that workspace.
+  static const _capabilities = <String, List<String>>{
+    'Owner': ['Ownership records', 'Tenants & leases', 'Rent & payments', 'Maintenance', 'Documents', 'Service requests'],
+    'Agent': ['Listings & bulk upload', 'Leads & CRM', 'Viewings', 'Offers & deals', 'Commissions'],
+    'Customer': ['Search & saved properties', 'Schedule viewings', 'Finance calculator', 'Marketplace', 'Messages'],
+    'Tenant': ['Lease & documents', 'Rent payments', 'Maintenance requests', 'Marketplace'],
+    'Supplier': ['Product catalogue', 'RFQs & quotations', 'Orders', 'Company profile'],
+    'Service Provider': ['Service listings', 'RFQs & quotations', 'Jobs', 'Ratings', 'Company profile'],
+    'Developer': ['Projects & communities', 'Unit inventory', 'Sales channels', 'Reservations', 'Handover'],
+  };
+
+  void _showRole(BuildContext context, String role, Color color, IconData icon) {
+    final caps = _capabilities[role] ?? const [];
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.x24, 0, AppSpacing.x24, AppSpacing.x24),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rMd)),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: AppSpacing.x12),
+            Text(role, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: _onBg(ctx))),
+          ]),
+          const SizedBox(height: AppSpacing.x16),
+          for (final c in caps)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(children: [
+                Icon(Icons.check_circle, size: 18, color: color),
+                const SizedBox(width: AppSpacing.x8),
+                Text(c, style: Theme.of(ctx).textTheme.bodyLarge?.copyWith(color: _onBg(ctx))),
+              ]),
+            ),
+          const SizedBox(height: AppSpacing.x20),
+          SizedBox(
+            width: double.infinity,
+            child: GradientButton(
+              onPressed: () { Navigator.pop(ctx); context.go('/register'); },
+              label: 'Explore the $role workspace',
+              icon: Icons.arrow_forward,
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.of(context).size.width >= 760;
@@ -514,6 +567,7 @@ class _EcosystemState extends State<_Ecosystem> {
         role: p.role, title: p.title, icon: p.icon, tags: p.tags, color: p.color,
         active: _active == i,
         onHover: (h) => setState(() => _active = h ? i : (_active == i ? null : _active)),
+        onTap: () => _showRole(context, p.role, p.color, p.icon),
       );
     });
     return _section(
@@ -572,7 +626,11 @@ class _EcosystemState extends State<_Ecosystem> {
   Widget _originCard(BuildContext context) {
     final t = Theme.of(context).textTheme;
     const dev = AppColors.info;
-    return MouseRegion(
+    return GestureDetector(
+      onTap: () => _showRole(context, 'Developer', dev, _developer.icon),
+      behavior: HitTestBehavior.opaque,
+      child: MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _devActive = true),
       onExit: (_) => setState(() => _devActive = false),
       child: HoverLift(
@@ -628,6 +686,7 @@ class _EcosystemState extends State<_Ecosystem> {
             ]),
           ]),
         ),
+      ),
       ),
     );
   }
@@ -714,18 +773,24 @@ class _PillarCard extends StatelessWidget {
       required this.tags,
       required this.color,
       this.active = false,
-      this.onHover});
+      this.onHover,
+      this.onTap});
   final String role, title;
   final IconData icon;
   final List<String> tags;
   final Color color;
   final bool active;
   final ValueChanged<bool>? onHover;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return MouseRegion(
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: MouseRegion(
+      cursor: onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
       onEnter: (_) => onHover?.call(true),
       onExit: (_) => onHover?.call(false),
       child: HoverLift(
@@ -773,6 +838,7 @@ class _PillarCard extends StatelessWidget {
             ]),
           ]),
         ),
+      ),
       ),
     );
   }
