@@ -224,6 +224,13 @@ Color roleColor(Persona p) {
   }
 }
 
+/// Whether a nav destination is the active one for the current [location].
+/// Matches the route exactly or a true sub-path (`route/…`) — NOT a sibling that
+/// merely shares a prefix (so `/saved-searches` no longer lights up `/saved`).
+bool isActiveRoute(String location, String route) => route == '/dashboard'
+    ? location == '/dashboard'
+    : location == route || location.startsWith('$route/');
+
 /// Top-bar role switcher: "Viewing as <Role> ▼" with a role-coloured badge.
 /// Always shown for signed-in users (even single-role) so role activation is
 /// discoverable; the dropdown lists active roles + "Add a role".
@@ -429,8 +436,7 @@ class NuzlBottomNav extends ConsumerWidget {
     final items = navItemsFor(ref.watch(personaProvider)).take(5).toList();
     if (items.length < 2) return const SizedBox.shrink();
     final location = GoRouterState.of(context).matchedLocation;
-    var index = items.indexWhere((it) =>
-        it.route == '/dashboard' ? location == '/dashboard' : location.startsWith(it.route));
+    var index = items.indexWhere((it) => isActiveRoute(location, it.route));
     if (index < 0) index = 0;
     // Solid nav bar with a hairline top separator (no glassmorphism).
     return DecoratedBox(
@@ -489,9 +495,7 @@ class NuzlSidebarBody extends ConsumerWidget {
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4),
             children: items.map((it) {
-              final selected = it.route == '/dashboard'
-                  ? location == '/dashboard'
-                  : location.startsWith(it.route);
+              final selected = isActiveRoute(location, it.route);
               // Premium: teal-tint fill + 4px gold left accent; monochrome icons
               // except the active item, which picks up the brand teal.
               return DecoratedBox(
