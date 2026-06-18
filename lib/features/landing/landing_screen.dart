@@ -460,19 +460,23 @@ class _WhoAreYou extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final wide = MediaQuery.of(context).size.width >= 900;
     return _section(
       context,
       title: 'Built for every real estate journey',
       subtitle: 'Whether you own, buy, rent, lease, manage, service or invest in property, NUZL adapts to your needs.',
-      child: Wrap(
-        spacing: AppSpacing.x16,
-        runSpacing: AppSpacing.x16,
-        children: _roles
-            .map((r) => HoverLift(
-                  child: Container(
-                    width: wide ? 320 : double.infinity,
+      child: LayoutBuilder(builder: (ctx, cons) {
+        const spacing = AppSpacing.x16;
+        final cols = cons.maxWidth >= 900 ? 3 : (cons.maxWidth >= 560 ? 2 : 1);
+        final cardW = cols == 1 ? cons.maxWidth : (cons.maxWidth - spacing * (cols - 1)) / cols;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: _roles
+              .map((r) => HoverLift(
+                  child: SizedBox(
+                    width: cardW,
                     height: 188,
+                    child: Container(
                     padding: const EdgeInsets.all(AppSpacing.x20),
                     decoration: BoxDecoration(
                       color: _surface(context),
@@ -500,9 +504,11 @@ class _WhoAreYou extends StatelessWidget {
                       ),
                     ]),
                   ),
+                  ),
                 ))
-            .toList(),
-      ),
+              .toList(),
+        );
+      }),
     );
   }
 }
@@ -1284,33 +1290,47 @@ class _Testimonials extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final wide = MediaQuery.of(context).size.width >= 900;
     return _section(
       context,
       title: 'Built for everyone in the deal',
-      child: Wrap(
-        spacing: AppSpacing.x16,
-        runSpacing: AppSpacing.x16,
-        children: _quotes
-            .map((q) => Container(
-                  width: wide ? 320 : double.infinity,
-                  padding: const EdgeInsets.all(AppSpacing.x20),
-                  decoration: BoxDecoration(
-                    color: _surface(context),
-                    borderRadius: BorderRadius.circular(_kCardR),
-                    border: Border.all(color: _border(context)),
-                    boxShadow: _cardShadow(context),
-                  ),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Icon(Icons.format_quote, color: _primary(context), size: 24),
-                    const SizedBox(height: AppSpacing.x8),
-                    Text(q.$2, style: t.bodyMedium?.copyWith(color: _onBg(context), height: 1.5)),
-                    const SizedBox(height: AppSpacing.x12),
-                    Text(q.$1, style: t.bodySmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w600)),
-                  ]),
-                ))
-            .toList(),
-      ),
+      // Uniform grid: equal width + height so quotes of different lengths don't
+      // make rows ragged (4 across on desktop, 2 on tablet, 1 on mobile).
+      child: LayoutBuilder(builder: (ctx, cons) {
+        const spacing = AppSpacing.x16;
+        final cols = cons.maxWidth >= 900 ? 4 : (cons.maxWidth >= 560 ? 2 : 1);
+        final w = cols == 1 ? cons.maxWidth : (cons.maxWidth - spacing * (cols - 1)) / cols;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: _quotes
+              .map((q) => SizedBox(
+                    width: w,
+                    height: 184,
+                    child: Container(
+                      padding: const EdgeInsets.all(AppSpacing.x20),
+                      decoration: BoxDecoration(
+                        color: _surface(context),
+                        borderRadius: BorderRadius.circular(_kCardR),
+                        border: Border.all(color: _border(context)),
+                        boxShadow: _cardShadow(context),
+                      ),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Icon(Icons.format_quote, color: _primary(context), size: 24),
+                        const SizedBox(height: AppSpacing.x8),
+                        Expanded(
+                          child: Text(q.$2,
+                              maxLines: 4,
+                              overflow: TextOverflow.ellipsis,
+                              style: t.bodyMedium?.copyWith(color: _onBg(context), height: 1.5)),
+                        ),
+                        const SizedBox(height: AppSpacing.x8),
+                        Text(q.$1, style: t.bodySmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w600)),
+                      ]),
+                    ),
+                  ))
+              .toList(),
+        );
+      }),
     );
   }
 }
