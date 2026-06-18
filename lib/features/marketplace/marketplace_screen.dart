@@ -282,6 +282,7 @@ class _ItemCard extends ConsumerWidget {
     final delivery = int.tryParse('${m['delivery_days'] ?? ''}');
     final isActive = m['is_active'] != false; // legacy rows (null) treated as live
     final verified = m['supplier_verified'] == true;
+    final logo = '${m['supplier_logo'] ?? ''}'.trim();
 
     return HoverLift(
       child: Card(
@@ -310,8 +311,19 @@ class _ItemCard extends ConsumerWidget {
               if (supplier.isNotEmpty) ...[
                 const SizedBox(height: 3),
                 Row(children: [
-                  const Icon(Icons.storefront_outlined, size: 13, color: AppColors.textMuted),
-                  const SizedBox(width: 4),
+                  if (logo.isNotEmpty)
+                    Container(
+                      width: 16, height: 16,
+                      margin: const EdgeInsets.only(right: 4),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        image: DecorationImage(image: NetworkImage(logo), fit: BoxFit.cover),
+                      ),
+                    )
+                  else ...[
+                    const Icon(Icons.storefront_outlined, size: 13, color: AppColors.textMuted),
+                    const SizedBox(width: 4),
+                  ],
                   Flexible(
                     child: Text(supplier,
                         style: t.bodySmall?.copyWith(color: AppColors.textMuted),

@@ -53,7 +53,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.inventory_2_outlined, 'Inventory', '/inventory'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
-        NavItem(Icons.business_outlined, 'Organization', '/org-ownership'),
+        NavItem(Icons.business_outlined, 'My Company', '/company-dashboard'),
         NavItem(Icons.query_stats_outlined, 'Lead analytics', '/lead-analytics'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
@@ -63,7 +63,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.domain_outlined, 'Projects', '/projects'),
         NavItem(Icons.inventory_2_outlined, 'Inventory', '/inventory'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
-        NavItem(Icons.business_outlined, 'Organization', '/org-ownership'),
+        NavItem(Icons.business_outlined, 'My Company', '/company-dashboard'),
         NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
@@ -91,6 +91,7 @@ List<NavItem> navItemsFor(Persona p) {
     case Persona.provider:
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
+        NavItem(Icons.business_outlined, 'My Company', '/company-dashboard'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
         NavItem(Icons.assignment_outlined, 'Requests', '/tenders'),
         NavItem(Icons.receipt_long_outlined, 'Orders', '/orders'),

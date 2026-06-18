@@ -64,6 +64,16 @@ class _Body extends StatelessWidget {
     final verified = org['is_verified'] == true;
     final agents = (org['agents'] is List) ? org['agents'] as List : const [];
     final listings = (org['listings'] is List) ? org['listings'] as List : const [];
+    final services = (org['services'] is List) ? org['services'] as List : const [];
+    final products = (org['products'] is List) ? org['products'] as List : const [];
+    final projects = (org['projects'] is List) ? org['projects'] as List : const [];
+    final reviews = (org['reviews'] is List) ? org['reviews'] as List : const [];
+    final rating = num.tryParse('${org['rating'] ?? ''}');
+    final reviewCount = int.tryParse('${org['review_count'] ?? 0}') ?? 0;
+    final location = [
+      '${org['city'] ?? ''}'.trim(),
+      '${org['country'] ?? ''}'.trim(),
+    ].where((s) => s.isNotEmpty).join(', ');
 
     return ListView(
       padding: EdgeInsets.zero,
@@ -112,6 +122,16 @@ class _Body extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(tagline, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
                         ],
+                        if (rating != null && reviewCount > 0) ...[
+                          const SizedBox(height: 4),
+                          Row(children: [
+                            for (var i = 1; i <= 5; i++)
+                              Icon(i <= rating.round() ? Icons.star : Icons.star_border, size: 14, color: AppColors.accentGold),
+                            const SizedBox(width: 6),
+                            Text('${rating.toStringAsFixed(1)} ($reviewCount ${reviewCount == 1 ? 'review' : 'reviews'})',
+                                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                          ]),
+                        ],
                       ]),
                     ),
                   ]),
@@ -122,8 +142,9 @@ class _Body extends StatelessWidget {
                   ],
 
                   // contact / links
-                  if (website.isNotEmpty || phone.isNotEmpty || email.isNotEmpty)
+                  if (website.isNotEmpty || phone.isNotEmpty || email.isNotEmpty || location.isNotEmpty)
                     Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
+                      if (location.isNotEmpty) _LinkChip(icon: Icons.place_outlined, label: location, value: location),
                       if (website.isNotEmpty) _LinkChip(icon: Icons.language, label: 'Website', value: website),
                       if (phone.isNotEmpty) _LinkChip(icon: Icons.call_outlined, label: 'Call', value: phone),
                       if (email.isNotEmpty) _LinkChip(icon: Icons.mail_outline, label: 'Email', value: email),
@@ -155,6 +176,30 @@ class _Body extends StatelessWidget {
                     }),
                   ],
 
+                  // services
+                  if (services.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.x24),
+                    Text('Services', style: t.titleMedium),
+                    const SizedBox(height: AppSpacing.x8),
+                    _offeringsGrid(services),
+                  ],
+
+                  // products
+                  if (products.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.x24),
+                    Text('Products', style: t.titleMedium),
+                    const SizedBox(height: AppSpacing.x8),
+                    _offeringsGrid(products),
+                  ],
+
+                  // projects (developers)
+                  if (projects.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.x24),
+                    Text('Projects', style: t.titleMedium),
+                    const SizedBox(height: AppSpacing.x8),
+                    Column(children: projects.map((e) => _ProjectTile(Map<String, dynamic>.from(e))).toList()),
+                  ],
+
                   // team
                   if (agents.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.x24),
@@ -165,6 +210,14 @@ class _Body extends StatelessWidget {
                       runSpacing: AppSpacing.x12,
                       children: agents.map((e) => _AgentChip(Map<String, dynamic>.from(e))).toList(),
                     ),
+                  ],
+
+                  // reviews
+                  if (reviews.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.x24),
+                    Text('Reviews', style: t.titleMedium),
+                    const SizedBox(height: AppSpacing.x8),
+                    Column(children: reviews.map((e) => _ReviewTile(Map<String, dynamic>.from(e))).toList()),
                   ],
                   const SizedBox(height: AppSpacing.x32),
                 ],
@@ -242,6 +295,123 @@ class _AgentChip extends StatelessWidget {
               Text(role, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
             ]),
           ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Responsive grid of service/product offering cards.
+Widget _offeringsGrid(List items) => LayoutBuilder(builder: (ctx, c) {
+      final cols = c.maxWidth >= 720 ? 3 : (c.maxWidth >= 480 ? 2 : 1);
+      final w = cols == 1 ? c.maxWidth : (c.maxWidth - (cols - 1) * AppSpacing.x12) / cols;
+      return Wrap(
+        spacing: AppSpacing.x12,
+        runSpacing: AppSpacing.x12,
+        children: items.map((e) => SizedBox(width: w, child: _OfferingCard(Map<String, dynamic>.from(e)))).toList(),
+      );
+    });
+
+class _OfferingCard extends StatelessWidget {
+  const _OfferingCard(this.m);
+  final Map<String, dynamic> m;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final price = num.tryParse('${m['price']}');
+    final money = price != null && price > 0 ? NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price) : '';
+    final unit = '${m['price_unit'] ?? ''}'.trim();
+    final img = '${m['image_url'] ?? ''}'.trim();
+    final isProduct = '${m['kind']}' == 'product';
+    final fallback = Container(
+      color: AppColors.surface2,
+      child: Center(child: Icon(isProduct ? Icons.inventory_2_outlined : Icons.handyman_outlined, size: 32, color: AppColors.textSubtle)),
+    );
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        AspectRatio(
+          aspectRatio: 16 / 10,
+          child: img.isEmpty ? fallback : Image.network(img, fit: BoxFit.cover, errorBuilder: (_, __, ___) => fallback),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(AppSpacing.x12),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('${m['title'] ?? ''}', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
+            if ('${m['category'] ?? ''}'.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text('${m['category']}${'${m['subcategory'] ?? ''}'.isNotEmpty ? ' · ${m['subcategory']}' : ''}',
+                  style: t.bodySmall?.copyWith(color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+            ],
+            if (money.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text('$money${unit.isNotEmpty ? ' · $unit' : ''}', style: t.titleSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+            ],
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
+class _ProjectTile extends StatelessWidget {
+  const _ProjectTile(this.p);
+  final Map<String, dynamic> p;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final units = int.tryParse('${p['unit_count'] ?? 0}') ?? 0;
+    final handover = '${p['handover_date'] ?? ''}'.split('T').first;
+    final meta = [
+      if ('${p['community'] ?? ''}'.isNotEmpty) '${p['community']}',
+      '${p['status'] ?? ''}'.replaceAll('_', ' '),
+      if (units > 0) '$units ${units == 1 ? 'unit' : 'units'}',
+      if (handover.isNotEmpty) 'Handover $handover',
+    ].where((s) => s.trim().isNotEmpty).join(' · ');
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x12),
+        child: Row(children: [
+          const Icon(Icons.domain_outlined, color: AppColors.primary),
+          const SizedBox(width: AppSpacing.x12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('${p['name'] ?? 'Project'}', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+              if (meta.isNotEmpty) Text(meta, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _ReviewTile extends StatelessWidget {
+  const _ReviewTile(this.r);
+  final Map<String, dynamic> r;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final rating = int.tryParse('${r['rating'] ?? 0}') ?? 0;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            for (var i = 1; i <= 5; i++)
+              Icon(i <= rating ? Icons.star : Icons.star_border, size: 14, color: AppColors.accentGold),
+            const SizedBox(width: 6),
+            Expanded(child: Text('${r['customer_name'] ?? 'Customer'}',
+                style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis)),
+          ]),
+          if ('${r['review'] ?? ''}'.trim().isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text('${r['review']}', style: t.bodySmall),
+          ],
+          if ('${r['item_title'] ?? ''}'.trim().isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text('${r['item_title']}', style: t.labelSmall?.copyWith(color: AppColors.textMuted)),
+          ],
         ]),
       ),
     );
