@@ -3,17 +3,30 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/util/mortgage_math.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../shell/app_shell.dart';
 
+/// Saved Property Finance Calculator scenarios for the signed-in user.
+final financeScenariosProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/finance-scenarios');
+    return d is List ? d : [];
+  } catch (_) {
+    return [];
+  }
+});
+
 /// Customer Finance Planner — an affordability tool, NOT a loan tracker (that's
 /// the Owner portal). Answers: what can I afford, what will it cost monthly, and
 /// what income do I need. All client-side; supports conventional + Islamic.
 class FinancePlannerScreen extends ConsumerStatefulWidget {
-  const FinancePlannerScreen({super.key});
+  const FinancePlannerScreen({super.key, this.listingId});
+  /// When opened from a property, the saved scenario links back to that listing.
+  final String? listingId;
   @override
   ConsumerState<FinancePlannerScreen> createState() => _FinancePlannerScreenState();
 }
@@ -25,6 +38,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
   final _rate = TextEditingController(text: '4.5');
   String _financeType = 'conventional';
   int _years = 25;
+  bool _saving = false;
 
   // UAE mortgage-affordability rule of thumb: total instalments ≤ 50% of monthly
   // income (the bank "DBR" cap).
@@ -201,6 +215,19 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                     style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
               ),
 
+            if (income > 0 || price > 0) ...[
+              const SizedBox(height: AppSpacing.x8),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _saving ? null : () => _save(
+                        price: price, income: income, downPayment: downPayment, financeAmount: financeAmount,
+                        installment: installment, rate: rate, dbr: dbr, maxPrice: maxPrice),
+                  icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+                  label: Text(_saving ? 'Saving…' : 'Save this scenario'),
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.x8),
             SizedBox(
               width: double.infinity,
@@ -210,6 +237,22 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                 label: Text(income > 0 ? 'Browse properties in budget' : 'Browse properties'),
               ),
             ),
+
+            // ── Saved scenarios ──
+            ...(() {
+              final saved = ref.watch(financeScenariosProvider).asData?.value ?? const [];
+              if (saved.isEmpty) return <Widget>[];
+              return [
+                const SizedBox(height: AppSpacing.x16),
+                _Panel(
+                  title: 'Saved scenarios',
+                  child: Column(children: [
+                    for (final s in saved) _scenarioTile(Map<String, dynamic>.from(s), aed),
+                  ]),
+                ),
+              ];
+            })(),
+
             const SizedBox(height: AppSpacing.x12),
             Text('Estimates only — actual eligibility, rates and fees are set by your bank or finance provider.',
                 style: t.bodySmall?.copyWith(color: AppColors.textSubtle)),
@@ -234,6 +277,100 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
         Expanded(child: Text(k, style: t.bodySmall?.copyWith(color: AppColors.textMuted))),
         Text(v, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
       ]),
+    );
+  }
+
+  Future<void> _save({
+    required double price, required double income, required double downPayment, required double financeAmount,
+    required double installment, required double rate, double? dbr, required double maxPrice,
+  }) async {
+    final ctrl = TextEditingController(
+      text: price > 0 ? NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price) : 'My scenario');
+    final label = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Save scenario'),
+        content: TextField(controller: ctrl, autofocus: true, decoration: const InputDecoration(labelText: 'Label')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: const Text('Save')),
+        ],
+      ),
+    );
+    if (label == null) return;
+    setState(() => _saving = true);
+    try {
+      await ref.read(apiClientProvider).post('/finance-scenarios', body: {
+        'listing_id': widget.listingId,
+        'label': label.isEmpty ? null : label,
+        'property_price': price > 0 ? price : null,
+        'down_payment': price > 0 ? downPayment : null,
+        'loan_amount': price > 0 ? financeAmount : null,
+        'interest_rate': rate,
+        'loan_years': _years,
+        'monthly_installment': price > 0 ? installment : null,
+        'income': income > 0 ? income : null,
+        'dbr': dbr,
+        'approval_estimate': income > 0 ? maxPrice : null,
+        'is_islamic': _isl,
+      });
+      ref.invalidate(financeScenariosProvider);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Scenario saved')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  void _load(Map<String, dynamic> s) {
+    setState(() {
+      final price = num.tryParse('${s['property_price']}');
+      final income = num.tryParse('${s['income']}');
+      final rate = num.tryParse('${s['interest_rate']}');
+      final years = int.tryParse('${s['loan_years'] ?? ''}');
+      final down = num.tryParse('${s['down_payment']}');
+      _price.text = price != null ? price.toStringAsFixed(0) : '';
+      _income.text = income != null ? income.toStringAsFixed(0) : '';
+      if (rate != null) _rate.text = '$rate';
+      if (years != null && const [10, 15, 20, 25].contains(years)) _years = years;
+      _financeType = s['is_islamic'] == true ? 'islamic' : 'conventional';
+      if (price != null && price > 0 && down != null) {
+        _downPct.text = ((down / price) * 100).round().toString();
+      }
+    });
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Scenario loaded')));
+  }
+
+  Future<void> _delete(String id) async {
+    try {
+      await ref.read(apiClientProvider).delete('/finance-scenarios/$id');
+      ref.invalidate(financeScenariosProvider);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Widget _scenarioTile(Map<String, dynamic> s, NumberFormat aed) {
+    final t = Theme.of(context).textTheme;
+    final price = num.tryParse('${s['property_price']}');
+    final inst = num.tryParse('${s['monthly_installment']}');
+    final sub = [
+      if (price != null) aed.format(price),
+      if (inst != null) '${aed.format(inst)}/mo',
+      if ('${s['community'] ?? ''}'.isNotEmpty) '${s['community']}',
+    ].join('  ·  ');
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.savings_outlined, color: AppColors.primary),
+      title: Text('${s['label'] ?? 'Scenario'}', maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: sub.isEmpty ? null : Text(sub, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+      onTap: () => _load(s),
+      trailing: IconButton(
+        tooltip: 'Delete',
+        icon: const Icon(Icons.delete_outline, size: 20),
+        onPressed: () => _delete('${s['id']}'),
+      ),
     );
   }
 }
