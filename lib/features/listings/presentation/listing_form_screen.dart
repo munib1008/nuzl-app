@@ -258,6 +258,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
 
   Future<void> _save() async {
     final editing = widget.editId != null;
+    final messenger = ScaffoldMessenger.of(context); // captured before any await
     // Profile-completion gate (#15): a complete profile is required to post a new listing.
     if (!editing) {
       final pc = await ref.read(profileCompletionProvider.future).catchError((_) => <String, dynamic>{'complete': true});
@@ -268,14 +269,24 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
         return;
       }
     }
-    // Building name + unit number are mandatory (owner #1). Unit number is only
-    // captured on create (it identifies the property), so require it there.
-    if (building.text.trim().isEmpty) {
-      setState(() => error = 'Building name is required.');
-      return;
-    }
-    if (!editing && unitNo.text.trim().isEmpty) {
-      setState(() => error = 'Unit number is required.');
+    // Validate all mandatory fields together and show a single, specific summary
+    // (don't clear the form — entered data is preserved).
+    final priceVal = double.tryParse(price.text.trim());
+    final missing = <String>[
+      if (building.text.trim().isEmpty) 'Building name',
+      if (!editing && unitNo.text.trim().isEmpty) 'Unit number',
+      if (priceVal == null || priceVal <= 0) 'A valid price',
+    ];
+    if (missing.isNotEmpty) {
+      final msg = missing.length == 1
+          ? '${missing.first} is required.'
+          : 'Please complete: ${missing.join(', ')}.';
+      setState(() => error = msg);
+      // Surface it above the pinned save bar too, so it's seen wherever the user
+      // is scrolled — without clearing any entered data.
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(msg)));
       return;
     }
     setState(() { saving = true; error = null; });
@@ -284,7 +295,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       'property_type': propertyType,
       'purpose': purpose,
       'furnishing': furnishing,
-      'price': double.tryParse(price.text) ?? 0,
+      'price': priceVal,
       'bedrooms': int.tryParse(beds.text),
       'bathrooms': int.tryParse(baths.text),
       'size_sqft': double.tryParse(size.text),

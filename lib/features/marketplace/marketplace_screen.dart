@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/hover_lift.dart';
+import '../../core/widgets/skeleton_loader.dart';
 import '../../core/widgets/status_badge.dart';
 import '../shell/app_shell.dart';
 import 'marketplace_taxonomy.dart';
@@ -189,7 +190,10 @@ class _MarketListState extends ConsumerState<_MarketList> {
         await ref.read(marketplaceProvider(widget.kind).future);
       },
       child: items.when(
-        loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
+        loading: () => ListView(
+          padding: const EdgeInsets.all(AppSpacing.x16),
+          children: const [SkeletonListingGrid(count: 6)],
+        ),
         error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text('$e')))]),
         data: (raw) {
           final all = raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
