@@ -1962,7 +1962,8 @@ class _ListingCard extends StatelessWidget {
         width: width,
         decoration: BoxDecoration(
           color: _surface(context),
-          borderRadius: BorderRadius.circular(16),
+          // Match the app-wide card radius (rCard=20) for visual consistency.
+          borderRadius: BorderRadius.circular(AppSpacing.rCard),
           border: Border.all(color: _border(context)),
           // Lighter single shadow — the 3-layer one was visual clutter.
           boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 14, offset: Offset(0, 6))],
