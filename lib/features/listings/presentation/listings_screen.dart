@@ -52,6 +52,12 @@ class ListingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: NuzlAppBar(title: 'Properties', actions: [
+        if (canList)
+          IconButton(
+            tooltip: 'Import properties',
+            icon: const Icon(Icons.upload_file_outlined),
+            onPressed: () => context.push('/properties/import'),
+          ),
         SaveSearchAction(filters: {
           if (purpose != 'all') 'purpose': purpose,
           if (type != 'all') 'property_type': type,

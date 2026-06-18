@@ -13,6 +13,7 @@ import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/feed/presentation/feed_screen.dart';
 import '../../features/listings/presentation/listings_screen.dart';
+import '../../features/listings/presentation/bulk_property_import_screen.dart';
 import '../../features/listings/presentation/listing_form_screen.dart';
 import '../../features/listings/presentation/listing_detail_screen.dart';
 import '../../features/listings/presentation/public_listing_screen.dart';
@@ -145,6 +146,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/dashboard', builder: (_, __) => const DashboardScreen()),
       GoRoute(path: '/feed', builder: (_, __) => const FeedScreen()),
       GoRoute(path: '/properties', builder: (_, __) => const ListingsScreen()),
+      GoRoute(path: '/properties/import', builder: (_, __) => const BulkPropertyImportScreen()),
       GoRoute(path: '/properties/new', builder: (_, __) => const ListingFormScreen()),
       GoRoute(path: '/properties/:id/edit', builder: (_, st) => ListingFormScreen(
             editId: st.pathParameters['id'],
