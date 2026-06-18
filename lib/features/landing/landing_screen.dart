@@ -981,6 +981,9 @@ class _EcosystemTrust extends StatelessWidget {
     (Icons.domain_outlined, 'Developers'),
     (Icons.trending_up, 'Investors'),
   ];
+  // UAE regulatory framework the platform is built around (stated as context,
+  // not as official integrations).
+  static const _framework = ['RERA', 'Dubai Land Department', 'Dubai Municipality', 'DEWA'];
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
@@ -989,25 +992,50 @@ class _EcosystemTrust extends StatelessWidget {
       title: 'Built for the UAE property ecosystem',
       subtitle: 'Every party in a property’s life — working from one shared record.',
       bg: _surface(context),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: AppSpacing.x12, runSpacing: AppSpacing.x12,
-        children: [
-          for (final r in _roles)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x12),
-              decoration: BoxDecoration(
-                color: _isDark(context) ? Colors.white10 : AppColors.surface2,
-                borderRadius: BorderRadius.circular(AppSpacing.rFull),
+      child: Column(children: [
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: AppSpacing.x12, runSpacing: AppSpacing.x12,
+          children: [
+            for (final r in _roles)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x12),
+                decoration: BoxDecoration(
+                  color: _isDark(context) ? Colors.white10 : AppColors.surface2,
+                  borderRadius: BorderRadius.circular(AppSpacing.rFull),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(r.$1, size: 18, color: _primary(context)),
+                  const SizedBox(width: AppSpacing.x8),
+                  Text(r.$2, style: t.bodyMedium?.copyWith(color: _onBg(context), fontWeight: FontWeight.w600)),
+                ]),
               ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(r.$1, size: 18, color: _primary(context)),
-                const SizedBox(width: AppSpacing.x8),
-                Text(r.$2, style: t.bodyMedium?.copyWith(color: _onBg(context), fontWeight: FontWeight.w600)),
-              ]),
-            ),
-        ],
-      ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.x24),
+        Text('Built around the UAE’s property framework',
+            style: t.bodySmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w600, letterSpacing: 0.3)),
+        const SizedBox(height: AppSpacing.x12),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: AppSpacing.x8, runSpacing: AppSpacing.x8,
+          children: [
+            for (final name in _framework)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x12, vertical: 6),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppSpacing.rSm),
+                  border: Border.all(color: _border(context)),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.verified_outlined, size: 14, color: _muted(context)),
+                  const SizedBox(width: 6),
+                  Text(name, style: t.labelMedium?.copyWith(color: _muted(context), fontWeight: FontWeight.w600)),
+                ]),
+              ),
+          ],
+        ),
+      ]),
     );
   }
 }
@@ -1405,6 +1433,13 @@ class _Footer extends StatelessWidget {
                         child: Text('The real-estate operating system. Dubai · Abu Dhabi.',
                             style: t.bodySmall?.copyWith(color: _muted(context), height: 1.5)),
                       ),
+                      const SizedBox(height: AppSpacing.x8),
+                      Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.bolt_outlined, size: 14, color: _subtle(context)),
+                        const SizedBox(width: 4),
+                        Text('Powered by Relaam — UAE’s Trusted Property Portal',
+                            style: t.labelSmall?.copyWith(color: _subtle(context))),
+                      ]),
                     ]),
                   ),
                   if (!wide) const SizedBox(height: AppSpacing.x32),
