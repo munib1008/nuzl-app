@@ -78,11 +78,13 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
     case Persona.salesperson:
+      // Pipeline-focused (spec): Leads → Opportunities → Quotations, not a generic
+      // contact list. Quotations are managed via the tendering/requests screen.
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
-        NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
-        NavItem(Icons.receipt_long_outlined, 'Orders', '/orders'),
-        NavItem(Icons.contacts_outlined, 'Contacts', '/contacts'),
+        NavItem(Icons.filter_alt_outlined, 'Leads', '/leads'),
+        NavItem(Icons.trending_up_outlined, 'Opportunities', '/opportunities'),
+        NavItem(Icons.request_quote_outlined, 'Quotations', '/tenders'),
         NavItem(Icons.event_note_outlined, 'Activities', '/activities'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
