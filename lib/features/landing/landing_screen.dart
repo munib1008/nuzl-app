@@ -1144,38 +1144,52 @@ class _MarketIntelligence extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final wide = MediaQuery.of(context).size.width >= 900;
     return _section(
       context,
       title: 'Market intelligence',
       subtitle: 'Stay ahead with the data that drives decisions.',
-      child: Wrap(
-        spacing: AppSpacing.x16,
-        runSpacing: AppSpacing.x16,
-        children: _items
-            .map((it) => HoverLift(
-                  child: Container(
-                    width: wide ? 232 : double.infinity,
-                    padding: const EdgeInsets.all(AppSpacing.x16),
-                    decoration: BoxDecoration(
-                      color: _surface(context),
-                      borderRadius: BorderRadius.circular(_kCardR),
-                      border: Border.all(color: _border(context)),
-                      boxShadow: _cardShadow(context),
+      // Uniform grid: identical card width + height (4 across on desktop, 2 on
+      // tablet, 1 on mobile) so 1- vs 2-line copy never makes rows ragged.
+      child: LayoutBuilder(builder: (ctx, cons) {
+        const spacing = AppSpacing.x16;
+        final cols = cons.maxWidth >= 900 ? 4 : (cons.maxWidth >= 560 ? 2 : 1);
+        final w = cols == 1 ? cons.maxWidth : (cons.maxWidth - spacing * (cols - 1)) / cols;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: _items
+              .map((it) => HoverLift(
+                    child: SizedBox(
+                      width: w,
+                      height: 168,
+                      child: Container(
+                        padding: const EdgeInsets.all(AppSpacing.x16),
+                        decoration: BoxDecoration(
+                          color: _surface(context),
+                          borderRadius: BorderRadius.circular(_kCardR),
+                          border: Border.all(color: _border(context)),
+                          boxShadow: _cardShadow(context),
+                        ),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Icon(it.$1, color: _primary(context), size: 24),
+                          const SizedBox(height: AppSpacing.x8),
+                          Text(it.$2,
+                              style: GoogleFonts.poppins(
+                                  fontSize: 15, fontWeight: FontWeight.w600, color: _onBg(context))),
+                          const SizedBox(height: AppSpacing.x4),
+                          Expanded(
+                            child: Text(it.$3,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: t.bodySmall?.copyWith(color: _body(context), height: 1.4)),
+                          ),
+                        ]),
+                      ),
                     ),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Icon(it.$1, color: _primary(context), size: 24),
-                      const SizedBox(height: AppSpacing.x8),
-                      Text(it.$2,
-                          style: GoogleFonts.poppins(
-                              fontSize: 15, fontWeight: FontWeight.w600, color: _onBg(context))),
-                      const SizedBox(height: AppSpacing.x4),
-                      Text(it.$3, style: t.bodySmall?.copyWith(color: _body(context), height: 1.4)),
-                    ]),
-                  ),
-                ))
-            .toList(),
-      ),
+                  ))
+              .toList(),
+        );
+      }),
     );
   }
 }

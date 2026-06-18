@@ -369,6 +369,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final t = Theme.of(context).textTheme;
     final user = ref.watch(authControllerProvider).user;
     final isAdmin = personaFromRole(user?.role) == Persona.admin;
+    // Client-facing professionals get Company / Expertise / RERA fields; consumers
+    // (buyer, tenant, owner, investor) get a simpler, role-appropriate profile.
+    final persona = personaFromRole(user?.activeRole ?? user?.role);
+    const proPersonas = {
+      Persona.leadGenerator, Persona.agent, Persona.broker,
+      Persona.developer, Persona.bank, Persona.salesperson, Persona.provider,
+    };
+    final pro = proPersonas.contains(persona);
     final avatarUrl = ref.watch(_avatarProvider).asData?.value;
     ref.watch(_meProvider).whenData(_prefill);
     final verified = reraBrn.text.trim().isNotEmpty;
@@ -420,20 +428,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: AppSpacing.x12),
                     Text(user?.fullName ?? 'Account', style: t.titleLarge),
                     Text(user?.email ?? '', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
-                    const SizedBox(height: AppSpacing.x8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                          color: verified ? AppColors.accentGoldTint : AppColors.surface2,
-                          borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(verified ? Icons.verified : Icons.verified_outlined, size: 14,
-                            color: verified ? AppColors.accentGold : AppColors.textMuted),
-                        const SizedBox(width: 4),
-                        Text(verified ? 'RERA verified' : 'Unverified',
-                            style: t.bodySmall?.copyWith(color: verified ? AppColors.accentGold : AppColors.textMuted)),
-                      ]),
-                    ),
+                    // RERA verification badge is only meaningful for professionals.
+                    if (pro) ...[
+                      const SizedBox(height: AppSpacing.x8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                            color: verified ? AppColors.accentGoldTint : AppColors.surface2,
+                            borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(verified ? Icons.verified : Icons.verified_outlined, size: 14,
+                              color: verified ? AppColors.accentGold : AppColors.textMuted),
+                          const SizedBox(width: 4),
+                          Text(verified ? 'RERA verified' : 'Unverified',
+                              style: t.bodySmall?.copyWith(color: verified ? AppColors.accentGold : AppColors.textMuted)),
+                        ]),
+                      ),
+                    ],
                   ])),
                   const SizedBox(height: AppSpacing.x24),
 
@@ -460,12 +471,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         child: Text(_designationLabel('${user!.designation}')),
                       ),
                     ],
-                    const SizedBox(height: AppSpacing.x12),
-                    TextField(controller: company, onChanged: (_) => _markDirty(),
-                        decoration: const InputDecoration(labelText: 'Company name', hintText: 'Your company or brokerage', prefixIcon: Icon(Icons.business_outlined))),
+                    if (pro) ...[
+                      const SizedBox(height: AppSpacing.x12),
+                      TextField(controller: company, onChanged: (_) => _markDirty(),
+                          decoration: const InputDecoration(labelText: 'Company name', hintText: 'Your company or brokerage', prefixIcon: Icon(Icons.business_outlined))),
+                    ],
                     const SizedBox(height: AppSpacing.x12),
                     TextField(controller: bio, onChanged: (_) => _markDirty(), maxLines: 3,
-                        decoration: const InputDecoration(labelText: 'Bio', hintText: 'Tell others about yourself…')),
+                        decoration: InputDecoration(
+                            labelText: 'Bio',
+                            hintText: pro ? 'Tell clients about yourself and your experience…' : 'Tell others a little about yourself…')),
                   ]),
                   const SizedBox(height: AppSpacing.x16),
 
@@ -490,7 +505,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ]),
                   const SizedBox(height: AppSpacing.x16),
 
-                  if (user?.organizationId == null) ...[
+                  if (pro && user?.organizationId == null) ...[
                     _section('Organization', null, [
                       Text('You are not part of an organization yet.',
                           style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
@@ -504,23 +519,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: AppSpacing.x16),
                   ],
 
-                  // ── Expertise ────────────────────────────────────
-                  _section('Expertise', 'Helps buyers find the right match', [
-                    MultiSelectField(label: 'Areas you cover', icon: Icons.map_outlined, options: _emirates, selected: areas,
-                        onChanged: (v) => setState(() { areas..clear()..addAll(v); _dirty = true; })),
-                    MultiSelectField(label: 'Languages', icon: Icons.translate_outlined, options: _langs, selected: languages,
-                        onChanged: (v) => setState(() { languages..clear()..addAll(v); _dirty = true; })),
-                    MultiSelectField(label: 'Property specialties', icon: Icons.star_outline, options: _specs, selected: specialties,
-                        onChanged: (v) => setState(() { specialties..clear()..addAll(v); _dirty = true; })),
-                  ]),
-                  const SizedBox(height: AppSpacing.x16),
-
-                  // ── Credentials ──────────────────────────────────
-                  _section('Credentials', 'A RERA BRN turns on the verified badge', [
-                    TextField(controller: reraBrn, onChanged: (_) => setState(() => _dirty = true),
-                        decoration: const InputDecoration(labelText: 'RERA BRN', hintText: 'Broker registration number', prefixIcon: Icon(Icons.verified_outlined))),
-                  ]),
-                  const SizedBox(height: AppSpacing.x16),
+                  // ── Expertise + Credentials (professionals only) ──
+                  if (pro) ...[
+                    _section('Expertise', 'Helps buyers find the right match', [
+                      MultiSelectField(label: 'Areas you cover', icon: Icons.map_outlined, options: _emirates, selected: areas,
+                          onChanged: (v) => setState(() { areas..clear()..addAll(v); _dirty = true; })),
+                      MultiSelectField(label: 'Languages', icon: Icons.translate_outlined, options: _langs, selected: languages,
+                          onChanged: (v) => setState(() { languages..clear()..addAll(v); _dirty = true; })),
+                      MultiSelectField(label: 'Property specialties', icon: Icons.star_outline, options: _specs, selected: specialties,
+                          onChanged: (v) => setState(() { specialties..clear()..addAll(v); _dirty = true; })),
+                    ]),
+                    const SizedBox(height: AppSpacing.x16),
+                    _section('Credentials', 'A RERA BRN turns on the verified badge', [
+                      TextField(controller: reraBrn, onChanged: (_) => setState(() => _dirty = true),
+                          decoration: const InputDecoration(labelText: 'RERA BRN', hintText: 'Broker registration number', prefixIcon: Icon(Icons.verified_outlined))),
+                    ]),
+                    const SizedBox(height: AppSpacing.x16),
+                  ] else ...[
+                    // Consumers get a single, optional "languages" preference — no
+                    // areas/specialties/RERA. Keeps the profile light and relevant.
+                    _section('Languages', 'Optional — helps us match you with the right people', [
+                      MultiSelectField(label: 'Languages you speak', icon: Icons.translate_outlined, options: _langs, selected: languages,
+                          onChanged: (v) => setState(() { languages..clear()..addAll(v); _dirty = true; })),
+                    ]),
+                    const SizedBox(height: AppSpacing.x16),
+                  ],
 
                   // ── Account ──────────────────────────────────────
                   Card(child: Column(children: [
