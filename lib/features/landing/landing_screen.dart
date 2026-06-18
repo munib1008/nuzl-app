@@ -51,7 +51,12 @@ List<BoxShadow> _cardShadow(BuildContext c) => _isDark(c)
 /// A consistent full-width section: centered, max content width, heading + optional
 /// subtitle (capped to 700px for readability), then the body.
 Widget _section(BuildContext context,
-    {required String title, String? subtitle, required Widget child, Color? bg, bool centered = false}) {
+    {required String title,
+    String? subtitle,
+    required Widget child,
+    Color? bg,
+    bool centered = false,
+    String? eyebrow}) {
   final t = Theme.of(context).textTheme;
   final wide = MediaQuery.of(context).size.width >= 900;
   return Container(
@@ -66,6 +71,24 @@ Widget _section(BuildContext context,
           child: Column(
             crossAxisAlignment: centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
             children: [
+              // Gold kicker — premium accent tier above the heading.
+              if (eyebrow != null) ...[
+                Row(
+                  mainAxisAlignment:
+                      centered ? MainAxisAlignment.center : MainAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(width: 18, height: 2, color: AppColors.goldAccent),
+                    const SizedBox(width: AppSpacing.x8),
+                    Text(eyebrow.toUpperCase(),
+                        style: t.labelMedium?.copyWith(
+                            color: AppColors.accentGold,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.4)),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.x8),
+              ],
               Text(title,
                   textAlign: centered ? TextAlign.center : TextAlign.start,
                   style: GoogleFonts.poppins(
@@ -962,8 +985,13 @@ class _WhyNuzl extends StatelessWidget {
 }
 
 // ── Section 5b — The property timeline (discovery → ownership) ────────────────
-class _PropertyTimeline extends StatelessWidget {
+class _PropertyTimeline extends StatefulWidget {
   const _PropertyTimeline();
+  @override
+  State<_PropertyTimeline> createState() => _PropertyTimelineState();
+}
+
+class _PropertyTimelineState extends State<_PropertyTimeline> with SingleTickerProviderStateMixin {
   static const _steps = [
     (Icons.search, 'Find'),
     (Icons.vpn_key_outlined, 'Buy'),
@@ -973,34 +1001,100 @@ class _PropertyTimeline extends StatelessWidget {
     (Icons.build_outlined, 'Maintain'),
     (Icons.trending_up, 'Grow'),
   ];
+
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    // One full sweep across all stages, looping — ~0.9s per stage.
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 900 * _steps.length),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final primary = _primary(context);
     return _section(
       context,
+      eyebrow: 'One living record',
       title: 'The property timeline',
       subtitle: 'From discovery to ownership — one record at every stage.',
       bg: _surface(context),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: AppSpacing.x8, runSpacing: AppSpacing.x16,
-        children: [
-          for (var i = 0; i < _steps.length; i++) ...[
-            Column(mainAxisSize: MainAxisSize.min, children: [
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: _primary(context).withValues(alpha: 0.10),
-                child: Icon(_steps[i].$1, color: _primary(context), size: 24),
-              ),
-              const SizedBox(height: 6),
-              Text(_steps[i].$2, style: t.labelLarge?.copyWith(color: _onBg(context))),
-            ]),
-            if (i < _steps.length - 1) Icon(Icons.arrow_forward, size: 18, color: _subtle(context)),
-          ],
-        ],
+      child: AnimatedBuilder(
+        animation: _ctrl,
+        builder: (context, _) {
+          final pos = _ctrl.value * _steps.length;
+          final active = pos.floor().clamp(0, _steps.length - 1);
+          final frac = pos - pos.floorToDouble();
+          // Gentle pulse on the active node (peaks mid-dwell).
+          final pulse = 1 + 0.14 * math.sin(frac * math.pi);
+          return Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.x8,
+            runSpacing: AppSpacing.x16,
+            children: [
+              for (var i = 0; i < _steps.length; i++) ...[
+                _node(context, t, primary, i, active, pulse),
+                if (i < _steps.length - 1)
+                  Icon(Icons.arrow_forward,
+                      size: 18, color: i < active ? primary : _subtle(context)),
+              ],
+            ],
+          );
+        },
       ),
     );
+  }
+
+  Widget _node(BuildContext context, TextTheme t, Color primary, int i, int active, double pulse) {
+    final isActive = i == active;
+    final done = i < active;
+    final Color bg;
+    final Color fg;
+    if (isActive) {
+      bg = primary;
+      fg = Colors.white;
+    } else if (done) {
+      bg = primary.withValues(alpha: 0.18);
+      fg = primary;
+    } else {
+      bg = primary.withValues(alpha: 0.06);
+      fg = _subtle(context);
+    }
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      Transform.scale(
+        scale: isActive ? pulse : 1.0,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          width: 52,
+          height: 52,
+          decoration: BoxDecoration(
+            color: bg,
+            shape: BoxShape.circle,
+            boxShadow: isActive
+                ? [BoxShadow(color: primary.withValues(alpha: 0.35), blurRadius: 16, spreadRadius: 1)]
+                : null,
+          ),
+          child: Icon(_steps[i].$1, color: fg, size: 24),
+        ),
+      ),
+      const SizedBox(height: 6),
+      Text(_steps[i].$2,
+          style: t.labelLarge?.copyWith(
+              color: isActive ? primary : _onBg(context),
+              fontWeight: isActive ? FontWeight.w700 : FontWeight.w500)),
+    ]);
   }
 }
 
@@ -1626,7 +1720,8 @@ class _FeaturedListingsState extends ConsumerState<_FeaturedListings> {
       final list = ListView.separated(
         controller: _sc,
         scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
+        physics: _SnapPhysics(
+            itemExtent: cardW + AppSpacing.x16, parent: const BouncingScrollPhysics()),
         padding: const EdgeInsets.symmetric(horizontal: 48),
         itemCount: items.length,
         separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.x16),
@@ -1646,22 +1741,26 @@ class _FeaturedListingsState extends ConsumerState<_FeaturedListings> {
         blendMode: BlendMode.dstIn,
         child: list,
       );
-      return SizedBox(
-        height: _height,
-        child: Stack(children: [
-          Positioned.fill(child: faded),
-          if (wide) ...[
-            Positioned(left: 4, top: 0, bottom: 0, child: Center(child: _arrow(Icons.chevron_left, () => _scrollBy(-(cardW + 16) * 2)))),
-            Positioned(right: 4, top: 0, bottom: 0, child: Center(child: _arrow(Icons.chevron_right, () => _scrollBy((cardW + 16) * 2)))),
-          ],
-        ]),
-      );
+      return Column(mainAxisSize: MainAxisSize.min, children: [
+        SizedBox(
+          height: _height,
+          child: Stack(children: [
+            Positioned.fill(child: faded),
+            if (wide) ...[
+              Positioned(left: 4, top: 0, bottom: 0, child: Center(child: _arrow(Icons.chevron_left, () => _scrollBy(-(cardW + 16) * 2)))),
+              Positioned(right: 4, top: 0, bottom: 0, child: Center(child: _arrow(Icons.chevron_right, () => _scrollBy((cardW + 16) * 2)))),
+            ],
+          ]),
+        ),
+        _ScrollProgress(controller: _sc, accent: _primary(context), track: _border(context)),
+      ]);
     }
 
     const quick = [('all', 'All'), ('sale', 'For sale'), ('rent', 'For rent'), ('offplan', 'Off-plan'), ('commercial', 'Commercial')];
 
     return _section(
       context,
+      eyebrow: 'Handpicked',
       title: 'Featured opportunities',
       subtitle: 'Verified homes, investment opportunities and rental listings across the UAE.',
       bg: _surface(context),
@@ -1701,6 +1800,89 @@ class _FeaturedListingsState extends ConsumerState<_FeaturedListings> {
           child: Padding(padding: const EdgeInsets.all(8), child: Icon(icon, color: _onBg(context))),
         ),
       );
+}
+
+/// Slim scroll-progress track under the carousel — a moving thumb whose
+/// position mirrors how far through the listings the user has scrolled.
+class _ScrollProgress extends StatelessWidget {
+  const _ScrollProgress({required this.controller, required this.accent, required this.track});
+  final ScrollController controller;
+  final Color accent;
+  final Color track;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (_, __) {
+        final hasScroll = controller.hasClients && controller.position.maxScrollExtent > 1;
+        final frac = hasScroll
+            ? (controller.offset / controller.position.maxScrollExtent).clamp(0.0, 1.0)
+            : 0.0;
+        return Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.x20),
+          child: Center(
+            child: AnimatedOpacity(
+              opacity: hasScroll ? 1 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: Container(
+                width: 140,
+                height: 4,
+                decoration: BoxDecoration(color: track, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                child: Align(
+                  alignment: Alignment(-1 + 2 * frac, 0),
+                  child: Container(
+                    width: 48,
+                    height: 4,
+                    decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Snap-to-card physics for the featured carousel — gives the Apple-style
+/// "settle on a card" feel instead of free-scrolling to arbitrary offsets.
+class _SnapPhysics extends ScrollPhysics {
+  const _SnapPhysics({required this.itemExtent, super.parent});
+  final double itemExtent;
+
+  @override
+  _SnapPhysics applyTo(ScrollPhysics? ancestor) =>
+      _SnapPhysics(itemExtent: itemExtent, parent: buildParent(ancestor));
+
+  double _snapTarget(ScrollMetrics position, double velocity, double velocityTolerance) {
+    var page = position.pixels / itemExtent;
+    if (velocity < -velocityTolerance) {
+      page = page.floorToDouble();
+    } else if (velocity > velocityTolerance) {
+      page = page.ceilToDouble();
+    } else {
+      page = page.roundToDouble();
+    }
+    return (page * itemExtent).clamp(position.minScrollExtent, position.maxScrollExtent);
+  }
+
+  @override
+  Simulation? createBallisticSimulation(ScrollMetrics position, double velocity) {
+    // Let the edges bounce naturally instead of snapping past the ends.
+    if ((velocity <= 0 && position.pixels <= position.minScrollExtent) ||
+        (velocity >= 0 && position.pixels >= position.maxScrollExtent)) {
+      return super.createBallisticSimulation(position, velocity);
+    }
+    final tol = toleranceFor(position);
+    final target = _snapTarget(position, velocity, tol.velocity);
+    if ((target - position.pixels).abs() < tol.distance) return null;
+    return ScrollSpringSimulation(spring, position.pixels, target, velocity, tolerance: tol);
+  }
+
+  @override
+  bool get allowImplicitScrolling => false;
 }
 
 class _ListingCard extends StatelessWidget {
