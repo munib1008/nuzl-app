@@ -252,13 +252,13 @@ class RoleSwitcher extends ConsumerWidget {
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         if (wide) ...[
-          Text('Viewing as', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+          Text('Current role', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
           const SizedBox(width: 6),
         ],
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+        Container(width: 9, height: 9, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
         const SizedBox(width: 6),
-        Text(persona.label, style: t.bodySmall?.copyWith(color: c, fontWeight: FontWeight.w700)),
-        Icon(Icons.expand_more, size: 16, color: c),
+        Text(persona.label, style: t.bodyMedium?.copyWith(color: c, fontWeight: FontWeight.w700)),
+        Icon(Icons.expand_more, size: 18, color: c),
       ]),
     );
 
@@ -300,51 +300,59 @@ class RoleSwitcher extends ConsumerWidget {
     );
   }
 
-  // Roles a user can add to their single account. Verified roles need RERA / a
-  // trade license (they land as 'pending' until approved).
-  static const _addable = [
-    ('owner', 'Property Owner', false),
-    ('tenant', 'Tenant', false),
-    ('investor', 'Investor', false),
-    ('agent', 'Agent', true),
-    ('developer', 'Developer', true),
-    ('provider', 'Service Provider', true),
-    ('supplier', 'Supplier', true),
+  // Roles a user can add on top of their base Customer identity. Verified roles
+  // (RERA / trade licence) land as 'pending' until an admin approves them.
+  static const _addable = <({String key, String title, String desc, String req, bool verified})>[
+    (key: 'owner', title: 'Property Owner', desc: 'Manage owned properties, leases and service requests.', req: 'Title Deed + Emirates ID', verified: false),
+    (key: 'tenant', title: 'Tenant', desc: 'Track your tenancy, rent payments and maintenance.', req: 'Tenancy contract (Ejari)', verified: false),
+    (key: 'investor', title: 'Investor', desc: 'Yield analysis, portfolio tracking and opportunities.', req: 'No documents required', verified: false),
+    (key: 'agent', title: 'Agent', desc: 'List and sell properties, manage CRM, leads and viewings.', req: 'RERA licence + agency affiliation', verified: true),
+    (key: 'developer', title: 'Developer', desc: 'Manage projects, inventory and unit releases.', req: 'Trade licence + developer registration', verified: true),
+    (key: 'provider', title: 'Service Provider', desc: 'Offer services, bid on tenders and send quotes.', req: 'Trade licence', verified: true),
+    (key: 'supplier', title: 'Supplier', desc: 'Sell products and manage your catalogue.', req: 'Trade licence', verified: true),
   ];
 
   Future<void> _addRole(BuildContext context, WidgetRef ref, List<String> held) async {
-    final options = _addable.where((o) => !held.contains(o.$1)).toList();
     final picked = await showDialog<({String key, bool verified})>(
       context: context,
-      builder: (ctx) => SimpleDialog(
-        title: const Text('Add a role'),
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
-            child: Text('One account, many roles. Verified roles are reviewed before they go live.',
-                style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-          ),
-          if (options.isEmpty)
-            const Padding(padding: EdgeInsets.all(24), child: Text('You already have every role.'))
-          else
-            for (final o in options)
-              SimpleDialogOption(
-                onPressed: () => Navigator.pop(ctx, (key: o.$1, verified: o.$3)),
-                child: Row(children: [
-                  Container(width: 8, height: 8,
-                      decoration: BoxDecoration(color: roleColor(personaFromRole(o.$1)), shape: BoxShape.circle)),
-                  const SizedBox(width: 10),
-                  Text(o.$2),
-                  if (o.$3) ...[
-                    const Spacer(),
-                    const Icon(Icons.verified_user_outlined, size: 14, color: AppColors.textMuted),
-                    const SizedBox(width: 4),
-                    const Text('Verification', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                  ],
-                ]),
+      builder: (ctx) {
+        final options = _addable.where((o) => !held.contains(o.key)).toList();
+        return Dialog(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460, maxHeight: 580),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 20, 20, 4),
+                child: Text('Add a role', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
               ),
-        ],
-      ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+                child: Text(
+                    'One account, many roles. You stay a Customer — added roles layer on top. '
+                    'Verified roles are reviewed before they go live.',
+                    style: TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
+              ),
+              Expanded(
+                child: options.isEmpty
+                    ? const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('You already have every role.')))
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                        itemCount: options.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (_, i) => _roleCard(ctx, options[i]),
+                      ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(0, 0, 12, 8),
+                  child: TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+                ),
+              ),
+            ]),
+          ),
+        );
+      },
     );
     if (picked == null) return;
     try {
@@ -360,6 +368,55 @@ class RoleSwitcher extends ConsumerWidget {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
   }
+
+  /// One informative role card in the Add-a-role dialog: purpose, required
+  /// documents, verification status and an Apply action.
+  Widget _roleCard(BuildContext ctx, ({String key, String title, String desc, String req, bool verified}) o) {
+    final c = roleColor(personaFromRole(o.key));
+    final badge = o.verified
+        ? _statusPill('Needs verification', AppColors.warning, Icons.verified_user_outlined)
+        : _statusPill('Instant', AppColors.success, Icons.bolt_outlined);
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: AppColors.surface2),
+        borderRadius: BorderRadius.circular(AppSpacing.rLg),
+      ),
+      padding: const EdgeInsets.all(AppSpacing.x12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(width: 10, height: 10, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+          const SizedBox(width: 8),
+          Expanded(child: Text(o.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
+          badge,
+        ]),
+        const SizedBox(height: 6),
+        Text(o.desc, style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+        const SizedBox(height: 8),
+        Row(children: [
+          const Icon(Icons.description_outlined, size: 14, color: AppColors.textSubtle),
+          const SizedBox(width: 4),
+          Expanded(child: Text(o.req, style: const TextStyle(fontSize: 12, color: AppColors.textSubtle))),
+          const SizedBox(width: 8),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, (key: o.key, verified: o.verified)),
+            style: FilledButton.styleFrom(
+                visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 16)),
+            child: const Text('Apply'),
+          ),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _statusPill(String label, Color c, IconData icon) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(color: c.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 12, color: c),
+          const SizedBox(width: 3),
+          Text(label, style: TextStyle(fontSize: 10.5, color: c, fontWeight: FontWeight.w600)),
+        ]),
+      );
 }
 
 /// Mobile-only bottom navigation: the role's top 4 destinations. The drawer
