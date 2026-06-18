@@ -84,7 +84,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.filter_alt_outlined, 'Leads', '/leads'),
         NavItem(Icons.trending_up_outlined, 'Opportunities', '/opportunities'),
-        NavItem(Icons.request_quote_outlined, 'Quotations', '/tenders'),
+        NavItem(Icons.request_quote_outlined, 'Quotations', '/quotations'),
         NavItem(Icons.event_note_outlined, 'Activities', '/activities'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
