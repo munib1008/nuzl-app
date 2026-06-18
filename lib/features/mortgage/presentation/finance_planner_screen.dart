@@ -31,18 +31,31 @@ class FinancePlannerScreen extends ConsumerStatefulWidget {
   ConsumerState<FinancePlannerScreen> createState() => _FinancePlannerScreenState();
 }
 
+/// GCC bank Debt-Burden-Ratio caps + currency. The DBR cap is the share of
+/// gross monthly income a bank lets go to ALL debt instalments combined; the
+/// new instalment must fit under (cap × income − existing obligations).
+typedef _Gcc = ({String code, String name, String currency, double dbr, String bureau});
+const List<_Gcc> _gccCountries = [
+  (code: 'AE', name: 'United Arab Emirates', currency: 'AED', dbr: 0.50, bureau: 'AECB'),
+  (code: 'SA', name: 'Saudi Arabia', currency: 'SAR', dbr: 0.55, bureau: 'SIMAH'),
+  (code: 'QA', name: 'Qatar', currency: 'QAR', dbr: 0.50, bureau: 'Qatar Credit Bureau'),
+  (code: 'KW', name: 'Kuwait', currency: 'KWD', dbr: 0.45, bureau: 'CI-Net (CBK)'),
+  (code: 'BH', name: 'Bahrain', currency: 'BHD', dbr: 0.55, bureau: 'Benefit'),
+  (code: 'OM', name: 'Oman', currency: 'OMR', dbr: 0.50, bureau: 'Mala’a'),
+];
+
 class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
   final _income = TextEditingController();
+  final _obligations = TextEditingController();
   final _price = TextEditingController();
   final _downPct = TextEditingController(text: '20');
   final _rate = TextEditingController(text: '4.5');
   String _financeType = 'conventional';
+  String _countryCode = 'AE';
   int _years = 25;
   bool _saving = false;
 
-  // UAE mortgage-affordability rule of thumb: total instalments ≤ 50% of monthly
-  // income (the bank "DBR" cap).
-  static const _dbrCap = 0.5;
+  _Gcc get _country => _gccCountries.firstWhere((c) => c.code == _countryCode, orElse: () => _gccCountries.first);
 
   bool get _isl => _financeType == 'islamic';
   String get _financeLabel => _isl ? 'Finance amount' : 'Loan amount';
@@ -51,7 +64,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
 
   @override
   void dispose() {
-    for (final c in [_income, _price, _downPct, _rate]) {
+    for (final c in [_income, _obligations, _price, _downPct, _rate]) {
       c.dispose();
     }
     super.dispose();
@@ -68,15 +81,20 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
+    final country = _country;
+    final dbrCap = country.dbr;
+    final aed = NumberFormat.currency(symbol: '${country.currency} ', decimalDigits: 0);
     final income = double.tryParse(_income.text.trim()) ?? 0;
+    final obligations = double.tryParse(_obligations.text.trim()) ?? 0;
     final price = double.tryParse(_price.text.trim()) ?? 0;
     final downPct = (double.tryParse(_downPct.text.trim()) ?? 20).clamp(0, 90) / 100;
     final rate = double.tryParse(_rate.text.trim()) ?? 4.5;
     final months = _years * 12;
 
-    // From income → eligibility.
-    final maxMonthly = income * _dbrCap;
+    // From income → eligibility. DBR allowance covers ALL debt; subtract the
+    // borrower's existing monthly obligations to get the room for a new one.
+    final dbrAllowance = income * dbrCap;
+    final maxMonthly = math.max(0.0, dbrAllowance - obligations);
     final maxLoan = _maxLoanFor(maxMonthly, rate, months);
     final maxPrice = downPct < 1 ? maxLoan / (1 - downPct) : maxLoan;
 
@@ -84,14 +102,16 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
     final downPayment = price * downPct;
     final financeAmount = price - downPayment;
     final installment = MortgageMath.monthlyPayment(financeAmount, rate, months);
-    final recommendedIncome = installment / _dbrCap;
-    // Approval likelihood from the debt-burden ratio (instalment / income).
-    final dbr = income > 0 ? installment / income : null;
+    // Income a bank looks for: the instalment PLUS existing obligations must sit
+    // under the DBR cap → income ≥ (instalment + obligations) / cap.
+    final recommendedIncome = (installment + obligations) / dbrCap;
+    // Approval likelihood from the TOTAL debt-burden ratio (all instalments).
+    final dbr = income > 0 ? (installment + obligations) / income : null;
     final ({String label, Color color})? approval = dbr == null
         ? null
-        : dbr <= 0.40
+        : dbr <= dbrCap - 0.10
             ? (label: 'High', color: AppColors.success)
-            : dbr <= _dbrCap
+            : dbr <= dbrCap
                 ? (label: 'Moderate', color: AppColors.warning)
                 : (label: 'Low', color: AppColors.danger);
 
@@ -110,9 +130,21 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
 
             // ── Inputs ──
             _Panel(title: 'Your numbers', child: Column(children: [
-              _money(_income, 'Monthly income (AED)', live: true),
+              DropdownButtonFormField<String>(
+                initialValue: _countryCode,
+                decoration: const InputDecoration(labelText: 'Country (sets the bank DBR cap)'),
+                items: [
+                  for (final c in _gccCountries)
+                    DropdownMenuItem(value: c.code, child: Text('${c.name}  ·  ${(c.dbr * 100).round()}% DBR')),
+                ],
+                onChanged: (v) => setState(() => _countryCode = v ?? 'AE'),
+              ),
               const SizedBox(height: AppSpacing.x12),
-              _money(_price, 'Property price (AED) — optional', live: true),
+              _money(_income, 'Gross monthly income (${country.currency})', live: true),
+              const SizedBox(height: AppSpacing.x12),
+              _money(_obligations, 'Existing monthly obligations (${country.currency})', live: true),
+              const SizedBox(height: AppSpacing.x12),
+              _money(_price, 'Property price (${country.currency}) — optional', live: true),
               const SizedBox(height: AppSpacing.x12),
               Row(children: [
                 Expanded(child: _money(_downPct, 'Down payment %', live: true, prefix: '')),
@@ -167,9 +199,20 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                       style: t.displaySmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w800)),
                   Text('estimated maximum property price', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
                   const SizedBox(height: AppSpacing.x12),
+                  // DBR breakdown — how the available instalment is derived.
+                  _kv('Gross monthly income', aed.format(income)),
+                  _kv('Max debt burden (${(dbrCap * 100).round()}% — ${country.name})', aed.format(dbrAllowance)),
+                  if (obligations > 0) _kv('Less existing obligations', '− ${aed.format(obligations)}'),
+                  const Divider(height: AppSpacing.x16),
+                  _kv('Available for new ${_installmentLabel.toLowerCase()}', aed.format(maxMonthly)),
                   _kv('Eligible ${_financeLabel.toLowerCase()}', aed.format(maxLoan)),
-                  _kv('Max ${_installmentLabel.toLowerCase()}', aed.format(maxMonthly)),
-                  _kv('Based on', '${(_dbrCap * 100).round()}% of income over $_years years'),
+                  _kv('Over', '$_years years at ${rate.toStringAsFixed(2)}%'),
+                  if (maxMonthly <= 0) ...[
+                    const SizedBox(height: AppSpacing.x8),
+                    Text('Your existing obligations already reach the ${(dbrCap * 100).round()}% debt-burden cap — '
+                        'a bank is unlikely to approve new finance until they reduce.',
+                        style: t.bodySmall?.copyWith(color: AppColors.danger)),
+                  ],
                 ]),
               ),
             if (income > 0) const SizedBox(height: AppSpacing.x16),
