@@ -55,6 +55,10 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
           ? Text(title!)
           : (MediaQuery.sizeOf(context).width >= 1000 ? const SizedBox.shrink() : const NuzlLogo(size: 28)),
       actions: [
+        // Permanent, prominent role switcher — visible on every authenticated page
+        // (desktop + mobile header). "Viewing as <Role> ▼", role-coloured.
+        if (user != null)
+          const Padding(padding: EdgeInsets.symmetric(horizontal: AppSpacing.x4), child: RoleSwitcher()),
         ...?actions,
         IconButton(
           tooltip: 'Toggle light / dark',
@@ -194,6 +198,167 @@ class _RoleChip extends ConsumerWidget {
           .toList(),
       child: pill,
     );
+  }
+}
+
+/// Brand colour per role — drives the role badge so users instantly recognise
+/// which role they're acting as.
+Color roleColor(Persona p) {
+  switch (p) {
+    case Persona.owner:
+      return AppColors.secondary;
+    case Persona.tenant:
+      return AppColors.primaryBright;
+    case Persona.developer:
+    case Persona.bank:
+      return AppColors.info;
+    case Persona.provider:
+      return AppColors.warning;
+    case Persona.investor:
+    case Persona.buyer:
+      return AppColors.success;
+    case Persona.admin:
+      return AppColors.danger;
+    default:
+      return AppColors.primary; // customer/agent/broker/salesperson/leadGenerator
+  }
+}
+
+/// Top-bar role switcher: "Viewing as <Role> ▼" with a role-coloured badge.
+/// Always shown for signed-in users (even single-role) so role activation is
+/// discoverable; the dropdown lists active roles + "Add a role".
+class RoleSwitcher extends ConsumerWidget {
+  const RoleSwitcher({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authControllerProvider).user;
+    if (user == null) return const SizedBox.shrink();
+    final persona = ref.watch(personaProvider);
+    final roles = user.approvedRoles;
+    final active = (user.activeRole?.isNotEmpty == true)
+        ? user.activeRole!
+        : (roles.isNotEmpty ? roles.first : null);
+    final wide = MediaQuery.sizeOf(context).width >= 600;
+    final c = roleColor(persona);
+    final t = Theme.of(context).textTheme;
+
+    final chip = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppSpacing.rFull),
+        border: Border.all(color: c.withValues(alpha: 0.35)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        if (wide) ...[
+          Text('Viewing as', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+          const SizedBox(width: 6),
+        ],
+        Container(width: 8, height: 8, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+        const SizedBox(width: 6),
+        Text(persona.label, style: t.bodySmall?.copyWith(color: c, fontWeight: FontWeight.w700)),
+        Icon(Icons.expand_more, size: 16, color: c),
+      ]),
+    );
+
+    return PopupMenuButton<String>(
+      tooltip: 'Switch role',
+      offset: const Offset(0, 44),
+      onSelected: (r) async {
+        if (r == '__add__') {
+          await _addRole(context, ref, roles);
+          return;
+        }
+        if (r == active) return;
+        await ref.read(authControllerProvider.notifier).switchRole(r);
+        if (context.mounted) context.go('/dashboard');
+      },
+      itemBuilder: (_) => [
+        for (final r in roles)
+          PopupMenuItem<String>(
+            value: r,
+            child: Row(children: [
+              Container(width: 8, height: 8,
+                  decoration: BoxDecoration(color: roleColor(personaFromRole(r)), shape: BoxShape.circle)),
+              const SizedBox(width: 10),
+              Text(personaFromRole(r).label),
+              if (r == active) ...[const Spacer(), const Icon(Icons.check, size: 16, color: AppColors.primary)],
+            ]),
+          ),
+        const PopupMenuDivider(),
+        const PopupMenuItem<String>(
+          value: '__add__',
+          child: Row(children: [
+            Icon(Icons.add_circle_outline, size: 16),
+            SizedBox(width: 10),
+            Text('Add a role'),
+          ]),
+        ),
+      ],
+      child: chip,
+    );
+  }
+
+  // Roles a user can add to their single account. Verified roles need RERA / a
+  // trade license (they land as 'pending' until approved).
+  static const _addable = [
+    ('owner', 'Property Owner', false),
+    ('tenant', 'Tenant', false),
+    ('investor', 'Investor', false),
+    ('agent', 'Agent', true),
+    ('developer', 'Developer', true),
+    ('provider', 'Service Provider', true),
+    ('supplier', 'Supplier', true),
+  ];
+
+  Future<void> _addRole(BuildContext context, WidgetRef ref, List<String> held) async {
+    final options = _addable.where((o) => !held.contains(o.$1)).toList();
+    final picked = await showDialog<({String key, bool verified})>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Add a role'),
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: Text('One account, many roles. Verified roles are reviewed before they go live.',
+                style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          ),
+          if (options.isEmpty)
+            const Padding(padding: EdgeInsets.all(24), child: Text('You already have every role.'))
+          else
+            for (final o in options)
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(ctx, (key: o.$1, verified: o.$3)),
+                child: Row(children: [
+                  Container(width: 8, height: 8,
+                      decoration: BoxDecoration(color: roleColor(personaFromRole(o.$1)), shape: BoxShape.circle)),
+                  const SizedBox(width: 10),
+                  Text(o.$2),
+                  if (o.$3) ...[
+                    const Spacer(),
+                    const Icon(Icons.verified_user_outlined, size: 14, color: AppColors.textMuted),
+                    const SizedBox(width: 4),
+                    const Text('Verification', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                  ],
+                ]),
+              ),
+        ],
+      ),
+    );
+    if (picked == null) return;
+    try {
+      await ref.read(apiClientProvider).post('/users/me/roles', body: {'role': picked.key});
+      await ref.read(authControllerProvider.notifier).bootstrap(); // refresh approved roles
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(picked.verified
+            ? 'Requested — your role will activate once verified.'
+            : 'Role added — switch to it from the top bar.'),
+      ));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
   }
 }
 

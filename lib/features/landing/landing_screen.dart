@@ -51,7 +51,7 @@ List<BoxShadow> _cardShadow(BuildContext c) => _isDark(c)
 /// A consistent full-width section: centered, max content width, heading + optional
 /// subtitle (capped to 700px for readability), then the body.
 Widget _section(BuildContext context,
-    {required String title, String? subtitle, required Widget child, Color? bg}) {
+    {required String title, String? subtitle, required Widget child, Color? bg, bool centered = false}) {
   final t = Theme.of(context).textTheme;
   final wide = MediaQuery.of(context).size.width >= 900;
   return Container(
@@ -63,20 +63,26 @@ Widget _section(BuildContext context,
         constraints: const BoxConstraints(maxWidth: 1040),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title,
-                style: GoogleFonts.poppins(
-                    fontSize: wide ? 30 : 24, fontWeight: FontWeight.w600, color: _onBg(context))),
-            if (subtitle != null) ...[
-              const SizedBox(height: AppSpacing.x4),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 700),
-                child: Text(subtitle, style: t.bodyMedium?.copyWith(color: _muted(context), height: 1.6)),
-              ),
+          child: Column(
+            crossAxisAlignment: centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  textAlign: centered ? TextAlign.center : TextAlign.start,
+                  style: GoogleFonts.poppins(
+                      fontSize: wide ? 30 : 24, fontWeight: FontWeight.w600, color: _onBg(context))),
+              if (subtitle != null) ...[
+                const SizedBox(height: AppSpacing.x4),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 700),
+                  child: Text(subtitle,
+                      textAlign: centered ? TextAlign.center : TextAlign.start,
+                      style: t.bodyMedium?.copyWith(color: _muted(context), height: 1.6)),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.x20),
+              child,
             ],
-            const SizedBox(height: AppSpacing.x20),
-            child,
-          ]),
+          ),
         ),
       ),
     ),
@@ -954,6 +960,7 @@ class _EcosystemTrust extends StatelessWidget {
       title: 'Built for the UAE property ecosystem',
       subtitle: 'Every party in a property’s life — working from one shared record.',
       bg: _surface(context),
+      centered: true,
       child: Column(children: [
         Wrap(
           alignment: WrapAlignment.center,
