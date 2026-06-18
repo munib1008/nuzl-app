@@ -291,6 +291,13 @@ class NuzlSidebarBody extends ConsumerWidget {
         ),
         const Divider(height: 1),
         ListTile(
+          dense: true,
+          leading: const Icon(Icons.card_giftcard, color: AppColors.accentGold),
+          title: const Text('Refer & Earn'),
+          subtitle: const Text('Get a free month', style: TextStyle(fontSize: 11)),
+          onTap: () => go('/refer'),
+        ),
+        ListTile(
           leading: const Icon(Icons.person_outline),
           title: const Text('Profile & settings'),
           onTap: () => go('/profile'),

@@ -23,6 +23,7 @@ import '../../features/admin/post_moderation_screen.dart';
 import '../../features/admin/founding_owners_screen.dart';
 import '../../features/organizations/org_ownership_screen.dart';
 import '../../features/organizations/company_dashboard_screen.dart';
+import '../../features/referral/refer_screen.dart';
 import '../../features/reports/lead_analytics_screen.dart';
 import '../../features/collaboration/collaboration_screen.dart';
 import '../../features/deal_board/deal_board_screen.dart';
@@ -115,7 +116,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // public
       GoRoute(path: '/', builder: (_, __) => const LandingScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+      GoRoute(path: '/register', builder: (_, st) => RegisterScreen(referralCode: st.uri.queryParameters['ref'])),
       GoRoute(path: '/forgot', builder: (_, __) => const ForgotPasswordScreen()),
       GoRoute(path: '/reset', builder: (_, st) => ResetPasswordScreen(token: st.uri.queryParameters['token'] ?? '')),
       GoRoute(path: '/info/:slug', builder: (_, st) => InfoPage(slug: st.pathParameters['slug']!)),
@@ -174,6 +175,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/founding-owners', builder: (_, __) => const FoundingOwnersScreen()),
       GoRoute(path: '/org-ownership', builder: (_, __) => const OrgOwnershipScreen()),
       GoRoute(path: '/company-dashboard', builder: (_, __) => const CompanyDashboardScreen()),
+      GoRoute(path: '/refer', builder: (_, __) => const ReferScreen()),
       GoRoute(path: '/lead-analytics', builder: (_, __) => const LeadAnalyticsScreen()),
       GoRoute(path: '/collaboration', builder: (_, __) => const CollaborationScreen()),
       GoRoute(path: '/deal-board', builder: (_, __) => const DealBoardScreen()),

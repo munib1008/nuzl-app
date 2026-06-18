@@ -7,7 +7,8 @@ import '../../../core/auth/google_sign_in_service.dart';
 import '../../../core/widgets/nuzl_logo.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
-  const RegisterScreen({super.key});
+  const RegisterScreen({super.key, this.referralCode});
+  final String? referralCode;
   @override
   ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
 }
@@ -16,18 +17,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  late final _referral = TextEditingController(text: widget.referralCode ?? '');
   final _formKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
-    _name.dispose(); _email.dispose(); _password.dispose();
+    _name.dispose(); _email.dispose(); _password.dispose(); _referral.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final ok = await ref.read(authControllerProvider.notifier)
-        .register(_email.text.trim(), _password.text, _name.text.trim());
+    final ok = await ref.read(authControllerProvider.notifier).register(
+          _email.text.trim(), _password.text, _name.text.trim(),
+          referralCode: _referral.text.trim().isEmpty ? null : _referral.text.trim(),
+        );
     if (ok && mounted) context.go('/onboarding');
   }
 
@@ -76,6 +80,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     obscureText: true,
                     decoration: const InputDecoration(hintText: 'Password (min 8)'),
                     validator: (v) => (v == null || v.length < 8) ? 'Min 8 characters' : null,
+                  ),
+                  const SizedBox(height: AppSpacing.x16),
+                  TextFormField(
+                    controller: _referral,
+                    textCapitalization: TextCapitalization.characters,
+                    decoration: const InputDecoration(
+                      hintText: 'Referral code (optional)',
+                      prefixIcon: Icon(Icons.card_giftcard, size: 18),
+                    ),
                   ),
                   if (state.error != null) ...[
                     const SizedBox(height: AppSpacing.x16),
