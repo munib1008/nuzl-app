@@ -148,7 +148,7 @@ class _Body extends ConsumerWidget {
       ],
       const SizedBox(height: AppSpacing.x12),
       Text('${aed.format(price)}${isRent ? ' / yr' : ''}',
-          style: t.displaySmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w800)),
+          style: t.displaySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800)),
       if (!isRent && est > 0)
         Text('~${aed.format(est)}/mo estimated mortgage',
             style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
@@ -283,7 +283,7 @@ class _AgentCard extends ConsumerWidget {
             CircleAvatar(
               radius: 20, backgroundColor: AppColors.primaryTint,
               child: Text(name[0].toUpperCase(),
-                  style: t.titleMedium?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                  style: t.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
             ),
             const SizedBox(width: AppSpacing.x12),
             Expanded(

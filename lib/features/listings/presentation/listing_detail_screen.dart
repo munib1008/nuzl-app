@@ -1118,7 +1118,7 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
               const Divider(height: AppSpacing.x16),
               Text('Estimated monthly payment', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
               Text(aed.format(_monthly),
-                  style: t.headlineSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                  style: t.headlineSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
               const SizedBox(height: AppSpacing.x8),
               row('Loan amount', aed.format(_loan)),
               row('Down payment', aed.format(_downPayment)),

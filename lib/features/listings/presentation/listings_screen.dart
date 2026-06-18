@@ -549,7 +549,7 @@ class _ListingCard extends StatelessWidget {
                 Row(children: [
                   Expanded(
                     child: Text('$money${isRent ? ' / yr' : ''}',
-                        style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
+                        style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary)),
                   ),
                   if (ptype.isNotEmpty)
                     Container(
