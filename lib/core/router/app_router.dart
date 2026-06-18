@@ -25,6 +25,7 @@ import '../../features/organizations/org_ownership_screen.dart';
 import '../../features/organizations/company_dashboard_screen.dart';
 import '../../features/referral/refer_screen.dart';
 import '../../features/rewards/rewards_screen.dart';
+import '../../features/leads/presentation/lead_market_screen.dart';
 import '../../features/reports/lead_analytics_screen.dart';
 import '../../features/collaboration/collaboration_screen.dart';
 import '../../features/deal_board/deal_board_screen.dart';
@@ -179,6 +180,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/company-dashboard', builder: (_, __) => const CompanyDashboardScreen()),
       GoRoute(path: '/refer', builder: (_, __) => const ReferScreen()),
       GoRoute(path: '/rewards', builder: (_, __) => const RewardsScreen()),
+      GoRoute(path: '/lead-market', builder: (_, __) => const LeadMarketScreen()),
       GoRoute(path: '/lead-analytics', builder: (_, __) => const LeadAnalyticsScreen()),
       GoRoute(path: '/collaboration', builder: (_, __) => const CollaborationScreen()),
       GoRoute(path: '/deal-board', builder: (_, __) => const DealBoardScreen()),
