@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/payments/payments_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_dialog.dart';
@@ -261,14 +262,16 @@ class _MarketCard extends ConsumerWidget {
   }
 }
 
-class _ClaimCard extends StatelessWidget {
+class _ClaimCard extends ConsumerWidget {
   const _ClaimCard(this.m);
   final Map<String, dynamic> m;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
     final paid = '${m['claim_status']}' == 'paid';
+    final canPay = ref.watch(paymentsConfigProvider).asData?.value ?? false;
+    final price = num.tryParse('${m['price']}');
     final phone = '${m['buyer_phone'] ?? ''}'.trim();
     final specs = [
       if ('${m['community'] ?? ''}'.isNotEmpty) '${m['community']}',
@@ -303,6 +306,17 @@ class _ClaimCard extends StatelessWidget {
                 label: const Text('Copy'),
               ),
             ]),
+          ],
+          if (!paid && canPay) ...[
+            const SizedBox(height: AppSpacing.x8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: FilledButton.icon(
+                onPressed: () => startCheckout(context, ref, purpose: 'lead_claim', refId: '${m['id']}'),
+                icon: const Icon(Icons.lock_outline, size: 16),
+                label: Text(price != null ? 'Pay ${_aed.format(price)}' : 'Pay'),
+              ),
+            ),
           ],
         ]),
       ),
