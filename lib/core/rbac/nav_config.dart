@@ -108,6 +108,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.vpn_key_outlined, 'My Tenancy', '/rentals'),
         NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
         NavItem(Icons.assignment_outlined, 'Requests', '/tenders'),
+        NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
         NavItem(Icons.folder_outlined, 'Documents', '/documents'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
@@ -129,6 +130,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.vpn_key_outlined, 'Rentals', '/rentals'),
         NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
         NavItem(Icons.assignment_outlined, 'Requests', '/tenders'),
+        NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
         NavItem(Icons.account_balance_wallet_outlined, 'Financials', '/financials'),
         NavItem(Icons.account_balance_outlined, 'Mortgages', '/mortgages'),
         NavItem(Icons.folder_outlined, 'Documents', '/documents'),
