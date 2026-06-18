@@ -62,6 +62,12 @@ class AppTheme {
         centerTitle: false,
         titleTextStyle: tt.headlineSmall,
       ),
+      // Float snackbars so they never dock over bottom UI (chat composer, sticky
+      // save bars, bottom nav) — fixes "the message box is missing" after a toast.
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.rMd)),
+      ),
       cardTheme: CardThemeData(
         color: card,
         elevation: 3,

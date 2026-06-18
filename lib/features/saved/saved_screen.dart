@@ -37,10 +37,16 @@ class SaveListingButton extends ConsumerWidget {
     final saved = ref.watch(savedIdsProvider).maybeWhen(data: (s) => s.contains(listingId), orElse: () => false);
     return IconButton(
       tooltip: saved ? 'Saved' : 'Save',
-      icon: Icon(saved ? Icons.bookmark : Icons.bookmark_border, color: saved ? AppColors.primary : null),
+      icon: Icon(saved ? Icons.bookmark : Icons.bookmark_border,
+          color: saved ? Theme.of(context).colorScheme.primary : null),
       onPressed: () async {
         try {
           await _toggleSaved(ref, listingId);
+          if (context.mounted) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(content: Text(saved ? 'Removed from saved' : 'Saved')));
+          }
         } catch (e) {
           if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
         }

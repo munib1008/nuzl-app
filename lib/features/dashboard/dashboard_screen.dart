@@ -678,6 +678,11 @@ class _PropertyMiniCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    // Theme-aware: AppColors.primary/textMuted are dark and vanish on a dark
+    // card. Use the colorScheme primary (bright in dark mode) + dark muted token.
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final priceColor = Theme.of(context).colorScheme.primary;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
     final id = '${m['id']}';
     final price = num.tryParse('${m['price']}') ?? 0;
     final isRent = '${m['purpose']}' == 'rent';
@@ -712,14 +717,14 @@ class _PropertyMiniCard extends StatelessWidget {
                 padding: const EdgeInsets.all(AppSpacing.x12),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   if (money.isNotEmpty)
-                    Text(money, style: t.titleSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                    Text(money, style: t.titleSmall?.copyWith(color: priceColor, fontWeight: FontWeight.w700)),
                   if (community.isNotEmpty)
-                    Text(community, style: t.bodySmall?.copyWith(color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text(community, style: t.bodySmall?.copyWith(color: muted), maxLines: 1, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 6),
                   Row(children: [
-                    if (beds != null) _spec(Icons.bed_outlined, '$beds'),
-                    if (baths != null) _spec(Icons.bathtub_outlined, '$baths'),
-                    if (sqft != null) _spec(Icons.straighten, '$sqft'),
+                    if (beds != null) _spec(Icons.bed_outlined, '$beds', muted),
+                    if (baths != null) _spec(Icons.bathtub_outlined, '$baths', muted),
+                    if (sqft != null) _spec(Icons.straighten, '$sqft', muted),
                   ]),
                 ]),
               ),
@@ -730,12 +735,12 @@ class _PropertyMiniCard extends StatelessWidget {
     );
   }
 
-  Widget _spec(IconData icon, String v) => Padding(
+  Widget _spec(IconData icon, String v, Color color) => Padding(
         padding: const EdgeInsets.only(right: 10),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 13, color: AppColors.textMuted),
+          Icon(icon, size: 13, color: color),
           const SizedBox(width: 3),
-          Text(v, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          Text(v, style: TextStyle(fontSize: 12, color: color)),
         ]),
       );
 }
@@ -985,7 +990,7 @@ class _MktMini extends StatelessWidget {
                 Text('${m['title'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
                 if (money.isNotEmpty)
-                  Text(money, style: t.bodySmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                  Text(money, style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
               ]),
             ),
           ]),
