@@ -512,22 +512,26 @@ class NuzlSidebarBody extends ConsumerWidget {
           ),
         ),
         const Divider(height: 1),
+        // Footer tiles share one type scale with the nav items above (dense,
+        // 14px / w500, theme onSurface) so 'Profile & settings' no longer
+        // renders larger than its neighbours.
         ListTile(
           dense: true,
-          leading: const Icon(Icons.card_giftcard, color: AppColors.accentGold),
-          title: const Text('Refer & Earn'),
-          subtitle: const Text('Get a free month', style: TextStyle(fontSize: 11)),
+          leading: const Icon(Icons.card_giftcard, size: 20, color: AppColors.accentGold),
+          title: Text('Refer & Earn', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
+          subtitle: Text('Get a free month', style: TextStyle(fontSize: 11, color: muted)),
           onTap: () => go('/refer'),
         ),
         ListTile(
           dense: true,
-          leading: const Icon(Icons.emoji_events_outlined, color: AppColors.accentGold),
-          title: const Text('Rewards & offers'),
+          leading: const Icon(Icons.emoji_events_outlined, size: 20, color: AppColors.accentGold),
+          title: Text('Rewards & offers', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
           onTap: () => go('/rewards'),
         ),
         ListTile(
-          leading: const Icon(Icons.person_outline),
-          title: const Text('Profile & settings'),
+          dense: true,
+          leading: Icon(Icons.person_outline, size: 20, color: muted),
+          title: Text('Profile & settings', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
           onTap: () => go('/profile'),
         ),
       ]),
