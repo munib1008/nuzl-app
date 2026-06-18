@@ -31,6 +31,16 @@ final myCompanyProvider = FutureProvider.autoDispose<Map<String, dynamic>?>((ref
   }
 });
 
+/// Pending company-join requests the user can act on (companies they own) + their own.
+final joinRequestsProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/organizations/mine/join-requests');
+    return d is List ? d.map((e) => Map<String, dynamic>.from(e as Map)).toList() : <Map<String, dynamic>>[];
+  } catch (_) {
+    return <Map<String, dynamic>>[];
+  }
+});
+
 class OrgOwnershipScreen extends ConsumerWidget {
   const OrgOwnershipScreen({super.key});
 
@@ -38,12 +48,16 @@ class OrgOwnershipScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
     final claims = ref.watch(orgClaimsProvider);
+    final joinReqs = ref.watch(joinRequestsProvider);
     return Scaffold(
       appBar: const NuzlAppBar(title: 'Organization ownership'),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: RefreshIndicator(
-          onRefresh: () async => ref.invalidate(orgClaimsProvider),
+          onRefresh: () async {
+            ref.invalidate(orgClaimsProvider);
+            ref.invalidate(joinRequestsProvider);
+          },
           child: ListView(
             padding: const EdgeInsets.all(AppSpacing.x16),
             children: [
@@ -79,6 +93,19 @@ class OrgOwnershipScreen extends ConsumerWidget {
                       )
                     : Column(children: [for (final c in list) _ClaimTile(c)]),
               ),
+              const SizedBox(height: AppSpacing.x16),
+              Text('Company join requests', style: t.titleMedium),
+              const SizedBox(height: AppSpacing.x8),
+              AsyncView<List<Map<String, dynamic>>>(
+                value: joinReqs,
+                onRetry: () => ref.invalidate(joinRequestsProvider),
+                data: (list) => list.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
+                        child: Text('No join requests.', style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                      )
+                    : Column(children: [for (final j in list) _JoinTile(j)]),
+              ),
             ],
           ),
         ),
@@ -113,6 +140,52 @@ class OrgOwnershipScreen extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
+  }
+}
+
+/// A pending company-join request: owners approve/decline; requesters see status.
+class _JoinTile extends ConsumerWidget {
+  const _JoinTile(this.j);
+  final Map<String, dynamic> j;
+
+  Future<void> _decide(BuildContext context, WidgetRef ref, bool approve) async {
+    try {
+      await ref.read(apiClientProvider).post('/organizations/join-requests/${j['id']}/decide', body: {'approve': approve});
+      ref.invalidate(joinRequestsProvider);
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final iAmOwner = j['i_am_owner'] == true;
+    final orgName = '${j['org_name'] ?? 'the company'}';
+    final requester = '${j['requester_name'] ?? 'A user'}';
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x12),
+        child: Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(iAmOwner ? '$requester wants to join $orgName' : 'Your request to join $orgName',
+                  style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              if (iAmOwner && '${j['requester_email'] ?? ''}'.trim().isNotEmpty)
+                Text('${j['requester_email']}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              if (!iAmOwner)
+                Text('Awaiting the company owner’s decision.',
+                    style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            ]),
+          ),
+          if (iAmOwner) ...[
+            const SizedBox(width: AppSpacing.x8),
+            TextButton(onPressed: () => _decide(context, ref, false), child: const Text('Decline')),
+            FilledButton(onPressed: () => _decide(context, ref, true), child: const Text('Approve')),
+          ],
+        ]),
+      ),
+    );
   }
 }
 

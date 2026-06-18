@@ -28,7 +28,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final company = TextEditingController(); // agency / agency name
   final orn = TextEditingController(); // trade licence / ORN
 
-  // Step 2 — contact + expertise
+  // Company step (org roles) — join an existing company or create a new one.
+  String _companyChoice = ''; // '' | join | create
+  final _companySearch = TextEditingController();
+  List<Map<String, dynamic>> _companyResults = [];
+  bool _searching = false;
+  String? _joinedOrgName;
+  bool _companyCreated = false;
+  String _bizType = 'agency';
+  final _coCity = TextEditingController();
+  final _coCountry = TextEditingController(text: 'United Arab Emirates');
+  final _coPhone = TextEditingController();
+  final _coEmail = TextEditingController();
+  final _coWebsite = TextEditingController();
+  final _coDesc = TextEditingController();
+
+  // Step 3 — contact + expertise
   final phone = TextEditingController();
   final whatsapp = TextEditingController();
   final areas = <String>{};
@@ -54,6 +69,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     reraBrn.dispose();
     company.dispose();
     orn.dispose();
+    _companySearch.dispose();
+    _coCity.dispose();
+    _coCountry.dispose();
+    _coPhone.dispose();
+    _coEmail.dispose();
+    _coWebsite.dispose();
+    _coDesc.dispose();
     phone.dispose();
     whatsapp.dispose();
     super.dispose();
@@ -61,6 +83,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   /// Agent / Salesperson / Developer can name the organization they work with.
   bool get _isOrg => const ['salesperson', 'developer'].contains(role);
+
+  /// Org-affiliated roles (salesperson, developer) get the company-association
+  /// step (join an existing company or create one).
+  bool get _needsCompany => _isOrg;
+
+  /// The visible steps — the company step only appears for org-affiliated roles.
+  List<Widget Function(TextTheme)> get _stepBuilders =>
+      [_roleStep, if (_needsCompany) _companyStep, _contactStep];
 
   /// Professionals get the "areas / specialties" fields; consumers
   /// (owner/tenant/customer) complete without them.
@@ -112,12 +142,12 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     child: Text("Let's set up your profile to get started",
                         style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
                 const SizedBox(height: AppSpacing.x20),
-                _Stepper(step: step),
+                _Stepper(step: step, count: _stepBuilders.length),
                 const SizedBox(height: AppSpacing.x24),
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.x20),
-                    child: step == 0 ? _roleStep(t) : _contactStep(t),
+                    child: _stepBuilders[step.clamp(0, _stepBuilders.length - 1)](t),
                   ),
                 ),
               ],
@@ -169,16 +199,194 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             TextField(controller: company, decoration: const InputDecoration(labelText: 'Agency name')),
           ],
         ],
-        if (_isOrg) ...[
-          const SizedBox(height: AppSpacing.x12),
-          TextField(controller: company, decoration: const InputDecoration(labelText: 'Organization name')),
-          const SizedBox(height: AppSpacing.x12),
-          TextField(controller: orn, decoration: const InputDecoration(labelText: 'Trade licence / registration no.')),
-        ],
         const SizedBox(height: AppSpacing.x20),
         _nav(onNext: role == null ? null : () => setState(() => step = 1)),
       ],
     );
+  }
+
+  // ── Company association step (join an existing company or create a new one) ──
+  Widget _companyStep(TextTheme t) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('Your company', style: t.titleLarge),
+      Text('Do you belong to a company?', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+      const SizedBox(height: AppSpacing.x12),
+      Row(children: [
+        Expanded(child: _choiceTile('join', Icons.search, 'Join existing')),
+        const SizedBox(width: AppSpacing.x8),
+        Expanded(child: _choiceTile('create', Icons.add_business_outlined, 'Create new')),
+      ]),
+      if (_companyChoice == 'join') ...[const SizedBox(height: AppSpacing.x16), _joinUi(t)],
+      if (_companyChoice == 'create') ...[const SizedBox(height: AppSpacing.x16), _createUi(t)],
+      const SizedBox(height: AppSpacing.x20),
+      _nav(
+        onBack: () => setState(() => step = 0),
+        nextLabel: _companyChoice == '' ? 'Skip for now' : 'Continue',
+        onNext: _companyNext,
+      ),
+    ]);
+  }
+
+  Widget _choiceTile(String value, IconData icon, String label) {
+    final selected = _companyChoice == value;
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppSpacing.rMd),
+      onTap: () => setState(() => _companyChoice = value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary.withValues(alpha: 0.08) : null,
+          border: Border.all(color: selected ? AppColors.primary : Theme.of(context).dividerColor, width: selected ? 1.5 : 1),
+          borderRadius: BorderRadius.circular(AppSpacing.rMd),
+        ),
+        child: Column(children: [
+          Icon(icon, color: selected ? AppColors.primary : AppColors.textMuted),
+          const SizedBox(height: 6),
+          Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: selected ? AppColors.primary : null)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _joinUi(TextTheme t) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Expanded(
+          child: TextField(
+            controller: _companySearch,
+            decoration: const InputDecoration(labelText: 'Company name or trade license'),
+            onSubmitted: (_) => _searchCompanies(),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.x8),
+        FilledButton(
+          onPressed: _searching ? null : _searchCompanies,
+          child: _searching
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Search'),
+        ),
+      ]),
+      if (_joinedOrgName != null)
+        Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.x8),
+          child: Text('Request sent to $_joinedOrgName — pending the owner’s approval. You can continue.',
+              style: const TextStyle(color: AppColors.success)),
+        ),
+      for (final o in _companyResults)
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text('${o['name']}'),
+          subtitle: Text([
+            if ('${o['org_type'] ?? ''}'.isNotEmpty) _cap('${o['org_type']}'),
+            if (o['verification_status'] == 'verified') 'Verified',
+          ].join(' · ')),
+          trailing: TextButton(onPressed: () => _requestJoin(o), child: const Text('Request')),
+        ),
+    ]);
+  }
+
+  Widget _createUi(TextTheme t) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      TextField(controller: company, decoration: const InputDecoration(labelText: 'Company name *')),
+      const SizedBox(height: AppSpacing.x8),
+      DropdownButtonFormField<String>(
+        initialValue: _bizType,
+        decoration: const InputDecoration(labelText: 'Business type *'),
+        items: const [
+          DropdownMenuItem(value: 'agency', child: Text('Real estate agency')),
+          DropdownMenuItem(value: 'developer', child: Text('Developer')),
+          DropdownMenuItem(value: 'maintenance', child: Text('Service provider')),
+          DropdownMenuItem(value: 'supplier', child: Text('Product supplier')),
+        ],
+        onChanged: (v) => setState(() => _bizType = v ?? 'agency'),
+      ),
+      const SizedBox(height: AppSpacing.x8),
+      TextField(controller: orn, decoration: const InputDecoration(labelText: 'Trade license')),
+      const SizedBox(height: AppSpacing.x8),
+      Row(children: [
+        Expanded(child: TextField(controller: _coCity, decoration: const InputDecoration(labelText: 'City'))),
+        const SizedBox(width: AppSpacing.x8),
+        Expanded(child: TextField(controller: _coCountry, decoration: const InputDecoration(labelText: 'Country'))),
+      ]),
+      const SizedBox(height: AppSpacing.x8),
+      Row(children: [
+        Expanded(child: TextField(controller: _coPhone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Contact phone'))),
+        const SizedBox(width: AppSpacing.x8),
+        Expanded(child: TextField(controller: _coEmail, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Contact email'))),
+      ]),
+      const SizedBox(height: AppSpacing.x8),
+      TextField(controller: _coWebsite, decoration: const InputDecoration(labelText: 'Website')),
+      const SizedBox(height: AppSpacing.x8),
+      TextField(controller: _coDesc, maxLines: 2, decoration: const InputDecoration(labelText: 'Company description')),
+      const SizedBox(height: AppSpacing.x12),
+      if (_companyCreated)
+        const Text('Company created ✓ Submit it for verification later to publish publicly.',
+            style: TextStyle(color: AppColors.success))
+      else
+        FilledButton.icon(
+          onPressed: _createCompany,
+          icon: const Icon(Icons.add_business_outlined, size: 18),
+          label: const Text('Create company'),
+        ),
+    ]);
+  }
+
+  Future<void> _searchCompanies() async {
+    final q = _companySearch.text.trim();
+    if (q.length < 2) return;
+    setState(() => _searching = true);
+    try {
+      final d = await ref.read(apiClientProvider).get('/organizations/search', query: {'q': q});
+      if (mounted) {
+        setState(() => _companyResults =
+            d is List ? d.map((e) => Map<String, dynamic>.from(e as Map)).toList() : []);
+      }
+    } catch (_) {
+      /* non-blocking */
+    } finally {
+      if (mounted) setState(() => _searching = false);
+    }
+  }
+
+  Future<void> _requestJoin(Map<String, dynamic> o) async {
+    try {
+      await ref.read(apiClientProvider).post('/organizations/${o['id']}/join-request', body: {});
+      if (mounted) setState(() => _joinedOrgName = '${o['name']}');
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  Future<void> _createCompany() async {
+    if (company.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Company name is required.')));
+      return;
+    }
+    try {
+      await ref.read(apiClientProvider).post('/organizations/mine', body: {
+        'name': company.text.trim(),
+        'org_type': _bizType,
+        'trade_license': orn.text.trim().isEmpty ? null : orn.text.trim(),
+        'phone': _coPhone.text.trim().isEmpty ? null : _coPhone.text.trim(),
+        'email': _coEmail.text.trim().isEmpty ? null : _coEmail.text.trim(),
+        'website': _coWebsite.text.trim().isEmpty ? null : _coWebsite.text.trim(),
+        'city': _coCity.text.trim().isEmpty ? null : _coCity.text.trim(),
+        'country': _coCountry.text.trim().isEmpty ? null : _coCountry.text.trim(),
+        'about': _coDesc.text.trim().isEmpty ? null : _coDesc.text.trim(),
+      });
+      if (mounted) setState(() => _companyCreated = true);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    }
+  }
+
+  /// Auto-create the company on Continue if the user filled the form but didn't
+  /// press Create, then advance to the contact step.
+  Future<void> _companyNext() async {
+    if (_companyChoice == 'create' && !_companyCreated && company.text.trim().isNotEmpty) {
+      await _createCompany();
+    }
+    if (mounted) setState(() => step = _stepBuilders.length - 1);
   }
 
   Widget _contactStep(TextTheme t) {
@@ -224,12 +432,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         ],
         const SizedBox(height: AppSpacing.x12),
         _nav(
-          onBack: () => setState(() => step = 0),
+          onBack: () => setState(() => step -= 1),
           nextLabel: 'Complete setup',
           onNext: _finish,
         ),
       ],
     );
+  }
+
+  String _cap(String s) {
+    final x = s.replaceAll('_', ' ').trim();
+    return x.isEmpty ? x : '${x[0].toUpperCase()}${x.substring(1)}';
   }
 
   Widget _nav({VoidCallback? onBack, VoidCallback? onNext, String nextLabel = 'Continue'}) {
@@ -255,13 +468,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 }
 
 class _Stepper extends StatelessWidget {
-  const _Stepper({required this.step});
+  const _Stepper({required this.step, this.count = 2});
   final int step;
+  final int count;
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(2, (i) {
+      children: List.generate(count, (i) {
         final done = i <= step;
         return Row(children: [
           CircleAvatar(
@@ -273,7 +487,7 @@ class _Stepper extends StatelessWidget {
                     : Text('${i + 1}', style: const TextStyle(color: Colors.white, fontSize: 12)))
                 : Text('${i + 1}', style: TextStyle(color: Theme.of(context).hintColor, fontSize: 12)),
           ),
-          if (i < 1)
+          if (i < count - 1)
             Container(width: 40, height: 2, color: i < step ? AppColors.primary : Theme.of(context).dividerColor),
         ]);
       }),
