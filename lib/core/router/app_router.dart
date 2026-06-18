@@ -74,6 +74,7 @@ import '../../features/network/network_screen.dart';
 import '../../features/admin/organizations_screen.dart';
 import '../../features/admin/verification_queue_screen.dart';
 import '../../features/admin/company_verifications_screen.dart';
+import '../../features/admin/role_requests_screen.dart';
 import '../../features/tenders/tenders_screen.dart';
 import '../../features/tenders/tender_detail_screen.dart';
 import '../../features/tenders/quotations_screen.dart';
@@ -206,6 +207,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/organizations', builder: (_, __) => const OrganizationsScreen()),
       GoRoute(path: '/verification-queue', builder: (_, __) => const VerificationQueueScreen()),
       GoRoute(path: '/company-verifications', builder: (_, __) => const CompanyVerificationsScreen()),
+      GoRoute(path: '/role-requests', builder: (_, __) => const RoleRequestsScreen()),
       GoRoute(path: '/nuzler-team', builder: (_, __) => const NuzlerTeamScreen()),
       GoRoute(path: '/audit', builder: (_, __) => const AuditScreen()),
       GoRoute(path: '/plans', builder: (_, __) => const PlansScreen()),
