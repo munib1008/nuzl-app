@@ -142,7 +142,7 @@ class MarketplaceScreen extends ConsumerWidget {
       return;
     }
     try {
-      await ref.read(apiClientProvider).post('/marketplace', body: {
+      final res = await ref.read(apiClientProvider).post('/marketplace', body: {
         'kind': kind,
         'title': title.text.trim(),
         'category': category,
@@ -154,7 +154,14 @@ class MarketplaceScreen extends ConsumerWidget {
         'contact': contact.text.trim(),
       });
       ref.invalidate(marketplaceProvider(kind));
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listed')));
+      final draft = res is Map && res['is_active'] == false;
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(draft
+              ? 'Saved as draft — it publishes once your company is verified.'
+              : 'Listed'),
+        ));
+      }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
@@ -273,6 +280,8 @@ class _ItemCard extends ConsumerWidget {
     final rating = num.tryParse('${m['rating'] ?? ''}');
     final reviews = int.tryParse('${m['review_count'] ?? 0}') ?? 0;
     final delivery = int.tryParse('${m['delivery_days'] ?? ''}');
+    final isActive = m['is_active'] != false; // legacy rows (null) treated as live
+    final verified = m['supplier_verified'] == true;
 
     return HoverLift(
       child: Card(
@@ -289,6 +298,8 @@ class _ItemCard extends ConsumerWidget {
             ),
             if (category.isNotEmpty)
               Positioned(top: 8, left: 8, child: StatusBadge(category, tone: BadgeTone.neutral)),
+            if (!isActive)
+              const Positioned(top: 8, right: 8, child: StatusBadge('Draft', tone: BadgeTone.warning)),
           ]),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.x12),
@@ -301,11 +312,15 @@ class _ItemCard extends ConsumerWidget {
                 Row(children: [
                   const Icon(Icons.storefront_outlined, size: 13, color: AppColors.textMuted),
                   const SizedBox(width: 4),
-                  Expanded(
+                  Flexible(
                     child: Text(supplier,
                         style: t.bodySmall?.copyWith(color: AppColors.textMuted),
                         maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
+                  if (verified) ...[
+                    const SizedBox(width: 4),
+                    const Icon(Icons.verified, size: 13, color: AppColors.success),
+                  ],
                 ]),
               ],
               if (rating != null && reviews > 0) ...[
