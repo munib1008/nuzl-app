@@ -1757,22 +1757,35 @@ class _FeaturedListingsState extends ConsumerState<_FeaturedListings> {
           child: _ListingCard(data: items[i], width: cardW, onOpen: () => _openListing(context, items[i])),
         ),
       );
-      // Soft edge fade so partial cards melt out instead of being hard-clipped.
-      final faded = ShaderMask(
-        shaderCallback: (rect) => const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Colors.transparent, Colors.black, Colors.black, Colors.transparent],
-          stops: [0.0, 0.06, 0.94, 1.0],
-        ).createShader(rect),
-        blendMode: BlendMode.dstIn,
-        child: list,
-      );
+      // Soft edge fade via gradient overlays. (Deliberately NOT a ShaderMask:
+      // ShaderMask uses saveLayer, which intermittently paints an opaque grey
+      // box on first load on Flutter web and only corrects on a repaint.)
+      final surface = _surface(context);
+      Widget edge({required bool left}) => Positioned(
+            left: left ? 0 : null,
+            right: left ? null : 0,
+            top: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              child: Container(
+                width: 44,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: left ? Alignment.centerLeft : Alignment.centerRight,
+                    end: left ? Alignment.centerRight : Alignment.centerLeft,
+                    colors: [surface, surface.withValues(alpha: 0)],
+                  ),
+                ),
+              ),
+            ),
+          );
       return Column(mainAxisSize: MainAxisSize.min, children: [
         SizedBox(
           height: _height,
           child: Stack(children: [
-            Positioned.fill(child: faded),
+            Positioned.fill(child: list),
+            edge(left: true),
+            edge(left: false),
             if (wide) ...[
               Positioned(left: 4, top: 0, bottom: 0, child: Center(child: _arrow(Icons.chevron_left, () => _scrollBy(-(cardW + 16) * 2)))),
               Positioned(right: 4, top: 0, bottom: 0, child: Center(child: _arrow(Icons.chevron_right, () => _scrollBy((cardW + 16) * 2)))),
