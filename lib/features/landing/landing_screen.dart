@@ -129,11 +129,13 @@ class _LandingScreenState extends State<LandingScreen> {
                 child: Column(
                   children: [
                     const _Hero(),
+                    // The ecosystem / property-record concept sits directly under the
+                    // hero — it's the single fastest way to explain "this is an OS,
+                    // not a portal." (landing critique 2026-06-18)
+                    const _Ecosystem(),
                     const _EcosystemTrust(),
-                    const _TrustMetrics(),
                     KeyedSubtree(key: _kFeatured, child: const _FeaturedListings()),
                     const _WhoAreYou(),
-                    const _Ecosystem(),
                     const _WhyNuzl(),
                     const _PropertyTimeline(),
                     KeyedSubtree(key: _kModules, child: const _MainModules()),
@@ -253,6 +255,8 @@ class _Hero extends StatelessWidget {
             foregroundColor: _onBg(context),
             side: BorderSide(color: _borderStrong(context)),
             minimumSize: const Size(0, 48),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
           ),
           child: const Padding(
               padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16), child: Text('Start managing properties')),
@@ -394,54 +398,6 @@ class _HeroPreview extends StatelessWidget {
             ]),
           ),
         ]),
-      ),
-    );
-  }
-}
-
-/// Trust metrics band directly under the hero (review: instant credibility).
-class _TrustMetrics extends StatelessWidget {
-  const _TrustMetrics();
-  static const _metrics = [
-    ('12,000+', 'Properties'),
-    ('3,500+', 'Owners'),
-    ('850+', 'Agents'),
-    ('25,000+', 'Documents managed'),
-    ('AED 500M+', 'Assets managed'),
-  ];
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context).textTheme;
-    return Container(
-      width: double.infinity,
-      color: _surface(context),
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.x32),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1040),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
-            child: Column(children: [
-              Text('Trusted by property owners across the UAE',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600, color: _onBg(context))),
-              const SizedBox(height: AppSpacing.x20),
-              Wrap(
-                spacing: AppSpacing.x40,
-                runSpacing: AppSpacing.x16,
-                alignment: WrapAlignment.center,
-                children: _metrics
-                    .map((m) => Column(children: [
-                          Text(m.$1,
-                              style: GoogleFonts.poppins(
-                                  fontSize: 28, fontWeight: FontWeight.w700, color: _primary(context))),
-                          Text(m.$2, style: t.bodySmall?.copyWith(color: _muted(context))),
-                        ]))
-                    .toList(),
-              ),
-            ]),
-          ),
-        ),
       ),
     );
   }
