@@ -484,7 +484,9 @@ class _AgentCard extends ConsumerWidget {
               orElse: () => SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: null,
+                  // Stay actionable even if the existing-viewing lookup is loading
+                  // or errored — scheduling doesn't depend on that data.
+                  onPressed: () => _requestViewing(context, ref),
                   icon: const Icon(Icons.event_available_outlined),
                   label: const Text('Schedule viewing'),
                 ),
