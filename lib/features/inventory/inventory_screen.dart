@@ -110,9 +110,9 @@ class InventoryScreen extends ConsumerWidget {
               decoration: const InputDecoration(labelText: 'Status'),
               items: const [
                 DropdownMenuItem(value: 'planning', child: Text('Planning')),
-                DropdownMenuItem(value: 'construction', child: Text('Construction')),
+                DropdownMenuItem(value: 'under_construction', child: Text('Under construction')),
                 DropdownMenuItem(value: 'ready', child: Text('Ready')),
-                DropdownMenuItem(value: 'handed_over', child: Text('Handed over')),
+                DropdownMenuItem(value: 'handover', child: Text('Handover')),
               ],
               onChanged: (v) => setS(() => status = v ?? 'planning'),
             ),

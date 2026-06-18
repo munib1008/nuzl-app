@@ -56,6 +56,7 @@ import '../../features/financials/financials_screen.dart';
 import '../../features/documents/documents_screen.dart';
 import '../../features/inventory/inventory_screen.dart';
 import '../../features/projects/projects_screen.dart';
+import '../../features/projects/project_detail_screen.dart';
 import '../../features/portfolio/my_properties_screen.dart';
 import '../../features/matching/lead_matches_screen.dart';
 import '../../features/activities/activities_screen.dart';
@@ -173,6 +174,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/documents', builder: (_, __) => const DocumentsScreen()),
       GoRoute(path: '/inventory', builder: (_, __) => const InventoryScreen()),
       GoRoute(path: '/projects', builder: (_, __) => const ProjectsScreen()),
+      GoRoute(path: '/projects/:id', builder: (_, s) => ProjectDetailScreen(projectId: s.pathParameters['id']!)),
       GoRoute(path: '/my-properties', builder: (_, __) => const MyPropertiesScreen()),
       GoRoute(path: '/lead-matches', builder: (_, __) => const LeadMatchesScreen()),
       GoRoute(path: '/crm', builder: (_, __) => const CrmScreen()),

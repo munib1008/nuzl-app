@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
@@ -22,7 +23,7 @@ final projectsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
 
 BadgeTone _tone(String s) => switch (s) {
       'ready' => BadgeTone.success,
-      'construction' => BadgeTone.warning,
+      'under_construction' => BadgeTone.warning,
       'planning' => BadgeTone.gold,
       _ => BadgeTone.neutral,
     };
@@ -56,15 +57,22 @@ class ProjectsScreen extends ConsumerWidget {
                     final status = '${p['status'] ?? 'planning'}';
                     final handover = DateTime.tryParse('${p['handover_date']}');
                     final units = p['units'] ?? 0;
+                    final available = p['available'] ?? 0;
                     return Card(
                       child: ListTile(
                         leading: const Icon(Icons.domain_outlined),
                         title: Text('${p['name'] ?? 'Project'}'),
                         subtitle: Text([
                           '$units units',
+                          if ('$available' != '0') '$available available',
                           if (handover != null) 'handover ${DateFormat('MMM y').format(handover)}',
                         ].join('  ·  ')),
-                        trailing: StatusBadge(_humanize(status), tone: _tone(status)),
+                        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                          StatusBadge(_humanize(status), tone: _tone(status)),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.chevron_right, color: Colors.grey),
+                        ]),
+                        onTap: () => context.push('/projects/${p['id']}'),
                       ),
                     );
                   },
@@ -91,9 +99,9 @@ class ProjectsScreen extends ConsumerWidget {
               decoration: const InputDecoration(labelText: 'Status'),
               items: const [
                 DropdownMenuItem(value: 'planning', child: Text('Planning')),
-                DropdownMenuItem(value: 'construction', child: Text('Construction')),
+                DropdownMenuItem(value: 'under_construction', child: Text('Under construction')),
                 DropdownMenuItem(value: 'ready', child: Text('Ready')),
-                DropdownMenuItem(value: 'handed_over', child: Text('Handed over')),
+                DropdownMenuItem(value: 'handover', child: Text('Handover')),
               ],
               onChanged: (v) => setS(() => status = v ?? 'planning'),
             ),
