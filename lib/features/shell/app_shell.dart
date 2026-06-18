@@ -298,6 +298,12 @@ class NuzlSidebarBody extends ConsumerWidget {
           onTap: () => go('/refer'),
         ),
         ListTile(
+          dense: true,
+          leading: const Icon(Icons.emoji_events_outlined, color: AppColors.accentGold),
+          title: const Text('Rewards & offers'),
+          onTap: () => go('/rewards'),
+        ),
+        ListTile(
           leading: const Icon(Icons.person_outline),
           title: const Text('Profile & settings'),
           onTap: () => go('/profile'),
