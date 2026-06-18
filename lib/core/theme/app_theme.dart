@@ -63,9 +63,11 @@ class AppTheme {
         titleTextStyle: tt.headlineSmall,
       ),
       // Float snackbars so they never dock over bottom UI (chat composer, sticky
-      // save bars, bottom nav) — fixes "the message box is missing" after a toast.
+      // save bars, bottom nav), and always give a close (✕) button so a toast
+      // can be dismissed manually — Flutter web sometimes fails to auto-dismiss.
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
+        showCloseIcon: true,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.rMd)),
       ),
       cardTheme: CardThemeData(
