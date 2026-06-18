@@ -30,7 +30,9 @@ final _fPriceMin = StateProvider.autoDispose<double?>((ref) => null);
 final _fPriceMax = StateProvider.autoDispose<double?>((ref) => null);
 final _fSort = StateProvider.autoDispose<String>((ref) => 'latest');
 final _fMine = StateProvider.autoDispose<bool>((ref) => false);
-final _fQuery = StateProvider.autoDispose<String>((ref) => '');
+/// Global property search query (community / building / area / ref-code). Public
+/// so the dashboard search bar can seed it before routing to /properties.
+final listingsSearchProvider = StateProvider<String>((ref) => '');
 
 class ListingsScreen extends ConsumerWidget {
   const ListingsScreen({super.key});
@@ -46,7 +48,7 @@ class ListingsScreen extends ConsumerWidget {
     final priceMax = ref.watch(_fPriceMax);
     final sort = ref.watch(_fSort);
     final mine = ref.watch(_fMine);
-    final query = ref.watch(_fQuery).trim().toLowerCase();
+    final query = ref.watch(listingsSearchProvider).trim().toLowerCase();
     final myId = ref.watch(authControllerProvider).user?.id;
     final t = Theme.of(context).textTheme;
 
@@ -172,7 +174,7 @@ class ListingsScreen extends ConsumerWidget {
                                     ref.read(_fBeds.notifier).state = null;
                                     ref.read(_fPriceMin.notifier).state = null;
                                     ref.read(_fPriceMax.notifier).state = null;
-                                    ref.read(_fQuery.notifier).state = '';
+                                    ref.read(listingsSearchProvider.notifier).state = '';
                                     ref.read(_fMine.notifier).state = false;
                                   },
                                   icon: const Icon(Icons.refresh, size: 18),
@@ -226,7 +228,7 @@ class _DiscoveryHeader extends ConsumerStatefulWidget {
 }
 
 class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
-  late final TextEditingController _qc = TextEditingController(text: ref.read(_fQuery));
+  late final TextEditingController _qc = TextEditingController(text: ref.read(listingsSearchProvider));
   @override
   void dispose() {
     _qc.dispose();
@@ -244,14 +246,14 @@ class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
     ref.read(_fBeds.notifier).state = null;
     ref.read(_fPriceMin.notifier).state = null;
     ref.read(_fPriceMax.notifier).state = null;
-    ref.read(_fQuery.notifier).state = '';
+    ref.read(listingsSearchProvider.notifier).state = '';
     ref.read(_fMine.notifier).state = false;
   }
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final q = ref.watch(_fQuery);
+    final q = ref.watch(listingsSearchProvider);
     // Keep the field's text in sync when the query is set elsewhere (chips / clear).
     if (_qc.text != q) {
       _qc.value = TextEditingValue(text: q, selection: TextSelection.collapsed(offset: q.length));
@@ -268,13 +270,13 @@ class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       TextField(
         controller: _qc,
-        onChanged: (v) => ref.read(_fQuery.notifier).state = v,
+        onChanged: (v) => ref.read(listingsSearchProvider.notifier).state = v,
         decoration: InputDecoration(
           hintText: 'Search community, building, area or ref…',
           prefixIcon: const Icon(Icons.search),
           suffixIcon: q.isEmpty
               ? null
-              : IconButton(icon: const Icon(Icons.close), onPressed: () => ref.read(_fQuery.notifier).state = ''),
+              : IconButton(icon: const Icon(Icons.close), onPressed: () => ref.read(listingsSearchProvider.notifier).state = ''),
           isDense: true,
         ),
       ),
@@ -284,7 +286,7 @@ class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
         const SizedBox(height: 6),
         Wrap(spacing: 6, runSpacing: 6, children: [
           for (final c in widget.popular)
-            ActionChip(label: Text(c), onPressed: () => ref.read(_fQuery.notifier).state = c),
+            ActionChip(label: Text(c), onPressed: () => ref.read(listingsSearchProvider.notifier).state = c),
         ]),
       ],
       const SizedBox(height: AppSpacing.x12),
