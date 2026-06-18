@@ -997,61 +997,75 @@ class _MainModules extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final wide = MediaQuery.of(context).size.width >= 900;
     final r = BorderRadius.circular(_kCardR);
     return _section(
       context,
       title: 'Everything in one place',
       subtitle: 'Six core modules cover the entire journey — discover the rest as you go.',
       bg: _surface(context),
-      child: Wrap(
-        spacing: AppSpacing.x16,
-        runSpacing: AppSpacing.x16,
-        children: _modules.map((m) {
-          final accent = m.$4;
-          return HoverLift(
-            child: SizedBox(
-              width: wide ? 232 : double.infinity,
-              child: DecoratedBox(
-                decoration: BoxDecoration(borderRadius: r, boxShadow: _cardShadow(context)),
-                child: Container(
-                  decoration: BoxDecoration(borderRadius: r, border: Border.all(color: _border(context))),
-                  child: ClipRRect(
-                    borderRadius: r,
-                    child: Material(
-                      color: _surface(context),
-                      child: InkWell(
-                        onTap: () => context.go('/login'),
-                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Container(height: 3, color: accent),
-                          Padding(
-                            padding: const EdgeInsets.all(AppSpacing.x16),
-                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Container(
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                    color: accent.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(AppSpacing.rMd)),
-                                child: Icon(m.$1, color: accent, size: 22),
+      // Uniform grid: every card the same width AND height (no ragged rows from
+      // 1- vs 2-line descriptions). 3 across on desktop, 2 on tablet, 1 on mobile.
+      child: LayoutBuilder(builder: (ctx, cons) {
+        const spacing = AppSpacing.x16;
+        final cols = cons.maxWidth >= 900 ? 3 : (cons.maxWidth >= 560 ? 2 : 1);
+        final w = cols == 1 ? cons.maxWidth : (cons.maxWidth - spacing * (cols - 1)) / cols;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: _modules.map((m) {
+            final accent = m.$4;
+            return HoverLift(
+              child: SizedBox(
+                width: w,
+                height: 172,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(borderRadius: r, boxShadow: _cardShadow(context)),
+                  child: Container(
+                    decoration: BoxDecoration(borderRadius: r, border: Border.all(color: _border(context))),
+                    child: ClipRRect(
+                      borderRadius: r,
+                      child: Material(
+                        color: _surface(context),
+                        child: InkWell(
+                          onTap: () => context.go('/login'),
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Container(height: 3, color: accent),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(AppSpacing.x16),
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                        color: accent.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(AppSpacing.rMd)),
+                                    child: Icon(m.$1, color: accent, size: 22),
+                                  ),
+                                  const SizedBox(height: AppSpacing.x12),
+                                  Text(m.$2,
+                                      style: GoogleFonts.poppins(
+                                          fontSize: 15, fontWeight: FontWeight.w600, color: _onBg(context))),
+                                  const SizedBox(height: AppSpacing.x4),
+                                  Expanded(
+                                    child: Text(m.$3,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: t.bodySmall?.copyWith(color: _body(context), height: 1.4)),
+                                  ),
+                                ]),
                               ),
-                              const SizedBox(height: AppSpacing.x12),
-                              Text(m.$2,
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 15, fontWeight: FontWeight.w600, color: _onBg(context))),
-                              const SizedBox(height: AppSpacing.x4),
-                              Text(m.$3, style: t.bodySmall?.copyWith(color: _body(context), height: 1.4)),
-                            ]),
-                          ),
-                        ]),
+                            ),
+                          ]),
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ),
-          );
-        }).toList(),
-      ),
+            );
+          }).toList(),
+        );
+      }),
     );
   }
 }
