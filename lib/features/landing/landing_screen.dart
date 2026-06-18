@@ -112,6 +112,49 @@ Widget _section(BuildContext context,
   );
 }
 
+/// A primary + secondary CTA pair rendered at identical size: equal-width
+/// (side by side on wide, stacked full-width on narrow) and equal height (48).
+/// Avoids the size mismatch between a GradientButton and an OutlinedButton.
+Widget _ctaPair(
+  BuildContext context, {
+  required String primaryLabel,
+  required VoidCallback onPrimary,
+  required String secondaryLabel,
+  required VoidCallback onSecondary,
+  bool center = false,
+}) {
+  final wide = MediaQuery.sizeOf(context).width >= 600;
+  final primary = GradientButton(
+    onPressed: onPrimary, label: primaryLabel, icon: Icons.arrow_forward, expand: true);
+  final secondary = OutlinedButton(
+    onPressed: onSecondary,
+    style: OutlinedButton.styleFrom(
+      foregroundColor: _onBg(context),
+      side: BorderSide(color: _borderStrong(context)),
+      minimumSize: const Size.fromHeight(48),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+    ),
+    child: Text(secondaryLabel, maxLines: 1, overflow: TextOverflow.ellipsis),
+  );
+  if (!wide) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      primary,
+      const SizedBox(height: AppSpacing.x12),
+      secondary,
+    ]);
+  }
+  final row = ConstrainedBox(
+    constraints: const BoxConstraints(maxWidth: 480),
+    child: Row(children: [
+      Expanded(child: primary),
+      const SizedBox(width: AppSpacing.x12),
+      Expanded(child: secondary),
+    ]),
+  );
+  return center ? Center(child: row) : row;
+}
+
 /// Public landing page — outcome-first information architecture.
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -272,25 +315,13 @@ class _Hero extends StatelessWidget {
       Text('Trusted by owners, buyers, agents and service providers across the UAE.',
           style: t.bodySmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w600)),
       const SizedBox(height: AppSpacing.x24),
-      Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x12, children: [
-        GradientButton(
-          onPressed: () => context.go('/login'),
-          label: 'Explore properties',
-          icon: Icons.arrow_forward,
-        ),
-        OutlinedButton(
-          onPressed: () => context.go('/register'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: _onBg(context),
-            side: BorderSide(color: _borderStrong(context)),
-            minimumSize: const Size(0, 48),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-          ),
-          child: const Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16), child: Text('Start managing properties')),
-        ),
-      ]),
+      _ctaPair(
+        context,
+        primaryLabel: 'Explore properties',
+        onPrimary: () => context.go('/login'),
+        secondaryLabel: 'Start managing properties',
+        onSecondary: () => context.go('/register'),
+      ),
     ]);
     final dark = _isDark(context);
     return DecoratedBox(
@@ -1484,29 +1515,15 @@ class _FinalCta extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: t.bodyLarge?.copyWith(color: _muted(context))),
               const SizedBox(height: AppSpacing.x24),
-              // Two distinct destinations only: explore (sign in) vs create an account.
-              Wrap(
-                spacing: AppSpacing.x12,
-                runSpacing: AppSpacing.x12,
-                alignment: WrapAlignment.center,
-                children: [
-                  GradientButton(
-                    onPressed: () => context.go('/login'),
-                    label: 'Explore properties',
-                    icon: Icons.arrow_forward,
-                  ),
-                  OutlinedButton(
-                    onPressed: () => context.go('/register'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _onBg(context),
-                      side: BorderSide(color: _borderStrong(context)),
-                      minimumSize: const Size(0, 48),
-                    ),
-                    child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16),
-                        child: Text('Join NUZL')),
-                  ),
-                ],
+              // Closing CTA is conversion-focused: Join (sign up) vs Sign in.
+              // 'Explore properties' lives in the hero only — not duplicated here.
+              _ctaPair(
+                context,
+                primaryLabel: 'Join NUZL',
+                onPrimary: () => context.go('/register'),
+                secondaryLabel: 'Sign in',
+                onSecondary: () => context.go('/login'),
+                center: true,
               ),
             ]),
           ),
@@ -1988,10 +2005,14 @@ class _ListingCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  // NOTE: this button is NOT inside Expanded, so its minimumSize
+                  // width must be 0 — Size.fromHeight sets width to infinity,
+                  // which (in a Row) starves the Expanded button to width 0 and
+                  // makes its label wrap one letter per line.
                   OutlinedButton.icon(
                     onPressed: () => showAuthPrompt(context, action: 'save this property'),
                     style: OutlinedButton.styleFrom(
-                      minimumSize: const Size.fromHeight(36),
+                      minimumSize: const Size(0, 36),
                       foregroundColor: _onBg(context),
                       side: BorderSide(color: _borderStrong(context)),
                     ),
