@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/utils/spreadsheet.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/responsive.dart';
@@ -53,10 +54,21 @@ class _BulkLeadImportScreenState extends ConsumerState<BulkLeadImportScreen> {
   }
 
   Future<void> _pickFile() async {
-    final res = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['csv', 'txt'], withData: true);
-    final bytes = res?.files.single.bytes;
+    final res = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['csv', 'txt', 'xlsx'], withData: true);
+    final file = res?.files.single;
+    final bytes = file?.bytes;
     if (bytes == null) return;
-    setState(() => _csv.text = utf8.decode(bytes, allowMalformed: true));
+    final ext = (file?.extension ?? '').toLowerCase();
+    if (ext == 'xlsx') {
+      final csv = xlsxBytesToCsv(bytes);
+      if (csv.isEmpty) {
+        setState(() => _result = 'Could not read that .xlsx file. Try re-saving it, or export as CSV.');
+        return;
+      }
+      setState(() { _csv.text = csv; _result = null; });
+    } else {
+      setState(() => _csv.text = utf8.decode(bytes, allowMalformed: true));
+    }
   }
 
   Future<void> _import() async {
@@ -96,7 +108,7 @@ class _BulkLeadImportScreenState extends ConsumerState<BulkLeadImportScreen> {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('Bulk upload leads', style: t.titleMedium),
                 const SizedBox(height: 4),
-                Text('Paste rows from a spreadsheet or upload a .csv file. Up to 500 leads at a time.',
+                Text('Paste rows from a spreadsheet or upload a .csv / .xlsx file. Up to 500 leads at a time.',
                     style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
                 const SizedBox(height: AppSpacing.x12),
                 Container(
@@ -124,7 +136,7 @@ class _BulkLeadImportScreenState extends ConsumerState<BulkLeadImportScreen> {
             OutlinedButton.icon(
               onPressed: _pickFile,
               icon: const Icon(Icons.upload_file, size: 18),
-              label: const Text('Upload .csv'),
+              label: const Text('Upload .csv / .xlsx'),
             ),
             const Spacer(),
             if (count > 0) Text('$count row${count == 1 ? '' : 's'} detected',

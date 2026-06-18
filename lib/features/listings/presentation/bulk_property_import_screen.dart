@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/utils/spreadsheet.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/responsive.dart';
@@ -53,10 +54,18 @@ class _BulkPropertyImportScreenState extends ConsumerState<BulkPropertyImportScr
   }
 
   Future<void> _pickFile() async {
-    final res = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['csv', 'txt'], withData: true);
-    final bytes = res?.files.single.bytes;
+    final res = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['csv', 'txt', 'xlsx'], withData: true);
+    final file = res?.files.single;
+    final bytes = file?.bytes;
     if (bytes == null) return;
-    setState(() => _csv.text = utf8.decode(bytes, allowMalformed: true));
+    final ext = (file?.extension ?? '').toLowerCase();
+    if (ext == 'xlsx') {
+      final csv = xlsxBytesToCsv(bytes);
+      if (csv.isEmpty) return;
+      setState(() => _csv.text = csv);
+    } else {
+      setState(() => _csv.text = utf8.decode(bytes, allowMalformed: true));
+    }
   }
 
   Future<void> _import() async {
@@ -119,7 +128,7 @@ class _BulkPropertyImportScreenState extends ConsumerState<BulkPropertyImportScr
           ),
           const SizedBox(height: AppSpacing.x12),
           Row(children: [
-            OutlinedButton.icon(onPressed: _pickFile, icon: const Icon(Icons.upload_file, size: 18), label: const Text('Upload .csv')),
+            OutlinedButton.icon(onPressed: _pickFile, icon: const Icon(Icons.upload_file, size: 18), label: const Text('Upload .csv / .xlsx')),
             const Spacer(),
             if (count > 0) Text('$count row${count == 1 ? '' : 's'} detected',
                 style: t.bodySmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
