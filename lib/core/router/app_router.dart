@@ -32,6 +32,7 @@ import '../../features/deal_board/deal_board_screen.dart';
 import '../../features/leads/presentation/leads_screen.dart';
 import '../../features/leads/presentation/lead_crm_screen.dart';
 import '../../features/leads/presentation/post_lead_screen.dart';
+import '../../features/leads/presentation/bulk_lead_import_screen.dart';
 import '../../features/deals/presentation/deals_screen.dart';
 import '../../features/customers/customers_screen.dart';
 import '../../features/contacts/contacts_screen.dart';
@@ -152,6 +153,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, st) => PropertyDocsScreen(propertyId: st.pathParameters['id']!)),
       GoRoute(path: '/listings/:id', builder: (_, st) => ListingDetailScreen(id: st.pathParameters['id']!)),
       GoRoute(path: '/leads', builder: (_, __) => const LeadsScreen()),
+      GoRoute(path: '/leads/import', builder: (_, __) => const BulkLeadImportScreen()),
       GoRoute(path: '/leads/new', builder: (_, __) => const PostLeadScreen()),
       GoRoute(path: '/leads/:id', builder: (_, st) => LeadCrmScreen(id: st.pathParameters['id']!)),
       GoRoute(path: '/deals', builder: (_, __) => const DealsScreen()),

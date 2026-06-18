@@ -20,7 +20,15 @@ class LeadsScreen extends ConsumerWidget {
     final leads = ref.watch(leadsProvider);
     final canManage = ref.watch(personaProvider).canManageLeads;
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Leads'),
+      appBar: NuzlAppBar(title: 'Leads', actions: canManage
+          ? [
+              IconButton(
+                tooltip: 'Import leads',
+                icon: const Icon(Icons.upload_file_outlined),
+                onPressed: () => context.push('/leads/import'),
+              ),
+            ]
+          : null),
       drawer: const NuzlDrawer(),
       floatingActionButton: canManage
           ? FloatingActionButton.extended(
