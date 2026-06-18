@@ -137,14 +137,15 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
     case Persona.buyer:
-      // Customer priority flow: search → save → contact → finance → purchase.
+      // Customer flow. First 5 also form the mobile bottom bar:
+      // Dashboard · Properties · Marketplace · Saved · Messages.
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
+        NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
         NavItem(Icons.bookmark_outline, 'Saved', '/saved'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.calculate_outlined, 'Finance Planner', '/finance-planner'),
-        NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
         NavItem(Icons.receipt_long_outlined, 'Orders', '/orders'),
       ];
     case Persona.admin:

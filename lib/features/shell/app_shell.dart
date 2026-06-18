@@ -369,7 +369,7 @@ class NuzlBottomNav extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items = navItemsFor(ref.watch(personaProvider)).take(4).toList();
+    final items = navItemsFor(ref.watch(personaProvider)).take(5).toList();
     if (items.length < 2) return const SizedBox.shrink();
     final location = GoRouterState.of(context).matchedLocation;
     var index = items.indexWhere((it) =>

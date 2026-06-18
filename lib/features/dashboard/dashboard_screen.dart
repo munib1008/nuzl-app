@@ -73,9 +73,9 @@ final _buyerKpisProvider = FutureProvider.autoDispose<Map<String, int>>((ref) as
     count('/listings/saved/mine'),
     count('/viewings'),
     count('/saved-searches'),
-    count('/mortgages'),
+    count('/finance-scenarios'), // customers plan finance, they don't track loans
   ]);
-  return {'saved': r[0], 'viewings': r[1], 'searches': r[2], 'mortgages': r[3]};
+  return {'saved': r[0], 'viewings': r[1], 'searches': r[2], 'finance': r[3]};
 });
 
 /// Monthly sales series for the Sales overview chart. Scope is decided by the
@@ -187,6 +187,8 @@ class DashboardScreen extends ConsumerWidget {
             // 5) Properties — buyers get recommendations; other browsing roles
             // get recent listings; owners care about owned assets, not these.
             if (isBuyer) const _RecommendedProperties(),
+            // Marketplace strip — shows NUZL is more than listings (services + products).
+            if (isBuyer) const _MarketplaceStrip(),
             if (!isBuyer && persona != Persona.owner) ...[
               const _RecentProperties(),
               const SizedBox(height: AppSpacing.x24),
@@ -284,10 +286,11 @@ class DashboardScreen extends ConsumerWidget {
 }
 
 class _Card {
-  _Card(this.label, this.value, this.icon, this.color);
+  _Card(this.label, this.value, this.icon, this.color, {this.route});
   final String label, value;
   final IconData icon;
   final Color color;
+  final String? route; // tapping the KPI opens this destination
 }
 
 /// Premium dashboard surface — white card on the near-neutral page, soft
@@ -343,7 +346,7 @@ class _KpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return _flatBox(
+    final box = _flatBox(
       context,
       accent: card.color,
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -361,6 +364,12 @@ class _KpiCard extends StatelessWidget {
         ),
       ]),
     );
+    if (card.route == null) return box;
+    // KPI cards are clickable — they open the matching destination.
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: () => context.go(card.route!), child: box),
+    );
   }
 }
 
@@ -373,10 +382,10 @@ class _BuyerKpis extends ConsumerWidget {
     final k = ref.watch(_buyerKpisProvider).asData?.value ?? const <String, int>{};
     int n(String key) => k[key] ?? 0;
     final cards = [
-      _Card('Saved properties', '${n('saved')}', Icons.bookmark_outline, AppColors.secondary),
-      _Card('Active viewings', '${n('viewings')}', Icons.event_available_outlined, AppColors.primary),
-      _Card('Market alerts', '${n('searches')}', Icons.notifications_active_outlined, AppColors.warning),
-      _Card('Mortgages tracked', '${n('mortgages')}', Icons.account_balance_outlined, AppColors.accentGold),
+      _Card('Saved properties', '${n('saved')}', Icons.bookmark_outline, AppColors.secondary, route: '/saved'),
+      _Card('Upcoming viewings', '${n('viewings')}', Icons.event_available_outlined, AppColors.primary, route: '/viewings'),
+      _Card('Property alerts', '${n('searches')}', Icons.notifications_active_outlined, AppColors.warning, route: '/saved-searches'),
+      _Card('Finance plans', '${n('finance')}', Icons.calculate_outlined, AppColors.accentGold, route: '/finance-planner'),
     ];
     return _KpiGrid(cards: cards, wide: wide);
   }
@@ -703,10 +712,12 @@ class _QuickActions extends StatelessWidget {
           ('My properties', Icons.home_work_outlined, '/my-properties'),
         ],
       Persona.buyer => [
-          ('Search properties', Icons.search, '/properties'),
+          ('Browse properties', Icons.search, '/properties'),
+          ('Finance calculator', Icons.calculate_outlined, '/finance-planner'),
           ('Saved properties', Icons.bookmark_outline, '/saved'),
-          ('Messages', Icons.chat_bubble_outline, '/messages'),
           ('Viewings', Icons.event_available_outlined, '/viewings'),
+          ('Marketplace', Icons.storefront_outlined, '/marketplace'),
+          ('Messages', Icons.chat_bubble_outline, '/messages'),
         ],
       Persona.tenant => [
           ('My tenancy', Icons.vpn_key_outlined, '/rentals'),
@@ -842,6 +853,98 @@ class _BuyerCta extends StatelessWidget {
 }
 
 /// "Recommended for you" — a horizontal strip of fresh listings for buyers.
+/// Featured marketplace items for customers — services + products. Shows NUZL is
+/// more than property listings. Empty list on error (never blanks the dashboard).
+final _featuredMktProvider = FutureProvider.autoDispose.family<List<dynamic>, String>((ref, kind) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/marketplace', query: {'kind': kind});
+    return d is List ? d.take(8).toList() : [];
+  } catch (_) {
+    return [];
+  }
+});
+
+class _MarketplaceStrip extends ConsumerWidget {
+  const _MarketplaceStrip();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final services = ref.watch(_featuredMktProvider('service')).asData?.value ?? const [];
+    final products = ref.watch(_featuredMktProvider('product')).asData?.value ?? const [];
+    if (services.isEmpty && products.isEmpty) return const SizedBox.shrink();
+    Widget group(String label, List<dynamic> items, IconData fallbackIcon) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: AppSpacing.x12),
+            Text(label, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: AppSpacing.x8),
+            SizedBox(
+              height: 132,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.x12),
+                itemBuilder: (_, i) => _MktMini(Map<String, dynamic>.from(items[i]), fallbackIcon),
+              ),
+            ),
+          ],
+        );
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Expanded(child: Text('From the marketplace', style: t.titleMedium)),
+        TextButton(onPressed: () => context.go('/marketplace'), child: const Text('Browse all')),
+      ]),
+      if (services.isNotEmpty) group('Services', services, Icons.handyman_outlined),
+      if (products.isNotEmpty) group('Products', products, Icons.inventory_2_outlined),
+      const SizedBox(height: AppSpacing.x24),
+    ]);
+  }
+}
+
+class _MktMini extends StatelessWidget {
+  const _MktMini(this.m, this.fallbackIcon);
+  final Map<String, dynamic> m;
+  final IconData fallbackIcon;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final img = '${m['image_url'] ?? ''}'.trim();
+    final price = num.tryParse('${m['price']}');
+    final money = price != null && price > 0 ? NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price) : '';
+    final fallback = Container(
+      color: AppColors.surface2,
+      child: Center(child: Icon(fallbackIcon, color: AppColors.textSubtle)),
+    );
+    return GestureDetector(
+      onTap: () => context.push('/marketplace/${m['id']}'),
+      child: SizedBox(
+        width: 150,
+        child: Card(
+          clipBehavior: Clip.antiAlias,
+          margin: EdgeInsets.zero,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SizedBox(
+              height: 70,
+              width: double.infinity,
+              child: img.isEmpty ? fallback : Image.network(img, fit: BoxFit.cover, errorBuilder: (_, __, ___) => fallback),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.x8),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('${m['title'] ?? ''}', maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                if (money.isNotEmpty)
+                  Text(money, style: t.bodySmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 class _RecommendedProperties extends ConsumerWidget {
   const _RecommendedProperties();
 
