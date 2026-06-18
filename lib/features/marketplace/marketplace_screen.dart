@@ -131,17 +131,27 @@ class MarketplaceScreen extends ConsumerWidget {
       ],
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('List')),
+        FilledButton(
+          // Validate BEFORE closing so the form (and the user's input) stays put
+          // on failure instead of being discarded.
+          onPressed: () {
+            final missing = <String>[
+              if (title.text.trim().isEmpty) 'a title',
+              if (category == null) 'a category',
+            ];
+            if (missing.isNotEmpty) {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(SnackBar(content: Text('Please add ${missing.join(' and ')}.')));
+              return;
+            }
+            Navigator.pop(context, true);
+          },
+          child: const Text('List'),
+        ),
       ],
     );
     if (ok != true) return;
-    if (title.text.trim().isEmpty || category == null) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Title and category are required.')));
-      }
-      return;
-    }
     try {
       final res = await ref.read(apiClientProvider).post('/marketplace', body: {
         'kind': kind,
