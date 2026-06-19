@@ -10,6 +10,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
 import '../../core/widgets/status_badge.dart';
+import '../auth/application/auth_controller.dart';
 import '../shell/app_shell.dart';
 
 /// GET /projects/:id → { project, units }
@@ -24,6 +25,17 @@ final projectProgressProvider =
     FutureProvider.autoDispose.family<List<dynamic>, String>((ref, id) async {
   try {
     final d = await ref.read(apiClientProvider).get('/projects/$id/progress');
+    return d is List ? d : [];
+  } catch (_) {
+    return [];
+  }
+});
+
+/// GET /projects/:id/inquiries → customer leads on a project (developer-scoped).
+final projectInquiriesProvider =
+    FutureProvider.autoDispose.family<List<dynamic>, String>((ref, id) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/projects/$id/inquiries');
     return d is List ? d : [];
   } catch (_) {
     return [];
@@ -66,6 +78,8 @@ class ProjectDetailScreen extends ConsumerWidget {
           data: (d) {
             final p = Map<String, dynamic>.from(d['project'] ?? {});
             final units = (d['units'] as List? ?? []);
+            final myOrg = ref.watch(authControllerProvider).user?.organizationId;
+            final isOwnerDev = myOrg != null && '${p['developer_org']}' == myOrg;
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
@@ -86,8 +100,15 @@ class ProjectDetailScreen extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.x16),
                 _ConstructionProgress(projectId: projectId),
                 const SizedBox(height: AppSpacing.x16),
-                _actions(context, ref, p),
+                if (isOwnerDev)
+                  _InquiriesInbox(projectId: projectId)
+                else
+                  _InquiryActions(projectId: projectId, projectName: '${p['name'] ?? 'this project'}'),
                 const SizedBox(height: AppSpacing.x16),
+                if (isOwnerDev) ...[
+                  _actions(context, ref, p),
+                  const SizedBox(height: AppSpacing.x16),
+                ],
                 Text('Units (${units.length})',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: AppSpacing.x8),
@@ -521,6 +542,197 @@ class ProjectDetailScreen extends ConsumerWidget {
       });
       ref.invalidate(projectDetailProvider(id));
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Project updated')));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+}
+
+const _inquiryKinds = [
+  ('brochure', 'Request brochure', Icons.description_outlined),
+  ('viewing', 'Book viewing', Icons.event_available_outlined),
+  ('callback', 'Request callback', Icons.call_outlined),
+  ('offer', 'Make an offer', Icons.local_offer_outlined),
+];
+
+Color _leadStatusColor(String s) => switch (s) {
+      'new' => AppColors.info,
+      'contacted' => AppColors.warning,
+      'qualified' => AppColors.secondary,
+      'won' => AppColors.success,
+      'lost' => AppColors.danger,
+      _ => AppColors.textMuted,
+    };
+
+/// Customer-facing inquiry actions on a project (spec §15). Lands as a developer lead.
+class _InquiryActions extends ConsumerWidget {
+  const _InquiryActions({required this.projectId, required this.projectName});
+  final String projectId;
+  final String projectName;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Interested in $projectName?', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 2),
+          Text('Send a request and the developer will reach out.',
+              style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
+          const SizedBox(height: AppSpacing.x12),
+          Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
+            for (final k in _inquiryKinds)
+              OutlinedButton.icon(
+                onPressed: () => _submitInquiry(context, ref, k.$1),
+                icon: Icon(k.$3, size: 16),
+                label: Text(k.$2),
+              ),
+          ]),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _submitInquiry(BuildContext context, WidgetRef ref, String kind) async {
+    final me = ref.read(authControllerProvider).user;
+    final name = TextEditingController(text: me?.fullName ?? '');
+    final phone = TextEditingController();
+    final message = TextEditingController();
+    final offer = TextEditingController();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 4, 20, 20 + MediaQuery.of(ctx).viewInsets.bottom),
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(_inquiryKinds.firstWhere((k) => k.$1 == kind).$2,
+              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: AppSpacing.x12),
+          TextField(controller: name, decoration: const InputDecoration(labelText: 'Your name', isDense: true)),
+          const SizedBox(height: AppSpacing.x8),
+          TextField(controller: phone, decoration: const InputDecoration(labelText: 'Phone', isDense: true)),
+          if (kind == 'offer') ...[
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: offer, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Offer amount (AED)', isDense: true)),
+          ],
+          const SizedBox(height: AppSpacing.x8),
+          TextField(controller: message, maxLines: 2, decoration: const InputDecoration(labelText: 'Message (optional)', isDense: true)),
+          const SizedBox(height: AppSpacing.x12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () async {
+                try {
+                  await ref.read(apiClientProvider).post('/projects/$projectId/inquiries', body: {
+                    'kind': kind,
+                    'name': name.text.trim(),
+                    'phone': phone.text.trim(),
+                    'message': message.text.trim(),
+                    if (kind == 'offer') 'offer_amount': offer.text.trim(),
+                  });
+                  if (ctx.mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request sent — the developer will be in touch.')));
+                  }
+                } catch (e) {
+                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+                }
+              },
+              child: const Text('Send request'),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Developer-facing leads inbox + pipeline status (spec §9/§15).
+class _InquiriesInbox extends ConsumerWidget {
+  const _InquiriesInbox({required this.projectId});
+  final String projectId;
+  static const _statuses = ['new', 'contacted', 'qualified', 'won', 'lost'];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final muted = Theme.of(context).hintColor;
+    final inq = ref.watch(projectInquiriesProvider(projectId));
+    final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
+    final df = DateFormat('d MMM');
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          inq.maybeWhen(
+            data: (list) => Text('Leads (${list.length})', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            orElse: () => Text('Leads', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(height: AppSpacing.x8),
+          inq.when(
+            loading: () => const Padding(padding: EdgeInsets.all(8), child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))),
+            error: (e, _) => Text(friendlyError(e), style: t.bodySmall),
+            data: (list) {
+              if (list.isEmpty) {
+                return Text('No inquiries yet. Customer brochure/viewing/callback/offer requests land here.',
+                    style: t.bodySmall?.copyWith(color: muted));
+              }
+              return Column(children: [
+                for (final e in list)
+                  Builder(builder: (_) {
+                    final m = Map<String, dynamic>.from(e);
+                    final kind = '${m['kind'] ?? 'callback'}';
+                    final status = '${m['status'] ?? 'new'}';
+                    final when = DateTime.tryParse('${m['created_at']}');
+                    final offer = num.tryParse('${m['offer_amount'] ?? ''}');
+                    final who = '${m['name'] ?? m['user_name'] ?? 'Customer'}';
+                    final contact = [m['phone'], m['user_email'] ?? m['email']].where((x) => '$x'.trim().isNotEmpty).join(' · ');
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Icon(_inquiryKinds.firstWhere((k) => k.$1 == kind, orElse: () => _inquiryKinds[2]).$3, size: 18, color: muted),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text('$who · ${_humanize(kind)}${offer != null ? ' · ${aed.format(offer)}' : ''}',
+                                style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                            if (contact.isNotEmpty) Text(contact, style: t.bodySmall?.copyWith(color: muted)),
+                            if ('${m['message'] ?? ''}'.isNotEmpty) Text('${m['message']}', style: t.bodySmall),
+                          ]),
+                        ),
+                        const SizedBox(width: 8),
+                        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                          if (when != null) Text(df.format(when), style: t.labelSmall?.copyWith(color: muted)),
+                          PopupMenuButton<String>(
+                            onSelected: (s) => _setStatus(context, ref, '${m['id']}', s),
+                            itemBuilder: (_) => [for (final s in _statuses) PopupMenuItem(value: s, child: Text(_humanize(s)))],
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(color: _leadStatusColor(status).withValues(alpha: 0.14), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                                Text(_humanize(status), style: t.labelSmall?.copyWith(color: _leadStatusColor(status), fontWeight: FontWeight.w700)),
+                                Icon(Icons.arrow_drop_down, size: 16, color: _leadStatusColor(status)),
+                              ]),
+                            ),
+                          ),
+                        ]),
+                      ]),
+                    );
+                  }),
+              ]);
+            },
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _setStatus(BuildContext context, WidgetRef ref, String id, String status) async {
+    try {
+      await ref.read(apiClientProvider).patch('/inquiries/$id/status', body: {'status': status});
+      ref.invalidate(projectInquiriesProvider(projectId));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
