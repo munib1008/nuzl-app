@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../core/network/api_client.dart';
+import '../../core/network/upload_service.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/rbac/nav_config.dart';
 import '../../core/theme/app_colors.dart';
@@ -251,82 +253,109 @@ bool isActiveRoute(String location, String route) => route == '/dashboard'
 
 // Roles a user can add on top of their base Customer identity. Verified roles
 // (RERA / trade licence) land as 'pending' until an admin approves them.
-const _addableRoles = <({String key, String title, String desc, String req, bool verified})>[
-  (key: 'owner', title: 'Property Owner', desc: 'Manage owned properties, leases and service requests.', req: 'Title Deed + Emirates ID', verified: false),
-  (key: 'tenant', title: 'Tenant', desc: 'Track your tenancy, rent payments and maintenance.', req: 'Tenancy contract (Ejari)', verified: false),
-  (key: 'investor', title: 'Investor', desc: 'Yield analysis, portfolio tracking and opportunities.', req: 'No documents required', verified: false),
-  (key: 'agent', title: 'Agent', desc: 'List and sell properties, manage CRM, leads and viewings.', req: 'RERA licence + agency affiliation', verified: true),
-  (key: 'developer', title: 'Developer', desc: 'Manage projects, inventory and unit releases.', req: 'Trade licence + developer registration', verified: true),
-  (key: 'provider', title: 'Service Provider', desc: 'Offer services, bid on tenders and send quotes.', req: 'Trade licence', verified: true),
-  (key: 'supplier', title: 'Supplier', desc: 'Sell products and manage your catalogue.', req: 'Trade licence', verified: true),
+typedef _RoleOption = ({String key, String title, String desc, String req, bool verified, List<String> docs});
+
+const _addableRoles = <_RoleOption>[
+  (key: 'owner', title: 'Property Owner', desc: 'Manage owned properties, leases and service requests.', req: 'Title Deed verified at listing time', verified: false, docs: []),
+  (key: 'tenant', title: 'Tenant', desc: 'Track your tenancy, rent payments and maintenance.', req: 'Tenancy contract (Ejari)', verified: false, docs: []),
+  (key: 'investor', title: 'Investor', desc: 'Yield analysis, portfolio tracking and opportunities.', req: 'No documents required', verified: false, docs: []),
+  (key: 'agent', title: 'Agent', desc: 'List and sell properties, manage CRM, leads and viewings.', req: 'RERA licence + Emirates ID', verified: true, docs: ['RERA licence', 'Emirates ID']),
+  (key: 'developer', title: 'Developer', desc: 'Manage projects, inventory and unit releases.', req: 'Trade + developer licence', verified: true, docs: ['Trade licence', 'Developer licence']),
+  (key: 'provider', title: 'Service Provider', desc: 'Offer services, bid on tenders and send quotes.', req: 'Trade licence', verified: true, docs: ['Trade licence']),
+  (key: 'supplier', title: 'Supplier', desc: 'Sell products and manage your catalogue.', req: 'Trade licence', verified: true, docs: ['Trade licence']),
 ];
 
-/// Opens the "Add a role" picker — informative cards with required documents +
-/// verification status. Verified roles request admin approval; instant roles
-/// activate immediately. Single entry point, reached from the sidebar role chip.
+/// Verification-status badge for a role the account already holds.
+({String label, Color color, IconData icon}) _roleStatusMeta(String? status) => switch (status) {
+      'approved' => (label: 'Active', color: AppColors.success, icon: Icons.check_circle_outline),
+      'pending' => (label: 'Under review', color: AppColors.warning, icon: Icons.hourglass_top_outlined),
+      'rejected' => (label: 'Rejected', color: AppColors.danger, icon: Icons.cancel_outlined),
+      _ => (label: 'Active', color: AppColors.success, icon: Icons.check_circle_outline),
+    };
+
+/// Opens the "Roles" sheet — your current roles + their verification status, plus
+/// roles you can add. Verified roles open a document-upload wizard before going
+/// to the admin review queue; instant roles activate immediately.
 Future<void> showAddRoleDialog(BuildContext context, WidgetRef ref, List<String> held) async {
-  final picked = await showDialog<({String key, bool verified})>(
+  await showDialog<void>(
     context: context,
-    builder: (ctx) {
-      final options = _addableRoles.where((o) => !held.contains(o.key)).toList();
-      final dark = Theme.of(ctx).brightness == Brightness.dark;
-      return Dialog(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 460, maxHeight: 580),
-          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 20, 20, 4),
-              child: Text('Add a role', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Text(
-                  'One account, many roles. You stay a Customer — added roles layer on top. '
-                  'Verified roles are reviewed before they go live.',
-                  style: TextStyle(fontSize: 12.5, color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
-            ),
-            Expanded(
-              child: options.isEmpty
-                  ? const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('You already have every role.')))
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                      itemCount: options.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (_, i) => _addRoleCard(ctx, options[i]),
-                    ),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 0, 12, 8),
-                child: TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
-              ),
-            ),
-          ]),
-        ),
-      );
-    },
+    builder: (_) => Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460, maxHeight: 640),
+        child: const _RolesBody(),
+      ),
+    ),
   );
-  if (picked == null) return;
-  try {
-    await ref.read(apiClientProvider).post('/users/me/roles', body: {'role': picked.key});
-    await ref.read(authControllerProvider.notifier).bootstrap(); // refresh approved roles
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(picked.verified
-          ? 'Requested — your role will activate once verified.'
-          : 'Role added — switch to it from the role chip under the logo.'),
-    ));
-  } catch (e) {
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+}
+
+class _RolesBody extends ConsumerWidget {
+  const _RolesBody();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final user = ref.watch(authControllerProvider).user;
+    final myRoles = user?.roles ?? const <Map<String, dynamic>>[];
+    final heldKeys = myRoles.map((r) => '${r['role']}').toSet();
+    final options = _addableRoles.where((o) => !heldKeys.contains(o.key)).toList();
+    return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, 4),
+        child: Text('Roles', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+        child: Text(
+            'One account, many roles. You stay a Customer — added roles layer on top. '
+            'Verified roles are reviewed before they go live.',
+            style: TextStyle(fontSize: 12.5, color: muted)),
+      ),
+      Flexible(
+        child: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 12), shrinkWrap: true, children: [
+          if (myRoles.isNotEmpty) ...[
+            Text('Your roles', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: muted)),
+            const SizedBox(height: 8),
+            for (final r in myRoles) _heldRoleRow(context, '${r['role']}', '${r['status']}'),
+            const SizedBox(height: AppSpacing.x16),
+          ],
+          if (options.isNotEmpty) ...[
+            Text('Add a role', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: muted)),
+            const SizedBox(height: 8),
+            for (final o in options) ...[_addRoleCard(context, ref, o), const SizedBox(height: 10)],
+          ],
+        ]),
+      ),
+      Align(
+        alignment: Alignment.centerRight,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(0, 0, 12, 8),
+          child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close')),
+        ),
+      ),
+    ]);
+  }
+
+  Widget _heldRoleRow(BuildContext context, String role, String status) {
+    final c = roleColor(personaFromRole(role));
+    final m = _roleStatusMeta(status);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(children: [
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+        const SizedBox(width: 8),
+        Expanded(child: Text(personaFromRole(role).label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14))),
+        _roleStatusPill(m.label, m.color, m.icon),
+      ]),
+    );
   }
 }
 
-/// One informative role card in the Add-a-role dialog: purpose, required
-/// documents, verification status and an Apply action.
-Widget _addRoleCard(BuildContext ctx, ({String key, String title, String desc, String req, bool verified}) o) {
+/// One add-a-role card: purpose, required documents, and an Apply action that
+/// routes verified roles through the document wizard.
+Widget _addRoleCard(BuildContext context, WidgetRef ref, _RoleOption o) {
   final c = roleColor(personaFromRole(o.key));
-  final dark = Theme.of(ctx).brightness == Brightness.dark;
+  final dark = Theme.of(context).brightness == Brightness.dark;
   final badge = o.verified
       ? _roleStatusPill('Needs verification', AppColors.warning, Icons.verified_user_outlined)
       : _roleStatusPill('Instant', AppColors.success, Icons.bolt_outlined);
@@ -352,14 +381,133 @@ Widget _addRoleCard(BuildContext ctx, ({String key, String title, String desc, S
         Expanded(child: Text(o.req, style: TextStyle(fontSize: 12, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle))),
         const SizedBox(width: 8),
         FilledButton(
-          onPressed: () => Navigator.pop(ctx, (key: o.key, verified: o.verified)),
+          onPressed: () => _applyForRole(context, ref, o),
           style: FilledButton.styleFrom(
               visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 16)),
-          child: const Text('Apply'),
+          child: Text(o.verified ? 'Verify' : 'Apply'),
         ),
       ]),
     ]),
   );
+}
+
+/// Apply for a role. Verified roles first collect their documents, then submit
+/// for review (status → pending); instant roles activate immediately.
+Future<void> _applyForRole(BuildContext context, WidgetRef ref, _RoleOption o) async {
+  List<Map<String, String>>? docs;
+  if (o.verified && o.docs.isNotEmpty) {
+    docs = await showDialog<List<Map<String, String>>>(
+      context: context,
+      builder: (_) => _DocUploadWizard(option: o),
+    );
+    if (docs == null) return; // cancelled
+  }
+  try {
+    await ref.read(apiClientProvider).post('/users/me/roles',
+        body: {'role': o.key, if (docs != null) 'documents': docs});
+    await ref.read(authControllerProvider.notifier).bootstrap();
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(o.verified
+          ? 'Submitted for verification — we\'ll review your documents and activate the role.'
+          : 'Role added — switch to it from the role chip under the logo.'),
+    ));
+  } catch (e) {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+  }
+}
+
+/// Step 3 of the add-role flow: upload each required document, then submit.
+class _DocUploadWizard extends ConsumerStatefulWidget {
+  const _DocUploadWizard({required this.option});
+  final _RoleOption option;
+  @override
+  ConsumerState<_DocUploadWizard> createState() => _DocUploadWizardState();
+}
+
+class _DocUploadWizardState extends ConsumerState<_DocUploadWizard> {
+  final Map<String, String> _uploaded = {}; // label -> url
+  String? _busy;
+
+  String _mime(String name) {
+    final n = name.toLowerCase();
+    if (n.endsWith('.pdf')) return 'application/pdf';
+    if (n.endsWith('.png')) return 'image/png';
+    return 'image/jpeg';
+  }
+
+  Future<void> _pick(String label) async {
+    setState(() => _busy = label);
+    try {
+      final res = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png'],
+        withData: true,
+      );
+      final f = res?.files.first;
+      if (f?.bytes != null) {
+        final url = await ref.read(uploadServiceProvider).upload(f!.bytes!, f.name, _mime(f.name));
+        if (url != null) setState(() => _uploaded[label] = url);
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    } finally {
+      if (mounted) setState(() => _busy = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final allDone = widget.option.docs.every(_uploaded.containsKey);
+    return AlertDialog(
+      title: Text('Verify ${widget.option.title}'),
+      content: SizedBox(
+        width: MediaQuery.sizeOf(context).width - 80 < 380 ? MediaQuery.sizeOf(context).width - 80 : 380,
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Upload the documents below — PDF or photo. An admin reviews them before the role goes live.',
+              style: TextStyle(fontSize: 12.5, color: muted)),
+          const SizedBox(height: AppSpacing.x16),
+          for (final label in widget.option.docs) ...[
+            _docRow(context, label, muted),
+            const SizedBox(height: AppSpacing.x8),
+          ],
+        ]),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: allDone
+              ? () => Navigator.pop(context,
+                  _uploaded.entries.map((e) => {'label': e.key, 'url': e.value}).toList())
+              : null,
+          child: const Text('Submit for review'),
+        ),
+      ],
+    );
+  }
+
+  Widget _docRow(BuildContext context, String label, Color muted) {
+    final done = _uploaded.containsKey(label);
+    final busy = _busy == label;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x12, vertical: AppSpacing.x8),
+      decoration: BoxDecoration(
+        border: Border.all(color: done ? AppColors.success : Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(AppSpacing.rMd),
+      ),
+      child: Row(children: [
+        Icon(done ? Icons.check_circle : Icons.upload_file_outlined,
+            size: 18, color: done ? AppColors.success : muted),
+        const SizedBox(width: AppSpacing.x8),
+        Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
+        busy
+            ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+            : TextButton(onPressed: () => _pick(label), child: Text(done ? 'Replace' : 'Upload')),
+      ]),
+    );
+  }
 }
 
 Widget _roleStatusPill(String label, Color c, IconData icon) => Container(

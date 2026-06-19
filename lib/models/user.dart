@@ -32,6 +32,18 @@ class AppUser {
   List<String> get approvedRoles =>
       roles.where((r) => '${r['status']}' == 'approved').map((r) => '${r['role']}').toList();
 
+  /// Roles still awaiting verification (admin review).
+  List<String> get pendingRoles =>
+      roles.where((r) => '${r['status']}' == 'pending').map((r) => '${r['role']}').toList();
+
+  /// Verification status for a role: 'approved' | 'pending' | 'rejected' | null.
+  String? statusOf(String role) {
+    for (final r in roles) {
+      if ('${r['role']}' == role) return '${r['status']}';
+    }
+    return null;
+  }
+
   factory AppUser.fromJson(Map<String, dynamic> j) => AppUser(
         id: j['id']?.toString() ?? '',
         email: j['email'] ?? '',

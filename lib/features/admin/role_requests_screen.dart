@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
@@ -102,10 +103,27 @@ class _RoleCard extends ConsumerWidget {
             if (verifStatus.isNotEmpty) _evi(Icons.verified_outlined, 'Company $verifStatus'),
             if (when != null) _evi(Icons.schedule, DateFormat('d MMM').format(when.toLocal())),
           ]),
-          if (rera.isEmpty && license.isEmpty)
+          // Documents the applicant uploaded in the verification wizard.
+          Builder(builder: (_) {
+            final docs = (r['documents'] is List) ? r['documents'] as List : const [];
+            final valid = docs.whereType<Map>().where((d) => '${d['url'] ?? ''}'.isNotEmpty).toList();
+            if (valid.isEmpty) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.x8),
+              child: Wrap(spacing: AppSpacing.x8, runSpacing: 6, children: [
+                for (final d in valid)
+                  ActionChip(
+                    avatar: const Icon(Icons.open_in_new, size: 14),
+                    label: Text('${d['label'] ?? 'Document'}'),
+                    onPressed: () => launchUrl(Uri.parse('${d['url']}'), mode: LaunchMode.externalApplication),
+                  ),
+              ]),
+            );
+          }),
+          if (rera.isEmpty && license.isEmpty && !(r['documents'] is List && (r['documents'] as List).isNotEmpty))
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.x8),
-              child: Text('No RERA / trade-license on file — verify externally before approving.',
+              child: Text('No RERA / trade-license / documents on file — verify externally before approving.',
                   style: t.bodySmall?.copyWith(color: AppColors.warning)),
             ),
           const SizedBox(height: AppSpacing.x12),
