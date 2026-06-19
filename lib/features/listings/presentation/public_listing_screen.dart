@@ -1,9 +1,12 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -261,6 +264,19 @@ class _Body extends ConsumerWidget {
           ),
         ];
       })(),
+      // Location map (OpenStreetMap, no API key) — shown when the property has
+      // coordinates, like the map every UAE portal embeds.
+      ...(() {
+        final lat = double.tryParse('${m['latitude'] ?? ''}');
+        final lng = double.tryParse('${m['longitude'] ?? ''}');
+        if (lat == null || lng == null) return <Widget>[];
+        return [
+          const SizedBox(height: AppSpacing.x24),
+          Text('Location', style: t.titleMedium),
+          const SizedBox(height: AppSpacing.x8),
+          _LocationMap(lat: lat, lng: lng, label: community.isNotEmpty ? community : title),
+        ];
+      })(),
       // Mortgage CTA — links to the affordability planner (sale listings only).
       if (!isRent) ...[
         const SizedBox(height: AppSpacing.x24),
@@ -323,6 +339,64 @@ class _Body extends ConsumerWidget {
         Text(value, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
         Text(label, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
       ]),
+    ]);
+  }
+}
+
+/// Embedded location map (OpenStreetMap tiles — no API key) + an "Open in Maps"
+/// link. Shown only when the property has coordinates.
+class _LocationMap extends StatelessWidget {
+  const _LocationMap({required this.lat, required this.lng, required this.label});
+  final double lat;
+  final double lng;
+  final String label;
+
+  Future<void> _openInMaps() async {
+    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$lat,$lng');
+    await launchUrl(uri, webOnlyWindowName: '_blank', mode: LaunchMode.externalApplication);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final point = LatLng(lat, lng);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      ClipRRect(
+        borderRadius: BorderRadius.circular(AppSpacing.rCard),
+        child: SizedBox(
+          height: 220,
+          child: FlutterMap(
+            options: MapOptions(
+              initialCenter: point,
+              initialZoom: 14,
+              interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.pinchZoom | InteractiveFlag.drag | InteractiveFlag.doubleTapZoom),
+            ),
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'ae.nuzl.app',
+              ),
+              MarkerLayer(markers: [
+                Marker(
+                  point: point,
+                  width: 44,
+                  height: 44,
+                  child: const Icon(Icons.location_pin, size: 40, color: AppColors.primary),
+                ),
+              ]),
+              const RichAttributionWidget(
+                attributions: [TextSourceAttribution('OpenStreetMap contributors')],
+              ),
+            ],
+          ),
+        ),
+      ),
+      const SizedBox(height: AppSpacing.x8),
+      OutlinedButton.icon(
+        onPressed: _openInMaps,
+        icon: const Icon(Icons.open_in_new, size: 16),
+        label: const Text('Open in Maps'),
+      ),
     ]);
   }
 }
