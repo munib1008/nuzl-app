@@ -134,6 +134,10 @@ Widget _ctaPair(
   required String secondaryLabel,
   required VoidCallback onSecondary,
   bool center = false,
+  // When true, both buttons get the SAME fixed width on wide screens (used for
+  // the hero pair, whose labels differ in length). Short-label pairs leave this
+  // off so they stay content-sized instead of stretching into chunky bars.
+  bool equalWidth = false,
 }) {
   final wide = MediaQuery.sizeOf(context).width >= 600;
   // height 44 (was 48) — a touch tighter. expand=false makes the button hug its
@@ -160,12 +164,19 @@ Widget _ctaPair(
       secondary(expand: true),
     ]);
   }
-  // Wide: content-sized buttons (Wrap so they fall to two rows if cramped).
+  // Wide: equal fixed-width buttons (hero) or content-sized (short CTAs).
+  // Wrap so they fall to two rows if the viewport is cramped.
+  const equalW = 248.0;
   final row = Wrap(
     spacing: AppSpacing.x12,
     runSpacing: AppSpacing.x12,
     alignment: center ? WrapAlignment.center : WrapAlignment.start,
-    children: [primary(expand: false), secondary(expand: false)],
+    children: equalWidth
+        ? [
+            SizedBox(width: equalW, child: primary(expand: true)),
+            SizedBox(width: equalW, child: secondary(expand: true)),
+          ]
+        : [primary(expand: false), secondary(expand: false)],
   );
   return center ? Center(child: row) : row;
 }
@@ -340,6 +351,7 @@ class _Hero extends StatelessWidget {
         onPrimary: () => context.go('/login?next=/properties'),
         secondaryLabel: 'Start managing properties',
         onSecondary: () => context.go('/register'),
+        equalWidth: true,
       ),
     ]);
     final dark = _isDark(context);
