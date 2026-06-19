@@ -5,6 +5,7 @@ import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/async_view.dart';
+import '../../../core/widgets/contact_actions.dart';
 import '../data/leads_repository.dart';
 
 const _stageLabels = {
@@ -56,8 +57,12 @@ class LeadCrmScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
                 Text(lead['buyer_name'] ?? 'Lead', style: t.headlineSmall),
-                if (lead['buyer_phone'] != null && '${lead['buyer_phone']}'.isNotEmpty)
+                if (lead['buyer_phone'] != null && '${lead['buyer_phone']}'.isNotEmpty) ...[
                   Text('${lead['buyer_phone']}', style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                  const SizedBox(height: AppSpacing.x12),
+                  // One-tap reach-out — Call / WhatsApp / Copy.
+                  ContactActions(phone: '${lead['buyer_phone']}'),
+                ],
                 if (subtitle.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.x8),
                   Text(subtitle, style: t.bodyMedium),
@@ -97,6 +102,9 @@ class LeadCrmScreen extends ConsumerWidget {
                   ),
                 ]),
                 const SizedBox(height: AppSpacing.x8),
+                // Frictionless note — type and tap away (or press send) to log it.
+                _QuickNote(id),
+                const SizedBox(height: AppSpacing.x12),
                 if (activities.isEmpty)
                   Text('No activity yet.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
                 else
@@ -198,6 +206,79 @@ class LeadCrmScreen extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
     }
+  }
+}
+
+/// Frictionless note composer — logs to the lead timeline when focus leaves the
+/// field (or the user presses send), so jotting a quick note takes no dialog.
+class _QuickNote extends ConsumerStatefulWidget {
+  const _QuickNote(this.id);
+  final String id;
+  @override
+  ConsumerState<_QuickNote> createState() => _QuickNoteState();
+}
+
+class _QuickNoteState extends ConsumerState<_QuickNote> {
+  final _ctrl = TextEditingController();
+  final _focus = FocusNode();
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_onFocusChange);
+  }
+
+  void _onFocusChange() {
+    if (!_focus.hasFocus) _save();
+  }
+
+  Future<void> _save() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty || _saving) return;
+    setState(() => _saving = true);
+    try {
+      await ref.read(leadsRepositoryProvider).addCrmActivity(widget.id, 'note', text);
+      _ctrl.clear();
+      ref.invalidate(leadCrmProvider(widget.id));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Note saved')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _focus.removeListener(_onFocusChange);
+    _focus.dispose();
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _ctrl,
+      focusNode: _focus,
+      maxLines: 2,
+      minLines: 1,
+      textInputAction: TextInputAction.newline,
+      decoration: InputDecoration(
+        hintText: 'Add a quick note — saved to the timeline when you tap away',
+        suffixIcon: _saving
+            ? const Padding(
+                padding: EdgeInsets.all(12),
+                child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))
+            : IconButton(
+                tooltip: 'Save note',
+                icon: const Icon(Icons.send_outlined, size: 18),
+                onPressed: _save),
+      ),
+    );
   }
 }
 
