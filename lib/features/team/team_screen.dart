@@ -8,8 +8,9 @@ import '../auth/application/auth_controller.dart';
 import '../shell/app_shell.dart';
 
 const _teamRoles = [
-  'director', 'sales_head', 'project_manager', 'inventory_manager',
-  'marketing_manager', 'sales_executive', 'customer_service', 'member',
+  'director', 'sales_manager', 'team_leader', 'senior_agent', 'agent',
+  'inventory_manager', 'project_manager', 'marketing_manager',
+  'sales_executive', 'customer_service', 'member',
 ];
 
 String _roleLabel(String? r) => (r == null || r.isEmpty)
