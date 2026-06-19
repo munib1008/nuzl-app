@@ -6,6 +6,7 @@ import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/async_view.dart';
+import '../../../core/widgets/contact_actions.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../data/leads_repository.dart';
@@ -206,6 +207,14 @@ class _LeadCard extends StatelessWidget {
               Text('${lead.qualificationSteps}/5', style: t.bodySmall),
             ]),
             const SizedBox(height: AppSpacing.x12),
+            // One-tap reach-out without leaving the inbox (Call / WhatsApp).
+            if (lead.phone != null && lead.phone!.isNotEmpty) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ContactActions(phone: lead.phone!, compact: true),
+              ),
+              const SizedBox(height: AppSpacing.x8),
+            ],
             const Divider(height: 1),
             const SizedBox(height: AppSpacing.x8),
             // Footer: created + last-activity dates
