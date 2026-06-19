@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
@@ -169,6 +170,7 @@ class _PropCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final yield_ = p['net_yield_pct'];
+    final pid = '${p['property_id'] ?? ''}'.trim();
     return Card(
       child: ListTile(
         leading: const Icon(Icons.home_outlined),
@@ -176,10 +178,15 @@ class _PropCard extends StatelessWidget {
             .where((x) => x != null && '$x'.isNotEmpty)
             .join('  ·  ')),
         subtitle: Text('Equity ${_money(p['equity'])}'),
-        trailing: yield_ == null
-            ? null
-            : Text('${(num.tryParse('$yield_') ?? 0).toStringAsFixed(1)}%',
+        // Open the full property record hub (lease, mortgage, maintenance, docs, timeline).
+        onTap: pid.isEmpty ? null : () => context.push('/property/$pid'),
+        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (yield_ != null)
+            Text('${(num.tryParse('$yield_') ?? 0).toStringAsFixed(1)}%',
                 style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
+          if (pid.isNotEmpty)
+            const Padding(padding: EdgeInsets.only(left: 4), child: Icon(Icons.chevron_right, size: 18)),
+        ]),
       ),
     );
   }
