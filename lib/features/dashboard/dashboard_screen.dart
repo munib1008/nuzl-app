@@ -12,6 +12,7 @@ import '../../core/widgets/hover_lift.dart';
 import '../../core/widgets/hover_zoom_image.dart';
 import '../../core/widgets/status_badge.dart';
 import '../auth/application/auth_controller.dart';
+import '../projects/projects_screen.dart' show projectsProvider;
 import '../shell/app_shell.dart';
 
 /// Role-appropriate KPI report. Graceful: {} on error / no permission.
@@ -192,8 +193,15 @@ class DashboardScreen extends ConsumerWidget {
             if (isBuyer) const _RecommendedProperties(),
             // Marketplace strip — shows NUZL is more than listings (services + products).
             if (isBuyer) const _MarketplaceStrip(),
-            if (!isBuyer && persona != Persona.owner) ...[
+            // Developers manage ONLY their own projects — never the public market
+            // (Access Rules). Agents/brokers browse the market they sell, so they
+            // still get recent listings; developers get their own projects instead.
+            if (!isBuyer && persona != Persona.owner && persona != Persona.developer) ...[
               const _RecentProperties(),
+              const SizedBox(height: AppSpacing.x24),
+            ],
+            if (persona == Persona.developer) ...[
+              const _DeveloperProjects(),
               const SizedBox(height: AppSpacing.x24),
             ],
             // Owner command centre — portfolio/viewing/document stats + the agents
@@ -841,6 +849,104 @@ class _RecentProperties extends ConsumerWidget {
           orElse: () => const SizedBox(height: 40, child: Center(child: CircularProgressIndicator())),
         ),
       ]),
+    );
+  }
+}
+
+/// Developer dashboard — the developer's OWN projects (org-scoped via
+/// projectsProvider), never the public market. Empty state guides project
+/// creation so the dashboard is never a dead end.
+class _DeveloperProjects extends ConsumerWidget {
+  const _DeveloperProjects();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final projects = ref.watch(projectsProvider);
+    return _flatBox(
+      context,
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text('Your projects', style: t.titleMedium)),
+          TextButton(onPressed: () => context.go('/projects'), child: const Text('View all')),
+        ]),
+        const SizedBox(height: AppSpacing.x12),
+        projects.maybeWhen(
+          data: (list) => list.isEmpty
+              ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('No projects yet — create your first development to start managing inventory and sales.',
+                      style: t.bodySmall?.copyWith(color: muted)),
+                  const SizedBox(height: AppSpacing.x12),
+                  FilledButton.icon(
+                    onPressed: () => context.go('/projects'),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Create a project'),
+                  ),
+                ])
+              : SizedBox(
+                  height: 150,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: list.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.x12),
+                    itemBuilder: (_, i) => _ProjectMiniCard(Map<String, dynamic>.from(list[i])),
+                  ),
+                ),
+          orElse: () => const SizedBox(height: 40, child: Center(child: CircularProgressIndicator())),
+        ),
+      ]),
+    );
+  }
+}
+
+class _ProjectMiniCard extends StatelessWidget {
+  const _ProjectMiniCard(this.p);
+  final Map<String, dynamic> p;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final status = '${p['status'] ?? 'planning'}';
+    final units = p['units'] ?? 0;
+    final available = p['available'] ?? 0;
+    final statusColor = switch (status) {
+      'ready' => AppColors.success,
+      'under_construction' => AppColors.warning,
+      'completed' || 'sold_out' => AppColors.info,
+      _ => AppColors.primary,
+    };
+    final label = status.isEmpty ? '' : '${status[0].toUpperCase()}${status.substring(1).replaceAll('_', ' ')}';
+    return SizedBox(
+      width: 230,
+      child: HoverLift(
+        child: Card(
+          child: InkWell(
+            onTap: () => context.push('/projects/${p['id']}'),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.x12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Icon(Icons.domain_outlined, size: 18, color: Theme.of(context).colorScheme.primary),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                    child: Text(label, style: t.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.w700)),
+                  ),
+                ]),
+                const SizedBox(height: AppSpacing.x12),
+                Text('${p['name'] ?? 'Project'}',
+                    style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700), maxLines: 2, overflow: TextOverflow.ellipsis),
+                const Spacer(),
+                Text('$units units · $available available', style: t.bodySmall?.copyWith(color: muted)),
+              ]),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
