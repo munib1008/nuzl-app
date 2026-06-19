@@ -107,6 +107,24 @@ class ProjectDetailScreen extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.x16),
                 if (isOwnerDev) ...[
                   _actions(context, ref, p),
+                  const SizedBox(height: AppSpacing.x8),
+                  Row(children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _assignProjectAgent(context, ref, '${p['id']}'),
+                        icon: const Icon(Icons.person_pin_outlined, size: 18),
+                        label: const Text('Assign agent'),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.x8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => _requestQuote(context, ref, p),
+                        icon: const Icon(Icons.request_quote_outlined, size: 18),
+                        label: const Text('Request quote'),
+                      ),
+                    ),
+                  ]),
                   const SizedBox(height: AppSpacing.x16),
                 ],
                 Text('Units (${units.length})',
@@ -474,6 +492,110 @@ class ProjectDetailScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(agentId == null ? 'Agent cleared' : 'Unit assigned to agent')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  /// Assign one sales agent across the whole project (all units inherit).
+  Future<void> _assignProjectAgent(BuildContext context, WidgetRef ref, String id) async {
+    final agents = await ref.read(assignableAgentsProvider.future);
+    if (!context.mounted) return;
+    if (agents.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No agents available to assign')));
+      return;
+    }
+    final chosen = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: ListView(shrinkWrap: true, children: [
+          const Padding(padding: EdgeInsets.all(AppSpacing.x16),
+              child: Text('Assign the project to an agent', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
+          for (final a in agents)
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: Text('${a['full_name'] ?? a['email'] ?? 'Agent'}'),
+              subtitle: '${a['email'] ?? ''}'.isNotEmpty ? Text('${a['email']}') : null,
+              onTap: () => Navigator.pop(ctx, '${a['id']}'),
+            ),
+          ListTile(
+            leading: const Icon(Icons.clear),
+            title: const Text('Clear assignment'),
+            onTap: () => Navigator.pop(ctx, ''),
+          ),
+        ]),
+      ),
+    );
+    if (chosen == null || !context.mounted) return;
+    try {
+      final res = await ref.read(apiClientProvider).post('/projects/$id/assign-agent', body: {'agent_id': chosen.isEmpty ? null : chosen});
+      ref.invalidate(projectDetailProvider(id));
+      final n = (res is Map) ? res['units'] ?? 0 : 0;
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(chosen.isEmpty ? 'Cleared agent on $n units' : 'Assigned $n units to the agent')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  /// Post a service tender for the whole project (fit-out / MEP / landscaping…).
+  Future<void> _requestQuote(BuildContext context, WidgetRef ref, Map<String, dynamic> p) async {
+    final scope = TextEditingController();
+    final budget = TextEditingController();
+    final desc = TextEditingController();
+    var category = 'fit_out';
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Request a project quote',
+      children: [
+        Text('Post a request for the whole project — service providers bid in the marketplace.',
+            style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: AppSpacing.x12),
+        StatefulBuilder(
+          builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
+            DropdownButtonFormField<String>(
+              initialValue: category,
+              decoration: const InputDecoration(labelText: 'Scope'),
+              items: const [
+                DropdownMenuItem(value: 'fit_out', child: Text('Fit-out')),
+                DropdownMenuItem(value: 'mep', child: Text('MEP')),
+                DropdownMenuItem(value: 'landscaping', child: Text('Landscaping')),
+                DropdownMenuItem(value: 'facade', child: Text('Façade')),
+                DropdownMenuItem(value: 'interior', child: Text('Interior design')),
+                DropdownMenuItem(value: 'other', child: Text('Other')),
+              ],
+              onChanged: (v) => setS(() => category = v ?? 'fit_out'),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: scope, decoration: const InputDecoration(labelText: 'Title', hintText: 'e.g. Full fit-out — 120 units')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: budget, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Budget (AED) — optional')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: desc, maxLines: 3, decoration: const InputDecoration(labelText: 'Details')),
+          ]),
+        ),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Post request')),
+      ],
+    );
+    if (ok != true) return;
+    final title = scope.text.trim().isEmpty ? '${p['name'] ?? 'Project'} — ${_humanize(category)}' : scope.text.trim();
+    try {
+      await ref.read(apiClientProvider).post('/tenders', body: {
+        'kind': 'service',
+        'category': category,
+        'title': 'Project quote: $title',
+        'description': desc.text.trim().isEmpty ? 'Quote for ${p['name'] ?? 'the project'}.' : desc.text.trim(),
+        'location': '${p['community'] ?? p['city'] ?? ''}',
+        if (budget.text.trim().isNotEmpty) 'budget': num.tryParse(budget.text.trim()),
+      });
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quote request posted to the marketplace')));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
