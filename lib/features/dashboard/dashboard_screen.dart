@@ -9,6 +9,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_elevation.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/hover_lift.dart';
+import '../../core/widgets/hover_zoom_image.dart';
 import '../../core/widgets/status_badge.dart';
 import '../auth/application/auth_controller.dart';
 import '../listings/presentation/listings_screen.dart' show listingsSearchProvider;
@@ -703,11 +704,21 @@ class _PropertyMiniCard extends StatelessWidget {
             onTap: () => context.go('/listings/$id'),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Stack(children: [
-                cover.isNotEmpty
-                    ? Image.network(cover, height: 110, width: double.infinity, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(height: 110, color: AppColors.surface2))
-                    : Container(height: 110, width: double.infinity, color: AppColors.surface2,
-                        child: const Icon(Icons.apartment_outlined, color: AppColors.textMuted)),
+                // ClipRect contains the hover-zoom so it can't bleed past the card.
+                ClipRect(
+                  child: SizedBox(
+                    height: 110,
+                    width: double.infinity,
+                    child: cover.isNotEmpty
+                        ? HoverZoomImage(
+                            url: cover,
+                            placeholder: Container(color: AppColors.surface2,
+                                child: const Icon(Icons.apartment_outlined, color: AppColors.textMuted)),
+                          )
+                        : Container(color: AppColors.surface2,
+                            child: const Icon(Icons.apartment_outlined, color: AppColors.textMuted)),
+                  ),
+                ),
                 Positioned(
                   top: 8, left: 8,
                   child: StatusBadge(isRent ? 'For Rent' : 'For Sale', tone: isRent ? BadgeTone.warning : BadgeTone.success),
@@ -1054,14 +1065,18 @@ class _RecCard extends StatelessWidget {
           child: InkWell(
             onTap: () => context.push('/listings/${l['id']}'),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              AspectRatio(
-                aspectRatio: 16 / 9,
-                child: cover.isEmpty
-                    ? Container(color: AppColors.surface2,
-                        child: const Center(child: Icon(Icons.apartment_outlined, color: AppColors.textSubtle)))
-                    : Image.network(cover, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(color: AppColors.surface2,
-                            child: const Center(child: Icon(Icons.apartment_outlined, color: AppColors.textSubtle)))),
+              ClipRect(
+                child: AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: cover.isEmpty
+                      ? Container(color: AppColors.surface2,
+                          child: const Center(child: Icon(Icons.apartment_outlined, color: AppColors.textSubtle)))
+                      : HoverZoomImage(
+                          url: cover,
+                          placeholder: Container(color: AppColors.surface2,
+                              child: const Center(child: Icon(Icons.apartment_outlined, color: AppColors.textSubtle))),
+                        ),
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.x12),

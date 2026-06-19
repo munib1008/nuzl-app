@@ -7,6 +7,7 @@ import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/hover_lift.dart';
+import '../../../core/widgets/hover_zoom_image.dart';
 import '../../../core/widgets/skeleton_loader.dart';
 import '../../saved/saved_screen.dart';
 import '../../auth/application/auth_controller.dart';
@@ -425,40 +426,6 @@ int _photoCount(Map<String, dynamic> l) {
   return n;
 }
 
-/// Property photo that gently zooms on hover (desktop) — the Airbnb/Bayut feel.
-/// Uses AnimatedScale (a Transform, NOT a saveLayer) so there's no web grey-box.
-class _HoverZoomImage extends StatefulWidget {
-  const _HoverZoomImage({required this.url, required this.placeholder});
-  final String url;
-  final Widget placeholder;
-  @override
-  State<_HoverZoomImage> createState() => _HoverZoomImageState();
-}
-
-class _HoverZoomImageState extends State<_HoverZoomImage> {
-  bool _hover = false;
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: AnimatedScale(
-        scale: _hover ? 1.06 : 1.0,
-        duration: const Duration(milliseconds: 320),
-        curve: Curves.easeOut,
-        child: Image.network(
-          widget.url,
-          fit: BoxFit.cover,
-          width: double.infinity,
-          height: double.infinity,
-          loadingBuilder: (c, child, p) => p == null ? child : Container(color: AppColors.surface2),
-          errorBuilder: (_, __, ___) => widget.placeholder,
-        ),
-      ),
-    );
-  }
-}
-
 class _ListingCard extends StatelessWidget {
   const _ListingCard(this.l);
   final Map<String, dynamic> l;
@@ -523,7 +490,7 @@ class _ListingCard extends StatelessWidget {
                     aspectRatio: 3 / 2,
                     child: cover.isEmpty
                         ? placeholder()
-                        : _HoverZoomImage(url: cover, placeholder: placeholder()),
+                        : HoverZoomImage(url: cover, placeholder: placeholder()),
                   ),
                 ),
                 // Trust ribbons (Verified / New / Exclusive / Hot / Price reduced) — top-left.

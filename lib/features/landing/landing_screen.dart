@@ -11,6 +11,7 @@ import '../../core/theme/theme_mode_provider.dart';
 import '../../core/widgets/fade_in.dart';
 import '../../core/widgets/gradient_button.dart';
 import '../../core/widgets/hover_lift.dart';
+import '../../core/widgets/hover_zoom_image.dart';
 import '../../core/widgets/nuzl_logo.dart';
 import '../../core/widgets/auth_prompt.dart';
 import '../mortgage/presentation/calculator_screen.dart';
@@ -1958,16 +1959,19 @@ class _ListingCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           // Image — only For sale/rent + Verified badges (no type pill, no scrim).
-          AspectRatio(
-            aspectRatio: 16 / 10,
-            child: Stack(fit: StackFit.expand, children: [
-              cover.isNotEmpty
-                  ? Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const _Placeholder())
-                  : const _Placeholder(),
-              Positioned(top: 10, left: 10, child: _pill(context, isRent ? 'For rent' : 'For sale', _primary(context))),
-              if (verified)
-                Positioned(top: 10, right: 10, child: _pill(context, 'Verified', AppColors.success, icon: Icons.verified)),
-            ]),
+          // ClipRect contains the hover-zoom so it can't bleed over the content.
+          ClipRect(
+            child: AspectRatio(
+              aspectRatio: 16 / 10,
+              child: Stack(fit: StackFit.expand, children: [
+                cover.isNotEmpty
+                    ? HoverZoomImage(url: cover, placeholder: const _Placeholder())
+                    : const _Placeholder(),
+                Positioned(top: 10, left: 10, child: _pill(context, isRent ? 'For rent' : 'For sale', _primary(context))),
+                if (verified)
+                  Positioned(top: 10, right: 10, child: _pill(context, 'Verified', AppColors.success, icon: Icons.verified)),
+              ]),
+            ),
           ),
           // Body — property first; agent + actions last.
           Expanded(
