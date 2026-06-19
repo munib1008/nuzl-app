@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/async_view.dart';
+import '../../core/widgets/empty_state.dart';
 import '../auth/application/auth_controller.dart';
 import '../messages/data/messaging_repository.dart';
 import '../shell/app_shell.dart';
@@ -41,11 +42,11 @@ class DealBoardScreen extends ConsumerWidget {
           value: deals,
           onRetry: () => ref.invalidate(dealBoardProvider),
           data: (list) => list.isEmpty
-              ? ListView(children: [
-                  Padding(
-                    padding: const EdgeInsets.all(48),
-                    child: Center(child: Text('No deals on the board yet — post one.',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textMuted))),
+              ? ListView(children: const [
+                  EmptyState(
+                    icon: Icons.campaign_outlined,
+                    title: 'No deals on the board yet',
+                    message: 'Post a deal to share it with the network and find a co-broker.',
                   ),
                 ])
               : ListView(

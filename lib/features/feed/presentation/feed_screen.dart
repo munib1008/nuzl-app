@@ -8,6 +8,7 @@ import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_dialog.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../shell/app_shell.dart';
 
@@ -67,9 +68,10 @@ class FeedScreen extends ConsumerWidget {
           error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text('$e')))]),
           data: (list) => list.isEmpty
               ? ListView(children: const [
-                  Padding(
-                    padding: EdgeInsets.all(48),
-                    child: Center(child: Text('No posts yet. Share a market update or success story.', textAlign: TextAlign.center)),
+                  EmptyState(
+                    icon: Icons.dynamic_feed_outlined,
+                    title: 'No posts yet',
+                    message: 'Share a market update or a success story to start the conversation.',
                   ),
                 ])
               : Center(

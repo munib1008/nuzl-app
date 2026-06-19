@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/async_view.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/status_badge.dart';
 import '../shell/app_shell.dart';
 import 'contacts_repository.dart';
@@ -51,11 +52,11 @@ class ContactsScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(contactsProvider),
           data: (list) {
             if (list.isEmpty) {
-              return ListView(children: [
-                Padding(
-                  padding: const EdgeInsets.all(48),
-                  child: Center(child: Text('No contacts yet.',
-                      style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
+              return ListView(children: const [
+                EmptyState(
+                  icon: Icons.contacts_outlined,
+                  title: 'No contacts yet',
+                  message: 'Contacts appear here automatically as leads and customers come in.',
                 ),
               ]);
             }
