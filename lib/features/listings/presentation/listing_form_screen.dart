@@ -46,6 +46,9 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   final view = TextEditingController();
   final parking = TextEditingController();
   final serviceCharge = TextEditingController();
+  final incentiveNote = TextEditingController();
+  double dldWaiver = 0; // % of the 4% DLD the developer covers
+  double processingWaiver = 0; // % of the processing fee covered
   DateTime? handover;
   final Set<int> selectedAmenities = {};
 
@@ -82,6 +85,9 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       view.text = '${m['view'] ?? ''}';
       parking.text = m['parking'] != null ? '${m['parking']}' : '';
       serviceCharge.text = m['service_charge'] != null ? '${m['service_charge']}' : '';
+      dldWaiver = (num.tryParse('${m['dld_waiver_pct'] ?? 0}') ?? 0).toDouble();
+      processingWaiver = (num.tryParse('${m['processing_waiver_pct'] ?? 0}') ?? 0).toDouble();
+      incentiveNote.text = '${m['incentive_note'] ?? ''}';
       handover = DateTime.tryParse('${m['handover_date'] ?? ''}');
       final lat = m['latitude'], lng = m['longitude'];
       if (lat != null && lng != null) location.text = '$lat, $lng';
@@ -111,6 +117,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
     ownerName.dispose(); ownerPhone.dispose(); description.dispose(); permit.dispose();
     building.dispose(); location.dispose(); originalPrice.dispose();
     developer.dispose(); view.dispose(); parking.dispose(); serviceCharge.dispose();
+    incentiveNote.dispose();
     super.dispose();
   }
 
@@ -310,6 +317,9 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       if (view.text.trim().isNotEmpty) 'view': view.text.trim(),
       if (parking.text.trim().isNotEmpty) 'parking': int.tryParse(parking.text.trim()),
       if (serviceCharge.text.trim().isNotEmpty) 'service_charge': double.tryParse(serviceCharge.text.trim()),
+      'dld_waiver_pct': dldWaiver,
+      'processing_waiver_pct': processingWaiver,
+      if (incentiveNote.text.trim().isNotEmpty) 'incentive_note': incentiveNote.text.trim(),
       if (handover != null)
         'handover_date': '${handover!.year}-${handover!.month.toString().padLeft(2, '0')}-${handover!.day.toString().padLeft(2, '0')}',
       'amenities': selectedAmenities.toList(),
@@ -549,6 +559,44 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
               decoration: const InputDecoration(
                 labelText: 'Original price (AED) — optional',
                 helperText: 'If above the current price, shows a "Price reduced" ribbon',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x16),
+            Text('Developer incentives', style: t.titleSmall),
+            const SizedBox(height: AppSpacing.x4),
+            Text('Fee waivers a developer covers — reflected in the buyer\'s mortgage estimate.',
+                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            const SizedBox(height: AppSpacing.x8),
+            FieldPair(
+              DropdownButtonFormField<double>(
+                initialValue: dldWaiver,
+                decoration: const InputDecoration(labelText: 'DLD fee waiver'),
+                items: const [
+                  DropdownMenuItem(value: 0.0, child: Text('None')),
+                  DropdownMenuItem(value: 25.0, child: Text('25% covered')),
+                  DropdownMenuItem(value: 50.0, child: Text('50% covered')),
+                  DropdownMenuItem(value: 75.0, child: Text('75% covered')),
+                  DropdownMenuItem(value: 100.0, child: Text('Full DLD waiver')),
+                ],
+                onChanged: (v) => setState(() => dldWaiver = v ?? 0),
+              ),
+              DropdownButtonFormField<double>(
+                initialValue: processingWaiver,
+                decoration: const InputDecoration(labelText: 'Processing fee waiver'),
+                items: const [
+                  DropdownMenuItem(value: 0.0, child: Text('None')),
+                  DropdownMenuItem(value: 50.0, child: Text('50% covered')),
+                  DropdownMenuItem(value: 100.0, child: Text('Fully covered')),
+                ],
+                onChanged: (v) => setState(() => processingWaiver = v ?? 0),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            TextField(
+              controller: incentiveNote,
+              decoration: const InputDecoration(
+                labelText: 'Other incentives — optional',
+                hintText: 'e.g. Service-charge waiver for 2 years, free furnishing',
               ),
             ),
             const SizedBox(height: AppSpacing.x16),

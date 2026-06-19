@@ -230,7 +230,12 @@ class _Detail extends ConsumerWidget {
                       _VerificationBlock(l: l),
                       // Mortgage estimate is shown ONLY on for-sale listings (Customer
                       // module spec — no standalone calculator for buyers).
-                      if (!isRent) _MortgageEstimate(price: price.toDouble()),
+                      if (!isRent) _MortgageEstimate(
+                        price: price.toDouble(),
+                        dldWaiverPct: (num.tryParse('${l['dld_waiver_pct'] ?? 0}') ?? 0).toDouble(),
+                        processingWaiverPct: (num.tryParse('${l['processing_waiver_pct'] ?? 0}') ?? 0).toDouble(),
+                        incentiveNote: '${l['incentive_note'] ?? ''}',
+                      ),
                       // Living-asset history — property parties only (Listing 2.0).
                       if (l['viewer_can_docs'] == true && '${l['property_id'] ?? ''}'.isNotEmpty)
                         _TimelineBlock(propertyId: '${l['property_id']}'),
@@ -1054,8 +1059,17 @@ class _VerificationBlock extends StatelessWidget {
 /// the only place buyers see mortgage math — there is no standalone calculator.
 /// Pure client-side amortisation + UAE acquisition costs (DLD 4%, ~1% processing).
 class _MortgageEstimate extends StatefulWidget {
-  const _MortgageEstimate({required this.price});
+  const _MortgageEstimate({
+    required this.price,
+    this.dldWaiverPct = 0,
+    this.processingWaiverPct = 0,
+    this.incentiveNote = '',
+  });
   final double price;
+  // % of each fee the developer covers (0 = none, 100 = full waiver).
+  final double dldWaiverPct;
+  final double processingWaiverPct;
+  final String incentiveNote;
   @override
   State<_MortgageEstimate> createState() => _MortgageEstimateState();
 }
@@ -1068,9 +1082,28 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
   double get _downPayment => widget.price * _downPct / 100;
   double get _loan => widget.price - _downPayment;
   double get _monthly => MortgageMath.monthlyPayment(_loan, _ratePct, _years * 12);
-  double get _dld => widget.price * 0.04;
-  double get _processing => _loan * 0.01;
+  double get _dldFull => widget.price * 0.04;
+  double get _processingFull => _loan * 0.01;
+  double get _dld => _dldFull * (1 - widget.dldWaiverPct.clamp(0, 100) / 100);
+  double get _processing => _processingFull * (1 - widget.processingWaiverPct.clamp(0, 100) / 100);
   double get _acquisition => widget.price + _dld + _processing;
+  bool get _hasIncentive =>
+      widget.dldWaiverPct > 0 || widget.processingWaiverPct > 0 || widget.incentiveNote.trim().isNotEmpty;
+  String get _incentiveSummary {
+    final parts = <String>[];
+    if (widget.dldWaiverPct >= 100) {
+      parts.add('DLD waived');
+    } else if (widget.dldWaiverPct > 0) {
+      parts.add('${widget.dldWaiverPct.round()}% DLD covered');
+    }
+    if (widget.processingWaiverPct >= 100) {
+      parts.add('processing fee waived');
+    } else if (widget.processingWaiverPct > 0) {
+      parts.add('${widget.processingWaiverPct.round()}% processing covered');
+    }
+    if (widget.incentiveNote.trim().isNotEmpty) parts.add(widget.incentiveNote.trim());
+    return parts.join('  ·  ');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1097,6 +1130,29 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
           ]),
         );
 
+    // Fee row: when the developer covers part/all of a fee, show the original
+    // struck-through next to the discounted amount.
+    Widget feeRow(String label, double full, double net, double waiverPct) {
+      final waived = waiverPct > 0;
+      final suffix = !waived
+          ? ''
+          : (waiverPct >= 100 ? '  ·  waived' : '  ·  ${waiverPct.round()}% covered');
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Expanded(child: Text('$label$suffix', style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
+          if (waived) ...[
+            Text(aed.format(full),
+                style: t.bodySmall?.copyWith(color: AppColors.textMuted, decoration: TextDecoration.lineThrough)),
+            const SizedBox(width: AppSpacing.x8),
+            Text(aed.format(net),
+                style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.success)),
+          ] else
+            Text(aed.format(net), style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+        ]),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1111,6 +1167,29 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.x16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (_hasIncentive) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.x12),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentGold.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppSpacing.rMd),
+                  ),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Icon(Icons.card_giftcard, size: 18, color: AppColors.accentGold),
+                    const SizedBox(width: AppSpacing.x8),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Developer incentive',
+                            style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.accentGold)),
+                        if (_incentiveSummary.isNotEmpty)
+                          Text(_incentiveSummary, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                      ]),
+                    ),
+                  ]),
+                ),
+                const SizedBox(height: AppSpacing.x12),
+              ],
               control('Down payment', '${_downPct.round()}%  ·  ${aed.format(_downPayment)}',
                   _downPct, 10, 50, 8, (v) => setState(() => _downPct = v)),
               control('Interest rate', '${_ratePct.toStringAsFixed(2)}%',
@@ -1124,8 +1203,8 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
               const SizedBox(height: AppSpacing.x8),
               row('Loan amount', aed.format(_loan)),
               row('Down payment', aed.format(_downPayment)),
-              row('DLD fee (4%)', aed.format(_dld)),
-              row('Processing fee (~1%)', aed.format(_processing)),
+              feeRow('DLD fee (4%)', _dldFull, _dld, widget.dldWaiverPct),
+              feeRow('Processing fee (~1%)', _processingFull, _processing, widget.processingWaiverPct),
               const Divider(height: AppSpacing.x16),
               row('Total acquisition cost', aed.format(_acquisition), strong: true),
               const SizedBox(height: AppSpacing.x8),
