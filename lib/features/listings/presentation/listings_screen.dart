@@ -127,14 +127,20 @@ class ListingsScreen extends ConsumerWidget {
 
             Widget grid(List<Map<String, dynamic>> data) => LayoutBuilder(
                   builder: (ctx, c) {
-                    final cols = c.maxWidth >= 980 ? 3 : (c.maxWidth >= 620 ? 2 : 1);
+                    // Slightly wider cards (fewer columns) so the photo is the hero.
+                    final cols = c.maxWidth >= 1120 ? 3 : (c.maxWidth >= 680 ? 2 : 1);
                     final cardW = cols == 1 ? c.maxWidth : (c.maxWidth - (cols - 1) * AppSpacing.x16) / cols;
-                    return Wrap(
-                      spacing: AppSpacing.x16,
-                      runSpacing: AppSpacing.x16,
-                      children: data
-                          .map((m) => SizedBox(width: cardW, child: HoverLift(child: _ListingCard(m))))
-                          .toList(),
+                    // Fixed card height = 3:2 hero image + a roomy content area → all
+                    // cards are exactly equal height (content can't overflow the buffer).
+                    final cardH = cardW * 2 / 3 + 210;
+                    return GridView.count(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: cols,
+                      crossAxisSpacing: AppSpacing.x16,
+                      mainAxisSpacing: AppSpacing.x16,
+                      childAspectRatio: cardW / cardH,
+                      children: data.map((m) => HoverLift(child: _ListingCard(m))).toList(),
                     );
                   },
                 );
@@ -419,6 +425,40 @@ int _photoCount(Map<String, dynamic> l) {
   return n;
 }
 
+/// Property photo that gently zooms on hover (desktop) — the Airbnb/Bayut feel.
+/// Uses AnimatedScale (a Transform, NOT a saveLayer) so there's no web grey-box.
+class _HoverZoomImage extends StatefulWidget {
+  const _HoverZoomImage({required this.url, required this.placeholder});
+  final String url;
+  final Widget placeholder;
+  @override
+  State<_HoverZoomImage> createState() => _HoverZoomImageState();
+}
+
+class _HoverZoomImageState extends State<_HoverZoomImage> {
+  bool _hover = false;
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: AnimatedScale(
+        scale: _hover ? 1.06 : 1.0,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeOut,
+        child: Image.network(
+          widget.url,
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          loadingBuilder: (c, child, p) => p == null ? child : Container(color: AppColors.surface2),
+          errorBuilder: (_, __, ___) => widget.placeholder,
+        ),
+      ),
+    );
+  }
+}
+
 class _ListingCard extends StatelessWidget {
   const _ListingCard(this.l);
   final Map<String, dynamic> l;
@@ -478,11 +518,13 @@ class _ListingCard extends StatelessWidget {
             // ── Image with overlays ──
             Stack(
               children: [
-                AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: cover.isEmpty
-                      ? placeholder()
-                      : Image.network(cover, fit: BoxFit.cover, errorBuilder: (_, __, ___) => placeholder()),
+                ClipRect(
+                  child: AspectRatio(
+                    aspectRatio: 3 / 2,
+                    child: cover.isEmpty
+                        ? placeholder()
+                        : _HoverZoomImage(url: cover, placeholder: placeholder()),
+                  ),
                 ),
                 // Trust ribbons (Verified / New / Exclusive / Hot / Price reduced) — top-left.
                 if (draft)

@@ -55,7 +55,7 @@ class SkeletonListingCard extends StatelessWidget {
       ),
       clipBehavior: Clip.antiAlias,
       child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        AspectRatio(aspectRatio: 16 / 9, child: SkeletonBox(height: double.infinity, radius: 0)),
+        AspectRatio(aspectRatio: 3 / 2, child: SkeletonBox(height: double.infinity, radius: 0)),
         Padding(
           padding: EdgeInsets.all(AppSpacing.x12),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -83,7 +83,7 @@ class SkeletonListingGrid extends StatelessWidget {
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: LayoutBuilder(builder: (ctx, c) {
-          final cols = c.maxWidth >= 980 ? 3 : (c.maxWidth >= 620 ? 2 : 1);
+          final cols = c.maxWidth >= 1120 ? 3 : (c.maxWidth >= 680 ? 2 : 1);
           final cardW = cols == 1 ? c.maxWidth : (c.maxWidth - (cols - 1) * AppSpacing.x16) / cols;
           return Wrap(
             spacing: AppSpacing.x16,
