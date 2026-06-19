@@ -71,6 +71,19 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     'provider': 'maintenance',
     'supplier': 'supplier',
   };
+
+  /// Icon + one-line description per goal (role value), for the goal cards.
+  static const _goalMeta = <String, (IconData, String)>{
+    'owner': (Icons.home_work_outlined, 'Track ownership, leases & maintenance'),
+    'tenant': (Icons.vpn_key_outlined, 'My tenancy, rent & maintenance'),
+    'agent': (Icons.handshake_outlined, 'List & sell, CRM, leads & deals'),
+    'salesperson': (Icons.badge_outlined, 'Pipeline, leads & quotations'),
+    'lead': (Icons.search, 'Buy, rent or just browse'),
+    'developer': (Icons.domain_outlined, 'Projects, inventory & handover'),
+    'agency': (Icons.business_outlined, 'Run a brokerage company'),
+    'provider': (Icons.build_outlined, 'Maintenance, cleaning, fit-out'),
+    'supplier': (Icons.inventory_2_outlined, 'Furniture, materials, hardware'),
+  };
   static const _emirates = ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Fujairah', 'Umm Al Quwain', 'Al Ain'];
   static const _langs = ['English', 'Arabic', 'Hindi', 'Urdu', 'Tagalog', 'Malayalam', 'Tamil', 'French', 'Russian', 'Chinese'];
   static const _specs = ['Villas', 'Apartments', 'Penthouses', 'Townhouses', 'Commercial', 'Off-Plan', 'Luxury', 'Investment', 'Short Term Rentals', 'Holiday Homes'];
@@ -174,30 +187,59 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
+  /// A tappable goal card (icon + label + description). Selecting it sets the
+  /// role and, for company-based goals, pre-arms the company step.
+  Widget _goalCard(TextTheme t, String value, String label) {
+    final selected = role == value;
+    final meta = _goalMeta[value];
+    final accent = Theme.of(context).colorScheme.primary;
+    return SizedBox(
+      width: 158,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.rLg),
+        onTap: () => setState(() {
+          role = value;
+          final biz = _companyRoleBiz[value];
+          if (biz != null) {
+            _companyChoice = 'create';
+            _bizType = biz;
+          }
+        }),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.all(AppSpacing.x12),
+          decoration: BoxDecoration(
+            color: selected ? accent.withValues(alpha: 0.10) : Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(AppSpacing.rLg),
+            border: Border.all(
+                color: selected ? accent : Theme.of(context).dividerColor, width: selected ? 1.5 : 1),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            Icon(meta?.$1 ?? Icons.badge_outlined, size: 22, color: selected ? accent : AppColors.textMuted),
+            const SizedBox(height: AppSpacing.x8),
+            Text(label,
+                style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: selected ? accent : null)),
+            const SizedBox(height: 2),
+            Text(meta?.$2 ?? '',
+                style: t.bodySmall?.copyWith(color: AppColors.textMuted), maxLines: 2, overflow: TextOverflow.ellipsis),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget _roleStep(TextTheme t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('What best describes you?', style: t.titleLarge),
-        Text('Choose your role in the UAE real estate market',
+        Text('What brings you to NUZL?', style: t.titleLarge),
+        Text('Pick your main goal — you stay a Customer and can add more roles later.',
             style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
         const SizedBox(height: AppSpacing.x16),
-        DropdownButtonFormField<String>(
-          initialValue: role,
-          decoration: const InputDecoration(labelText: 'I am a…', prefixIcon: Icon(Icons.badge_outlined)),
-          items: _roleOptions
-              .map((r) => DropdownMenuItem(value: r.$1, child: Text(r.$2)))
-              .toList(),
-          onChanged: (v) => setState(() {
-            role = v;
-            // Company-based role → jump straight to creating a company with the
-            // right business type, so the path is obvious.
-            final biz = _companyRoleBiz[v];
-            if (biz != null) {
-              _companyChoice = 'create';
-              _bizType = biz;
-            }
-          }),
+        Wrap(
+          spacing: AppSpacing.x12,
+          runSpacing: AppSpacing.x12,
+          children: [for (final r in _roleOptions) _goalCard(t, r.$1, r.$2)],
         ),
         if (_isCompanyRole) ...[
           const SizedBox(height: AppSpacing.x12),
