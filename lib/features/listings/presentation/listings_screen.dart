@@ -35,6 +35,10 @@ final _fMine = StateProvider.autoDispose<bool>((ref) => false);
 /// so the dashboard search bar can seed it before routing to /properties.
 final listingsSearchProvider = StateProvider<String>((ref) => '');
 
+/// Affordability ceiling (AED) seeded by the Finance Planner's "Browse in budget"
+/// CTA — when set, the list only shows properties at or under this price.
+final listingsBudgetProvider = StateProvider<double?>((ref) => null);
+
 class ListingsScreen extends ConsumerWidget {
   const ListingsScreen({super.key});
 
@@ -50,6 +54,7 @@ class ListingsScreen extends ConsumerWidget {
     final sort = ref.watch(_fSort);
     final mine = ref.watch(_fMine);
     final query = ref.watch(listingsSearchProvider).trim().toLowerCase();
+    final budget = ref.watch(listingsBudgetProvider);
     final myId = ref.watch(authControllerProvider).user?.id;
     final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -104,6 +109,7 @@ class ListingsScreen extends ConsumerWidget {
               if (beds != null && (bedsOf(m) ?? -1) < beds) return false;
               if (priceMin != null && priceOf(m) < priceMin) return false;
               if (priceMax != null && priceOf(m) > priceMax) return false;
+              if (budget != null && priceOf(m) > budget) return false;
               if (query.isNotEmpty) {
                 final hay = '${m['community'] ?? ''} ${m['property_type'] ?? ''} '
                         '${m['building_name'] ?? ''} ${m['unit_no'] ?? ''} '
@@ -165,6 +171,28 @@ class ListingsScreen extends ConsumerWidget {
                   resultCount: items.length,
                   filtersActive: filtersActive,
                 ),
+                if (budget != null)
+                  Container(
+                    margin: const EdgeInsets.only(top: AppSpacing.x12),
+                    padding: const EdgeInsets.all(AppSpacing.x12),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(AppSpacing.rCard),
+                      border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25)),
+                    ),
+                    child: Row(children: [
+                      Icon(Icons.account_balance_wallet_outlined, size: 18, color: Theme.of(context).colorScheme.primary),
+                      const SizedBox(width: AppSpacing.x8),
+                      Expanded(
+                        child: Text(
+                            'Within your budget — homes up to ${NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(budget)}',
+                            style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+                      ),
+                      TextButton(
+                          onPressed: () => ref.read(listingsBudgetProvider.notifier).state = null,
+                          child: const Text('Clear')),
+                    ]),
+                  ),
                 const SizedBox(height: AppSpacing.x16),
                 if (items.isEmpty)
                   Center(

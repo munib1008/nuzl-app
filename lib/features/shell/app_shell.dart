@@ -311,8 +311,8 @@ class _RolesBody extends ConsumerWidget {
             'Verified roles are reviewed before they go live.',
             style: TextStyle(fontSize: 12.5, color: muted)),
       ),
-      Flexible(
-        child: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 12), shrinkWrap: true, children: [
+      Expanded(
+        child: ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 12), children: [
           if (myRoles.isNotEmpty) ...[
             Text('Your roles', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: muted)),
             const SizedBox(height: 8),

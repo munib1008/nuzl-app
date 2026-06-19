@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/util/mortgage_math.dart';
 import '../../../core/widgets/responsive.dart';
+import '../../listings/presentation/listings_screen.dart' show listingsBudgetProvider;
 import '../../shell/app_shell.dart';
 
 /// Saved Property Finance Calculator scenarios for the signed-in user.
@@ -203,7 +204,8 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                   // DBR breakdown — how the available instalment is derived.
                   _kv('Gross monthly income', aed.format(income)),
                   _kv('Max debt burden (${(dbrCap * 100).round()}% — ${country.name})', aed.format(dbrAllowance)),
-                  if (obligations > 0) _kv('Less existing obligations', '− ${aed.format(obligations)}'),
+                  // Always shown so the DBR formula is transparent (capacity = cap − obligations).
+                  _kv('Less existing obligations', obligations > 0 ? '− ${aed.format(obligations)}' : aed.format(0)),
                   const Divider(height: AppSpacing.x16),
                   _kv('Available for new ${_installmentLabel.toLowerCase()}', aed.format(maxMonthly)),
                   _kv('Eligible ${_financeLabel.toLowerCase()}', aed.format(maxLoan)),
@@ -276,7 +278,13 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => context.go('/properties'),
+                onPressed: () {
+                  // Carry the affordability ceiling into the property search so
+                  // results are filtered to homes the buyer can actually afford.
+                  ref.read(listingsBudgetProvider.notifier).state =
+                      (income > 0 && maxPrice > 0) ? maxPrice : null;
+                  context.go('/properties');
+                },
                 icon: const Icon(Icons.search, size: 18),
                 label: Text(income > 0 ? 'Browse properties in budget' : 'Browse properties'),
               ),
