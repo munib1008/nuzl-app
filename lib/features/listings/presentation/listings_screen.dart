@@ -385,18 +385,19 @@ class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
           ),
         ),
       ],
-      // ── Goal segmented control + More filters ──
+      // ── Goal segmented control ──
+      const SizedBox(height: AppSpacing.x8),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: _GoalSegmented(active: goal, onSelect: _setGoal),
+      ),
+      // ── Primary filter pills + "Filters" on the same (3rd) row ──
       const SizedBox(height: AppSpacing.x8),
       Row(children: [
-        Flexible(child: _GoalSegmented(active: goal, onSelect: _setGoal)),
-        const Spacer(),
-        _MoreFiltersButton(count: advanced, onTap: _openMoreFilters),
-      ]),
-      // ── Primary filter pills ──
-      const SizedBox(height: AppSpacing.x8),
-      SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(children: [
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
           _Drop<String>(
             label: 'Purpose',
             value: ref.watch(_fPurpose),
@@ -437,8 +438,12 @@ class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
             items: const [('latest', 'Newest'), ('price_asc', 'Price: low → high'), ('price_desc', 'Price: high → low')],
             onChanged: (v) => ref.read(_fSort.notifier).state = v ?? 'latest',
           ),
-        ]),
-      ),
+            ]),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.x8),
+        _MoreFiltersButton(count: advanced, onTap: _openMoreFilters),
+      ]),
       // ── Result count + sort summary ──
       const SizedBox(height: AppSpacing.x12),
       Row(children: [
@@ -708,6 +713,8 @@ class _Drop<T> extends StatelessWidget {
         child: DropdownButton<T>(
           value: value,
           isDense: true,
+          // No grey focus/hover fill — keep every pill visually identical.
+          focusColor: Colors.transparent,
           icon: Padding(
             padding: const EdgeInsets.only(left: 4),
             child: Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: on ? primary : Theme.of(context).hintColor),
