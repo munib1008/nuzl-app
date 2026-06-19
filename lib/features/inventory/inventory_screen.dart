@@ -335,6 +335,30 @@ class _UnitSheet extends ConsumerWidget {
               ].join('  ·  '), style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
           ],
           const Divider(height: AppSpacing.x24),
+          // Deal — the buyer + price behind a reserved/booked/sold status.
+          Row(children: [
+            Expanded(child: Text('Deal', style: t.labelLarge)),
+            TextButton.icon(
+              onPressed: () => _editDeal(context, ref, u),
+              icon: const Icon(Icons.edit_outlined, size: 14),
+              label: Text('${u['sale_buyer'] ?? ''}'.trim().isEmpty ? 'Add' : 'Edit'),
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
+            ),
+          ]),
+          Builder(builder: (_) {
+            final buyer = '${u['sale_buyer'] ?? ''}'.trim();
+            final sp = num.tryParse('${u['sale_price'] ?? ''}');
+            if (buyer.isEmpty && sp == null) {
+              return Text('No buyer recorded.', style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor));
+            }
+            return Text([
+              if (buyer.isNotEmpty) buyer,
+              if ('${u['sale_buyer_phone'] ?? ''}'.trim().isNotEmpty) '${u['sale_buyer_phone']}',
+              if (sp != null) aed.format(sp),
+              if ('${u['sale_date'] ?? ''}'.trim().isNotEmpty) '${u['sale_date']}'.split('T').first,
+            ].join('  ·  '), style: t.bodyMedium);
+          }),
+          const SizedBox(height: AppSpacing.x16),
           Text('Set status', style: t.labelLarge),
           const SizedBox(height: 6),
           Wrap(spacing: 8, runSpacing: 8, children: [
@@ -404,6 +428,50 @@ class _UnitSheet extends ConsumerWidget {
       ref.invalidate(_unitHistoryProvider(id));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unit set to ${_humanize(status)}')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  Future<void> _editDeal(BuildContext context, WidgetRef ref, Map<String, dynamic> u) async {
+    final buyer = TextEditingController(text: '${u['sale_buyer'] ?? ''}');
+    final phone = TextEditingController(text: '${u['sale_buyer_phone'] ?? ''}');
+    final price = TextEditingController(text: u['sale_price'] != null ? '${u['sale_price']}' : '');
+    final date = TextEditingController(text: '${u['sale_date'] ?? ''}'.split('T').first);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Deal details'),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: buyer, decoration: const InputDecoration(labelText: 'Buyer name')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Buyer phone')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Sale price (AED)')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: date, decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)')),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(apiClientProvider).patch('/inventory/${u['id']}/deal', body: {
+        'sale_buyer': buyer.text.trim(),
+        'sale_buyer_phone': phone.text.trim(),
+        'sale_price': price.text.trim(),
+        'sale_date': date.text.trim(),
+      });
+      ref.invalidate(inventoryProvider);
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deal saved')));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
