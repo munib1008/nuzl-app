@@ -8,6 +8,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/auth_prompt.dart';
+import '../../../core/widgets/detail_grid.dart';
 import '../../../core/widgets/location_map.dart';
 import '../../../core/widgets/nuzl_logo.dart';
 import '../../auth/application/auth_controller.dart';
@@ -209,15 +210,8 @@ class _Body extends ConsumerWidget {
       if (details.isNotEmpty) ...[
         const SizedBox(height: AppSpacing.x24),
         Text('Details', style: t.titleMedium),
-        const SizedBox(height: AppSpacing.x8),
-        for (final d in details)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            child: Row(children: [
-              Expanded(child: Text(d.$1, style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
-              Text(d.$2, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-            ]),
-          ),
+        const SizedBox(height: AppSpacing.x12),
+        DetailGrid(items: details.map((d) => (detailIcon(d.$1), d.$1, d.$2)).toList()),
       ],
       // Regulatory information — the RERA/permit + verified trust block that
       // every UAE portal (Bayut / PropertyFinder / dubizzle) shows.

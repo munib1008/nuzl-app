@@ -9,6 +9,7 @@ import '../../../core/rbac/persona.dart';
 import '../../../core/util/mortgage_math.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/detail_grid.dart';
 import '../../../core/widgets/location_map.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../messages/data/messaging_repository.dart';
@@ -210,17 +211,15 @@ class _Detail extends ConsumerWidget {
                           _statCard(context, Icons.straighten, (num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0), 'Sq ft'),
                         if (l['property_type'] != null) _statCard(context, Icons.home_work_outlined, _cap('${l['property_type']}'), 'Type'),
                       ]),
-                      const SizedBox(height: AppSpacing.x12),
-                      ...facts.map((f) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(f.$1, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
-                                Text(f.$2, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                              ],
-                            ),
-                          )),
+                      const SizedBox(height: AppSpacing.x16),
+                      // Remaining facts as a balanced, distributed grid (the
+                      // headline four are already the stat cards above).
+                      DetailGrid(
+                        items: facts
+                            .where((f) => !const {'Type', 'Bedrooms', 'Bathrooms', 'Size'}.contains(f.$1))
+                            .map((f) => (detailIcon(f.$1), f.$1, f.$2))
+                            .toList(),
+                      ),
                       if ('${l['description'] ?? ''}'.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.x16),
                         Text('Description', style: t.titleMedium),
