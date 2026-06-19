@@ -381,6 +381,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       Persona.developer, Persona.bank, Persona.salesperson, Persona.provider,
     };
     final pro = proPersonas.contains(persona);
+    // Agent-like personas genuinely "cover areas / have a RERA BRN / help buyers
+    // find a match" — the Expertise + RERA fields apply only to them. A developer
+    // or service company is an ORG; its details live in My Company, not here.
+    final agentLike = persona == Persona.agent || persona == Persona.broker ||
+        persona == Persona.salesperson || persona == Persona.leadGenerator;
+    final companyRole = persona.canManageTeam; // developer / agency / provider / bank
     final avatarUrl = ref.watch(_avatarProvider).asData?.value;
     ref.watch(_meProvider).whenData(_prefill);
     final verified = reraBrn.text.trim().isNotEmpty;
@@ -475,10 +481,26 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         child: Text(_designationLabel('${user!.designation}')),
                       ),
                     ],
-                    if (pro) ...[
+                    if (companyRole) ...[
+                      const SizedBox(height: AppSpacing.x12),
+                      // A developer / agency / service company is an organisation — its
+                      // name, licence, website and address live in My Company, not on
+                      // the personal profile (company ≠ user).
+                      InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Company',
+                          prefixIcon: Icon(Icons.business_outlined),
+                          helperText: 'Company name, licence, website and address are managed in My Company.',
+                        ),
+                        child: Text(
+                          user?.organizationId == null ? 'Not set up yet — open My Company' : 'Managed in My Company',
+                          style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted),
+                        ),
+                      ),
+                    ] else if (agentLike) ...[
                       const SizedBox(height: AppSpacing.x12),
                       TextField(controller: company, onChanged: (_) => _markDirty(),
-                          decoration: const InputDecoration(labelText: 'Company name', hintText: 'Your company or brokerage', prefixIcon: Icon(Icons.business_outlined))),
+                          decoration: const InputDecoration(labelText: 'Company / brokerage', hintText: 'Your brokerage or firm', prefixIcon: Icon(Icons.business_outlined))),
                     ],
                     const SizedBox(height: AppSpacing.x12),
                     TextField(controller: bio, onChanged: (_) => _markDirty(), maxLines: 3,
@@ -558,8 +580,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: AppSpacing.x16),
                   ],
 
-                  // ── Expertise + Credentials (professionals only) ──
-                  if (pro) ...[
+                  // ── Expertise + Credentials (agent-like roles only) ──
+                  // Developers / service companies don't "cover areas" or carry a
+                  // personal RERA BRN — those are brokerage concepts.
+                  if (agentLike) ...[
                     _section('Expertise', 'Helps buyers find the right match', [
                       MultiSelectField(label: 'Areas you cover', icon: Icons.map_outlined, options: _emirates, selected: areas,
                           onChanged: (v) => setState(() { areas..clear()..addAll(v); _dirty = true; })),
