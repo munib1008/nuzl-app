@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
@@ -106,12 +108,19 @@ class ReportsScreen extends ConsumerWidget {
                 Card(
                   child: ListTile(
                     leading: const Icon(Icons.file_download_outlined),
-                    title: const Text('Export CSV'),
-                    subtitle: const Text('Download these figures as a spreadsheet.'),
-                    trailing: FilledButton(
-                      onPressed: () => _exportCsv(context, ref, entries, showTeam),
-                      child: const Text('Export'),
-                    ),
+                    title: const Text('Export report'),
+                    subtitle: const Text('Download as a spreadsheet or a PDF.'),
+                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                      OutlinedButton(
+                        onPressed: () => _exportCsv(context, ref, entries, showTeam),
+                        child: const Text('CSV'),
+                      ),
+                      const SizedBox(width: AppSpacing.x8),
+                      FilledButton(
+                        onPressed: () => _exportPdf(context, ref, entries, showTeam),
+                        child: const Text('PDF'),
+                      ),
+                    ]),
                   ),
                 ),
               ],
@@ -160,6 +169,46 @@ Future<void> _exportCsv(BuildContext context, WidgetRef ref, List<MapEntry<Strin
   if (context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('CSV exported — opened in a new tab and copied to clipboard')));
+  }
+}
+
+/// Build a branded PDF of the report (metrics + team) and open the print /
+/// download dialog (works on web + mobile via the printing package).
+Future<void> _exportPdf(BuildContext context, WidgetRef ref, List<MapEntry<String, num>> entries, bool team) async {
+  List<List<String>> teamRows = [];
+  if (team) {
+    try {
+      final rows = await ref.read(orgLeaderboardProvider.future);
+      teamRows = rows
+          .map((r) => ['${r['name'] ?? 'Agent'}', '${r['listings'] ?? 0}', '${r['active_leads'] ?? 0}',
+              '${r['active_deals'] ?? 0}', '${r['closed_deals'] ?? 0}'])
+          .toList();
+    } catch (_) {/* team optional */}
+  }
+  final doc = pw.Document();
+  doc.addPage(pw.MultiPage(build: (ctx) => [
+        pw.Text('NUZL — Report', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 12),
+        pw.TableHelper.fromTextArray(
+          headers: const ['Metric', 'Value'],
+          data: entries.map((e) => [e.key, _fmt(e.value)]).toList(),
+          headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+        ),
+        if (teamRows.isNotEmpty) ...[
+          pw.SizedBox(height: 18),
+          pw.Text('Team performance', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 6),
+          pw.TableHelper.fromTextArray(
+            headers: const ['Agent', 'Listings', 'Leads', 'Deals', 'Won'],
+            data: teamRows,
+            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          ),
+        ],
+      ]));
+  try {
+    await Printing.layoutPdf(onLayout: (format) async => doc.save());
+  } catch (e) {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF export failed: $e')));
   }
 }
 
