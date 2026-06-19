@@ -19,6 +19,17 @@ final projectDetailProvider =
   return d is Map ? Map<String, dynamic>.from(d) : <String, dynamic>{};
 });
 
+/// GET /projects/:id/progress → construction-progress milestones.
+final projectProgressProvider =
+    FutureProvider.autoDispose.family<List<dynamic>, String>((ref, id) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/projects/$id/progress');
+    return d is List ? d : [];
+  } catch (_) {
+    return [];
+  }
+});
+
 /// GET /inventory/agents → agents a developer can distribute units to.
 final assignableAgentsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   try {
@@ -58,9 +69,22 @@ class ProjectDetailScreen extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
+                if ('${p['hero_image'] ?? ''}'.trim().isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(AppSpacing.rCard),
+                    child: AspectRatio(
+                      aspectRatio: 21 / 9,
+                      child: Image.network('${p['hero_image']}', fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(color: AppColors.surface2)),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.x12),
+                ],
                 _header(context, ref, p),
                 const SizedBox(height: AppSpacing.x16),
                 _availability(context, p),
+                const SizedBox(height: AppSpacing.x16),
+                _ConstructionProgress(projectId: projectId),
                 const SizedBox(height: AppSpacing.x16),
                 _actions(context, ref, p),
                 const SizedBox(height: AppSpacing.x16),
@@ -121,8 +145,21 @@ class ProjectDetailScreen extends ConsumerWidget {
           ],
           const SizedBox(height: AppSpacing.x12),
           Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
+            _planChip(context, ref, p, label: 'Hero image', field: 'hero_image'),
             _planChip(context, ref, p, label: 'Masterplan', field: 'masterplan_url'),
             _planChip(context, ref, p, label: 'Brochure', field: 'brochure_url'),
+            if ('${p['video_url'] ?? ''}'.trim().isNotEmpty)
+              OutlinedButton.icon(
+                onPressed: () => launchUrl(Uri.parse('${p['video_url']}'), webOnlyWindowName: '_blank'),
+                icon: const Icon(Icons.play_circle_outline, size: 16),
+                label: const Text('Video'),
+              ),
+            if ('${p['tour_url'] ?? ''}'.trim().isNotEmpty)
+              OutlinedButton.icon(
+                onPressed: () => launchUrl(Uri.parse('${p['tour_url']}'), webOnlyWindowName: '_blank'),
+                icon: const Icon(Icons.threed_rotation, size: 16),
+                label: const Text('360° tour'),
+              ),
             OutlinedButton.icon(
               onPressed: () => _editProject(context, ref, p),
               icon: const Icon(Icons.edit_outlined, size: 16),
@@ -425,8 +462,11 @@ class ProjectDetailScreen extends ConsumerWidget {
   Future<void> _editProject(BuildContext context, WidgetRef ref, Map<String, dynamic> p) async {
     final id = '${p['id']}';
     final loc = TextEditingController(text: '${p['location'] ?? ''}');
+    final city = TextEditingController(text: '${p['city'] ?? ''}');
     final desc = TextEditingController(text: '${p['description'] ?? ''}');
     final price = TextEditingController(text: p['price_from'] != null ? '${p['price_from']}' : '');
+    final video = TextEditingController(text: '${p['video_url'] ?? ''}');
+    final tour = TextEditingController(text: '${p['tour_url'] ?? ''}');
     var status = '${p['status'] ?? 'planning'}';
     final ok = await AppDialog.show<bool>(
       context,
@@ -434,7 +474,9 @@ class ProjectDetailScreen extends ConsumerWidget {
       children: [
         StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: loc, decoration: const InputDecoration(labelText: 'Location')),
+            TextField(controller: loc, decoration: const InputDecoration(labelText: 'Location / area')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: city, decoration: const InputDecoration(labelText: 'City (e.g. Dubai)')),
             const SizedBox(height: AppSpacing.x8),
             TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price from (AED)')),
             const SizedBox(height: AppSpacing.x8),
@@ -443,12 +485,19 @@ class ProjectDetailScreen extends ConsumerWidget {
               decoration: const InputDecoration(labelText: 'Status'),
               items: const [
                 DropdownMenuItem(value: 'planning', child: Text('Planning')),
+                DropdownMenuItem(value: 'launching', child: Text('Launching')),
                 DropdownMenuItem(value: 'under_construction', child: Text('Under construction')),
                 DropdownMenuItem(value: 'ready', child: Text('Ready')),
+                DropdownMenuItem(value: 'completed', child: Text('Completed')),
+                DropdownMenuItem(value: 'sold_out', child: Text('Sold out')),
                 DropdownMenuItem(value: 'handover', child: Text('Handover')),
               ],
               onChanged: (v) => setS(() => status = v ?? 'planning'),
             ),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: video, decoration: const InputDecoration(labelText: 'Video URL (optional)')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: tour, decoration: const InputDecoration(labelText: '360° tour URL (optional)')),
             const SizedBox(height: AppSpacing.x8),
             TextField(controller: desc, maxLines: 3, decoration: const InputDecoration(labelText: 'Description')),
           ]),
@@ -463,8 +512,11 @@ class ProjectDetailScreen extends ConsumerWidget {
     try {
       await ref.read(apiClientProvider).patch('/projects/$id', body: {
         'location': loc.text.trim(),
+        'city': city.text.trim(),
         'description': desc.text.trim(),
         'price_from': num.tryParse(price.text.trim()),
+        'video_url': video.text.trim(),
+        'tour_url': tour.text.trim(),
         'status': status,
       });
       ref.invalidate(projectDetailProvider(id));
@@ -475,10 +527,194 @@ class ProjectDetailScreen extends ConsumerWidget {
   }
 }
 
+const _progressPhases = ['foundation', 'structure', 'mep', 'finishing', 'landscaping', 'handover'];
+
+/// Construction progress (spec §14): latest % per phase + a dated timeline with
+/// optional site photos. Developers log milestones; everyone with read sees them.
+class _ConstructionProgress extends ConsumerWidget {
+  const _ConstructionProgress({required this.projectId});
+  final String projectId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final prog = ref.watch(projectProgressProvider(projectId));
+    final df = DateFormat('d MMM yyyy');
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(child: Text('Construction progress', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700))),
+            TextButton.icon(
+              onPressed: () => _logProgress(context, ref),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Log'),
+              style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+            ),
+          ]),
+          const SizedBox(height: AppSpacing.x8),
+          prog.when(
+            loading: () => const Padding(padding: EdgeInsets.all(8), child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))),
+            error: (e, _) => Text(friendlyError(e), style: t.bodySmall),
+            data: (list) {
+              // Latest pct per phase (entries are newest-first).
+              final latest = <String, int>{};
+              for (final e in list) {
+                final m = Map<String, dynamic>.from(e);
+                final ph = '${m['phase']}';
+                if (!latest.containsKey(ph)) latest[ph] = int.tryParse('${m['pct'] ?? 0}') ?? 0;
+              }
+              final overall = _progressPhases.map((p) => latest[p] ?? 0).fold<int>(0, (a, b) => a + b) ~/ _progressPhases.length;
+              return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Text('Overall', style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  const Spacer(),
+                  Text('$overall%', style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary)),
+                ]),
+                const SizedBox(height: 8),
+                for (final ph in _progressPhases) ...[
+                  Row(children: [
+                    SizedBox(width: 96, child: Text(_humanize(ph), style: t.bodySmall)),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(AppSpacing.rFull),
+                        child: LinearProgressIndicator(
+                          value: (latest[ph] ?? 0) / 100,
+                          minHeight: 8,
+                          backgroundColor: AppColors.surface2,
+                          valueColor: AlwaysStoppedAnimation(Theme.of(context).colorScheme.primary),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(width: 36, child: Text('${latest[ph] ?? 0}%', textAlign: TextAlign.right, style: t.bodySmall)),
+                  ]),
+                  const SizedBox(height: 6),
+                ],
+                if (list.isNotEmpty) ...[
+                  const Divider(height: AppSpacing.x24),
+                  Text('Updates', style: t.labelLarge),
+                  const SizedBox(height: 6),
+                  for (final e in list.take(8))
+                    Builder(builder: (_) {
+                      final m = Map<String, dynamic>.from(e);
+                      final when = DateTime.tryParse('${m['recorded_at']}');
+                      final img = '${m['image_url'] ?? ''}'.trim();
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          if (img.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(AppSpacing.rSm),
+                                child: Image.network(img, width: 44, height: 44, fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => const SizedBox(width: 44, height: 44)),
+                              ),
+                            ),
+                          Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text('${_humanize('${m['phase']}')} · ${m['pct']}%', style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                              if ('${m['note'] ?? ''}'.isNotEmpty) Text('${m['note']}', style: t.bodySmall?.copyWith(color: muted)),
+                            ]),
+                          ),
+                          if (when != null) Text(df.format(when), style: t.labelSmall?.copyWith(color: muted)),
+                        ]),
+                      );
+                    }),
+                ],
+              ]);
+            },
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _logProgress(BuildContext context, WidgetRef ref) async {
+    var phase = 'structure';
+    final pct = TextEditingController();
+    final note = TextEditingController();
+    String? imageUrl;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 4, 20, 20 + MediaQuery.of(ctx).viewInsets.bottom),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Log construction progress', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: AppSpacing.x12),
+            DropdownButtonFormField<String>(
+              initialValue: phase,
+              decoration: const InputDecoration(labelText: 'Phase', isDense: true),
+              items: [for (final p in _progressPhases) DropdownMenuItem(value: p, child: Text(_humanize(p)))],
+              onChanged: (v) => setS(() => phase = v ?? 'structure'),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: pct, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Completion %', isDense: true)),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: note, maxLines: 2, decoration: const InputDecoration(labelText: 'Note (optional)', isDense: true)),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final res = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+                  final f = res?.files.firstOrNull;
+                  if (f?.bytes == null) return;
+                  final ext = (f!.extension ?? 'jpg').toLowerCase();
+                  final ct = ext == 'png' ? 'image/png' : 'image/jpeg';
+                  final url = await ref.read(uploadServiceProvider).upload(f.bytes!, f.name, ct);
+                  if (url != null) setS(() => imageUrl = url);
+                },
+                icon: const Icon(Icons.photo_camera_outlined, size: 16),
+                label: Text(imageUrl == null ? 'Add photo' : 'Photo added'),
+              ),
+              if (imageUrl != null) ...[
+                const SizedBox(width: 8),
+                const Icon(Icons.check_circle, size: 18, color: AppColors.success),
+              ],
+            ]),
+            const SizedBox(height: AppSpacing.x12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: () async {
+                  try {
+                    await ref.read(apiClientProvider).post('/projects/$projectId/progress', body: {
+                      'phase': phase,
+                      'pct': int.tryParse(pct.text.trim()) ?? 0,
+                      'note': note.text.trim(),
+                      'image_url': imageUrl,
+                    });
+                    ref.invalidate(projectProgressProvider(projectId));
+                    if (ctx.mounted) {
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Progress logged')));
+                    }
+                  } catch (e) {
+                    if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+                  }
+                },
+                child: const Text('Save'),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 BadgeTone _projectTone(String s) => switch (s) {
-      'ready' => BadgeTone.success,
-      'under_construction' => BadgeTone.warning,
+      'ready' || 'completed' => BadgeTone.success,
+      'under_construction' || 'launching' => BadgeTone.warning,
       'planning' => BadgeTone.gold,
+      'sold_out' => BadgeTone.neutral,
       _ => BadgeTone.neutral,
     };
 
