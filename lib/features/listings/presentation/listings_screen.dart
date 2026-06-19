@@ -432,6 +432,10 @@ class _ListingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    // Theme-aware muted tokens — textMuted/textSubtle are dim on a dark card.
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final subtle = dark ? AppColors.dTextSubtle : AppColors.textSubtle;
     final price = num.tryParse('${l['price']}') ?? 0;
     final money = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price);
     final cover = '${l['cover_image'] ?? ''}';
@@ -459,7 +463,7 @@ class _ListingCard extends StatelessWidget {
         color: AppColors.surface2,
         child: const Center(child: Icon(Icons.apartment_outlined, size: 40, color: AppColors.textSubtle)));
     Widget metric(IconData i, String v) => Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(i, size: 15, color: AppColors.textMuted),
+          Icon(i, size: 15, color: muted),
           const SizedBox(width: 3),
           Text(v, style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
         ]);
@@ -540,11 +544,11 @@ class _ListingCard extends StatelessWidget {
                 Text(title, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                     maxLines: 1, overflow: TextOverflow.ellipsis),
                 if (community.isNotEmpty)
-                  Text(community, style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+                  Text(community, style: t.bodySmall?.copyWith(color: muted),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                 if ('${l['ref_code'] ?? ''}'.trim().isNotEmpty)
                   Text('Ref ${l['ref_code']}',
-                      style: t.bodySmall?.copyWith(color: AppColors.textSubtle, fontWeight: FontWeight.w600)),
+                      style: t.bodySmall?.copyWith(color: subtle, fontWeight: FontWeight.w600)),
                 const SizedBox(height: AppSpacing.x4),
                 Row(children: [
                   Expanded(
