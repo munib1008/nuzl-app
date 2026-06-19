@@ -55,6 +55,12 @@ class ListingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: NuzlAppBar(title: 'Properties', actions: [
+        // Saved lives inside Properties (combined nav) — bookmark opens it.
+        IconButton(
+          tooltip: 'Saved',
+          icon: const Icon(Icons.bookmark_outline),
+          onPressed: () => context.push('/saved'),
+        ),
         if (canList)
           IconButton(
             tooltip: 'Import properties',
@@ -133,7 +139,10 @@ class ListingsScreen extends ConsumerWidget {
                     final cardW = cols == 1 ? c.maxWidth : (c.maxWidth - (cols - 1) * AppSpacing.x16) / cols;
                     // Fixed card height = 3:2 hero image + a roomy content area → all
                     // cards are exactly equal height (content can't overflow the buffer).
-                    final cardH = cardW * 2 / 3 + 210;
+                    // Buffer must fit the tallest card body (title + price + specs
+                    // + tags + agent row + button + gaps ≈ 230) so the button never
+                    // overlaps the agent line on a fixed-aspect grid cell.
+                    final cardH = cardW * 2 / 3 + 256;
                     return GridView.count(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
