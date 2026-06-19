@@ -284,7 +284,7 @@ class DashboardScreen extends ConsumerWidget {
       case Persona.admin:
         return const _SalesCard(title: 'Sales overview · Organization');
       case Persona.owner:
-        return _RoiCard(data: data);
+        return const _PortfolioPerformance();
       default:
         return null;
     }
@@ -512,40 +512,251 @@ class _SalesCard extends ConsumerWidget {
       );
 }
 
-/// Owner-only ROI summary. Derives a simple return on the equity held across the
-/// owner's portfolio from the dashboard roll-up (no fabricated time series).
-class _RoiCard extends StatelessWidget {
-  const _RoiCard({required this.data});
-  final Map<String, dynamic> data;
+/// Owner Portfolio Performance — monthly income/expense over the owned portfolio.
+final _ownerPerfProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/reports/owner-performance');
+    return d is Map ? Map<String, dynamic>.from(d) : <String, dynamic>{};
+  } catch (_) {
+    return <String, dynamic>{};
+  }
+});
+
+class _PerfPoint {
+  _PerfPoint(this.label, this.income, this.expense, this.roi);
+  final String label;
+  final double income, expense, roi;
+}
+
+/// Interactive Income / Expense / ROI trend with a Monthly | Annual toggle,
+/// drag-to-inspect readout, and a period summary. Replaces the static ROI card.
+class _PortfolioPerformance extends ConsumerStatefulWidget {
+  const _PortfolioPerformance();
+  @override
+  ConsumerState<_PortfolioPerformance> createState() => _PortfolioPerformanceState();
+}
+
+class _PortfolioPerformanceState extends ConsumerState<_PortfolioPerformance> {
+  bool _annual = false;
+  int? _sel;
+
+  List<_PerfPoint> _build(List rows, double equity) {
+    double inc(dynamic e) => (num.tryParse('${e['income']}') ?? 0).toDouble();
+    double exp(dynamic e) => (num.tryParse('${e['expense']}') ?? 0).toDouble();
+    double roiOf(double net) => equity > 0 ? net / equity * 100 : 0;
+    if (_annual) {
+      final byYear = <String, List<double>>{};
+      for (final e in rows) {
+        final y = '${e['period']}'.padRight(4).substring(0, 4);
+        final cur = byYear.putIfAbsent(y, () => [0, 0]);
+        cur[0] += inc(e);
+        cur[1] += exp(e);
+      }
+      final years = byYear.keys.toList()..sort();
+      return [for (final y in years) _PerfPoint(y, byYear[y]![0], byYear[y]![1], roiOf(byYear[y]![0] - byYear[y]![1]))];
+    }
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    final last = rows.length > 12 ? rows.sublist(rows.length - 12) : rows;
+    return last.map((e) {
+      final p = '${e['period']}';
+      final m = p.length >= 7 ? (int.tryParse(p.substring(5, 7)) ?? 1) : 1;
+      return _PerfPoint(months[(m - 1).clamp(0, 11)], inc(e), exp(e), roiOf(inc(e) - exp(e)));
+    }).toList();
+  }
+
+  Widget _legendDot(Color c, String label) {
+    final t = Theme.of(context).textTheme;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(width: 9, height: 9, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+      const SizedBox(width: 5),
+      Text(label, style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    num g(String k) => (data[k] is num) ? data[k] as num : num.tryParse('${data[k]}') ?? 0;
-    final value = g('total_value');
-    final loan = g('outstanding_loan');
-    final income = g('annual_rental_income');
-    final equity = (value - loan) <= 0 ? value : (value - loan);
-    final roi = equity > 0 ? (income / equity * 100) : 0;
-    String aed(num v) => 'AED ${NumberFormat.compact().format(v)}';
-    return _PanelCard(
-      title: 'Portfolio ROI',
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text('${roi.toStringAsFixed(1)}%',
-              style: t.displaySmall?.copyWith(fontWeight: FontWeight.w800, color: AppColors.success)),
-          const SizedBox(width: AppSpacing.x8),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Text('annual return on equity', style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final d = ref.watch(_ownerPerfProvider).asData?.value ?? const <String, dynamic>{};
+    final rows = (d['series'] is List) ? d['series'] as List : const [];
+    final equity = (num.tryParse('${d['equity'] ?? 0}') ?? 0).toDouble();
+    final pts = _build(rows, equity);
+    final aed = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
+
+    final header = Row(children: [
+      Expanded(child: Text('Portfolio Performance', style: t.titleMedium)),
+      _SegToggle(annual: _annual, onChanged: (v) => setState(() { _annual = v; _sel = null; })),
+    ]);
+    Widget card(Widget body) => Card(child: Padding(padding: const EdgeInsets.all(AppSpacing.x16), child: body));
+
+    if (pts.isEmpty) {
+      return card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        header,
+        const SizedBox(height: AppSpacing.x20),
+        Center(child: Column(children: [
+          Icon(Icons.show_chart, size: 36, color: muted),
+          const SizedBox(height: AppSpacing.x8),
+          Text('No financial data yet', style: t.titleSmall),
+          const SizedBox(height: 4),
+          Text('Add a property and log income/expenses to start tracking performance.',
+              textAlign: TextAlign.center, style: t.bodySmall?.copyWith(color: muted)),
+          const SizedBox(height: AppSpacing.x12),
+          OutlinedButton(onPressed: () => context.go('/financials'), child: const Text('Open financials')),
+        ])),
+        const SizedBox(height: AppSpacing.x8),
+      ]));
+    }
+
+    final totalInc = pts.fold(0.0, (s, p) => s + p.income);
+    final totalExp = pts.fold(0.0, (s, p) => s + p.expense);
+    final avgRoi = pts.map((p) => p.roi).fold(0.0, (s, v) => s + v) / pts.length;
+    final selPt = (_sel != null && _sel! < pts.length) ? pts[_sel!] : null;
+
+    return card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      header,
+      const SizedBox(height: AppSpacing.x12),
+      if (selPt != null)
+        Row(children: [
+          Text(selPt.label, style: t.titleSmall),
+          const Spacer(),
+          _legendDot(AppColors.success, aed.format(selPt.income)),
+          const SizedBox(width: AppSpacing.x12),
+          _legendDot(AppColors.danger, aed.format(selPt.expense)),
+          const SizedBox(width: AppSpacing.x12),
+          _legendDot(AppColors.accentGold, '${selPt.roi.toStringAsFixed(1)}%'),
+        ])
+      else
+        Text('Drag across the chart to inspect a period', style: t.bodySmall?.copyWith(color: muted)),
+      const SizedBox(height: AppSpacing.x8),
+      LayoutBuilder(builder: (ctx, c) {
+        void select(double dx) {
+          final n = pts.length;
+          final i = n <= 1 ? 0 : ((dx / c.maxWidth) * (n - 1)).round().clamp(0, n - 1);
+          setState(() => _sel = i);
+        }
+        return GestureDetector(
+          onTapDown: (e) => select(e.localPosition.dx),
+          onHorizontalDragUpdate: (e) => select(e.localPosition.dx),
+          child: SizedBox(
+            height: 150,
+            width: double.infinity,
+            child: CustomPaint(
+              painter: _PerfPainter(
+                pts: pts, sel: _sel, grid: Theme.of(context).dividerColor,
+                income: AppColors.success, expense: AppColors.danger, roi: AppColors.accentGold),
+            ),
           ),
-        ]),
-        const SizedBox(height: AppSpacing.x12),
-        _RoiLine(label: 'Equity invested', value: aed(equity)),
-        _RoiLine(label: 'Annual income', value: aed(income)),
-        _RoiLine(label: 'Outstanding loan', value: aed(loan)),
+        );
+      }),
+      const SizedBox(height: AppSpacing.x8),
+      Wrap(spacing: AppSpacing.x16, children: [
+        _legendDot(AppColors.success, 'Income'),
+        _legendDot(AppColors.danger, 'Expense'),
+        _legendDot(AppColors.accentGold, 'ROI'),
+      ]),
+      const Divider(height: AppSpacing.x24),
+      _RoiLine(label: 'Total income', value: aed.format(totalInc)),
+      _RoiLine(label: 'Total expenses', value: aed.format(totalExp)),
+      _RoiLine(label: 'Net profit', value: aed.format(totalInc - totalExp)),
+      _RoiLine(label: 'Average ROI', value: '${avgRoi.toStringAsFixed(1)}%'),
+    ]));
+  }
+}
+
+class _SegToggle extends StatelessWidget {
+  const _SegToggle({required this.annual, required this.onChanged});
+  final bool annual;
+  final ValueChanged<bool> onChanged;
+  @override
+  Widget build(BuildContext context) {
+    final c = Theme.of(context).colorScheme.primary;
+    Widget seg(String label, bool selected, VoidCallback onTap) => GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: selected ? c.withValues(alpha: 0.14) : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppSpacing.rFull),
+            ),
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w700, color: selected ? c : Theme.of(context).hintColor)),
+          ),
+        );
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        seg('Monthly', !annual, () => onChanged(false)),
+        seg('Annual', annual, () => onChanged(true)),
       ]),
     );
   }
+}
+
+class _PerfPainter extends CustomPainter {
+  _PerfPainter({
+    required this.pts,
+    required this.sel,
+    required this.grid,
+    required this.income,
+    required this.expense,
+    required this.roi,
+  });
+  final List<_PerfPoint> pts;
+  final int? sel;
+  final Color grid, income, expense, roi;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width, h = size.height;
+    final n = pts.length;
+    final gridP = Paint()..color = grid..strokeWidth = 0.5;
+    for (var i = 0; i <= 3; i++) {
+      final y = h * i / 3;
+      canvas.drawLine(Offset(0, y), Offset(w, y), gridP);
+    }
+    double xAt(int i) => n <= 1 ? w / 2 : w * i / (n - 1);
+    final maxAed = pts.map((p) => max(p.income, p.expense)).fold(1.0, max);
+    final maxRoi = pts.map((p) => p.roi.abs()).fold(1.0, max);
+    double yAed(double v) => h - (v / maxAed) * (h * 0.86) - h * 0.07;
+    double yRoi(double v) => h / 2 - (v / maxRoi) * (h * 0.43);
+
+    void line(double Function(_PerfPoint) yf, Color color) {
+      final paint = Paint()
+        ..color = color
+        ..strokeWidth = 2.2
+        ..style = PaintingStyle.stroke
+        ..strokeJoin = StrokeJoin.round;
+      final path = Path();
+      for (var i = 0; i < n; i++) {
+        final o = Offset(xAt(i), yf(pts[i]));
+        if (i == 0) {
+          path.moveTo(o.dx, o.dy);
+        } else {
+          path.lineTo(o.dx, o.dy);
+        }
+      }
+      canvas.drawPath(path, paint);
+    }
+
+    line((p) => yAed(p.income), income);
+    line((p) => yAed(p.expense), expense);
+    line((p) => yRoi(p.roi), roi);
+
+    if (sel != null && sel! < n) {
+      final x = xAt(sel!);
+      canvas.drawLine(Offset(x, 0), Offset(x, h), Paint()..color = grid..strokeWidth = 1);
+      void dot(double y, Color c) => canvas.drawCircle(Offset(x, y), 3.5, Paint()..color = c);
+      dot(yAed(pts[sel!].income), income);
+      dot(yAed(pts[sel!].expense), expense);
+      dot(yRoi(pts[sel!].roi), roi);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_PerfPainter old) => old.pts != pts || old.sel != sel;
 }
 
 class _RoiLine extends StatelessWidget {
