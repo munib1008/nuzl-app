@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Type scale — Inter. Calm + consistent: all main titles share ONE size (20)
-/// and are differentiated by WEIGHT, not size — bold (700) → semibold (600).
-/// Card/sub titles sit one step down (16/14). Body 400/500. Nothing "loud".
+/// Type scale — Fraunces (serif) for page/section headings, Inter for body,
+/// labels and KPI numbers. The serif display gives an editorial, branded feel
+/// on the big headings while numbers + dense UI stay clean and legible.
+/// Main titles share ONE size (20), differentiated by WEIGHT (700 → 600).
 class AppTypography {
   static TextTheme textTheme(Color text, Color muted) {
     // Premium readability: body text breathes (1.5), while titles/labels stay
@@ -16,14 +17,24 @@ class AppTypography {
           letterSpacing: ls,
           height: h,
         );
+    // Editorial serif for headings — slightly tighter tracking so it reads as a
+    // crafted headline, not body text.
+    TextStyle d(double size, FontWeight w, {Color? c, double ls = -0.3, double h = 1.2}) =>
+        GoogleFonts.fraunces(
+          fontSize: size,
+          fontWeight: w,
+          color: c ?? text,
+          letterSpacing: ls,
+          height: h,
+        );
     return TextTheme(
-      // KPI numbers — prominent but not shouting.
+      // KPI numbers — kept on Inter so figures stay clean + tabular-feeling.
       displayLarge: s(24, FontWeight.w700, ls: -0.4, h: 1.15),
       displaySmall: s(22, FontWeight.w700, ls: -0.3, h: 1.15),
-      // Main titles — same size (20), weight is the only differentiator.
-      headlineLarge: s(20, FontWeight.w700, ls: -0.2, h: 1.25), // page title (bold)
-      headlineMedium: s(20, FontWeight.w600, ls: -0.2, h: 1.25), // page title (semibold)
-      headlineSmall: s(20, FontWeight.w600, ls: -0.2, h: 1.25), // section title / app bar (semibold)
+      // Main titles — Fraunces serif; same size (20), weight differentiates.
+      headlineLarge: d(20, FontWeight.w700, h: 1.25), // page title (bold)
+      headlineMedium: d(20, FontWeight.w600, h: 1.25), // page title (semibold)
+      headlineSmall: d(20, FontWeight.w600, h: 1.25), // section title / app bar (semibold)
       // Card / sub titles — one calm step down.
       titleLarge: s(16, FontWeight.w600, h: 1.3),
       titleMedium: s(16, FontWeight.w600, h: 1.3), // card title

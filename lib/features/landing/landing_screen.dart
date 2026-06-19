@@ -103,8 +103,8 @@ Widget _section(BuildContext context,
               ],
               Text(title,
                   textAlign: centered ? TextAlign.center : TextAlign.start,
-                  style: GoogleFonts.poppins(
-                      fontSize: wide ? 30 : 24, fontWeight: FontWeight.w600, color: _onBg(context))),
+                  style: GoogleFonts.fraunces(
+                      fontSize: wide ? 30 : 24, fontWeight: FontWeight.w600, letterSpacing: -0.4, color: _onBg(context))),
               if (subtitle != null) ...[
                 const SizedBox(height: AppSpacing.x4),
                 ConstrainedBox(
@@ -315,8 +315,8 @@ class _Hero extends StatelessWidget {
     final wide = MediaQuery.of(context).size.width >= 900;
     final textCol = Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
       Text('The Real Estate\nOperating System',
-          style: GoogleFonts.poppins(
-              fontSize: wide ? 52 : 34, height: 1.1, fontWeight: FontWeight.w700, color: _onBg(context))),
+          style: GoogleFonts.fraunces(
+              fontSize: wide ? 52 : 34, height: 1.05, fontWeight: FontWeight.w700, letterSpacing: -0.5, color: _onBg(context))),
       const SizedBox(height: AppSpacing.x16),
       ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640),
@@ -1626,8 +1626,8 @@ class _FinalCta extends StatelessWidget {
             child: Column(children: [
               Text('Ready to manage your entire property journey?',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                      fontSize: wide ? 34 : 26, fontWeight: FontWeight.w700, color: _onBg(context), height: 1.2)),
+                  style: GoogleFonts.fraunces(
+                      fontSize: wide ? 34 : 26, fontWeight: FontWeight.w700, letterSpacing: -0.4, color: _onBg(context), height: 1.15)),
               const SizedBox(height: AppSpacing.x12),
               Text('Find. Buy. Own. Lease. Finance. Maintain. Grow — all from one platform.',
                   textAlign: TextAlign.center,
