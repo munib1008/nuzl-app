@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
@@ -101,11 +103,15 @@ class ReportsScreen extends ConsumerWidget {
                   }),
                 ],
                 const SizedBox(height: AppSpacing.x24),
-                const Card(
+                Card(
                   child: ListTile(
-                    leading: Icon(Icons.file_download_outlined),
-                    title: Text('Excel / PDF export'),
-                    subtitle: Text('Coming soon.'),
+                    leading: const Icon(Icons.file_download_outlined),
+                    title: const Text('Export CSV'),
+                    subtitle: const Text('Download these figures as a spreadsheet.'),
+                    trailing: FilledButton(
+                      onPressed: () => _exportCsv(context, ref, entries, showTeam),
+                      child: const Text('Export'),
+                    ),
                   ),
                 ),
               ],
@@ -122,6 +128,40 @@ String _humanize(String k) => k
     .split(' ')
     .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
     .join(' ');
+
+String _csvCell(String s) => (s.contains(',') || s.contains('"') || s.contains('\n'))
+    ? '"${s.replaceAll('"', '""')}"'
+    : s;
+
+/// Build a CSV from the report metrics (+ team leaderboard) and export it: open
+/// it in a new tab (downloadable on web) and copy it to the clipboard.
+Future<void> _exportCsv(BuildContext context, WidgetRef ref, List<MapEntry<String, num>> entries, bool team) async {
+  final sb = StringBuffer()..writeln('Metric,Value');
+  for (final e in entries) {
+    sb.writeln('${_csvCell(e.key)},${_fmt(e.value)}');
+  }
+  if (team) {
+    try {
+      final rows = await ref.read(orgLeaderboardProvider.future);
+      if (rows.isNotEmpty) {
+        sb..writeln()..writeln('Agent,Listings,Leads,Deals,Won');
+        for (final r in rows) {
+          sb.writeln('${_csvCell('${r['name'] ?? 'Agent'}')},${r['listings'] ?? 0},'
+              '${r['active_leads'] ?? 0},${r['active_deals'] ?? 0},${r['closed_deals'] ?? 0}');
+        }
+      }
+    } catch (_) {/* team optional */}
+  }
+  final csv = sb.toString();
+  await Clipboard.setData(ClipboardData(text: csv));
+  try {
+    await launchUrl(Uri.parse('data:text/csv;charset=utf-8,${Uri.encodeComponent(csv)}'), webOnlyWindowName: '_blank');
+  } catch (_) {/* fall back to clipboard only */}
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('CSV exported — opened in a new tab and copied to clipboard')));
+  }
+}
 
 String _fmt(num v) => v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
 
