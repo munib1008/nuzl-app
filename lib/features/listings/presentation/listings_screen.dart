@@ -6,6 +6,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/util/mortgage_math.dart';
 import '../../../core/widgets/hover_lift.dart';
 import '../../../core/widgets/hover_zoom_image.dart';
 import '../../../core/widgets/skeleton_loader.dart';
@@ -119,11 +120,14 @@ class ListingsScreen extends ConsumerWidget {
               }
               return true;
             }).toList();
-            // sort — 'latest' keeps the server order (created_at desc)
+            // sort — 'latest' keeps the server order (created_at desc). When a
+            // budget is active, default to most-affordable first (price asc).
             if (sort == 'price_asc') {
               items.sort((a, b) => priceOf(a).compareTo(priceOf(b)));
             } else if (sort == 'price_desc') {
               items.sort((a, b) => priceOf(b).compareTo(priceOf(a)));
+            } else if (budget != null) {
+              items.sort((a, b) => priceOf(a).compareTo(priceOf(b)));
             }
 
             // Popular communities (most-listed) for quick-search chips.
@@ -149,7 +153,8 @@ class ListingsScreen extends ConsumerWidget {
                     // Buffer must fit the tallest card body (title + price + specs
                     // + tags + agent row + button + gaps ≈ 230) so the button never
                     // overlaps the agent line on a fixed-aspect grid cell.
-                    final cardH = cardW * 2 / 3 + 256;
+                    // +72 when a budget is active to fit the affordability strip.
+                    final cardH = cardW * 2 / 3 + 256 + (budget != null ? 72 : 0);
                     return GridView.count(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
@@ -157,7 +162,7 @@ class ListingsScreen extends ConsumerWidget {
                       crossAxisSpacing: AppSpacing.x16,
                       mainAxisSpacing: AppSpacing.x16,
                       childAspectRatio: cardW / cardH,
-                      children: data.map((m) => HoverLift(child: _ListingCard(m))).toList(),
+                      children: data.map((m) => HoverLift(child: _ListingCard(m, budget: budget))).toList(),
                     );
                   },
                 );
@@ -466,14 +471,52 @@ int _photoCount(Map<String, dynamic> l) {
 }
 
 class _ListingCard extends StatelessWidget {
-  const _ListingCard(this.l);
+  const _ListingCard(this.l, {this.budget});
   final Map<String, dynamic> l;
+  /// When set (Browse-in-budget flow), the card shows per-property affordability.
+  final double? budget;
 
   static Widget _pill(String text, Color c, TextTheme t) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(color: c.withValues(alpha: 0.92), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
         child: Text(text, style: t.bodySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
       );
+
+  /// Per-property affordability for the Browse-in-budget flow: it passed the
+  /// price filter, so it's finance-eligible — show the 20% down payment and an
+  /// estimated monthly (80% LTV, 4.5%, 25yr).
+  Widget _affordability(BuildContext context, double price, Color muted) {
+    final t = Theme.of(context).textTheme;
+    final c = Theme.of(context).colorScheme.primary;
+    final aed = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
+    final down = price * 0.20;
+    final monthly = MortgageMath.monthlyPayment(price * 0.80, 4.5, 300);
+    Widget line(String label, String value) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: t.labelSmall?.copyWith(color: muted)),
+          Text(value, style: t.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+        ]);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.x8),
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppSpacing.rMd),
+        border: Border.all(color: c.withValues(alpha: 0.18)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Icon(Icons.verified_outlined, size: 13, color: AppColors.success),
+          const SizedBox(width: 4),
+          Text('Finance-eligible', style: t.labelSmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w700)),
+        ]),
+        const SizedBox(height: 4),
+        Row(children: [
+          Expanded(child: line('Down (20%)', aed.format(down))),
+          Expanded(child: line('Est. monthly', '${aed.format(monthly)}/mo')),
+        ]),
+      ]),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -621,6 +664,10 @@ class _ListingCard extends StatelessWidget {
                     metric(Icons.straighten, sqft),
                   ],
                 ]),
+                if (budget != null && !isRent && price > 0) ...[
+                  const SizedBox(height: AppSpacing.x8),
+                  _affordability(context, price.toDouble(), muted),
+                ],
                 if (highlights.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.x8),
                   Wrap(spacing: 6, runSpacing: 4, children: [
