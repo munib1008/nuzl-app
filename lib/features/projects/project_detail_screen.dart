@@ -98,6 +98,7 @@ class ProjectDetailScreen extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.x16),
                 _availability(context, p),
                 const SizedBox(height: AppSpacing.x16),
+                _gallery(context, ref, p, isOwnerDev),
                 _ConstructionProgress(projectId: projectId),
                 const SizedBox(height: AppSpacing.x16),
                 if (isOwnerDev)
@@ -493,6 +494,87 @@ class ProjectDetailScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(agentId == null ? 'Agent cleared' : 'Unit assigned to agent')));
       }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  /// Project photo gallery — view for everyone, add/remove for the owner.
+  Widget _gallery(BuildContext context, WidgetRef ref, Map<String, dynamic> p, bool isOwner) {
+    final t = Theme.of(context).textTheme;
+    final list = (p['gallery'] is List)
+        ? (p['gallery'] as List).map((e) => '$e').where((s) => s.trim().isNotEmpty).toList()
+        : <String>[];
+    if (list.isEmpty && !isOwner) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.x16),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.x16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Expanded(child: Text('Gallery', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700))),
+              if (isOwner)
+                TextButton.icon(
+                  onPressed: () => _addGalleryPhoto(context, ref, '${p['id']}', list),
+                  icon: const Icon(Icons.add_photo_alternate_outlined, size: 16),
+                  label: const Text('Add'),
+                  style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                ),
+            ]),
+            const SizedBox(height: AppSpacing.x8),
+            if (list.isEmpty)
+              Text('No photos yet. Add gallery images buyers can browse.',
+                  style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor))
+            else
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final url in list)
+                  Stack(children: [
+                    GestureDetector(
+                      onTap: () => launchUrl(Uri.parse(url), webOnlyWindowName: '_blank'),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(AppSpacing.rMd),
+                        child: Image.network(url, width: 88, height: 88, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(width: 88, height: 88, color: AppColors.surface2)),
+                      ),
+                    ),
+                    if (isOwner)
+                      Positioned(
+                        top: -6, right: -6,
+                        child: IconButton(
+                          icon: const Icon(Icons.cancel, size: 18),
+                          color: AppColors.danger,
+                          onPressed: () => _removeGalleryPhoto(context, ref, '${p['id']}', list, url),
+                        ),
+                      ),
+                  ]),
+              ]),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addGalleryPhoto(BuildContext context, WidgetRef ref, String id, List<String> current) async {
+    final res = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+    final f = res?.files.firstOrNull;
+    if (f?.bytes == null) return;
+    final ext = (f!.extension ?? 'jpg').toLowerCase();
+    final ct = ext == 'png' ? 'image/png' : 'image/jpeg';
+    try {
+      final url = await ref.read(uploadServiceProvider).upload(f.bytes!, f.name, ct);
+      if (url == null) return;
+      await ref.read(apiClientProvider).patch('/projects/$id', body: {'gallery': [...current, url]});
+      ref.invalidate(projectDetailProvider(id));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  Future<void> _removeGalleryPhoto(BuildContext context, WidgetRef ref, String id, List<String> current, String url) async {
+    try {
+      await ref.read(apiClientProvider).patch('/projects/$id', body: {'gallery': current.where((u) => u != url).toList()});
+      ref.invalidate(projectDetailProvider(id));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
