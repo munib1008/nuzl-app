@@ -30,6 +30,7 @@ final _fType = StateProvider.autoDispose<String>((ref) => 'all');
 final _fBeds = StateProvider.autoDispose<int?>((ref) => null);
 final _fPriceMin = StateProvider.autoDispose<double?>((ref) => null);
 final _fPriceMax = StateProvider.autoDispose<double?>((ref) => null);
+final _fArea = StateProvider.autoDispose<String?>((ref) => null);
 final _fSort = StateProvider.autoDispose<String>((ref) => 'latest');
 final _fMine = StateProvider.autoDispose<bool>((ref) => false);
 /// Global property search query (community / building / area / ref-code). Public
@@ -52,6 +53,7 @@ class ListingsScreen extends ConsumerWidget {
     final beds = ref.watch(_fBeds);
     final priceMin = ref.watch(_fPriceMin);
     final priceMax = ref.watch(_fPriceMax);
+    final area = ref.watch(_fArea);
     final sort = ref.watch(_fSort);
     final mine = ref.watch(_fMine);
     final query = ref.watch(listingsSearchProvider).trim().toLowerCase();
@@ -110,6 +112,7 @@ class ListingsScreen extends ConsumerWidget {
               if (beds != null && (bedsOf(m) ?? -1) < beds) return false;
               if (priceMin != null && priceOf(m) < priceMin) return false;
               if (priceMax != null && priceOf(m) > priceMax) return false;
+              if (area != null && '${m['community'] ?? ''}'.trim() != area) return false;
               if (budget != null && priceOf(m) > budget) return false;
               if (query.isNotEmpty) {
                 final hay = '${m['community'] ?? ''} ${m['property_type'] ?? ''} '
@@ -138,23 +141,23 @@ class ListingsScreen extends ConsumerWidget {
             }
             final topCommunities = (counts.keys.toList()
                   ..sort((a, b) => counts[b]!.compareTo(counts[a]!)))
-                .take(6)
+                .take(8)
                 .toList();
+            final allCommunities = counts.keys.toList()..sort();
             final filtersActive = purpose != 'all' || type != 'all' || beds != null ||
-                priceMin != null || priceMax != null || query.isNotEmpty || mine;
+                priceMin != null || priceMax != null || area != null || query.isNotEmpty || mine;
 
             Widget grid(List<Map<String, dynamic>> data) => LayoutBuilder(
                   builder: (ctx, c) {
                     // Slightly wider cards (fewer columns) so the photo is the hero.
                     final cols = c.maxWidth >= 1120 ? 3 : (c.maxWidth >= 680 ? 2 : 1);
                     final cardW = cols == 1 ? c.maxWidth : (c.maxWidth - (cols - 1) * AppSpacing.x16) / cols;
-                    // Fixed card height = 3:2 hero image + a roomy content area → all
+                    // Fixed card height = 3:2 hero image + a compact content area → all
                     // cards are exactly equal height (content can't overflow the buffer).
-                    // Buffer must fit the tallest card body (title + price + specs
-                    // + tags + agent row + button + gaps ≈ 230) so the button never
-                    // overlaps the agent line on a fixed-aspect grid cell.
-                    // +72 when a budget is active to fit the affordability strip.
-                    final cardH = cardW * 2 / 3 + 256 + (budget != null ? 72 : 0);
+                    // Buffer fits the tightened card body (title + grouped location/ref +
+                    // price + specs + tags + agent + button) on a fixed-aspect grid cell.
+                    // +60 when a budget is active to fit the affordability strip.
+                    final cardH = cardW * 2 / 3 + 232 + (budget != null ? 60 : 0);
                     return GridView.count(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
@@ -173,31 +176,18 @@ class ListingsScreen extends ConsumerWidget {
                 _DiscoveryHeader(
                   types: types.toList(),
                   popular: topCommunities,
+                  communities: allCommunities,
                   resultCount: items.length,
                   filtersActive: filtersActive,
                 ),
-                if (budget != null)
-                  Container(
-                    margin: const EdgeInsets.only(top: AppSpacing.x12),
-                    padding: const EdgeInsets.all(AppSpacing.x12),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(AppSpacing.rCard),
-                      border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25)),
-                    ),
-                    child: Row(children: [
-                      Icon(Icons.account_balance_wallet_outlined, size: 18, color: Theme.of(context).colorScheme.primary),
-                      const SizedBox(width: AppSpacing.x8),
-                      Expanded(
-                        child: Text(
-                            'Within your budget — homes up to ${NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(budget)}',
-                            style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                      ),
-                      TextButton(
-                          onPressed: () => ref.read(listingsBudgetProvider.notifier).state = null,
-                          child: const Text('Clear')),
-                    ]),
+                if (budget != null) ...[
+                  const SizedBox(height: AppSpacing.x12),
+                  _BudgetBar(
+                    budget: budget,
+                    resultCount: items.length,
+                    onClear: () => ref.read(listingsBudgetProvider.notifier).state = null,
                   ),
+                ],
                 const SizedBox(height: AppSpacing.x16),
                 if (items.isEmpty)
                   Center(
@@ -266,11 +256,13 @@ class _DiscoveryHeader extends ConsumerStatefulWidget {
   const _DiscoveryHeader({
     required this.types,
     required this.popular,
+    required this.communities,
     required this.resultCount,
     required this.filtersActive,
   });
   final List<String> types;
   final List<String> popular;
+  final List<String> communities;
   final int resultCount;
   final bool filtersActive;
   @override
@@ -285,9 +277,21 @@ class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
     super.dispose();
   }
 
-  void _goal(String purpose, String? sort) {
-    ref.read(_fPurpose.notifier).state = purpose;
-    if (sort != null) ref.read(_fSort.notifier).state = sort;
+  // 0 Buy → for sale; 1 Rent → for rent; 2 Invest → for sale, cheapest first.
+  void _setGoal(int i) {
+    switch (i) {
+      case 0:
+        ref.read(_fPurpose.notifier).state = 'sale';
+        if (ref.read(_fSort) == 'price_asc') ref.read(_fSort.notifier).state = 'latest';
+        break;
+      case 1:
+        ref.read(_fPurpose.notifier).state = 'rent';
+        break;
+      case 2:
+        ref.read(_fPurpose.notifier).state = 'sale';
+        ref.read(_fSort.notifier).state = 'price_asc';
+        break;
+    }
   }
 
   void _clear() {
@@ -296,62 +300,94 @@ class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
     ref.read(_fBeds.notifier).state = null;
     ref.read(_fPriceMin.notifier).state = null;
     ref.read(_fPriceMax.notifier).state = null;
+    ref.read(_fArea.notifier).state = null;
+    ref.read(_fSort.notifier).state = 'latest';
     ref.read(listingsSearchProvider.notifier).state = '';
     ref.read(_fMine.notifier).state = false;
+  }
+
+  String _sortLabel(String sort, bool budgetOn) {
+    if (sort == 'price_asc') return 'Price: low to high';
+    if (sort == 'price_desc') return 'Price: high to low';
+    return budgetOn ? 'Most affordable' : 'Newest';
+  }
+
+  // Filters tucked behind "More filters" (min price, area, my listings).
+  int _advancedCount() {
+    var n = 0;
+    if (ref.read(_fPriceMin) != null) n++;
+    if (ref.read(_fArea) != null) n++;
+    if (ref.read(_fMine)) n++;
+    return n;
+  }
+
+  Future<void> _openMoreFilters() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => _MoreFiltersSheet(communities: widget.communities),
+    );
+    if (mounted) setState(() {}); // refresh the advanced-filter badge
   }
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final dark = Theme.of(context).brightness == Brightness.dark;
     final q = ref.watch(listingsSearchProvider);
     // Keep the field's text in sync when the query is set elsewhere (chips / clear).
     if (_qc.text != q) {
       _qc.value = TextEditingValue(text: q, selection: TextSelection.collapsed(offset: q.length));
     }
-    Widget heading(String s) => Text(s,
-        style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w700, letterSpacing: 0.5));
-
-    const goals = [
-      ('Buy a home', Icons.home_outlined, 'sale', null),
-      ('Rent', Icons.vpn_key_outlined, 'rent', null),
-      ('Invest', Icons.trending_up, 'sale', 'price_asc'),
-    ];
+    final purpose = ref.watch(_fPurpose);
+    final sort = ref.watch(_fSort);
+    final budgetOn = ref.watch(listingsBudgetProvider) != null;
+    // Derive the active goal segment from purpose + sort so it stays in sync even
+    // when the Purpose dropdown is changed directly. -1 = none selected.
+    final goal = purpose == 'rent' ? 1 : (purpose == 'sale' ? (sort == 'price_asc' ? 2 : 0) : -1);
+    final advanced = _advancedCount();
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      // ── Search ──
       TextField(
         controller: _qc,
         onChanged: (v) => ref.read(listingsSearchProvider.notifier).state = v,
+        textInputAction: TextInputAction.search,
         decoration: InputDecoration(
-          hintText: 'Search community, building, area or ref…',
-          prefixIcon: const Icon(Icons.search),
+          hintText: 'Search area, building or ref (e.g. NUZL-DXB-90012)',
+          prefixIcon: const Icon(Icons.search, size: 20),
           suffixIcon: q.isEmpty
               ? null
-              : IconButton(icon: const Icon(Icons.close), onPressed: () => ref.read(listingsSearchProvider.notifier).state = ''),
+              : IconButton(icon: const Icon(Icons.close, size: 18), onPressed: () => ref.read(listingsSearchProvider.notifier).state = ''),
           isDense: true,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         ),
       ),
+      // ── Popular searches: single scrollable row of light pills ──
       if (widget.popular.isNotEmpty) ...[
-        const SizedBox(height: AppSpacing.x12),
-        heading('POPULAR SEARCHES'),
-        const SizedBox(height: 6),
-        Wrap(spacing: 6, runSpacing: 6, children: [
-          for (final c in widget.popular)
-            ActionChip(label: Text(c), onPressed: () => ref.read(listingsSearchProvider.notifier).state = c),
-        ]),
-      ],
-      const SizedBox(height: AppSpacing.x12),
-      heading('EXPLORE BY GOAL'),
-      const SizedBox(height: 6),
-      Wrap(spacing: 6, runSpacing: 6, children: [
-        for (final g in goals)
-          ActionChip(
-            avatar: Icon(g.$2, size: 16, color: Theme.of(context).colorScheme.primary),
-            label: Text(g.$1),
-            onPressed: () => _goal(g.$3, g.$4),
+        const SizedBox(height: AppSpacing.x8),
+        SizedBox(
+          height: 30,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: widget.popular.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 6),
+            itemBuilder: (_, i) => _MiniPill(
+              label: widget.popular[i],
+              onTap: () => ref.read(listingsSearchProvider.notifier).state = widget.popular[i],
+            ),
           ),
+        ),
+      ],
+      // ── Goal segmented control + More filters ──
+      const SizedBox(height: AppSpacing.x8),
+      Row(children: [
+        Flexible(child: _GoalSegmented(active: goal, onSelect: _setGoal)),
+        const Spacer(),
+        _MoreFiltersButton(count: advanced, onTap: _openMoreFilters),
       ]),
-      const SizedBox(height: AppSpacing.x12),
+      // ── Primary filter pills ──
+      const SizedBox(height: AppSpacing.x8),
       SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(children: [
@@ -377,20 +413,7 @@ class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
           ),
           const SizedBox(width: AppSpacing.x8),
           _Drop<double?>(
-            label: 'Min price',
-            value: ref.watch(_fPriceMin),
-            items: const [
-              (null, 'Any min'),
-              (500000.0, '≥ 500K'),
-              (1000000.0, '≥ 1M'),
-              (2000000.0, '≥ 2M'),
-              (3000000.0, '≥ 3M'),
-            ],
-            onChanged: (v) => ref.read(_fPriceMin.notifier).state = v,
-          ),
-          const SizedBox(width: AppSpacing.x8),
-          _Drop<double?>(
-            label: 'Max price',
+            label: 'Price',
             value: ref.watch(_fPriceMax),
             items: const [
               (null, 'Any price'),
@@ -403,31 +426,255 @@ class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
           ),
           const SizedBox(width: AppSpacing.x8),
           _Drop<String>(
-            label: 'Sort by',
+            label: 'Sort',
             value: ref.watch(_fSort),
             items: const [('latest', 'Newest'), ('price_asc', 'Price: low → high'), ('price_desc', 'Price: high → low')],
             onChanged: (v) => ref.read(_fSort.notifier).state = v ?? 'latest',
           ),
-          if (ref.watch(personaProvider).canListProperty) ...[
-            const SizedBox(width: AppSpacing.x8),
-            FilterChip(
-              label: const Text('My listings'),
-              selected: ref.watch(_fMine),
-              onSelected: (v) => ref.read(_fMine.notifier).state = v,
-            ),
-          ],
         ]),
       ),
-      const SizedBox(height: AppSpacing.x8),
+      // ── Result count + sort summary ──
+      const SizedBox(height: AppSpacing.x12),
       Row(children: [
         Expanded(
-          child: Text('${widget.resultCount} ${widget.resultCount == 1 ? 'property' : 'properties'} found',
-              style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          child: Text(
+            '${widget.resultCount} ${widget.resultCount == 1 ? 'Result' : 'Results'} · Sorted by ${_sortLabel(sort, budgetOn)}',
+            style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
         ),
         if (widget.filtersActive)
-          TextButton.icon(onPressed: _clear, icon: const Icon(Icons.close, size: 16), label: const Text('Clear')),
+          TextButton.icon(
+            onPressed: _clear,
+            icon: const Icon(Icons.close, size: 16),
+            label: const Text('Clear'),
+            style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+          ),
       ]),
     ]);
+  }
+}
+
+/// Compact, light popular-search pill (32px) — hover/tap only, no heavy border.
+class _MiniPill extends StatelessWidget {
+  const _MiniPill({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final t = Theme.of(context).textTheme;
+    return Material(
+      color: dark ? AppColors.dSurface2 : AppColors.surface2,
+      borderRadius: BorderRadius.circular(AppSpacing.rFull),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.rFull),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Center(
+            child: Text(label,
+                style: t.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600, color: dark ? AppColors.dTextMuted : AppColors.text)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Segmented Buy | Rent | Invest control — one container, active segment filled.
+class _GoalSegmented extends StatelessWidget {
+  const _GoalSegmented({required this.active, required this.onSelect});
+  final int active; // -1 none, 0 Buy, 1 Rent, 2 Invest
+  final ValueChanged<int> onSelect;
+  static const _labels = ['Buy', 'Rent', 'Invest'];
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final t = Theme.of(context).textTheme;
+    final primary = Theme.of(context).colorScheme.primary;
+    return Container(
+      height: 36,
+      decoration: BoxDecoration(
+        color: dark ? AppColors.dSurface2 : AppColors.surface2,
+        borderRadius: BorderRadius.circular(AppSpacing.rMd),
+      ),
+      padding: const EdgeInsets.all(3),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        for (var i = 0; i < _labels.length; i++)
+          GestureDetector(
+            onTap: () => onSelect(i),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: i == active ? (dark ? AppColors.dSurface : Colors.white) : Colors.transparent,
+                borderRadius: BorderRadius.circular(AppSpacing.rSm),
+                boxShadow: i == active
+                    ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 4, offset: const Offset(0, 1))]
+                    : null,
+              ),
+              child: Text(_labels[i],
+                  style: t.bodySmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: i == active ? primary : (dark ? AppColors.dTextMuted : AppColors.textMuted))),
+            ),
+          ),
+      ]),
+    );
+  }
+}
+
+/// "More filters" button with a count badge for the advanced filters in the sheet.
+class _MoreFiltersButton extends StatelessWidget {
+  const _MoreFiltersButton({required this.count, required this.onTap});
+  final int count;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final primary = Theme.of(context).colorScheme.primary;
+    final on = count > 0;
+    return Material(
+      color: on ? primary.withValues(alpha: 0.10) : Colors.transparent,
+      borderRadius: BorderRadius.circular(AppSpacing.rMd),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.rMd),
+        onTap: onTap,
+        child: Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppSpacing.rMd),
+            border: Border.all(color: on ? primary.withValues(alpha: 0.35) : Theme.of(context).dividerColor),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.tune, size: 16, color: on ? primary : null),
+            const SizedBox(width: 6),
+            Text(on ? 'Filters · $count' : 'Filters',
+                style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: on ? primary : null)),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// Progressive-disclosure sheet for advanced filters: min price, area, my listings.
+class _MoreFiltersSheet extends ConsumerWidget {
+  const _MoreFiltersSheet({required this.communities});
+  final List<String> communities;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final canList = ref.watch(personaProvider).canListProperty;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 4, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('More filters', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+        const SizedBox(height: AppSpacing.x16),
+        Text('Minimum price', style: t.labelLarge),
+        const SizedBox(height: 6),
+        _Drop<double?>(
+          label: 'Min price',
+          value: ref.watch(_fPriceMin),
+          items: const [
+            (null, 'Any min'),
+            (500000.0, '≥ 500K'),
+            (1000000.0, '≥ 1M'),
+            (2000000.0, '≥ 2M'),
+            (3000000.0, '≥ 3M'),
+            (5000000.0, '≥ 5M'),
+          ],
+          onChanged: (v) => ref.read(_fPriceMin.notifier).state = v,
+        ),
+        const SizedBox(height: AppSpacing.x16),
+        Text('Area', style: t.labelLarge),
+        const SizedBox(height: 6),
+        _Drop<String?>(
+          label: 'Any area',
+          value: ref.watch(_fArea),
+          items: [(null, 'Any area'), for (final c in communities) (c, c)],
+          onChanged: (v) => ref.read(_fArea.notifier).state = v,
+        ),
+        if (canList) ...[
+          const SizedBox(height: AppSpacing.x16),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: Text('My listings only', style: t.bodyMedium),
+            value: ref.watch(_fMine),
+            onChanged: (v) => ref.read(_fMine.notifier).state = v,
+          ),
+        ],
+        const SizedBox(height: AppSpacing.x16),
+        Row(children: [
+          TextButton(
+            onPressed: () {
+              ref.read(_fPriceMin.notifier).state = null;
+              ref.read(_fArea.notifier).state = null;
+              ref.read(_fMine.notifier).state = false;
+            },
+            child: const Text('Reset'),
+          ),
+          const Spacer(),
+          FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Show results')),
+        ]),
+      ]),
+    );
+  }
+}
+
+/// Compact budget chip-bar: [✓ Budget Match] [AED 1.63M] [N results]  Clear.
+class _BudgetBar extends StatelessWidget {
+  const _BudgetBar({required this.budget, required this.resultCount, required this.onClear});
+  final double budget;
+  final int resultCount;
+  final VoidCallback onClear;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final primary = Theme.of(context).colorScheme.primary;
+    final aed = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 2);
+    Widget chip(Widget child, {Color? color}) => Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+              color: (color ?? primary).withValues(alpha: 0.10), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+          child: child,
+        );
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: primary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(AppSpacing.rMd),
+        border: Border.all(color: primary.withValues(alpha: 0.18)),
+      ),
+      child: Row(children: [
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(children: [
+              chip(Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.check_circle, size: 14, color: AppColors.success),
+                const SizedBox(width: 4),
+                Text('Budget match', style: t.labelMedium?.copyWith(color: AppColors.success, fontWeight: FontWeight.w700)),
+              ]), color: AppColors.success),
+              const SizedBox(width: 6),
+              chip(Text('Up to ${aed.format(budget)}',
+                  style: t.labelMedium?.copyWith(color: primary, fontWeight: FontWeight.w700))),
+              const SizedBox(width: 6),
+              chip(Text(resultCount == 1 ? '1 result' : '$resultCount results',
+                  style: t.labelMedium?.copyWith(color: primary, fontWeight: FontWeight.w700))),
+            ]),
+          ),
+        ),
+        TextButton(
+          onPressed: onClear,
+          style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
+          child: const Text('Clear'),
+        ),
+      ]),
+    );
   }
 }
 
@@ -440,18 +687,25 @@ class _Drop<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // "Active" = a non-default selection. 'all'/'latest'/null are the defaults.
+    final on = value != null && '$value' != 'all' && '$value' != 'latest';
+    final primary = Theme.of(context).colorScheme.primary;
     return Container(
+      height: 40,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppSpacing.rFull),
-        border: Border.all(color: Theme.of(context).dividerColor),
+        color: on ? primary.withValues(alpha: 0.08) : null,
+        borderRadius: BorderRadius.circular(AppSpacing.rMd),
+        border: Border.all(color: on ? primary.withValues(alpha: 0.35) : Theme.of(context).dividerColor),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
           value: value,
           isDense: true,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600, color: on ? primary : Theme.of(context).textTheme.bodyMedium?.color),
           borderRadius: BorderRadius.circular(AppSpacing.rMd),
-          hint: Text(label),
+          hint: Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
           items: items.map((it) => DropdownMenuItem<T>(value: it.$1, child: Text(it.$2))).toList(),
           onChanged: onChanged,
         ),
@@ -628,23 +882,16 @@ class _ListingCard extends StatelessWidget {
                 ),
               ],
             ),
-            // ── Decision-first info ──
+            // ── Decision-first info (price → title → location/ref grouped) ──
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.x12),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.x12, AppSpacing.x12, AppSpacing.x12, AppSpacing.x12),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
-                if (community.isNotEmpty)
-                  Text(community, style: t.bodySmall?.copyWith(color: muted),
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                if ('${l['ref_code'] ?? ''}'.trim().isNotEmpty)
-                  Text('Ref ${l['ref_code']}',
-                      style: t.bodySmall?.copyWith(color: subtle, fontWeight: FontWeight.w600)),
-                const SizedBox(height: AppSpacing.x4),
-                Row(children: [
+                Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
                   Expanded(
                     child: Text('$money${isRent ? ' / yr' : ''}',
-                        style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary)),
+                        style: t.titleLarge?.copyWith(
+                            fontSize: 21, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.primary),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
                   if (ptype.isNotEmpty)
                     Container(
@@ -653,6 +900,22 @@ class _ListingCard extends StatelessWidget {
                           color: AppColors.surface2, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
                       child: Text(_cap(ptype), style: t.labelSmall?.copyWith(color: AppColors.textMuted, fontWeight: FontWeight.w600)),
                     ),
+                ]),
+                const SizedBox(height: 2),
+                Text(title, style: t.titleSmall?.copyWith(fontSize: 15.5, fontWeight: FontWeight.w700),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 2),
+                Row(children: [
+                  if (community.isNotEmpty)
+                    Flexible(
+                      child: Text(community, style: t.bodySmall?.copyWith(color: muted),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                  if (community.isNotEmpty && '${l['ref_code'] ?? ''}'.trim().isNotEmpty)
+                    Text('  ·  ', style: t.bodySmall?.copyWith(color: subtle)),
+                  if ('${l['ref_code'] ?? ''}'.trim().isNotEmpty)
+                    Text('${l['ref_code']}',
+                        style: t.bodySmall?.copyWith(color: subtle, fontWeight: FontWeight.w700, letterSpacing: 0.2)),
                 ]),
                 const SizedBox(height: AppSpacing.x8),
                 Row(children: [
@@ -671,7 +934,7 @@ class _ListingCard extends StatelessWidget {
                 if (highlights.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.x8),
                   Wrap(spacing: 6, runSpacing: 4, children: [
-                    for (final h in highlights.take(3))
+                    for (final h in highlights.take(2))
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
@@ -701,11 +964,12 @@ class _ListingCard extends StatelessWidget {
                     ],
                   ]),
                 ],
-                const SizedBox(height: AppSpacing.x12),
+                const SizedBox(height: AppSpacing.x8),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: () => context.push('/listings/${l['id']}'),
+                    style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
                     child: const Text('View details'),
                   ),
                 ),
