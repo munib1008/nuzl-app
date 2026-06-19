@@ -166,7 +166,7 @@ class _Body extends ConsumerWidget {
         Text('~${aed.format(est)}/mo estimated mortgage',
             style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
       const SizedBox(height: AppSpacing.x16),
-      Wrap(spacing: AppSpacing.x24, runSpacing: AppSpacing.x12, children: [
+      Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x12, children: [
         _fact(context, Icons.bed_outlined, '${m['bedrooms'] ?? '-'}', 'Bedrooms'),
         _fact(context, Icons.bathtub_outlined, '${m['bathrooms'] ?? '-'}', 'Bathrooms'),
         _fact(context, Icons.straighten, '${m['size_sqft'] ?? '-'}', 'Sq ft'),
@@ -289,27 +289,35 @@ class _Body extends ConsumerWidget {
     ]);
 
     final agent = _AgentCard(m: m, id: id);
+    // Wrap the details in a premium, spacious card (modern card design).
+    final infoCard = Card(
+      child: Padding(padding: const EdgeInsets.all(AppSpacing.x24), child: info),
+    );
 
     return ListView(
+      padding: const EdgeInsets.only(top: AppSpacing.x20, bottom: AppSpacing.x16),
       children: [
-        _Gallery(images: images, height: wide ? 420 : 240),
-        const SizedBox(height: AppSpacing.x20),
         Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 1040),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(AppSpacing.x20, 0, AppSpacing.x20, AppSpacing.x32),
-              child: wide
-                  ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Expanded(flex: 2, child: info),
-                      const SizedBox(width: AppSpacing.x24),
-                      SizedBox(width: 320, child: agent),
-                    ])
-                  : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      info,
-                      const SizedBox(height: AppSpacing.x24),
-                      agent,
-                    ]),
+              padding: const EdgeInsets.fromLTRB(AppSpacing.x20, 0, AppSpacing.x20, AppSpacing.x16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                // Image-first: a contained, rounded hero gallery.
+                _Gallery(images: images, height: wide ? 460 : 260),
+                const SizedBox(height: AppSpacing.x24),
+                wide
+                    ? Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Expanded(flex: 2, child: infoCard),
+                        const SizedBox(width: AppSpacing.x24),
+                        SizedBox(width: 340, child: agent),
+                      ])
+                    : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        infoCard,
+                        const SizedBox(height: AppSpacing.x24),
+                        agent,
+                      ]),
+              ]),
             ),
           ),
         ),
@@ -332,14 +340,22 @@ class _Body extends ConsumerWidget {
 
   Widget _fact(BuildContext context, IconData icon, String value, String label) {
     final t = Theme.of(context).textTheme;
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 20, color: AppColors.primary),
-      const SizedBox(width: 8),
-      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-        Text(value, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-        Text(label, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      constraints: const BoxConstraints(minWidth: 92),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(AppSpacing.rLg),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 22, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(height: AppSpacing.x8),
+        Text(value, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+        Text(label, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
       ]),
-    ]);
+    );
   }
 }
 
@@ -612,35 +628,81 @@ class _GalleryState extends State<_Gallery> {
     super.dispose();
   }
 
+  void _go(int delta) {
+    final n = widget.images.length;
+    if (n < 2) return;
+    final next = (_i + delta).clamp(0, n - 1);
+    _pc.animateTo(next * (_pc.position.viewportDimension),
+        duration: const Duration(milliseconds: 280), curve: Curves.easeOut);
+  }
+
+  Widget _navArrow(IconData icon, VoidCallback onTap) => Material(
+        color: Colors.black.withValues(alpha: 0.42),
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(padding: const EdgeInsets.all(8), child: Icon(icon, color: Colors.white, size: 22)),
+        ),
+      );
+
   @override
   Widget build(BuildContext context) {
+    final wide = MediaQuery.sizeOf(context).width >= 900;
+    final multi = widget.images.length > 1;
     Widget ph() => Container(
         color: AppColors.surface2,
         child: const Center(child: Icon(Icons.apartment_outlined, size: 48, color: AppColors.textMuted)));
-    if (widget.images.isEmpty) return SizedBox(height: widget.height, child: ph());
-    return SizedBox(
-      height: widget.height,
-      child: Stack(children: [
-        PageView.builder(
-          controller: _pc,
-          itemCount: widget.images.length,
-          onPageChanged: (i) => setState(() => _i = i),
-          itemBuilder: (_, i) => Image.network(widget.images[i],
-              fit: BoxFit.cover, width: double.infinity,
-              errorBuilder: (_, __, ___) => ph()),
-        ),
-        if (widget.images.length > 1)
-          Positioned(
-            right: 12, bottom: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-              child: Text('${_i + 1} / ${widget.images.length}',
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+    final content = widget.images.isEmpty
+        ? ph()
+        : Stack(fit: StackFit.expand, children: [
+            PageView.builder(
+              controller: _pc,
+              itemCount: widget.images.length,
+              onPageChanged: (i) => setState(() => _i = i),
+              itemBuilder: (_, i) => Image.network(widget.images[i],
+                  fit: BoxFit.cover, width: double.infinity,
+                  loadingBuilder: (c, child, p) =>
+                      p == null ? child : Container(color: AppColors.surface2),
+                  errorBuilder: (_, __, ___) => ph()),
             ),
-          ),
-      ]),
+            // Soft bottom scrim so the counter / dots read on any image.
+            const Positioned(
+              left: 0, right: 0, bottom: 0, height: 72,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Color(0x66000000)],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (multi)
+              Positioned(
+                right: 14, bottom: 14,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Icon(Icons.photo_library_outlined, size: 13, color: Colors.white),
+                    const SizedBox(width: 5),
+                    Text('${_i + 1} / ${widget.images.length}',
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                  ]),
+                ),
+              ),
+            if (multi && wide) ...[
+              Positioned(left: 14, top: 0, bottom: 0, child: Center(child: _navArrow(Icons.chevron_left, () => _go(-1)))),
+              Positioned(right: 14, top: 0, bottom: 0, child: Center(child: _navArrow(Icons.chevron_right, () => _go(1)))),
+            ],
+          ]);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppSpacing.rXl),
+      child: SizedBox(height: widget.height, width: double.infinity, child: content),
     );
   }
 }
