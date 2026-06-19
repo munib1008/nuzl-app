@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/upload_service.dart';
+import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
@@ -147,19 +148,24 @@ class _JobCard extends ConsumerWidget {
     }
   }
 
-  Future<void> _actions(BuildContext context, WidgetRef ref) async {
+  Future<void> _actions(BuildContext context, WidgetRef ref,
+      {required bool canAssign, required bool canUpdate}) async {
     final action = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(
         child: ListView(shrinkWrap: true, children: [
-          ListTile(
-              leading: const Icon(Icons.handyman_outlined),
-              title: const Text('Assign provider'),
-              onTap: () => Navigator.pop(ctx, 'assign')),
-          ListTile(
-              leading: const Icon(Icons.flag_outlined),
-              title: const Text('Update status'),
-              onTap: () => Navigator.pop(ctx, 'status')),
+          // "Assign provider" is the property holder hiring a contractor;
+          // "Update status" is the service provider's job-progress workflow.
+          if (canAssign)
+            ListTile(
+                leading: const Icon(Icons.handyman_outlined),
+                title: const Text('Assign provider'),
+                onTap: () => Navigator.pop(ctx, 'assign')),
+          if (canUpdate)
+            ListTile(
+                leading: const Icon(Icons.flag_outlined),
+                title: const Text('Update status'),
+                onTap: () => Navigator.pop(ctx, 'status')),
         ]),
       ),
     );
@@ -219,6 +225,12 @@ class _JobCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final persona = ref.watch(personaProvider);
+    // Property holders (owner / investor / admin) hire a provider; service
+    // providers progress the job's status. Others just view their request.
+    final canAssign = persona.canManagePortfolio;
+    final canUpdate = persona.isServiceProvider;
+    final canAct = canAssign || canUpdate;
     final images = (j['images'] is List) ? (j['images'] as List).map((e) => '$e').where((s) => s.isNotEmpty).toList() : <String>[];
     final where = [
       if ('${j['community'] ?? ''}'.isNotEmpty) '${j['community']}',
@@ -227,7 +239,7 @@ class _JobCard extends ConsumerWidget {
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: () => _actions(context, ref),
+        onTap: canAct ? () => _actions(context, ref, canAssign: canAssign, canUpdate: canUpdate) : null,
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.x12),
           child: Row(
