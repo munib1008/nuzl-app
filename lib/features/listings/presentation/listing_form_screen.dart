@@ -49,6 +49,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   final incentiveNote = TextEditingController();
   double dldWaiver = 0; // % of the 4% DLD the developer covers
   double processingWaiver = 0; // % of the processing fee covered
+  final List<_IncentiveInput> _incentives = []; // structured "Incentives & offers"
   DateTime? handover;
   final Set<int> selectedAmenities = {};
 
@@ -88,6 +89,18 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       dldWaiver = (num.tryParse('${m['dld_waiver_pct'] ?? 0}') ?? 0).toDouble();
       processingWaiver = (num.tryParse('${m['processing_waiver_pct'] ?? 0}') ?? 0).toDouble();
       incentiveNote.text = '${m['incentive_note'] ?? ''}';
+      final inc = m['incentives'];
+      if (inc is List) {
+        for (final it in inc) {
+          if (it is Map) {
+            final r = _IncentiveInput(type: '${it['type'] ?? 'cash_back'}');
+            r.input.text = _structuredIncentiveUnit(r.type).isEmpty
+                ? '${it['label'] ?? ''}'
+                : '${it['value'] ?? ''}';
+            _incentives.add(r);
+          }
+        }
+      }
       handover = DateTime.tryParse('${m['handover_date'] ?? ''}');
       final lat = m['latitude'], lng = m['longitude'];
       if (lat != null && lng != null) location.text = '$lat, $lng';
@@ -118,6 +131,9 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
     building.dispose(); location.dispose(); originalPrice.dispose();
     developer.dispose(); view.dispose(); parking.dispose(); serviceCharge.dispose();
     incentiveNote.dispose();
+    for (final r in _incentives) {
+      r.input.dispose();
+    }
     super.dispose();
   }
 
@@ -320,6 +336,13 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       'dld_waiver_pct': dldWaiver,
       'processing_waiver_pct': processingWaiver,
       if (incentiveNote.text.trim().isNotEmpty) 'incentive_note': incentiveNote.text.trim(),
+      'incentives': [
+        for (final r in _incentives.where((r) => r.input.text.trim().isNotEmpty))
+          if (_structuredIncentiveUnit(r.type).isEmpty)
+            {'type': r.type, 'label': r.input.text.trim()}
+          else
+            {'type': r.type, 'value': double.tryParse(r.input.text.trim()), 'unit': _structuredIncentiveUnit(r.type)},
+      ],
       if (handover != null)
         'handover_date': '${handover!.year}-${handover!.month.toString().padLeft(2, '0')}-${handover!.day.toString().padLeft(2, '0')}',
       'amenities': selectedAmenities.toList(),
@@ -599,6 +622,59 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                 hintText: 'e.g. Service-charge waiver for 2 years, free furnishing',
               ),
             ),
+            const SizedBox(height: AppSpacing.x12),
+            Text('Offers list — shown as "Incentives & offers" on the property',
+                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            const SizedBox(height: AppSpacing.x8),
+            for (var i = 0; i < _incentives.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.x8),
+                child: Row(children: [
+                  Expanded(
+                    flex: 3,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _incentives[i].type,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Offer', isDense: true),
+                      items: const [
+                        DropdownMenuItem(value: 'cash_back', child: Text('Cash-back')),
+                        DropdownMenuItem(value: 'service_charge_holiday', child: Text('Service-charge holiday')),
+                        DropdownMenuItem(value: 'furniture', child: Text('Furniture allowance')),
+                        DropdownMenuItem(value: 'payment_plan', child: Text('Payment plan')),
+                        DropdownMenuItem(value: 'free_management', child: Text('Free management')),
+                        DropdownMenuItem(value: 'dld_waiver', child: Text('DLD waiver')),
+                        DropdownMenuItem(value: 'processing_waiver', child: Text('Processing waiver')),
+                        DropdownMenuItem(value: 'other', child: Text('Other')),
+                      ],
+                      onChanged: (v) => setState(() => _incentives[i].type = v ?? 'other'),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.x8),
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      controller: _incentives[i].input,
+                      keyboardType: _structuredIncentiveUnit(_incentives[i].type).isEmpty
+                          ? TextInputType.text
+                          : const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(labelText: _incFieldLabel(_incentives[i].type), isDense: true),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Remove',
+                    icon: const Icon(Icons.close, size: 18),
+                    onPressed: () => setState(() => _incentives.removeAt(i).input.dispose()),
+                  ),
+                ]),
+              ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => setState(() => _incentives.add(_IncentiveInput())),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add an offer'),
+              ),
+            ),
             const SizedBox(height: AppSpacing.x16),
             Text('Amenities', style: t.titleSmall),
             const SizedBox(height: AppSpacing.x8),
@@ -642,5 +718,44 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
         onPressed: _save,
       ),
     );
+  }
+}
+
+/// One editable row in the structured "Offers list" — a type + a single input
+/// that's a numeric value (for %/AED/months offers) or free text (for the rest).
+class _IncentiveInput {
+  _IncentiveInput({this.type = 'cash_back'});
+  String type;
+  final input = TextEditingController();
+}
+
+/// The unit an offer's value is measured in (drives parsing + the field label).
+/// Empty = the input is free text (e.g. a payment-plan description).
+String _structuredIncentiveUnit(String type) {
+  switch (type) {
+    case 'dld_waiver':
+    case 'processing_waiver':
+      return 'percent';
+    case 'cash_back':
+    case 'furniture':
+      return 'aed';
+    case 'service_charge_holiday':
+    case 'free_management':
+      return 'months';
+    default:
+      return '';
+  }
+}
+
+String _incFieldLabel(String type) {
+  switch (_structuredIncentiveUnit(type)) {
+    case 'percent':
+      return 'Percent (%)';
+    case 'aed':
+      return 'Amount (AED)';
+    case 'months':
+      return 'Months';
+    default:
+      return 'Details';
   }
 }

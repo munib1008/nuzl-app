@@ -227,6 +227,7 @@ class _Detail extends ConsumerWidget {
                         Text('${l['description']}', style: t.bodyMedium),
                       ],
                       _AmenitiesBlock(l: l),
+                      _IncentivesBlock(l: l),
                       _VerificationBlock(l: l),
                       // Mortgage estimate is shown ONLY on for-sale listings (Customer
                       // module spec — no standalone calculator for buyers).
@@ -1058,6 +1059,95 @@ class _VerificationBlock extends StatelessWidget {
 /// In-context mortgage estimate for a FOR-SALE listing (Customer module spec):
 /// the only place buyers see mortgage math — there is no standalone calculator.
 /// Pure client-side amortisation + UAE acquisition costs (DLD 4%, ~1% processing).
+/// Structured developer incentives — a gold-tinted "Incentives & offers" card
+/// listing each typed offer with an icon and (optional) value.
+class _IncentivesBlock extends StatelessWidget {
+  const _IncentivesBlock({required this.l});
+  final Map<String, dynamic> l;
+
+  @override
+  Widget build(BuildContext context) {
+    final raw = l['incentives'];
+    final items = (raw is List) ? raw : const [];
+    if (items.isEmpty) return const SizedBox.shrink();
+    final t = Theme.of(context).textTheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SizedBox(height: AppSpacing.x16),
+      Row(children: [
+        const Icon(Icons.card_giftcard, size: 18, color: AppColors.accentGold),
+        const SizedBox(width: AppSpacing.x8),
+        Text('Incentives & offers', style: t.titleMedium),
+      ]),
+      const SizedBox(height: AppSpacing.x8),
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.x12),
+        decoration: BoxDecoration(
+          color: AppColors.accentGold.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppSpacing.rCard),
+          border: Border.all(color: AppColors.accentGold.withValues(alpha: 0.25)),
+        ),
+        child: Column(children: [
+          for (final it in items) _row(context, Map<String, dynamic>.from(it as Map)),
+        ]),
+      ),
+    ]);
+  }
+
+  Widget _row(BuildContext context, Map<String, dynamic> it) {
+    final t = Theme.of(context).textTheme;
+    final meta = _incentiveMeta('${it['type'] ?? 'other'}');
+    final label = '${it['label'] ?? ''}'.trim().isNotEmpty ? '${it['label']}' : meta.$2;
+    final value = _formatIncentiveValue(it['value'], '${it['unit'] ?? ''}');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(children: [
+        Icon(meta.$1, size: 18, color: AppColors.accentGold),
+        const SizedBox(width: AppSpacing.x8),
+        Expanded(child: Text(label, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600))),
+        if (value.isNotEmpty)
+          Text(value, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.success)),
+      ]),
+    );
+  }
+}
+
+(IconData, String) _incentiveMeta(String type) {
+  switch (type) {
+    case 'dld_waiver':
+      return (Icons.savings_outlined, 'DLD fee waiver');
+    case 'processing_waiver':
+      return (Icons.receipt_long_outlined, 'Processing fee waiver');
+    case 'service_charge_holiday':
+      return (Icons.event_busy_outlined, 'Service-charge holiday');
+    case 'cash_back':
+      return (Icons.payments_outlined, 'Cash-back');
+    case 'furniture':
+      return (Icons.chair_outlined, 'Furniture allowance');
+    case 'payment_plan':
+      return (Icons.calendar_month_outlined, 'Payment plan');
+    case 'free_management':
+      return (Icons.manage_accounts_outlined, 'Free property management');
+    default:
+      return (Icons.card_giftcard, 'Incentive');
+  }
+}
+
+String _formatIncentiveValue(dynamic value, String unit) {
+  final v = num.tryParse('${value ?? ''}');
+  if (v == null) return '';
+  switch (unit) {
+    case 'percent':
+      return '${v % 1 == 0 ? v.toInt() : v}%';
+    case 'aed':
+      return NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(v);
+    case 'months':
+      return '${v.toInt()} ${v.toInt() == 1 ? 'month' : 'months'}';
+    default:
+      return '$v';
+  }
+}
+
 class _MortgageEstimate extends StatefulWidget {
   const _MortgageEstimate({
     required this.price,
