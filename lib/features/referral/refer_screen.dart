@@ -19,7 +19,11 @@ final referralProgramProvider = FutureProvider.autoDispose<Map<String, dynamic>>
 
 /// Refer & Earn — share your code, earn a free month for every friend who joins.
 class ReferScreen extends ConsumerWidget {
-  const ReferScreen({super.key});
+  const ReferScreen({super.key, this.embedded = false});
+
+  /// When embedded in the Rewards hub's tabs, render just the body (no
+  /// Scaffold/app-bar/drawer of its own).
+  final bool embedded;
 
   static String shareLink(String code) {
     // Web uses hash routing; the link opens signup with the code prefilled.
@@ -30,19 +34,21 @@ class ReferScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final program = ref.watch(referralProgramProvider);
+    final body = ResponsiveCenter(
+      child: RefreshIndicator(
+        onRefresh: () async => ref.refresh(referralProgramProvider.future),
+        child: program.when(
+          loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
+          error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text('$e'))]),
+          data: (m) => _body(context, m),
+        ),
+      ),
+    );
+    if (embedded) return body;
     return Scaffold(
       appBar: const NuzlAppBar(title: 'Refer & Earn'),
       drawer: const NuzlDrawer(),
-      body: ResponsiveCenter(
-        child: RefreshIndicator(
-          onRefresh: () async => ref.refresh(referralProgramProvider.future),
-          child: program.when(
-            loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text('$e'))]),
-            data: (m) => _body(context, m),
-          ),
-        ),
-      ),
+      body: body,
     );
   }
 

@@ -136,33 +136,36 @@ Widget _ctaPair(
   bool center = false,
 }) {
   final wide = MediaQuery.sizeOf(context).width >= 600;
-  final primary = GradientButton(
-    onPressed: onPrimary, label: primaryLabel, icon: Icons.arrow_forward, expand: true);
-  final secondary = OutlinedButton(
-    onPressed: onSecondary,
-    style: OutlinedButton.styleFrom(
-      foregroundColor: _onBg(context),
-      side: BorderSide(color: _borderStrong(context)),
-      minimumSize: const Size.fromHeight(48),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-    ),
-    child: Text(secondaryLabel, maxLines: 1, overflow: TextOverflow.ellipsis),
-  );
+  // height 44 (was 48) — a touch tighter. expand=false makes the button hug its
+  // label so short CTAs ("Join NUZL", "Sign in") aren't stretched into chunky
+  // empty bars; mobile still stacks them full-width for easy thumb targets.
+  GradientButton primary({required bool expand}) => GradientButton(
+      onPressed: onPrimary, label: primaryLabel, icon: Icons.arrow_forward, expand: expand, height: 44);
+  OutlinedButton secondary({required bool expand}) => OutlinedButton(
+        onPressed: onSecondary,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: _onBg(context),
+          side: BorderSide(color: _borderStrong(context)),
+          minimumSize: expand ? const Size.fromHeight(44) : const Size(0, 44),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        ),
+        child: Text(secondaryLabel, maxLines: 1, overflow: TextOverflow.ellipsis),
+      );
   if (!wide) {
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      primary,
+      primary(expand: true),
       const SizedBox(height: AppSpacing.x12),
-      secondary,
+      secondary(expand: true),
     ]);
   }
-  final row = ConstrainedBox(
-    constraints: const BoxConstraints(maxWidth: 480),
-    child: Row(children: [
-      Expanded(child: primary),
-      const SizedBox(width: AppSpacing.x12),
-      Expanded(child: secondary),
-    ]),
+  // Wide: content-sized buttons (Wrap so they fall to two rows if cramped).
+  final row = Wrap(
+    spacing: AppSpacing.x12,
+    runSpacing: AppSpacing.x12,
+    alignment: center ? WrapAlignment.center : WrapAlignment.start,
+    children: [primary(expand: false), secondary(expand: false)],
   );
   return center ? Center(child: row) : row;
 }

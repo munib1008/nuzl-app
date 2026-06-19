@@ -522,15 +522,9 @@ class NuzlSidebarBody extends ConsumerWidget {
         ListTile(
           dense: true,
           leading: const Icon(Icons.card_giftcard, size: 20, color: AppColors.accentGold),
-          title: Text('Refer & Earn', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
-          subtitle: Text('Get a free month', style: TextStyle(fontSize: 11, color: muted)),
-          onTap: () => go('/refer'),
-        ),
-        ListTile(
-          dense: true,
-          leading: const Icon(Icons.emoji_events_outlined, size: 20, color: AppColors.accentGold),
-          title: Text('Rewards & offers', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
-          onTap: () => go('/rewards'),
+          title: Text('Rewards & referrals', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
+          subtitle: Text('Refer & earn · offers · leaderboard', style: TextStyle(fontSize: 11, color: muted)),
+          onTap: () => go('/rewards-hub'),
         ),
         ListTile(
           dense: true,

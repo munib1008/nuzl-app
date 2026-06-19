@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
 import '../auth/application/auth_controller.dart';
+import '../referral/refer_screen.dart';
 import '../shell/app_shell.dart';
 
 final leaderboardProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
@@ -19,7 +20,10 @@ final leaderboardProvider = FutureProvider.autoDispose<Map<String, dynamic>>((re
 
 /// Rewards & offers — launch promotions + the platform top-contributor leaderboard.
 class RewardsScreen extends ConsumerWidget {
-  const RewardsScreen({super.key});
+  const RewardsScreen({super.key, this.embedded = false});
+
+  /// When embedded in the Rewards hub's tabs, render just the body.
+  final bool embedded;
 
   static const _offers = [
     (Icons.celebration_outlined, 'First month free', 'Every new member gets a full month free — no card required to start.', AppColors.success, null),
@@ -32,10 +36,7 @@ class RewardsScreen extends ConsumerWidget {
     final t = Theme.of(context).textTheme;
     final board = ref.watch(leaderboardProvider);
     final myId = ref.watch(authControllerProvider).user?.id;
-    return Scaffold(
-      appBar: const NuzlAppBar(title: 'Rewards & offers'),
-      drawer: const NuzlDrawer(),
-      body: ResponsiveCenter(
+    final body = ResponsiveCenter(
         child: RefreshIndicator(
           onRefresh: () async => ref.refresh(leaderboardProvider.future),
           child: ListView(padding: const EdgeInsets.all(AppSpacing.x16), children: [
@@ -110,6 +111,37 @@ class RewardsScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.x24),
           ]),
         ),
+      );
+    if (embedded) return body;
+    return Scaffold(
+      appBar: const NuzlAppBar(title: 'Rewards & offers'),
+      drawer: const NuzlDrawer(),
+      body: body,
+    );
+  }
+}
+
+/// Combined "Rewards & referrals" hub — tabs for the rewards/leaderboard view
+/// and the Refer & Earn program, so they live under one menu entry.
+class RewardsHubScreen extends StatelessWidget {
+  const RewardsHubScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: NuzlAppBar(title: 'Rewards & referrals'),
+        drawer: NuzlDrawer(),
+        body: Column(children: [
+          TabBar(tabs: [Tab(text: 'Rewards & offers'), Tab(text: 'Refer & Earn')]),
+          Expanded(
+            child: TabBarView(children: [
+              RewardsScreen(embedded: true),
+              ReferScreen(embedded: true),
+            ]),
+          ),
+        ]),
       ),
     );
   }

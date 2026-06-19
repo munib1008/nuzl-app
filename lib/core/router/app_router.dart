@@ -192,6 +192,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/company-dashboard', builder: (_, __) => const CompanyDashboardScreen()),
       GoRoute(path: '/refer', builder: (_, __) => const ReferScreen()),
       GoRoute(path: '/rewards', builder: (_, __) => const RewardsScreen()),
+      GoRoute(path: '/rewards-hub', builder: (_, __) => const RewardsHubScreen()),
       GoRoute(path: '/lead-market', builder: (_, __) => const LeadMarketScreen()),
       GoRoute(path: '/lead-analytics', builder: (_, __) => const LeadAnalyticsScreen()),
       GoRoute(path: '/collaboration', builder: (_, __) => const CollaborationScreen()),

@@ -8,9 +8,11 @@ import '../../../core/rbac/persona.dart';
 import 'profile_completion_banner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/data/geo.dart';
 import '../../../core/widgets/app_dialog.dart';
 import '../../../core/widgets/field_pair.dart';
 import '../../../core/widgets/image_crop_dialog.dart';
+import '../../../core/widgets/picker_field.dart';
 import '../../../core/widgets/multi_select_field.dart';
 import '../../../core/widgets/nuzl_logo.dart';
 import '../../../core/widgets/sticky_save_bar.dart';
@@ -284,43 +286,42 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   // ── Account deletion (soft delete) ────────────────────────────
   Future<void> _deleteAccount() async {
     final confirm = TextEditingController();
+    // Drives the Delete button's enabled state from the confirm field. The
+    // buttons live in AppDialog's `actions` slot (always visible, never inside
+    // the scroll view) so the submit button can't get clipped on short screens.
+    final canDelete = ValueNotifier<bool>(false);
     final ok = await AppDialog.show<bool>(
       context,
       title: 'Delete account?',
       children: [
-        StatefulBuilder(
-          builder: (ctx, setS) {
-            final enabled = confirm.text.trim().toUpperCase() == 'DELETE';
-            return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text(
-                'Your account will be deactivated and you will be signed out. You have 14 days '
-                'to sign back in and reactivate — after that it is permanently deleted.'),
-              const SizedBox(height: AppSpacing.x12),
-              const Text('Type DELETE to confirm.', style: TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(height: AppSpacing.x8),
-              TextField(
-                controller: confirm,
-                autofocus: true,
-                textCapitalization: TextCapitalization.characters,
-                decoration: const InputDecoration(hintText: 'DELETE'),
-                onChanged: (_) => setS(() {}),
-              ),
-              const SizedBox(height: AppSpacing.x16),
-              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-                const SizedBox(width: AppSpacing.x8),
-                FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
-                  onPressed: enabled ? () => Navigator.pop(ctx, true) : null,
-                  child: const Text('Delete'),
-                ),
-              ]),
-            ]);
-          },
+        const Text(
+          'Your account will be deactivated and you will be signed out. You have 14 days '
+          'to sign back in and reactivate — after that it is permanently deleted.'),
+        const SizedBox(height: AppSpacing.x12),
+        const Text('Type DELETE to confirm.', style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: AppSpacing.x8),
+        TextField(
+          controller: confirm,
+          autofocus: true,
+          textCapitalization: TextCapitalization.characters,
+          decoration: const InputDecoration(hintText: 'DELETE'),
+          onChanged: (v) => canDelete.value = v.trim().toUpperCase() == 'DELETE',
         ),
       ],
-      actions: const [],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        ValueListenableBuilder<bool>(
+          valueListenable: canDelete,
+          builder: (ctx, enabled, _) => FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: enabled ? () => Navigator.pop(ctx, true) : null,
+            child: const Text('Delete'),
+          ),
+        ),
+      ],
     );
+    confirm.dispose();
+    canDelete.dispose();
     if (ok != true) return;
     try {
       await ref.read(apiClientProvider).post('/users/me/deactivate');
@@ -493,14 +494,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     TextField(controller: whatsapp, onChanged: (_) => _markDirty(), keyboardType: TextInputType.phone,
                         decoration: const InputDecoration(labelText: 'WhatsApp', hintText: '+971 …', prefixIcon: Icon(Icons.chat_outlined))),
                     const SizedBox(height: AppSpacing.x12),
-                    TextField(controller: nationality, onChanged: (_) => _markDirty(),
-                        decoration: const InputDecoration(labelText: 'Nationality *', prefixIcon: Icon(Icons.flag_outlined))),
+                    PickerField(
+                      label: 'Nationality *',
+                      icon: Icons.flag_outlined,
+                      value: nationality.text,
+                      options: kNationalities,
+                      onChanged: (v) => setState(() {
+                        nationality.text = v;
+                        _markDirty();
+                      }),
+                    ),
                     const SizedBox(height: AppSpacing.x12),
                     FieldPair(
-                      TextField(controller: country, onChanged: (_) => _markDirty(),
-                          decoration: const InputDecoration(labelText: 'Country *')),
-                      TextField(controller: city, onChanged: (_) => _markDirty(),
-                          decoration: const InputDecoration(labelText: 'City *')),
+                      PickerField(
+                        label: 'Country *',
+                        value: country.text,
+                        options: kCountries,
+                        onChanged: (v) => setState(() {
+                          country.text = v;
+                          // City depends on country — drop a city that doesn't belong.
+                          final cities = kCitiesByCountry[v];
+                          if (cities != null && !cities.contains(city.text)) city.clear();
+                          _markDirty();
+                        }),
+                      ),
+                      // Known country → pick from its cities; otherwise free text.
+                      Builder(builder: (_) {
+                        final cities = kCitiesByCountry[country.text];
+                        if (cities != null) {
+                          return PickerField(
+                            label: 'City *',
+                            value: city.text,
+                            options: cities,
+                            onChanged: (v) => setState(() {
+                              city.text = v;
+                              _markDirty();
+                            }),
+                          );
+                        }
+                        return TextField(
+                          controller: city,
+                          onChanged: (_) => _markDirty(),
+                          decoration: const InputDecoration(labelText: 'City *'),
+                        );
+                      }),
                     ),
                   ]),
                   const SizedBox(height: AppSpacing.x16),
