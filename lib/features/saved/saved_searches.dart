@@ -312,7 +312,7 @@ class _AlertCard extends StatelessWidget {
                 Text(title, style: t.titleSmall),
                 if (community.isNotEmpty) Text(community, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
                 if (money.isNotEmpty)
-                  Text(money, style: t.titleSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                  Text(money, style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
               ]),
             ),
             const Icon(Icons.chevron_right, color: AppColors.textSubtle),

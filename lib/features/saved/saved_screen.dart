@@ -137,7 +137,7 @@ class _SavedCard extends StatelessWidget {
                 if (community.isNotEmpty)
                   Text(community, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
                 if (money.isNotEmpty)
-                  Text(money, style: t.titleMedium?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                  Text(money, style: t.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
               ]),
             ),
             SaveListingButton(listingId: id),

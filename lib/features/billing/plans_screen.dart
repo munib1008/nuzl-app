@@ -258,7 +258,7 @@ class _PlanCard extends StatelessWidget {
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(child: Text('${plan['name'] ?? plan['key'] ?? 'Plan'}', style: t.titleLarge)),
                 Text('$money / $interval',
-                    style: t.titleMedium?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                    style: t.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
                 if (onEdit != null) ...[
                   const SizedBox(width: AppSpacing.x8),
                   const Icon(Icons.edit_outlined, size: 18, color: AppColors.textMuted),

@@ -65,7 +65,7 @@ class LeadsScreen extends ConsumerWidget {
               children: [
                 if (offers.isNotEmpty) ...[
                   Text('Offered to you — first to accept gets it',
-                      style: t.titleSmall?.copyWith(color: AppColors.primary)),
+                      style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
                   const SizedBox(height: AppSpacing.x8),
                   for (final o in offers)
                     Padding(padding: const EdgeInsets.only(bottom: AppSpacing.x12), child: _OfferCard(o)),
@@ -152,7 +152,7 @@ class _LeadCard extends StatelessWidget {
                 backgroundColor: AppColors.primaryTint,
                 child: Text(
                   (lead.buyerName?.isNotEmpty == true ? lead.buyerName![0] : '?').toUpperCase(),
-                  style: t.titleSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+                  style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700),
                 ),
               ),
               const SizedBox(width: AppSpacing.x12),

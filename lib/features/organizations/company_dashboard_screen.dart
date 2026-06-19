@@ -83,7 +83,7 @@ class CompanyDashboardScreen extends ConsumerWidget {
                 ),
                 child: logo.isEmpty
                     ? Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-                        style: t.titleLarge?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)))
+                        style: t.titleLarge?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)))
                     : null,
               ),
               const SizedBox(width: AppSpacing.x12),

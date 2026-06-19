@@ -114,7 +114,7 @@ class _ViewingCard extends ConsumerWidget {
               const Icon(Icons.event_outlined, size: 14, color: AppColors.primary),
               const SizedBox(width: 4),
               Text(DateFormat('EEE d MMM · HH:mm').format(sched),
-                  style: t.bodySmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                  style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
             ]),
           ],
           _actions(context, ref, status),

@@ -62,7 +62,7 @@ class LeadAnalyticsScreen extends ConsumerWidget {
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Text('Conversion rate', style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
                         Text('$rate%',
-                            style: t.displaySmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                            style: t.displaySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
                         Text('of decided leads converted (won vs lost)',
                             style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
                       ]),

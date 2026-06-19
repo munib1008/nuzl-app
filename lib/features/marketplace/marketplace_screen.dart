@@ -362,7 +362,7 @@ class _ItemCard extends ConsumerWidget {
               if (money.isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text('$money${unit.isNotEmpty ? ' · $unit' : ''}',
-                    style: t.titleMedium?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                    style: t.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
               ],
               if (delivery != null && delivery > 0) ...[
                 const SizedBox(height: 6),

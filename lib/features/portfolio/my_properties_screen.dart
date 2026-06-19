@@ -154,7 +154,7 @@ class _Stat extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(value, style: t.titleLarge?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+            Text(value, style: t.titleLarge?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
             const SizedBox(height: AppSpacing.x4),
             Text(label, style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
           ],

@@ -140,7 +140,7 @@ class _StatCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(_fmt(value),
-                style: t.headlineMedium?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                style: t.headlineMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
             const SizedBox(height: AppSpacing.x4),
             Text(label, style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
           ],

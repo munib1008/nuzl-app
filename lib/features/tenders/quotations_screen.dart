@@ -110,7 +110,7 @@ class _QuoteCard extends StatelessWidget {
                 Text('$days days', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
               ],
               const Spacer(),
-              Text('View →', style: t.bodySmall?.copyWith(color: AppColors.primary)),
+              Text('View →', style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
             ]),
           ]),
         ),

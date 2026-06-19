@@ -105,7 +105,7 @@ class _Body extends StatelessWidget {
                       ),
                       child: logo.isEmpty
                           ? Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-                              style: t.headlineSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)))
+                              style: t.headlineSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)))
                           : null,
                     ),
                     const SizedBox(width: AppSpacing.x12),
@@ -285,7 +285,7 @@ class _AgentChip extends StatelessWidget {
             backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
             child: avatar.isEmpty
                 ? Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-                    style: t.titleSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700))
+                    style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700))
                 : null,
           ),
           const SizedBox(width: AppSpacing.x8),
@@ -345,7 +345,7 @@ class _OfferingCard extends StatelessWidget {
             ],
             if (money.isNotEmpty) ...[
               const SizedBox(height: 4),
-              Text('$money${unit.isNotEmpty ? ' · $unit' : ''}', style: t.titleSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+              Text('$money${unit.isNotEmpty ? ' · $unit' : ''}', style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
             ],
           ]),
         ),

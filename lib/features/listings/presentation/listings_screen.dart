@@ -588,7 +588,7 @@ class _ListingCard extends StatelessWidget {
                     CircleAvatar(
                       radius: 12, backgroundColor: AppColors.primaryTint,
                       child: Text(agent[0].toUpperCase(),
-                          style: t.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                          style: t.labelSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
                     ),
                     const SizedBox(width: 6),
                     Expanded(

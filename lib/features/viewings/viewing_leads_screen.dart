@@ -54,7 +54,7 @@ class ViewingLeadsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.x20),
 
-            Text('Pending — first to accept gets the lead', style: t.titleSmall?.copyWith(color: AppColors.primary)),
+            Text('Pending — first to accept gets the lead', style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
             const SizedBox(height: AppSpacing.x8),
             pending.when(
               loading: () => const LinearProgressIndicator(),

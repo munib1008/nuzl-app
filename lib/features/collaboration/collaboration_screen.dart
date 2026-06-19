@@ -50,7 +50,7 @@ class CollaborationScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.x16),
           children: [
-            Text('Requests on your listings', style: t.titleSmall?.copyWith(color: AppColors.primary)),
+            Text('Requests on your listings', style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
             const SizedBox(height: AppSpacing.x8),
             incoming.when(
               loading: () => const LinearProgressIndicator(),

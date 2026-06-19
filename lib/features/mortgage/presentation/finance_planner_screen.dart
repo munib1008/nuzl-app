@@ -196,7 +196,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                 title: 'What you can afford',
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(aed.format(maxPrice),
-                      style: t.displaySmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w800)),
+                      style: t.displaySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800)),
                   Text('estimated maximum property price', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
                   const SizedBox(height: AppSpacing.x12),
                   // DBR breakdown — how the available instalment is derived.
@@ -225,7 +225,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                     Text(_installmentLabel, style: t.bodyMedium),
                     Text(aed.format(installment),
-                        style: t.titleLarge?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w800)),
+                        style: t.titleLarge?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800)),
                   ]),
                   const Divider(height: AppSpacing.x16),
                   _kv('Property price', aed.format(price)),

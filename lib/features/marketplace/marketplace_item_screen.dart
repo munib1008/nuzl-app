@@ -119,7 +119,7 @@ class _Detail extends ConsumerWidget {
               const SizedBox(height: AppSpacing.x12),
               if (price > 0)
                 Text('${aed.format(price)}${unit.isNotEmpty ? ' · $unit' : ''}',
-                    style: t.headlineMedium?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w800)),
+                    style: t.headlineMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800)),
               if (delivery != null && delivery > 0) ...[
                 const SizedBox(height: 6),
                 Row(mainAxisSize: MainAxisSize.min, children: [

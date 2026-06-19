@@ -212,7 +212,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               const SizedBox(width: AppSpacing.x8),
               Expanded(
                 child: Text("Next, set up your company — that's all it takes to start as a ${_roleOptions.firstWhere((r) => r.$1 == role).$2.toLowerCase()}.",
-                    style: t.bodySmall?.copyWith(color: AppColors.primary)),
+                    style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
               ),
             ]),
           ),
