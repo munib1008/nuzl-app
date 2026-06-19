@@ -372,19 +372,25 @@ class _ProjectTile extends StatelessWidget {
       if (units > 0) '$units ${units == 1 ? 'unit' : 'units'}',
       if (handover.isNotEmpty) 'Handover $handover',
     ].where((s) => s.trim().isNotEmpty).join(' · ');
+    final id = '${p['id'] ?? ''}'.trim();
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.x12),
-        child: Row(children: [
-          Icon(Icons.domain_outlined, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: AppSpacing.x12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('${p['name'] ?? 'Project'}', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-              if (meta.isNotEmpty) Text(meta, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
-            ]),
-          ),
-        ]),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: id.isEmpty ? null : () => context.push('/projects/$id'),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.x12),
+          child: Row(children: [
+            Icon(Icons.domain_outlined, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: AppSpacing.x12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('${p['name'] ?? 'Project'}', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                if (meta.isNotEmpty) Text(meta, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+              ]),
+            ),
+            if (id.isNotEmpty) Icon(Icons.chevron_right, color: Theme.of(context).hintColor),
+          ]),
+        ),
       ),
     );
   }
