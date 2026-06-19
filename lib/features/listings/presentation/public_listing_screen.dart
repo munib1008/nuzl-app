@@ -25,6 +25,16 @@ final _publicListingProvider =
   }
 });
 
+/// Similar visible listings for the "Similar listings" strip (no auth).
+final _similarProvider = FutureProvider.autoDispose.family<List<dynamic>, String>((ref, id) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/public/listings/$id/similar');
+    return d is List ? d : [];
+  } catch (_) {
+    return [];
+  }
+});
+
 double _estMonthly(num price) {
   final loan = price * 0.75;
   const r = 0.045 / 12;
@@ -287,6 +297,7 @@ class _Body extends ConsumerWidget {
             ),
           ),
         ),
+        _SimilarStrip(id: id),
       ],
     );
   }
@@ -313,6 +324,92 @@ class _Body extends ConsumerWidget {
         Text(label, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
       ]),
     ]);
+  }
+}
+
+/// "Similar listings" strip — same community / type, like every UAE portal.
+/// Renders nothing when there are no similar listings.
+class _SimilarStrip extends ConsumerWidget {
+  const _SimilarStrip({required this.id});
+  final String id;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(_similarProvider(id)).asData?.value ?? const [];
+    if (items.isEmpty) return const SizedBox.shrink();
+    final t = Theme.of(context).textTheme;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1040),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(AppSpacing.x20, 0, AppSpacing.x20, AppSpacing.x32),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Similar listings', style: t.titleLarge),
+            const SizedBox(height: AppSpacing.x12),
+            SizedBox(
+              height: 240,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: items.length,
+                separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.x12),
+                itemBuilder: (_, i) => _SimilarCard(Map<String, dynamic>.from(items[i] as Map)),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+class _SimilarCard extends StatelessWidget {
+  const _SimilarCard(this.m);
+  final Map<String, dynamic> m;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final sid = '${m['id']}';
+    final price = num.tryParse('${m['price']}') ?? 0;
+    final isRent = '${m['purpose']}' == 'rent';
+    final money = price > 0
+        ? '${NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price)}${isRent ? ' / yr' : ''}'
+        : '';
+    final cover = '${m['cover_image'] ?? ''}';
+    final community = '${m['community'] ?? ''}';
+    final beds = m['bedrooms'];
+    final baths = m['bathrooms'];
+    return SizedBox(
+      width: 240,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => context.go('/property/$sid'),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            cover.isNotEmpty
+                ? Image.network(cover, height: 120, width: double.infinity, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(height: 120, color: AppColors.surface2))
+                : Container(height: 120, width: double.infinity, color: AppColors.surface2,
+                    child: const Icon(Icons.apartment_outlined, color: AppColors.textMuted)),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.x12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (money.isNotEmpty)
+                  Text(money, style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
+                if (community.isNotEmpty)
+                  Text(community, maxLines: 1, overflow: TextOverflow.ellipsis,
+                      style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                const SizedBox(height: 4),
+                Text([
+                  if (beds != null) '$beds bed',
+                  if (baths != null) '$baths bath',
+                ].join(' · '), style: t.bodySmall),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
   }
 }
 
