@@ -1718,7 +1718,7 @@ class _FeaturedListings extends ConsumerStatefulWidget {
 class _FeaturedListingsState extends ConsumerState<_FeaturedListings> {
   final _sc = ScrollController();
   String _filter = 'all';
-  static const _height = 440.0;
+  static const _height = 384.0;
 
   @override
   void dispose() {
@@ -1811,21 +1811,20 @@ class _FeaturedListingsState extends ConsumerState<_FeaturedListings> {
               ),
             ),
           );
-      return Column(mainAxisSize: MainAxisSize.min, children: [
-        SizedBox(
-          height: _height,
-          child: Stack(children: [
-            Positioned.fill(child: list),
-            edge(left: true),
-            edge(left: false),
-            if (wide) ...[
-              Positioned(left: 4, top: 0, bottom: 0, child: Center(child: _arrow(Icons.chevron_left, () => _scrollBy(-(cardW + 16) * 2)))),
-              Positioned(right: 4, top: 0, bottom: 0, child: Center(child: _arrow(Icons.chevron_right, () => _scrollBy((cardW + 16) * 2)))),
-            ],
-          ]),
-        ),
-        _ScrollProgress(controller: _sc, accent: _primary(context), track: _border(context)),
-      ]);
+      // NOTE: no AnimatedOpacity / ShaderMask here — both use saveLayer, which
+      // intermittently paints an opaque grey box on Flutter web. Keep it light.
+      return SizedBox(
+        height: _height,
+        child: Stack(children: [
+          Positioned.fill(child: list),
+          edge(left: true),
+          edge(left: false),
+          if (wide) ...[
+            Positioned(left: 4, top: 0, bottom: 0, child: Center(child: _arrow(Icons.chevron_left, () => _scrollBy(-(cardW + 16) * 2)))),
+            Positioned(right: 4, top: 0, bottom: 0, child: Center(child: _arrow(Icons.chevron_right, () => _scrollBy((cardW + 16) * 2)))),
+          ],
+        ]),
+      );
     }
 
     const quick = [('all', 'All'), ('sale', 'For sale'), ('rent', 'For rent'), ('offplan', 'Off-plan'), ('commercial', 'Commercial')];
@@ -1872,50 +1871,6 @@ class _FeaturedListingsState extends ConsumerState<_FeaturedListings> {
           child: Padding(padding: const EdgeInsets.all(8), child: Icon(icon, color: _onBg(context))),
         ),
       );
-}
-
-/// Slim scroll-progress track under the carousel — a moving thumb whose
-/// position mirrors how far through the listings the user has scrolled.
-class _ScrollProgress extends StatelessWidget {
-  const _ScrollProgress({required this.controller, required this.accent, required this.track});
-  final ScrollController controller;
-  final Color accent;
-  final Color track;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (_, __) {
-        final hasScroll = controller.hasClients && controller.position.maxScrollExtent > 1;
-        final frac = hasScroll
-            ? (controller.offset / controller.position.maxScrollExtent).clamp(0.0, 1.0)
-            : 0.0;
-        return Padding(
-          padding: const EdgeInsets.only(top: AppSpacing.x20),
-          child: Center(
-            child: AnimatedOpacity(
-              opacity: hasScroll ? 1 : 0,
-              duration: const Duration(milliseconds: 200),
-              child: Container(
-                width: 140,
-                height: 4,
-                decoration: BoxDecoration(color: track, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                child: Align(
-                  alignment: Alignment(-1 + 2 * frac, 0),
-                  child: Container(
-                    width: 48,
-                    height: 4,
-                    decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
 }
 
 /// Snap-to-card physics for the featured carousel — gives the Apple-style
@@ -2052,28 +2007,27 @@ class _ListingCard extends StatelessWidget {
                   Text('Listed by $agent',
                       style: t.bodySmall?.copyWith(color: _muted(context)), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: AppSpacing.x8),
+                // Two equal-width buttons (both Expanded → identical size).
                 Row(children: [
                   Expanded(
                     child: FilledButton(
                       onPressed: onOpen,
-                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(36)),
+                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(40)),
                       child: const Text('View property'),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  // NOTE: this button is NOT inside Expanded, so its minimumSize
-                  // width must be 0 — Size.fromHeight sets width to infinity,
-                  // which (in a Row) starves the Expanded button to width 0 and
-                  // makes its label wrap one letter per line.
-                  OutlinedButton.icon(
-                    onPressed: () => showAuthPrompt(context, action: 'save this property'),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 36),
-                      foregroundColor: _onBg(context),
-                      side: BorderSide(color: _borderStrong(context)),
+                  const SizedBox(width: AppSpacing.x8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => showAuthPrompt(context, action: 'save this property'),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(40),
+                        foregroundColor: _onBg(context),
+                        side: BorderSide(color: _borderStrong(context)),
+                      ),
+                      icon: const Icon(Icons.favorite_border, size: 16),
+                      label: const Text('Save'),
                     ),
-                    icon: const Icon(Icons.favorite_border, size: 16),
-                    label: const Text('Save'),
                   ),
                 ]),
               ]),
