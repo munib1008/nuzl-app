@@ -35,14 +35,27 @@ class FinancePlannerScreen extends ConsumerStatefulWidget {
 /// GCC bank Debt-Burden-Ratio caps + currency. The DBR cap is the share of
 /// gross monthly income a bank lets go to ALL debt instalments combined; the
 /// new instalment must fit under (cap × income − existing obligations).
-typedef _Gcc = ({String code, String name, String currency, double dbr, String bureau});
+///
+/// LTV (loan-to-value) caps set the MAXIMUM a bank finances, i.e. the minimum
+/// down payment. They tighten for every additional property a buyer owns.
+///   • ltv1   — first / owner-occupied home
+///   • ltvNext— second & subsequent (investment) properties
+///   • hvLtv  — first-home cap above hvThreshold (e.g. UAE steps 80%→70% over AED 5M)
+/// Figures are the prevailing regulator caps (June 2026):
+///   UAE  CBUAE — expat 1st ≤AED 5M 80%, >5M 70%, 2nd+ 60% (off-plan lower).
+///   KSA  SAMA  — 1st up to ~90% (finance cos), 2nd+ ~70%.
+///   Others — typical bank practice; actual cap is set by the lender.
+typedef _Gcc = ({
+  String code, String name, String currency, double dbr, String bureau,
+  double ltv1, double ltvNext, double? hvThreshold, double? hvLtv,
+});
 const List<_Gcc> _gccCountries = [
-  (code: 'AE', name: 'United Arab Emirates', currency: 'AED', dbr: 0.50, bureau: 'AECB'),
-  (code: 'SA', name: 'Saudi Arabia', currency: 'SAR', dbr: 0.55, bureau: 'SIMAH'),
-  (code: 'QA', name: 'Qatar', currency: 'QAR', dbr: 0.50, bureau: 'Qatar Credit Bureau'),
-  (code: 'KW', name: 'Kuwait', currency: 'KWD', dbr: 0.45, bureau: 'CI-Net (CBK)'),
-  (code: 'BH', name: 'Bahrain', currency: 'BHD', dbr: 0.55, bureau: 'Benefit'),
-  (code: 'OM', name: 'Oman', currency: 'OMR', dbr: 0.50, bureau: 'Mala’a'),
+  (code: 'AE', name: 'United Arab Emirates', currency: 'AED', dbr: 0.50, bureau: 'AECB', ltv1: 0.80, ltvNext: 0.60, hvThreshold: 5000000, hvLtv: 0.70),
+  (code: 'SA', name: 'Saudi Arabia', currency: 'SAR', dbr: 0.55, bureau: 'SIMAH', ltv1: 0.90, ltvNext: 0.70, hvThreshold: null, hvLtv: null),
+  (code: 'QA', name: 'Qatar', currency: 'QAR', dbr: 0.50, bureau: 'Qatar Credit Bureau', ltv1: 0.80, ltvNext: 0.70, hvThreshold: null, hvLtv: null),
+  (code: 'KW', name: 'Kuwait', currency: 'KWD', dbr: 0.45, bureau: 'CI-Net (CBK)', ltv1: 0.70, ltvNext: 0.60, hvThreshold: null, hvLtv: null),
+  (code: 'BH', name: 'Bahrain', currency: 'BHD', dbr: 0.55, bureau: 'Benefit', ltv1: 0.90, ltvNext: 0.70, hvThreshold: null, hvLtv: null),
+  (code: 'OM', name: 'Oman', currency: 'OMR', dbr: 0.50, bureau: 'Mala’a', ltv1: 0.80, ltvNext: 0.70, hvThreshold: null, hvLtv: null),
 ];
 
 class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
@@ -54,9 +67,27 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
   String _financeType = 'conventional';
   String _countryCode = 'AE';
   int _years = 25;
+  int _propertyNo = 1; // 1 = first home, 2 = second, 3 = third or more
   bool _saving = false;
 
   _Gcc get _country => _gccCountries.firstWhere((c) => c.code == _countryCode, orElse: () => _gccCountries.first);
+
+  /// Regulatory max loan-to-value for the chosen country + property number.
+  /// Tightens for additional properties; UAE first-home steps down over AED 5M.
+  double _maxLtv(_Gcc c, int propertyNo, double value) {
+    if (propertyNo >= 2) return c.ltvNext;
+    if (c.hvThreshold != null && c.hvLtv != null && value > c.hvThreshold!) return c.hvLtv!;
+    return c.ltv1;
+  }
+
+  /// Raise the down-payment field to the regulatory minimum when the country or
+  /// property number changes (the buyer can still choose to put down more).
+  void _syncDownPayment() {
+    final price = double.tryParse(_price.text.trim()) ?? 0;
+    final minDown = ((1 - _maxLtv(_country, _propertyNo, price)) * 100).round();
+    final cur = double.tryParse(_downPct.text.trim()) ?? 0;
+    if (cur < minDown) _downPct.text = '$minDown';
+  }
 
   bool get _isl => _financeType == 'islamic';
   String get _financeLabel => _isl ? 'Finance amount' : 'Loan amount';
@@ -89,16 +120,34 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
     final income = double.tryParse(_income.text.trim()) ?? 0;
     final obligations = double.tryParse(_obligations.text.trim()) ?? 0;
     final price = double.tryParse(_price.text.trim()) ?? 0;
-    final downPct = (double.tryParse(_downPct.text.trim()) ?? 20).clamp(0, 90) / 100;
+    final userDownPct = (double.tryParse(_downPct.text.trim()) ?? 20).clamp(0, 90) / 100;
     final rate = double.tryParse(_rate.text.trim()) ?? 4.5;
     final months = _years * 12;
+
+    // Regulatory LTV cap → a minimum down payment the buyer cannot go under.
+    // The effective down payment is the larger of what they entered and the cap.
+    double maxLtv = _maxLtv(country, _propertyNo, price);
+    double minDownPct = 1 - maxLtv;
+    double downPct = math.max(userDownPct, minDownPct);
 
     // From income → eligibility. DBR allowance covers ALL debt; subtract the
     // borrower's existing monthly obligations to get the room for a new one.
     final dbrAllowance = income * dbrCap;
     final maxMonthly = math.max(0.0, dbrAllowance - obligations);
     final maxLoan = _maxLoanFor(maxMonthly, rate, months);
-    final maxPrice = downPct < 1 ? maxLoan / (1 - downPct) : maxLoan;
+    double maxPrice = downPct < 1 ? maxLoan / (1 - downPct) : maxLoan;
+    // High-value step-down (UAE first home >AED 5M): if the affordable price
+    // crosses the threshold, the LTV drops, so re-apply the steeper down payment.
+    if (price <= 0 &&
+        _propertyNo < 2 &&
+        country.hvThreshold != null &&
+        country.hvLtv != null &&
+        maxPrice > country.hvThreshold!) {
+      maxLtv = country.hvLtv!;
+      minDownPct = 1 - maxLtv;
+      downPct = math.max(userDownPct, minDownPct);
+      maxPrice = downPct < 1 ? maxLoan / (1 - downPct) : maxLoan;
+    }
 
     // From property price → cost.
     final downPayment = price * downPct;
@@ -139,7 +188,39 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                   for (final c in _gccCountries)
                     DropdownMenuItem(value: c.code, child: Text('${c.name}  ·  ${(c.dbr * 100).round()}% DBR')),
                 ],
-                onChanged: (v) => setState(() => _countryCode = v ?? 'AE'),
+                onChanged: (v) => setState(() {
+                  _countryCode = v ?? 'AE';
+                  _syncDownPayment();
+                }),
+              ),
+              const SizedBox(height: AppSpacing.x12),
+              // Property number drives the regulatory LTV cap (e.g. UAE 1st 80% / 2nd+ 60%).
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Which property is this for you? (sets the loan-to-value cap)',
+                    style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+              ),
+              const SizedBox(height: 6),
+              Wrap(spacing: AppSpacing.x8, children: [
+                for (final p in const [(1, '1st home'), (2, '2nd property'), (3, '3rd or more')])
+                  ChoiceChip(
+                    label: Text(p.$2),
+                    visualDensity: VisualDensity.compact,
+                    selected: _propertyNo == p.$1,
+                    onSelected: (_) => setState(() {
+                      _propertyNo = p.$1;
+                      _syncDownPayment();
+                    }),
+                  ),
+              ]),
+              const SizedBox(height: 6),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                    '${country.name} · ${_propertyNo == 1 ? "1st home" : _propertyNo == 2 ? "2nd property" : "3rd+ property"} — '
+                    'up to ${(maxLtv * 100).round()}% finance (${(minDownPct * 100).round()}% min down)',
+                    style: t.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
               ),
               const SizedBox(height: AppSpacing.x12),
               _money(_income, 'Gross monthly income (${country.currency})', live: true),
@@ -149,7 +230,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
               _money(_price, 'Property price (${country.currency}) — optional', live: true),
               const SizedBox(height: AppSpacing.x12),
               Row(children: [
-                Expanded(child: _money(_downPct, 'Down payment %', live: true, prefix: '')),
+                Expanded(child: _money(_downPct, 'Down payment % (min ${(minDownPct * 100).round()}%)', live: true, prefix: '')),
                 const SizedBox(width: AppSpacing.x12),
                 Expanded(
                   child: TextField(
@@ -209,6 +290,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                   const Divider(height: AppSpacing.x16),
                   _kv('Available for new ${_installmentLabel.toLowerCase()}', aed.format(maxMonthly)),
                   _kv('Eligible ${_financeLabel.toLowerCase()}', aed.format(maxLoan)),
+                  _kv('Loan-to-value cap', '${(maxLtv * 100).round()}% · min ${(minDownPct * 100).round()}% down'),
                   _kv('Over', '$_years years at ${rate.toStringAsFixed(2)}%'),
                   if (maxMonthly <= 0) ...[
                     const SizedBox(height: AppSpacing.x8),
