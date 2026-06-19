@@ -177,6 +177,24 @@ class _Body extends ConsumerWidget {
         const SizedBox(height: AppSpacing.x8),
         Text(desc, style: t.bodyMedium?.copyWith(height: 1.5)),
       ],
+      ...(() {
+        final raw = m['amenities'];
+        final items = raw is List
+            ? raw
+                .map((e) => '${(e is Map ? e : const {})['label'] ?? (e is Map ? e : const {})['code'] ?? ''}')
+                .where((s) => s.isNotEmpty)
+                .toList()
+            : <String>[];
+        if (items.isEmpty) return <Widget>[];
+        return [
+          const SizedBox(height: AppSpacing.x24),
+          Text('Amenities', style: t.titleMedium),
+          const SizedBox(height: AppSpacing.x8),
+          Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
+            for (final a in items) Chip(label: Text(a), visualDensity: VisualDensity.compact),
+          ]),
+        ];
+      })(),
       if (details.isNotEmpty) ...[
         const SizedBox(height: AppSpacing.x24),
         Text('Details', style: t.titleMedium),
