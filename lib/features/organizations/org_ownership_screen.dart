@@ -332,6 +332,12 @@ class _CompanyVerificationCard extends ConsumerWidget {
     final phone = TextEditingController(text: '${c['phone'] ?? ''}');
     final email = TextEditingController(text: '${c['email'] ?? ''}');
     final about = TextEditingController(text: '${c['about'] ?? ''}');
+    final country = TextEditingController(text: '${c['country_of_registration'] ?? 'UAE'}');
+    final emirate = TextEditingController(text: '${c['emirate'] ?? ''}');
+    final vat = TextEditingController(text: '${c['vat_number'] ?? ''}');
+    final year = TextEditingController(text: c['year_established'] != null ? '${c['year_established']}' : '');
+    final address = TextEditingController(text: '${c['address'] ?? ''}');
+    var legalType = '${c['legal_entity_type'] ?? 'LLC'}';
     String? docUrl = '${c['trade_license_doc'] ?? ''}'.isEmpty ? null : '${c['trade_license_doc']}';
     var uploading = false;
     final ok = await AppDialog.show<bool>(
@@ -385,6 +391,37 @@ class _CompanyVerificationCard extends ConsumerWidget {
               Expanded(child: TextField(controller: email, decoration: const InputDecoration(labelText: 'Contact email'))),
             ]),
             const SizedBox(height: AppSpacing.x8),
+            // Company registration / legal identity (company ≠ user).
+            Row(children: [
+              Expanded(child: TextField(controller: country, decoration: const InputDecoration(labelText: 'Country of registration *'))),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(child: TextField(controller: emirate, decoration: const InputDecoration(labelText: 'Emirate / State *'))),
+            ]),
+            const SizedBox(height: AppSpacing.x8),
+            DropdownButtonFormField<String>(
+              initialValue: const ['LLC', 'Free Zone Company', 'Sole Proprietorship', 'Corporation', 'Partnership', 'Government Entity', 'Non-Profit', 'Freelancer'].contains(legalType) ? legalType : 'LLC',
+              decoration: const InputDecoration(labelText: 'Legal entity type'),
+              items: const [
+                DropdownMenuItem(value: 'LLC', child: Text('LLC')),
+                DropdownMenuItem(value: 'Free Zone Company', child: Text('Free Zone Company')),
+                DropdownMenuItem(value: 'Sole Proprietorship', child: Text('Sole Proprietorship')),
+                DropdownMenuItem(value: 'Corporation', child: Text('Corporation')),
+                DropdownMenuItem(value: 'Partnership', child: Text('Partnership')),
+                DropdownMenuItem(value: 'Government Entity', child: Text('Government Entity')),
+                DropdownMenuItem(value: 'Non-Profit', child: Text('Non-Profit')),
+                DropdownMenuItem(value: 'Freelancer', child: Text('Freelancer')),
+              ],
+              onChanged: (v) => setS(() => legalType = v ?? 'LLC'),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(child: TextField(controller: vat, decoration: const InputDecoration(labelText: 'VAT number (optional)'))),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(child: TextField(controller: year, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Year established'))),
+            ]),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: address, decoration: const InputDecoration(labelText: 'Company address *')),
+            const SizedBox(height: AppSpacing.x8),
             TextField(controller: about, maxLines: 2, decoration: const InputDecoration(labelText: 'Company description')),
           ]),
         ),
@@ -408,6 +445,12 @@ class _CompanyVerificationCard extends ConsumerWidget {
         'phone': phone.text.trim().isEmpty ? null : phone.text.trim(),
         'email': email.text.trim().isEmpty ? null : email.text.trim(),
         'about': about.text.trim().isEmpty ? null : about.text.trim(),
+        'country_of_registration': country.text.trim().isEmpty ? null : country.text.trim(),
+        'emirate': emirate.text.trim().isEmpty ? null : emirate.text.trim(),
+        'legal_entity_type': legalType,
+        'vat_number': vat.text.trim().isEmpty ? null : vat.text.trim(),
+        'year_established': int.tryParse(year.text.trim()),
+        'address': address.text.trim().isEmpty ? null : address.text.trim(),
       });
       ref.invalidate(myCompanyProvider);
       if (context.mounted) {

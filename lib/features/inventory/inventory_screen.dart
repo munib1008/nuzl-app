@@ -200,7 +200,7 @@ class _ProjectBoard extends ConsumerWidget {
     final towers = <String, List<Map<String, dynamic>>>{};
     for (final u in units) {
       final tw = '${u['tower'] ?? ''}'.trim();
-      (towers[tw.isEmpty ? 'Units' : 'Tower $tw'] ??= []).add(u);
+      (towers[tw.isEmpty ? 'Units' : 'Building $tw'] ??= []).add(u);
     }
     final projectId = '${units.first['project_id'] ?? ''}';
     return Card(
@@ -302,7 +302,7 @@ class _UnitSheet extends ConsumerWidget {
       if (u['size_sqft'] != null) '${(num.tryParse('${u['size_sqft']}') ?? 0).toStringAsFixed(0)} sqft',
     ].join('  ·  ');
     final extra = [
-      if ('${u['tower'] ?? ''}'.isNotEmpty) 'Tower ${u['tower']}',
+      if ('${u['tower'] ?? ''}'.isNotEmpty) 'Building ${u['tower']}',
       if (u['floor'] != null) 'Floor ${u['floor']}',
       if (u['parking'] != null) '${u['parking']} parking',
       if ('${u['view'] ?? ''}'.isNotEmpty) '${u['view']} view',
@@ -551,7 +551,7 @@ Future<void> _showAddUnitsSheet(BuildContext context, WidgetRef ref, String proj
                 Expanded(child: field(startNo, 'Start #', num: true)),
               ]),
               Row(children: [
-                Expanded(child: field(tower, 'Tower')),
+                Expanded(child: field(tower, 'Building')),
                 const SizedBox(width: AppSpacing.x8),
                 Expanded(child: field(floor, 'Floor', num: true)),
               ]),

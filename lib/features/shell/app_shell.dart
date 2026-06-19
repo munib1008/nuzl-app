@@ -298,7 +298,10 @@ class _RolesBody extends ConsumerWidget {
     final user = ref.watch(authControllerProvider).user;
     final myRoles = user?.roles ?? const <Map<String, dynamic>>[];
     final heldKeys = myRoles.map((r) => '${r['role']}').toSet();
-    final options = _addableRoles.where((o) => !heldKeys.contains(o.key)).toList();
+    // Company-admin roles are exclusive — a company account can't layer on others.
+    const companyRoles = {'developer', 'broker', 'agency', 'provider', 'supplier'};
+    final isCompanyAccount = heldKeys.any(companyRoles.contains);
+    final options = isCompanyAccount ? <_RoleOption>[] : _addableRoles.where((o) => !heldKeys.contains(o.key)).toList();
     return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
       const Padding(
         padding: EdgeInsets.fromLTRB(20, 20, 20, 4),
@@ -323,6 +326,9 @@ class _RolesBody extends ConsumerWidget {
             Text('Add a role', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: muted)),
             const SizedBox(height: 8),
             for (final o in options) ...[_addRoleCard(context, ref, o), const SizedBox(height: 10)],
+          ] else if (isCompanyAccount) ...[
+            Text('This is a company account — it is dedicated to a single role, so additional roles can\'t be added.',
+                style: TextStyle(fontSize: 12.5, color: muted)),
           ],
         ]),
       ),
