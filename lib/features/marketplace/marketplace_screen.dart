@@ -330,7 +330,7 @@ class _ItemCard extends ConsumerWidget {
                       width: 16, height: 16,
                       margin: const EdgeInsets.only(right: 4),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(AppSpacing.rSm),
                         image: DecorationImage(image: NetworkImage(logo), fit: BoxFit.cover),
                       ),
                     )

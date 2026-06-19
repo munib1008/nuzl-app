@@ -166,7 +166,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 const SizedBox(height: AppSpacing.x16),
                 const Center(child: NuzlLogo(size: 44, showWordmark: false)),
                 const SizedBox(height: AppSpacing.x12),
-                Center(child: Text('Welcome to nuzl', style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700))),
+                Center(child: Text('Welcome to nuzl', style: GoogleFonts.manrope(fontSize: 22, fontWeight: FontWeight.w700))),
                 Center(
                     child: Text("Let's set up your profile to get started",
                         style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),

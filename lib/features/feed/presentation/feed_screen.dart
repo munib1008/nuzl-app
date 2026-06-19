@@ -119,7 +119,7 @@ class FeedScreen extends ConsumerWidget {
               child: Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
                 for (final url in media)
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppSpacing.rMd),
                     child: Image.network(url, width: 56, height: 56, fit: BoxFit.cover),
                   ),
                 OutlinedButton.icon(
@@ -321,7 +321,7 @@ class _PostCard extends ConsumerWidget {
               Wrap(spacing: 6, runSpacing: 6, children: [
                 for (final m in (p['media'] as List))
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppSpacing.rMd),
                     child: Image.network('$m', width: 110, height: 110, fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => const SizedBox.shrink()),
                   ),

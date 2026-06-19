@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive.dart';
@@ -180,7 +179,7 @@ class _PropCard extends StatelessWidget {
         trailing: yield_ == null
             ? null
             : Text('${(num.tryParse('$yield_') ?? 0).toStringAsFixed(1)}%',
-                style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.primary)),
+                style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
       ),
     );
   }

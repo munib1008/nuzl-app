@@ -349,7 +349,7 @@ class _Card {
 /// brand-coloured top bar so each card reads as a distinct module at a glance.
 Widget _flatBox(BuildContext context, Widget child, {EdgeInsets? padding, Color? accent}) {
   final dark = Theme.of(context).brightness == Brightness.dark;
-  final radius = BorderRadius.circular(16);
+  final radius = BorderRadius.circular(AppSpacing.rCard);
   return DecoratedBox(
     decoration: BoxDecoration(borderRadius: radius, boxShadow: dark ? null : AppShadows.card),
     child: ClipRRect(
@@ -410,7 +410,7 @@ class _KpiCard extends StatelessWidget {
         ),
         Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: card.color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(color: card.color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rMd)),
           child: Icon(card.icon, size: 18, color: card.color),
         ),
       ]),

@@ -92,7 +92,7 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
             const PopupMenuItem(value: 'profile', child: ListTile(
                 leading: Icon(Icons.settings_outlined), title: Text('Settings'), dense: true)),
             const PopupMenuItem(value: 'logout', child: ListTile(
-                leading: Icon(Icons.logout, color: Colors.redAccent),
+                leading: Icon(Icons.logout, color: AppColors.danger),
                 title: Text('Logout'), dense: true)),
           ],
           child: Padding(
@@ -125,7 +125,7 @@ class _Bell extends StatelessWidget {
           right: 8, top: 8,
           child: Container(
             padding: const EdgeInsets.all(3),
-            decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+            decoration: const BoxDecoration(color: AppColors.danger, shape: BoxShape.circle),
             constraints: const BoxConstraints(minWidth: 15, minHeight: 15),
             child: Text(count > 9 ? '9+' : '$count',
                 style: const TextStyle(color: Colors.white, fontSize: 9, height: 1),

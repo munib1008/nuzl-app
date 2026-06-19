@@ -28,6 +28,8 @@ class OwnerCockpitScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final data = ref.watch(_cockpitProvider);
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
     return Scaffold(
       appBar: const NuzlAppBar(title: 'Owner cockpit'),
       drawer: const NuzlDrawer(),
@@ -48,7 +50,7 @@ class OwnerCockpitScreen extends ConsumerWidget {
                   ('Total', '${_i(props['total'])}'),
                   ('Published', '${_i(props['published'])}'),
                   ('Drafts', '${_i(props['drafts'])}'),
-                ], t, onTap: () => context.push('/properties')),
+                ], t, muted, onTap: () => context.push('/properties')),
                 const SizedBox(height: AppSpacing.x12),
                 _statCard('Viewing activity', [
                   ('Requests', '${_i(v['requests'])}'),
@@ -56,19 +58,19 @@ class OwnerCockpitScreen extends ConsumerWidget {
                   ('Scheduled', '${_i(v['scheduled'])}'),
                   ('Completed', '${_i(v['completed'])}'),
                   ('Won', '${_i(v['closed_won'])}'),
-                ], t),
+                ], t, muted),
                 const SizedBox(height: AppSpacing.x12),
                 _statCard('Documents', [
                   ('Uploaded', '${_i(docs['uploaded'])}'),
                   ('Pending requests', '${_i(docs['pending_requests'])}'),
-                ], t),
+                ], t, muted),
                 const SizedBox(height: AppSpacing.x20),
                 Text('Agents working your properties', style: t.titleMedium),
                 const SizedBox(height: AppSpacing.x8),
                 if (agents.isEmpty)
-                  Text('No agents assigned yet.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  Text('No agents assigned yet.', style: t.bodySmall?.copyWith(color: muted))
                 else
-                  for (final a in agents) _agentRow(Map<String, dynamic>.from(a), t),
+                  for (final a in agents) _agentRow(Map<String, dynamic>.from(a), t, muted),
               ],
             );
           },
@@ -77,21 +79,21 @@ class OwnerCockpitScreen extends ConsumerWidget {
     );
   }
 
-  Widget _statCard(String title, List<(String, String)> stats, TextTheme t, {VoidCallback? onTap}) {
+  Widget _statCard(String title, List<(String, String)> stats, TextTheme t, Color muted, {VoidCallback? onTap}) {
     final card = Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Text(title, style: t.titleSmall),
-            if (onTap != null) ...[const Spacer(), const Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted)],
+            if (onTap != null) ...[const Spacer(), Icon(Icons.chevron_right, size: 18, color: muted)],
           ]),
           const SizedBox(height: AppSpacing.x12),
           Wrap(spacing: AppSpacing.x24, runSpacing: AppSpacing.x12, children: [
             for (final s in stats)
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(s.$2, style: t.titleLarge),
-                Text(s.$1, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                Text(s.$1, style: t.bodySmall?.copyWith(color: muted)),
               ]),
           ]),
         ]),
@@ -100,7 +102,7 @@ class OwnerCockpitScreen extends ConsumerWidget {
     return onTap == null ? card : InkWell(onTap: onTap, borderRadius: BorderRadius.circular(AppSpacing.rMd), child: card);
   }
 
-  Widget _agentRow(Map<String, dynamic> a, TextTheme t) {
+  Widget _agentRow(Map<String, dynamic> a, TextTheme t, Color muted) {
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.x8),
       child: Padding(
@@ -121,7 +123,7 @@ class OwnerCockpitScreen extends ConsumerWidget {
                 '${_i(a['scheduled'])} scheduled',
                 '${_i(a['closed_won'])} won',
                 'resp ${_fmtResponse(_i(a['avg_response_secs']))}',
-              ].join('  ·  '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              ].join('  ·  '), style: t.bodySmall?.copyWith(color: muted)),
             ]),
           ),
         ]),

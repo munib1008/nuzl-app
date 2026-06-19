@@ -63,7 +63,7 @@ class MaintenanceScreen extends ConsumerWidget {
                     padding: const EdgeInsets.only(bottom: AppSpacing.x16),
                     child: Card(child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.x16),
-                      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      child: Wrap(spacing: AppSpacing.x16, runSpacing: AppSpacing.x12, children: [
                         metric('Total spend', aed.format(total)),
                         metric('Open', '$open'),
                         metric('Completed', '$completed'),
