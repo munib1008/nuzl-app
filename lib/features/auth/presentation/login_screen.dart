@@ -24,18 +24,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
+  /// Where to land after sign-in — honor a safe internal `next=` (e.g. the
+  /// landing hero search routes through login → /properties), else dashboard.
+  String _dest() {
+    final next = GoRouterState.of(context).uri.queryParameters['next'];
+    if (next != null && next.startsWith('/') && !next.startsWith('//')) return next;
+    return '/dashboard';
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     final ok = await ref.read(authControllerProvider.notifier)
         .login(_email.text.trim(), _password.text);
-    if (ok && mounted) context.go('/dashboard');
+    if (ok && mounted) context.go(_dest());
   }
 
   Future<void> _google() async {
     final idToken = await GoogleSignInService().getIdToken();
     if (idToken == null) return;
     final ok = await ref.read(authControllerProvider.notifier).loginWithGoogle(idToken);
-    if (ok && mounted) context.go('/dashboard');
+    if (ok && mounted) context.go(_dest());
   }
 
   @override

@@ -500,15 +500,10 @@ class _AgentCard extends ConsumerWidget {
           ]),
           const SizedBox(height: AppSpacing.x12),
         ],
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: () => gated('request a viewing'),
-            icon: const Icon(Icons.event_available_outlined, size: 18),
-            label: const Text('Request a viewing'),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.x8),
+        // Inline enquiry — captures the visitor as a CRM lead for the agent, no
+        // sign-up wall (adopted from the reference build's inquiry form).
+        _InquiryForm(id: id),
+        const SizedBox(height: AppSpacing.x12),
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
@@ -542,6 +537,108 @@ class _ContactButton extends StatelessWidget {
       icon: Icon(icon, size: 18),
       label: Text(label),
     );
+  }
+}
+
+/// Public "enquire about this property" form — posts to the unauthenticated
+/// inquiry endpoint, which creates a CRM lead for the listing's agent. No
+/// account needed; a short success state replaces the form once sent.
+class _InquiryForm extends ConsumerStatefulWidget {
+  const _InquiryForm({required this.id});
+  final String id;
+  @override
+  ConsumerState<_InquiryForm> createState() => _InquiryFormState();
+}
+
+class _InquiryFormState extends ConsumerState<_InquiryForm> {
+  final _name = TextEditingController();
+  final _phone = TextEditingController();
+  final _message = TextEditingController(text: "I'm interested in this property.");
+  bool _busy = false;
+  bool _sent = false;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _phone.dispose();
+    _message.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final name = _name.text.trim();
+    final phone = _phone.text.trim();
+    if (name.isEmpty || phone.isEmpty) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Please add your name and phone number.')));
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await ref.read(apiClientProvider).post('/public/listings/${widget.id}/inquiry',
+          body: {'name': name, 'phone': phone, 'message': _message.text.trim()});
+      if (mounted) {
+        setState(() {
+          _sent = true;
+          _busy = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _busy = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    if (_sent) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.x12),
+        decoration: BoxDecoration(
+          color: AppColors.success.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(AppSpacing.rMd),
+        ),
+        child: Row(children: [
+          const Icon(Icons.check_circle_outline, color: AppColors.success, size: 20),
+          const SizedBox(width: AppSpacing.x8),
+          Expanded(child: Text('Enquiry sent — the agent will reach out shortly.', style: t.bodySmall)),
+        ]),
+      );
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('Enquire about this property', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+      const SizedBox(height: AppSpacing.x8),
+      TextField(
+          controller: _name,
+          textInputAction: TextInputAction.next,
+          decoration: const InputDecoration(labelText: 'Your name', isDense: true)),
+      const SizedBox(height: AppSpacing.x8),
+      TextField(
+          controller: _phone,
+          keyboardType: TextInputType.phone,
+          textInputAction: TextInputAction.next,
+          decoration: const InputDecoration(labelText: 'Phone', isDense: true)),
+      const SizedBox(height: AppSpacing.x8),
+      TextField(
+          controller: _message,
+          maxLines: 3,
+          decoration: const InputDecoration(labelText: 'Message', isDense: true)),
+      const SizedBox(height: AppSpacing.x12),
+      SizedBox(
+        width: double.infinity,
+        child: FilledButton.icon(
+          onPressed: _busy ? null : _send,
+          icon: _busy
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Icon(Icons.send_outlined, size: 18),
+          label: Text(_busy ? 'Sending…' : 'Send enquiry'),
+        ),
+      ),
+    ]);
   }
 }
 

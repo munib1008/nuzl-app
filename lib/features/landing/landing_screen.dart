@@ -14,6 +14,7 @@ import '../../core/widgets/hover_lift.dart';
 import '../../core/widgets/hover_zoom_image.dart';
 import '../../core/widgets/nuzl_logo.dart';
 import '../../core/widgets/auth_prompt.dart';
+import '../listings/presentation/listings_screen.dart' show listingsSearchProvider;
 import '../mortgage/presentation/calculator_screen.dart';
 
 // Theme-aware color helpers — the landing follows light/dark like the rest of the app.
@@ -322,6 +323,10 @@ class _Hero extends StatelessWidget {
           style: t.bodyLarge?.copyWith(color: _body(context), height: 1.6),
         ),
       ),
+      const SizedBox(height: AppSpacing.x20),
+      // Pill search — type a community/building/ref, land on filtered results
+      // after sign-in (the query rides listingsSearchProvider through login).
+      const _HeroSearch(),
       const SizedBox(height: AppSpacing.x12),
       Text('Trusted by owners, buyers, agents and service providers across the UAE.',
           style: t.bodySmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w600)),
@@ -329,7 +334,7 @@ class _Hero extends StatelessWidget {
       _ctaPair(
         context,
         primaryLabel: 'Explore properties',
-        onPrimary: () => context.go('/login'),
+        onPrimary: () => context.go('/login?next=/properties'),
         secondaryLabel: 'Start managing properties',
         onSecondary: () => context.go('/register'),
       ),
@@ -381,6 +386,73 @@ class _Hero extends StatelessWidget {
           ),
         ),
       ]),
+    );
+  }
+}
+
+/// Pill-style hero search (adopted from the Lovable build): one rounded unit of
+/// icon + field + button. The query rides [listingsSearchProvider] (a global,
+/// non-disposed provider) through the login wall, and `next=/properties` lands
+/// the visitor straight on filtered results after sign-in.
+class _HeroSearch extends ConsumerStatefulWidget {
+  const _HeroSearch();
+  @override
+  ConsumerState<_HeroSearch> createState() => _HeroSearchState();
+}
+
+class _HeroSearchState extends ConsumerState<_HeroSearch> {
+  final _ctrl = TextEditingController();
+
+  void _go() {
+    ref.read(listingsSearchProvider.notifier).state = _ctrl.text.trim();
+    context.go('/login?next=/properties');
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 560),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.x16, 6, 6, 6),
+        decoration: BoxDecoration(
+          color: _surface(context),
+          borderRadius: BorderRadius.circular(AppSpacing.rFull),
+          border: Border.all(color: _border(context)),
+          boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 16, offset: Offset(0, 6))],
+        ),
+        child: Row(children: [
+          Icon(Icons.search, size: 20, color: _muted(context)),
+          const SizedBox(width: AppSpacing.x8),
+          Expanded(
+            child: TextField(
+              controller: _ctrl,
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _go(),
+              decoration: InputDecoration(
+                isCollapsed: true,
+                border: InputBorder.none,
+                hintText: 'Community, building or ref…',
+                hintStyle: TextStyle(color: _muted(context)),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.x8),
+          FilledButton(
+            onPressed: _go,
+            style: FilledButton.styleFrom(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24, vertical: AppSpacing.x12),
+            ),
+            child: const Text('Search'),
+          ),
+        ]),
+      ),
     );
   }
 }

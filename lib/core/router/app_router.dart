@@ -110,8 +110,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isPublic = _publicPaths.contains(loc) || loc.startsWith('/info/') ||
           loc.startsWith('/u/') || loc.startsWith('/org/') || loc.startsWith('/property/');
       if (!auth.isAuthenticated) return isPublic ? null : '/login';
-      // authed users shouldn't sit on landing/login/register
-      if (loc == '/' || loc == '/login' || loc == '/register') return '/dashboard';
+      // authed users shouldn't sit on landing/login/register. Honor a `next=`
+      // intent (e.g. the landing hero search routes through login → results).
+      if (loc == '/' || loc == '/login' || loc == '/register') {
+        final next = state.uri.queryParameters['next'];
+        if (next != null && next.startsWith('/') && !next.startsWith('//')) return next;
+        return '/dashboard';
+      }
       // Lead posting/pipeline is for agents / agency / freelancer (+ lead-gen) only.
       // Customers are active users but don't run a lead pipeline — bounce them out.
       if (loc == '/leads' || loc.startsWith('/leads/')) {
