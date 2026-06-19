@@ -200,7 +200,17 @@ class _Detail extends ConsumerWidget {
                       ],
                       const SizedBox(height: AppSpacing.x16),
                       Text('Key facts', style: t.titleMedium),
-                      const SizedBox(height: AppSpacing.x8),
+                      const SizedBox(height: AppSpacing.x12),
+                      // Headline facts as scannable stat cards (the full table
+                      // below still carries every detail).
+                      Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x12, children: [
+                        if (l['bedrooms'] != null) _statCard(context, Icons.bed_outlined, '${l['bedrooms']}', 'Bedrooms'),
+                        if (l['bathrooms'] != null) _statCard(context, Icons.bathtub_outlined, '${l['bathrooms']}', 'Bathrooms'),
+                        if (l['size_sqft'] != null)
+                          _statCard(context, Icons.straighten, (num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0), 'Sq ft'),
+                        if (l['property_type'] != null) _statCard(context, Icons.home_work_outlined, _cap('${l['property_type']}'), 'Type'),
+                      ]),
+                      const SizedBox(height: AppSpacing.x12),
                       ...facts.map((f) => Padding(
                             padding: const EdgeInsets.symmetric(vertical: 4),
                             child: Row(
@@ -1227,4 +1237,25 @@ class _TimelineRow extends StatelessWidget {
 String _cap(String s) {
   final x = s.replaceAll('_', ' ').trim();
   return x.isEmpty ? x : '${x[0].toUpperCase()}${x.substring(1)}';
+}
+
+/// A premium, scannable key-fact stat card (icon + bold value + label).
+Widget _statCard(BuildContext context, IconData icon, String value, String label) {
+  final t = Theme.of(context).textTheme;
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  return Container(
+    constraints: const BoxConstraints(minWidth: 92),
+    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x12),
+    decoration: BoxDecoration(
+      color: Theme.of(context).cardColor,
+      borderRadius: BorderRadius.circular(AppSpacing.rLg),
+      border: Border.all(color: Theme.of(context).dividerColor),
+    ),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 22, color: Theme.of(context).colorScheme.primary),
+      const SizedBox(height: AppSpacing.x8),
+      Text(value, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+      Text(label, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+    ]),
+  );
 }
