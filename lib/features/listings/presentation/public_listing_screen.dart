@@ -208,6 +208,58 @@ class _Body extends ConsumerWidget {
             ]),
           ),
       ],
+      // Regulatory information — the RERA/permit + verified trust block that
+      // every UAE portal (Bayut / PropertyFinder / dubizzle) shows.
+      ...(() {
+        final permit = '${m['permit_number'] ?? ''}'.trim();
+        final rera = '${m['rera_number'] ?? ''}'.trim();
+        final ownershipVerified = '${m['ownership_status']}' == 'verified';
+        final availVerified = '${m['availability_status']}' == 'verified';
+        if (permit.isEmpty && rera.isEmpty && !ownershipVerified && !availVerified) return <Widget>[];
+        Widget kv(String k, String v) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(children: [
+                Expanded(child: Text(k, style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
+                Text(v, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              ]),
+            );
+        Widget badge(IconData i, String s, Color c) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(i, size: 18, color: c),
+                const SizedBox(width: 6),
+                Text(s, style: t.bodyMedium?.copyWith(color: c, fontWeight: FontWeight.w600)),
+              ]),
+            );
+        return [
+          const SizedBox(height: AppSpacing.x24),
+          Text('Regulatory information', style: t.titleMedium),
+          const SizedBox(height: AppSpacing.x8),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.x12),
+            decoration: BoxDecoration(
+              color: AppColors.surface2,
+              borderRadius: BorderRadius.circular(AppSpacing.rCard),
+              border: Border.all(color: Theme.of(context).dividerColor),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (ownershipVerified) badge(Icons.verified_user, 'Ownership verified', AppColors.accentGold),
+              if (availVerified) badge(Icons.verified, 'Verified listing', AppColors.success),
+              if (permit.isNotEmpty) kv('Permit no.', permit),
+              if (rera.isNotEmpty) kv('RERA no.', rera),
+            ]),
+          ),
+        ];
+      })(),
+      // Mortgage CTA — links to the affordability planner (sale listings only).
+      if (!isRent) ...[
+        const SizedBox(height: AppSpacing.x24),
+        OutlinedButton.icon(
+          onPressed: () => context.go('/finance-planner'),
+          icon: const Icon(Icons.calculate_outlined, size: 18),
+          label: const Text('Calculate your affordability'),
+        ),
+      ],
     ]);
 
     final agent = _AgentCard(m: m, id: id);
