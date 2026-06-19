@@ -16,15 +16,16 @@ class NuzlLogo extends StatelessWidget {
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final wordColor = color ?? (dark ? AppColors.dText : AppColors.primary);
+    // The hexagon fill is `currentColor`. On dark it must NOT be near-white, or
+    // the white house cutout + gold marker blend into it and the detail vanishes.
+    // Use the brand teal on dark so the house/gold stay legible; ink on light.
+    final markColor = dark ? AppColors.dPrimary : AppColors.primary;
     return Row(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // The hexagon fill is `currentColor`; drive it from the theme so the mark
-        // matches the wordmark (ink on light, near-white on dark). The gold marker
-        // stays gold. Without this the ink mark vanishes on dark backgrounds.
         SvgPicture.asset('assets/logo/nuzl_mark.svg',
-            width: size, height: size, theme: SvgTheme(currentColor: wordColor)),
+            width: size, height: size, theme: SvgTheme(currentColor: markColor)),
         if (showWordmark) ...[
           SizedBox(width: size * 0.16),
           Text(

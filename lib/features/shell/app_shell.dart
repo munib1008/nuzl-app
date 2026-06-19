@@ -148,7 +148,13 @@ class _RoleChip extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authControllerProvider).user;
     final persona = ref.watch(personaProvider);
-    final roles = user?.approvedRoles ?? const [];
+    // Dedupe by persona label — 'customer' and 'buyer' both render as "Customer",
+    // so without this the switcher can show "Customer" twice.
+    final roles = <String>[];
+    final seenLabels = <String>{};
+    for (final r in (user?.approvedRoles ?? const <String>[])) {
+      if (seenLabels.add(personaFromRole(r).label)) roles.add(r);
+    }
     final active = (user?.activeRole?.isNotEmpty == true)
         ? user!.activeRole!
         : (roles.isNotEmpty ? roles.first : null);

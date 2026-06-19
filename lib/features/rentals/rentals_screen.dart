@@ -9,6 +9,7 @@ import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/date_field.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
@@ -183,9 +184,9 @@ Future<void> _addTenancy(BuildContext context, WidgetRef ref) async {
           ]),
           const SizedBox(height: AppSpacing.x8),
           Row(children: [
-            Expanded(child: TextField(controller: start, decoration: const InputDecoration(labelText: 'Start (YYYY-MM-DD)'))),
+            Expanded(child: DateField(controller: start, label: 'Start date')),
             const SizedBox(width: AppSpacing.x8),
-            Expanded(child: TextField(controller: end, decoration: const InputDecoration(labelText: 'End (YYYY-MM-DD)'))),
+            Expanded(child: DateField(controller: end, label: 'End date')),
           ]),
         ]),
       ),
@@ -634,7 +635,7 @@ class _Cheques extends ConsumerWidget {
       TextField(controller: no, decoration: const InputDecoration(labelText: 'Cheque no.')),
       TextField(controller: bank, decoration: const InputDecoration(labelText: 'Bank')),
       TextField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (AED)')),
-      TextField(controller: due, decoration: const InputDecoration(labelText: 'Due date (YYYY-MM-DD)')),
+      DateField(controller: due, label: 'Due date'),
     ], actions: [
       TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
       FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),

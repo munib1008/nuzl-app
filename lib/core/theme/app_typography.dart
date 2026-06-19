@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Type scale — Fraunces (serif) for page/section headings, Inter for body,
-/// labels and KPI numbers. The serif display gives an editorial, branded feel
-/// on the big headings while numbers + dense UI stay clean and legible.
+/// Type scale — Manrope (modern geometric sans) for page/section headings,
+/// Inter for body, labels and KPI numbers. Manrope SemiBold reads premium and
+/// clean (lighter than the old serif) while numbers + dense UI stay legible.
 /// Main titles share ONE size (20), differentiated by WEIGHT (700 → 600).
 class AppTypography {
   static TextTheme textTheme(Color text, Color muted) {
@@ -17,10 +17,9 @@ class AppTypography {
           letterSpacing: ls,
           height: h,
         );
-    // Editorial serif for headings — slightly tighter tracking so it reads as a
-    // crafted headline, not body text.
+    // Manrope for headings — modern geometric sans, slightly tighter tracking.
     TextStyle d(double size, FontWeight w, {Color? c, double ls = -0.3, double h = 1.2}) =>
-        GoogleFonts.fraunces(
+        GoogleFonts.manrope(
           fontSize: size,
           fontWeight: w,
           color: c ?? text,
