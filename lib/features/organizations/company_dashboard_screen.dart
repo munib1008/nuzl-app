@@ -42,16 +42,18 @@ class CompanyDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _noCompany(BuildContext context, TextTheme t) => ListView(
+  Widget _noCompany(BuildContext context, TextTheme t) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return ListView(
         padding: const EdgeInsets.all(AppSpacing.x24),
         children: [
           const SizedBox(height: 60),
-          const Icon(Icons.business_outlined, size: 48, color: AppColors.textSubtle),
+          Icon(Icons.business_outlined, size: 48, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
           const SizedBox(height: 12),
           Center(child: Text('No company yet', style: t.titleMedium)),
           const SizedBox(height: 4),
           Center(child: Text('Create or join a company to manage listings and get verified.',
-              textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
+              textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
           const SizedBox(height: AppSpacing.x16),
           Center(
             child: FilledButton.icon(
@@ -62,6 +64,7 @@ class CompanyDashboardScreen extends ConsumerWidget {
           ),
         ],
       );
+  }
 
   Widget _dashboard(BuildContext context, TextTheme t, Map<String, dynamic> c, int pendingJoins) {
     final name = '${c['name'] ?? 'Your company'}';
@@ -69,6 +72,7 @@ class CompanyDashboardScreen extends ConsumerWidget {
     final slug = '${c['slug'] ?? ''}'.trim();
     final status = '${c['verification_status'] ?? 'pending'}';
     final verified = status == 'verified';
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return ListView(padding: const EdgeInsets.all(AppSpacing.x16), children: [
       Card(
         child: Padding(
@@ -99,7 +103,7 @@ class CompanyDashboardScreen extends ConsumerWidget {
             if (!verified) ...[
               const SizedBox(height: AppSpacing.x12),
               Text('Get verified to publish listings publicly and appear in the marketplace.',
-                  style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               const SizedBox(height: AppSpacing.x8),
               FilledButton.icon(
                 onPressed: () => context.push('/org-ownership'),
@@ -137,6 +141,7 @@ class CompanyDashboardScreen extends ConsumerWidget {
 
   Widget _tile(BuildContext context, double w, IconData icon, String title, String sub, Color color, String route) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       width: w,
       child: Card(
@@ -155,10 +160,10 @@ class CompanyDashboardScreen extends ConsumerWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(title, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                  Text(sub, style: t.bodySmall?.copyWith(color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(sub, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ]),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.textSubtle),
+              Icon(Icons.chevron_right, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
             ]),
           ),
         ),

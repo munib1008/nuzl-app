@@ -130,17 +130,20 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
     ]);
   }
 
-  Widget _empty(String title, String body) => ListView(children: [
+  Widget _empty(String title, String body) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return ListView(children: [
         const SizedBox(height: 80),
-        const Icon(Icons.assignment_outlined, size: 48, color: AppColors.textSubtle),
+        Icon(Icons.assignment_outlined, size: 48, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
         const SizedBox(height: 12),
         Center(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w700))),
         const SizedBox(height: 4),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Text(body, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+          child: Text(body, textAlign: TextAlign.center, style: TextStyle(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
         ),
       ]);
+  }
 
   Future<void> _postDialog(BuildContext context) async {
     var kind = 'service';
@@ -158,7 +161,9 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
       maxWidth: 480,
       children: [
         StatefulBuilder(
-          builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
+          builder: (ctx, setS) {
+          final dark = Theme.of(ctx).brightness == Brightness.dark;
+          return Column(mainAxisSize: MainAxisSize.min, children: [
             DropdownButtonFormField<String>(
               initialValue: kind,
               decoration: const InputDecoration(labelText: 'Type'),
@@ -203,7 +208,7 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
               Expanded(child: Text(preferred == null ? 'Preferred date (optional)' : 'Preferred: ${DateFormat('d MMM yyyy').format(preferred!)}',
-                  style: const TextStyle(color: AppColors.textMuted))),
+                  style: TextStyle(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
               TextButton.icon(
                 onPressed: () async {
                   final now = DateTime.now();
@@ -214,7 +219,8 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
                 label: const Text('Pick date'),
               ),
             ]),
-          ]),
+          ]);
+          },
         ),
       ],
       actions: [
@@ -257,6 +263,7 @@ class _TenderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final status = '${m['status'] ?? 'open'}';
     final isProduct = '${m['kind']}' == 'product';
     final bids = int.tryParse('${m['bid_count'] ?? 0}') ?? 0;
@@ -270,9 +277,9 @@ class _TenderCard extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.x16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Icon(isProduct ? Icons.inventory_2_outlined : Icons.handyman_outlined, size: 16, color: AppColors.textMuted),
+              Icon(isProduct ? Icons.inventory_2_outlined : Icons.handyman_outlined, size: 16, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
               const SizedBox(width: 6),
-              Text('${m['ref_code'] ?? ''}', style: t.labelSmall?.copyWith(color: AppColors.textMuted, fontWeight: FontWeight.w700)),
+              Text('${m['ref_code'] ?? ''}', style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w700)),
               const Spacer(),
               StatusBadge(status.replaceAll('_', ' '), tone: tenderTone(status)),
             ]),
@@ -283,11 +290,11 @@ class _TenderCard extends StatelessWidget {
               Text([
                 if ('${m['category'] ?? ''}'.isNotEmpty) '${m['category']}',
                 if (budget != null) 'Budget ${aed.format(budget)}',
-              ].join(' · '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              ].join(' · '), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ],
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
-              const Icon(Icons.request_quote_outlined, size: 14, color: AppColors.primary),
+              Icon(Icons.request_quote_outlined, size: 14, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 4),
               Text(mine ? '$bids ${bids == 1 ? 'quote' : 'quotes'} received' : '$bids ${bids == 1 ? 'quote' : 'quotes'} so far',
                   style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),

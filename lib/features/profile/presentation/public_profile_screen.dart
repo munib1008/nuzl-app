@@ -74,6 +74,7 @@ class _Body extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final name = '${user['full_name'] ?? 'Member'}';
     final role = personaFromRole('${user['role'] ?? ''}').label;
     final reraVerified = '${user['rera_brn'] ?? ''}'.trim().isNotEmpty;
@@ -142,7 +143,7 @@ class _Body extends ConsumerWidget {
                       ),
                       if (company.isNotEmpty && company != orgName) ...[
                         const SizedBox(height: AppSpacing.x8),
-                        Text(company, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                        Text(company, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       ],
                     ],
                   ),
@@ -196,7 +197,7 @@ class _Body extends ConsumerWidget {
                   loading: () => const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())),
                   error: (e, _) => const Text('No listings.'),
                   data: (list) => list.isEmpty
-                      ? Text('No active listings.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                      ? Text('No active listings.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                       : LayoutBuilder(builder: (ctx, c) {
                           final cols = c.maxWidth >= 560 ? 2 : 1;
                           final cardW = cols == 1 ? c.maxWidth : (c.maxWidth - AppSpacing.x12) / 2;
@@ -347,6 +348,7 @@ class _ReviewsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final ratings = reviews
         .map((e) => num.tryParse('${(e as Map)['rating']}') ?? 0)
         .where((r) => r > 0)
@@ -362,7 +364,7 @@ class _ReviewsSection extends StatelessWidget {
             const SizedBox(width: 4),
             Text(avg.toStringAsFixed(1), style: t.titleMedium),
             const SizedBox(width: 6),
-            Text('(${reviews.length} reviews)', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            Text('(${reviews.length} reviews)', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ]),
           const SizedBox(height: AppSpacing.x8),
           ...reviews.take(5).map((e) {
@@ -370,7 +372,7 @@ class _ReviewsSection extends StatelessWidget {
             return ListTile(
               dense: true,
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.format_quote, color: AppColors.textMuted),
+              leading: Icon(Icons.format_quote, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
               title: Text('${m['comment'] ?? ''}'),
               subtitle: Text('${m['rater'] ?? 'Anonymous'} · ${m['rating'] ?? '-'}★'),
             );
@@ -387,6 +389,7 @@ class _PublicListingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final price = num.tryParse('${l['price']}') ?? 0;
     final money = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price);
     final cover = '${l['cover_image'] ?? ''}';
@@ -432,7 +435,7 @@ class _PublicListingCard extends StatelessWidget {
                     ),
                 ]),
                 const SizedBox(height: 2),
-                Text(facts, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                Text(facts, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               ],
             ),
           ),

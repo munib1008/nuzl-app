@@ -25,6 +25,7 @@ class QuotationsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final quotes = ref.watch(myQuotesProvider);
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: const NuzlAppBar(title: 'Quotations'),
       drawer: const NuzlDrawer(),
@@ -37,14 +38,14 @@ class QuotationsScreen extends ConsumerWidget {
             data: (list) => list.isEmpty
                 ? ListView(children: [
                     const SizedBox(height: 80),
-                    const Icon(Icons.request_quote_outlined, size: 48, color: AppColors.textSubtle),
+                    Icon(Icons.request_quote_outlined, size: 48, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
                     const SizedBox(height: 12),
                     const Center(child: Text('No quotations yet', style: TextStyle(fontWeight: FontWeight.w700))),
                     const SizedBox(height: 4),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 40),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 40),
                       child: Text('Quotes you submit on open requests appear here. Browse open requests to start bidding.',
-                          textAlign: TextAlign.center, style: TextStyle(color: AppColors.textMuted)),
+                          textAlign: TextAlign.center, style: TextStyle(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                     ),
                     const SizedBox(height: AppSpacing.x16),
                     Center(child: FilledButton.icon(
@@ -73,6 +74,7 @@ class _QuoteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
     final price = num.tryParse('${q['price']}');
     final status = '${q['status']}'; // submitted | accepted | declined
@@ -91,9 +93,9 @@ class _QuoteCard extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.x16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Icon(isProduct ? Icons.inventory_2_outlined : Icons.handyman_outlined, size: 15, color: AppColors.textMuted),
+              Icon(isProduct ? Icons.inventory_2_outlined : Icons.handyman_outlined, size: 15, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
               const SizedBox(width: 6),
-              Text('${q['ref_code'] ?? ''}', style: t.labelSmall?.copyWith(color: AppColors.textMuted, fontWeight: FontWeight.w700)),
+              Text('${q['ref_code'] ?? ''}', style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w700)),
               const Spacer(),
               StatusBadge(label, tone: tone),
             ]),
@@ -102,12 +104,12 @@ class _QuoteCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
               if (price != null) ...[
-                Text('Your quote ', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
-                Text(aed.format(price), style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
+                Text('Your quote ', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                Text(aed.format(price), style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary)),
               ],
               if (days != null) ...[
                 const SizedBox(width: AppSpacing.x12),
-                Text('$days days', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                Text('$days days', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               ],
               const Spacer(),
               Text('View →', style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),

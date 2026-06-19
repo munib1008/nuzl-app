@@ -350,6 +350,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Widget _section(String title, String? subtitle, List<Widget> children) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
@@ -357,7 +358,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Text(title, style: t.titleMedium),
           if (subtitle != null) ...[
             const SizedBox(height: 2),
-            Text(subtitle, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            Text(subtitle, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ],
           const SizedBox(height: AppSpacing.x16),
           ...children,
@@ -369,6 +370,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final user = ref.watch(authControllerProvider).user;
     final isAdmin = personaFromRole(user?.role) == Persona.admin;
     // Client-facing professionals get Company / Expertise / RERA fields; consumers
@@ -429,7 +431,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ]),
                     const SizedBox(height: AppSpacing.x12),
                     Text(user?.fullName ?? 'Account', style: t.titleLarge),
-                    Text(user?.email ?? '', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                    Text(user?.email ?? '', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                     // RERA verification badge is only meaningful for professionals.
                     if (pro) ...[
                       const SizedBox(height: AppSpacing.x8),
@@ -545,7 +547,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   if (pro && user?.organizationId == null) ...[
                     _section('Organization', null, [
                       Text('You are not part of an organization yet.',
-                          style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                          style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       const SizedBox(height: AppSpacing.x8),
                       OutlinedButton.icon(
                         onPressed: () => _createOrg(context),

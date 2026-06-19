@@ -21,6 +21,7 @@ class RoleRequestsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final reqs = ref.watch(roleRequestsProvider);
     return Scaffold(
       appBar: const NuzlAppBar(title: 'Role requests'),
@@ -32,14 +33,14 @@ class RoleRequestsScreen extends ConsumerWidget {
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
             error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (list) => list.isEmpty
-                ? ListView(children: const [
-                    SizedBox(height: 80),
-                    Icon(Icons.verified_user_outlined, size: 48, color: AppColors.textSubtle),
-                    SizedBox(height: 12),
-                    Center(child: Text('No pending role requests', style: TextStyle(fontWeight: FontWeight.w700))),
-                    SizedBox(height: 4),
+                ? ListView(children: [
+                    const SizedBox(height: 80),
+                    Icon(Icons.verified_user_outlined, size: 48, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
+                    const SizedBox(height: 12),
+                    const Center(child: Text('No pending role requests', style: TextStyle(fontWeight: FontWeight.w700))),
+                    const SizedBox(height: 4),
                     Center(child: Text('Agent / developer / supplier requests appear here for review.',
-                        style: TextStyle(color: AppColors.textMuted))),
+                        style: TextStyle(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
                   ])
                 : ListView.separated(
                     padding: const EdgeInsets.all(AppSpacing.x16),
@@ -75,6 +76,7 @@ class _RoleCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final role = '${r['role'] ?? ''}';
     final when = DateTime.tryParse('${r['created_at'] ?? ''}');
     final rera = '${r['rera_brn'] ?? ''}'.trim();
@@ -90,7 +92,7 @@ class _RoleCard extends ConsumerWidget {
             StatusBadge(personaFromRole(role).label, tone: BadgeTone.gold),
           ]),
           if ('${r['email'] ?? ''}'.isNotEmpty)
-            Text('${r['email']}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            Text('${r['email']}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           const SizedBox(height: AppSpacing.x8),
           // Supporting verification evidence for the reviewer.
           Wrap(spacing: AppSpacing.x8, runSpacing: 6, children: [

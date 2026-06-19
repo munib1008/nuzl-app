@@ -61,6 +61,7 @@ class SaveSearchAction extends ConsumerWidget {
   }
 
   Future<void> _save(BuildContext context, WidgetRef ref) async {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final nameCtrl = TextEditingController();
     final ok = await AppDialog.show<bool>(
       context,
@@ -75,8 +76,8 @@ class SaveSearchAction extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.x12),
-        const Text('We’ll alert you when a new listing matches these filters.',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 12)),
+        Text('We’ll alert you when a new listing matches these filters.',
+            style: TextStyle(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontSize: 12)),
       ],
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
@@ -248,12 +249,13 @@ class _SearchTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final name = '${m['name'] ?? ''}'.trim();
     return Card(
       child: ListTile(
-        leading: const Icon(Icons.search, color: AppColors.primary),
+        leading: Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
         title: Text(name.isEmpty ? _summary(m) : name, style: t.titleSmall),
-        subtitle: name.isEmpty ? null : Text(_summary(m), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+        subtitle: name.isEmpty ? null : Text(_summary(m), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
         trailing: IconButton(
           tooltip: 'Delete',
           icon: const Icon(Icons.delete_outline, color: AppColors.danger),
@@ -282,6 +284,7 @@ class _AlertCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final id = '${m['listing_id']}';
     final price = num.tryParse('${m['price']}') ?? 0;
     final money = price > 0 ? NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price) : '';
@@ -310,12 +313,12 @@ class _AlertCard extends StatelessWidget {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(title, style: t.titleSmall),
-                if (community.isNotEmpty) Text(community, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                if (community.isNotEmpty) Text(community, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 if (money.isNotEmpty)
                   Text(money, style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
               ]),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.textSubtle),
+            Icon(Icons.chevron_right, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
           ]),
         ),
       ),

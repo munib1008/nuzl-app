@@ -199,7 +199,7 @@ class _RoleChip extends ConsumerWidget {
             value: r,
             child: Row(children: [
               Icon(r == active ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                  size: 16, color: r == active ? accent : AppColors.textMuted),
+                  size: 16, color: r == active ? accent : (dark ? AppColors.dTextMuted : AppColors.textMuted)),
               const SizedBox(width: 8),
               Text(personaFromRole(r).label),
             ]),
@@ -269,6 +269,7 @@ Future<void> showAddRoleDialog(BuildContext context, WidgetRef ref, List<String>
     context: context,
     builder: (ctx) {
       final options = _addableRoles.where((o) => !held.contains(o.key)).toList();
+      final dark = Theme.of(ctx).brightness == Brightness.dark;
       return Dialog(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 460, maxHeight: 580),
@@ -277,12 +278,12 @@ Future<void> showAddRoleDialog(BuildContext context, WidgetRef ref, List<String>
               padding: EdgeInsets.fromLTRB(20, 20, 20, 4),
               child: Text('Add a role', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
               child: Text(
                   'One account, many roles. You stay a Customer — added roles layer on top. '
                   'Verified roles are reviewed before they go live.',
-                  style: TextStyle(fontSize: 12.5, color: AppColors.textMuted)),
+                  style: TextStyle(fontSize: 12.5, color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ),
             Expanded(
               child: options.isEmpty
@@ -325,6 +326,7 @@ Future<void> showAddRoleDialog(BuildContext context, WidgetRef ref, List<String>
 /// documents, verification status and an Apply action.
 Widget _addRoleCard(BuildContext ctx, ({String key, String title, String desc, String req, bool verified}) o) {
   final c = roleColor(personaFromRole(o.key));
+  final dark = Theme.of(ctx).brightness == Brightness.dark;
   final badge = o.verified
       ? _roleStatusPill('Needs verification', AppColors.warning, Icons.verified_user_outlined)
       : _roleStatusPill('Instant', AppColors.success, Icons.bolt_outlined);
@@ -342,12 +344,12 @@ Widget _addRoleCard(BuildContext ctx, ({String key, String title, String desc, S
         badge,
       ]),
       const SizedBox(height: 6),
-      Text(o.desc, style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+      Text(o.desc, style: TextStyle(fontSize: 13, color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
       const SizedBox(height: 8),
       Row(children: [
-        const Icon(Icons.description_outlined, size: 14, color: AppColors.textSubtle),
+        Icon(Icons.description_outlined, size: 14, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
         const SizedBox(width: 4),
-        Expanded(child: Text(o.req, style: const TextStyle(fontSize: 12, color: AppColors.textSubtle))),
+        Expanded(child: Text(o.req, style: TextStyle(fontSize: 12, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle))),
         const SizedBox(width: 8),
         FilledButton(
           onPressed: () => Navigator.pop(ctx, (key: o.key, verified: o.verified)),

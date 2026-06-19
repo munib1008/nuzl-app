@@ -54,10 +54,11 @@ class MaintenanceScreen extends ConsumerWidget {
                   if (total == 0 && open == 0 && completed == 0) return const SizedBox.shrink();
                   final aed = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
                   final tt = Theme.of(context).textTheme;
+                  final dark = Theme.of(context).brightness == Brightness.dark;
                   Widget metric(String label, String value) => Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [Text(value, style: tt.titleLarge),
-                          Text(label, style: tt.bodySmall?.copyWith(color: AppColors.textMuted))],
+                          Text(label, style: tt.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))],
                       );
                   return Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.x16),
@@ -132,7 +133,7 @@ class _JobCard extends ConsumerWidget {
       builder: (ctx) => SafeArea(
         child: ListView(shrinkWrap: true, children: flow.map((s) => ListTile(
           title: Text(s),
-          trailing: s == current ? const Icon(Icons.check, color: AppColors.primary) : null,
+          trailing: s == current ? Icon(Icons.check, color: Theme.of(ctx).colorScheme.primary) : null,
           onTap: () => Navigator.pop(ctx, s),
         )).toList()),
       ),
@@ -217,6 +218,7 @@ class _JobCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final images = (j['images'] is List) ? (j['images'] as List).map((e) => '$e').where((s) => s.isNotEmpty).toList() : <String>[];
     final where = [
       if ('${j['community'] ?? ''}'.isNotEmpty) '${j['community']}',
@@ -251,10 +253,10 @@ class _JobCard extends ConsumerWidget {
                     Text('${_cap('${j['category'] ?? 'Maintenance'}')}${where.isNotEmpty ? ' · $where' : ''}',
                         style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                     if ('${j['description'] ?? ''}'.isNotEmpty)
-                      Text('${j['description']}', style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+                      Text('${j['description']}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                           maxLines: 2, overflow: TextOverflow.ellipsis),
                     if ('${j['provider_name'] ?? ''}'.isNotEmpty)
-                      Text('Assigned: ${j['provider_name']}', style: t.labelSmall?.copyWith(color: AppColors.textMuted)),
+                      Text('Assigned: ${j['provider_name']}', style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                   ],
                 ),
               ),

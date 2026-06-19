@@ -59,6 +59,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   @override
   Widget build(BuildContext context) {
     final myId = ref.watch(authControllerProvider).user?.id;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final header = ref.watch(threadHeaderProvider(widget.id));
     final messages = ref.watch(threadMessagesProvider(widget.id));
 
@@ -95,7 +96,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                           style: Theme.of(context)
                               .textTheme
                               .bodyMedium
-                              ?.copyWith(color: AppColors.textMuted)))
+                              ?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)))
                   : ListView.builder(
                       controller: _scroll,
                       padding: const EdgeInsets.all(AppSpacing.x16),

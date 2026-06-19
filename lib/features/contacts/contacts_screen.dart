@@ -28,6 +28,7 @@ class ContactsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final contacts = ref.watch(contactsProvider);
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: NuzlAppBar(
         title: 'Contacts',
@@ -67,7 +68,7 @@ class ContactsScreen extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
-                _summaryStrip(byLife, list.length, t),
+                _summaryStrip(byLife, list.length, t, dark),
                 const SizedBox(height: AppSpacing.x16),
                 for (final l in contactLifecycleOrder)
                   if (byLife[l]?.isNotEmpty == true) ...[
@@ -76,7 +77,7 @@ class ContactsScreen extends ConsumerWidget {
                       child: Row(children: [
                         Text(contactLifecycleLabels[l] ?? l, style: t.titleSmall),
                         const SizedBox(width: AppSpacing.x8),
-                        Text('${byLife[l]!.length}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                        Text('${byLife[l]!.length}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       ]),
                     ),
                     for (final c in byLife[l]!) _ContactCard(c, onTap: () => _openContact(context, ref, c)),
@@ -89,7 +90,7 @@ class ContactsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _summaryStrip(Map<String, List> byLife, int total, TextTheme t) {
+  Widget _summaryStrip(Map<String, List> byLife, int total, TextTheme t, bool dark) {
     final customers = (byLife['customer']?.length ?? 0) + (byLife['owner']?.length ?? 0) + (byLife['tenant']?.length ?? 0);
     final leads = (byLife['lead']?.length ?? 0) + (byLife['qualified']?.length ?? 0);
     final stats = <(String, String)>[
@@ -107,7 +108,7 @@ class ContactsScreen extends ConsumerWidget {
             for (final s in stats)
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(s.$2, style: t.titleLarge),
-                Text(s.$1, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                Text(s.$1, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               ]),
           ],
         ),
@@ -173,6 +174,7 @@ class ContactsScreen extends ConsumerWidget {
       builder: (sheetCtx) => StatefulBuilder(
         builder: (sheetCtx, setS) {
           final t = Theme.of(sheetCtx).textTheme;
+          final dark = Theme.of(sheetCtx).brightness == Brightness.dark;
           final phone = '${c['phone'] ?? ''}'.trim();
           final email = '${c['email'] ?? ''}'.trim();
           final owner = '${c['owner_name'] ?? ''}'.trim();
@@ -187,10 +189,10 @@ class ContactsScreen extends ConsumerWidget {
                 StatusBadge(contactLifecycleLabels[lifecycle] ?? lifecycle, tone: _lifeTone(lifecycle)),
               ]),
               const SizedBox(height: AppSpacing.x8),
-              if (phone.isNotEmpty) _line(Icons.phone_outlined, phone, t),
-              if (email.isNotEmpty) _line(Icons.email_outlined, email, t),
-              if (owner.isNotEmpty) _line(Icons.person_outline, 'Owner: $owner', t),
-              if (props > 0) _line(Icons.home_work_outlined, '$props propert${props == 1 ? 'y' : 'ies'}', t),
+              if (phone.isNotEmpty) _line(Icons.phone_outlined, phone, t, dark),
+              if (email.isNotEmpty) _line(Icons.email_outlined, email, t, dark),
+              if (owner.isNotEmpty) _line(Icons.person_outline, 'Owner: $owner', t, dark),
+              if (props > 0) _line(Icons.home_work_outlined, '$props propert${props == 1 ? 'y' : 'ies'}', t, dark),
               const SizedBox(height: AppSpacing.x16),
               DropdownButtonFormField<String>(
                 initialValue: lifecycle,
@@ -230,10 +232,10 @@ class ContactsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _line(IconData icon, String text, TextTheme t) => Padding(
+  Widget _line(IconData icon, String text, TextTheme t, bool dark) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),
         child: Row(children: [
-          Icon(icon, size: 16, color: AppColors.textMuted),
+          Icon(icon, size: 16, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
           const SizedBox(width: AppSpacing.x8),
           Expanded(child: Text(text, style: t.bodyMedium)),
         ]),
@@ -248,6 +250,7 @@ class _ContactCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final name = '${c['full_name'] ?? '—'}';
     final life = '${c['lifecycle'] ?? 'lead'}';
     final subtitleParts = <String>[
@@ -270,14 +273,14 @@ class _ContactCard extends StatelessWidget {
                 Text(name, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                 if (subtitleParts.isNotEmpty)
                   Text(subtitleParts.join('  ·  '),
-                      style: t.bodySmall?.copyWith(color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
               ]),
             ),
             const SizedBox(width: AppSpacing.x8),
             if (props > 0) ...[
-              const Icon(Icons.home_work_outlined, size: 14, color: AppColors.textMuted),
+              Icon(Icons.home_work_outlined, size: 14, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
               const SizedBox(width: 2),
-              Text('$props', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              Text('$props', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               const SizedBox(width: AppSpacing.x8),
             ],
             StatusBadge(contactLifecycleLabels[life] ?? life, tone: _lifeTone(life)),

@@ -38,6 +38,7 @@ class ViewingLeadsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final pending = ref.watch(viewingPendingProvider);
     final assigned = ref.watch(viewingAssignedProvider);
     final metrics = ref.watch(viewingMetricsProvider);
@@ -61,7 +62,7 @@ class ViewingLeadsScreen extends ConsumerWidget {
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('No pending viewing requests.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  ? Text('No pending viewing requests.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Column(children: [for (final v in list) _PendingCard(v)]),
             ),
             const SizedBox(height: AppSpacing.x20),
@@ -72,7 +73,7 @@ class ViewingLeadsScreen extends ConsumerWidget {
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('No leads assigned to you yet.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  ? Text('No leads assigned to you yet.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Column(children: [for (final v in list) _AssignedCard(v)]),
             ),
           ],
@@ -110,6 +111,7 @@ class _MetricsCard extends StatelessWidget {
       ('Avg response', _avg()),
     ];
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
@@ -122,7 +124,7 @@ class _MetricsCard extends StatelessWidget {
                 width: 120,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(s.$2, style: t.titleLarge),
-                  Text(s.$1, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  Text(s.$1, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ),
           ],
@@ -199,6 +201,7 @@ class _AssignedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final stage = '${v['crm_stage'] ?? 'new_inquiry'}';
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -212,13 +215,13 @@ class _AssignedCard extends StatelessWidget {
                 Text(_propTitle(v), style: t.titleMedium),
                 if ('${v['requested_by_name'] ?? ''}'.isNotEmpty) ...[
                   const SizedBox(height: 2),
-                  Text('${v['requested_by_name']}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  Text('${v['requested_by_name']}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ],
               ]),
             ),
             StatusBadge(viewingStageLabels[stage] ?? stage, tone: _stageTone(stage)),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right, color: AppColors.textMuted),
+            Icon(Icons.chevron_right, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
           ]),
         ),
       ),

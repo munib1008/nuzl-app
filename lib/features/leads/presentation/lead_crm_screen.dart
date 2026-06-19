@@ -31,6 +31,7 @@ class LeadCrmScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final crm = ref.watch(leadCrmProvider(id));
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final canManage = ref.watch(personaProvider).canManageLeads;
     return Scaffold(
       appBar: AppBar(title: const Text('Lead')),
@@ -59,7 +60,7 @@ class LeadCrmScreen extends ConsumerWidget {
               children: [
                 Text(lead['buyer_name'] ?? 'Lead', style: t.headlineSmall),
                 if (lead['buyer_phone'] != null && '${lead['buyer_phone']}'.isNotEmpty) ...[
-                  Text('${lead['buyer_phone']}', style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                  Text('${lead['buyer_phone']}', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                   const SizedBox(height: AppSpacing.x12),
                   // One-tap reach-out — Call / WhatsApp / Copy.
                   ContactActions(phone: '${lead['buyer_phone']}'),
@@ -107,9 +108,10 @@ class LeadCrmScreen extends ConsumerWidget {
                 _QuickNote(id),
                 const SizedBox(height: AppSpacing.x12),
                 if (activities.isEmpty)
-                  Text('No activity yet.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  Text('No activity yet.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                 else
-                  for (final a in activities) _activityTile(Map<String, dynamic>.from(a), t),
+                  for (final a in activities)
+                    _activityTile(Map<String, dynamic>.from(a), t, dark, Theme.of(context).colorScheme.primary),
               ],
             );
           },
@@ -118,7 +120,7 @@ class LeadCrmScreen extends ConsumerWidget {
     );
   }
 
-  Widget _activityTile(Map<String, dynamic> a, TextTheme t) {
+  Widget _activityTile(Map<String, dynamic> a, TextTheme t, bool dark, Color primary) {
     final when = DateTime.tryParse('${a['created_at'] ?? ''}');
     final sub = [
       if (a['actor_name'] != null) '${a['actor_name']}',
@@ -127,13 +129,13 @@ class LeadCrmScreen extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Padding(padding: EdgeInsets.only(top: 4),
-            child: Icon(Icons.circle, size: 8, color: AppColors.primary)),
+        Padding(padding: const EdgeInsets.only(top: 4),
+            child: Icon(Icons.circle, size: 8, color: primary)),
         const SizedBox(width: AppSpacing.x12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('${a['note'] ?? a['activity_type'] ?? ''}', style: t.bodyMedium),
-            if (sub.isNotEmpty) Text(sub, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            if (sub.isNotEmpty) Text(sub, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ]),
         ),
       ]),

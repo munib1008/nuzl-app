@@ -53,6 +53,7 @@ class _Body extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final name = '${org['name'] ?? 'Agency'}';
     final tagline = '${org['tagline'] ?? ''}'.trim();
     final about = '${org['about'] ?? ''}'.trim();
@@ -120,7 +121,7 @@ class _Body extends StatelessWidget {
                         ]),
                         if (tagline.isNotEmpty) ...[
                           const SizedBox(height: 2),
-                          Text(tagline, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                          Text(tagline, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                         ],
                         if (rating != null && reviewCount > 0) ...[
                           const SizedBox(height: 4),
@@ -129,7 +130,7 @@ class _Body extends StatelessWidget {
                               Icon(i <= rating.round() ? Icons.star : Icons.star_border, size: 14, color: AppColors.accentGold),
                             const SizedBox(width: 6),
                             Text('${rating.toStringAsFixed(1)} ($reviewCount ${reviewCount == 1 ? 'review' : 'reviews'})',
-                                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                           ]),
                         ],
                       ]),
@@ -248,7 +249,7 @@ class _LinkChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ActionChip(
-      avatar: Icon(icon, size: 16, color: AppColors.primary),
+      avatar: Icon(icon, size: 16, color: Theme.of(context).colorScheme.primary),
       label: Text(label),
       onPressed: () {
         Clipboard.setData(ClipboardData(text: value));
@@ -264,6 +265,7 @@ class _AgentChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final id = '${a['id']}';
     final name = '${a['full_name'] ?? 'Agent'}';
     final role = personaFromRole('${a['role'] ?? ''}').label;
@@ -292,7 +294,7 @@ class _AgentChip extends StatelessWidget {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(name, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
-              Text(role, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              Text(role, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ]),
           ),
         ]),
@@ -318,6 +320,7 @@ class _OfferingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final price = num.tryParse('${m['price']}');
     final money = price != null && price > 0 ? NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price) : '';
     final unit = '${m['price_unit'] ?? ''}'.trim();
@@ -341,7 +344,7 @@ class _OfferingCard extends StatelessWidget {
             if ('${m['category'] ?? ''}'.isNotEmpty) ...[
               const SizedBox(height: 2),
               Text('${m['category']}${'${m['subcategory'] ?? ''}'.isNotEmpty ? ' · ${m['subcategory']}' : ''}',
-                  style: t.bodySmall?.copyWith(color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
             ],
             if (money.isNotEmpty) ...[
               const SizedBox(height: 4),
@@ -360,6 +363,7 @@ class _ProjectTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final units = int.tryParse('${p['unit_count'] ?? 0}') ?? 0;
     final handover = '${p['handover_date'] ?? ''}'.split('T').first;
     final meta = [
@@ -372,12 +376,12 @@ class _ProjectTile extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x12),
         child: Row(children: [
-          const Icon(Icons.domain_outlined, color: AppColors.primary),
+          Icon(Icons.domain_outlined, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: AppSpacing.x12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('${p['name'] ?? 'Project'}', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-              if (meta.isNotEmpty) Text(meta, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              if (meta.isNotEmpty) Text(meta, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ]),
           ),
         ]),
@@ -392,6 +396,7 @@ class _ReviewTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final rating = int.tryParse('${r['rating'] ?? 0}') ?? 0;
     return Card(
       child: Padding(
@@ -410,7 +415,7 @@ class _ReviewTile extends StatelessWidget {
           ],
           if ('${r['item_title'] ?? ''}'.trim().isNotEmpty) ...[
             const SizedBox(height: 2),
-            Text('${r['item_title']}', style: t.labelSmall?.copyWith(color: AppColors.textMuted)),
+            Text('${r['item_title']}', style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ],
         ]),
       ),
@@ -424,6 +429,7 @@ class _OrgListingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final price = num.tryParse('${l['price']}') ?? 0;
     final money = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price);
     final cover = '${l['cover_image'] ?? ''}';
@@ -451,7 +457,7 @@ class _OrgListingCard extends StatelessWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(money, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 2),
-              Text(facts, style: t.bodySmall?.copyWith(color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(facts, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
             ]),
           ),
         ],

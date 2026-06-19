@@ -85,6 +85,7 @@ class ProjectDetailScreen extends ConsumerWidget {
   // ── Header: name, status, location, plans ──
   Widget _header(BuildContext context, WidgetRef ref, Map<String, dynamic> p) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final status = '${p['status'] ?? 'planning'}';
     final handover = DateTime.tryParse('${p['handover_date']}');
     final priceFrom = num.tryParse('${p['price_from']}');
@@ -103,16 +104,16 @@ class ProjectDetailScreen extends ConsumerWidget {
           if ('${p['location'] ?? ''}'.trim().isNotEmpty || '${p['community'] ?? ''}'.trim().isNotEmpty) ...[
             const SizedBox(height: 4),
             Row(children: [
-              const Icon(Icons.place_outlined, size: 16, color: AppColors.textMuted),
+              Icon(Icons.place_outlined, size: 16, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
               const SizedBox(width: 4),
               Text([p['location'], p['community']].where((e) => '$e'.trim().isNotEmpty).join(', '),
-                  style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                  style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ]),
           ],
           const SizedBox(height: AppSpacing.x8),
           Wrap(spacing: AppSpacing.x16, runSpacing: 6, children: [
-            if (handover != null) _meta(Icons.event_outlined, 'Handover ${DateFormat('MMM y').format(handover)}'),
-            if (priceFrom != null && priceFrom > 0) _meta(Icons.sell_outlined, 'From ${aed.format(priceFrom)}'),
+            if (handover != null) _meta(Icons.event_outlined, 'Handover ${DateFormat('MMM y').format(handover)}', dark),
+            if (priceFrom != null && priceFrom > 0) _meta(Icons.sell_outlined, 'From ${aed.format(priceFrom)}', dark),
           ]),
           if ('${p['description'] ?? ''}'.trim().isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x8),
@@ -133,10 +134,10 @@ class ProjectDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _meta(IconData i, String s) => Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(i, size: 16, color: AppColors.textMuted),
+  Widget _meta(IconData i, String s, bool dark) => Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(i, size: 16, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
         const SizedBox(width: 4),
-        Text(s, style: const TextStyle(color: AppColors.textMuted)),
+        Text(s, style: TextStyle(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
       ]);
 
   Widget _planChip(BuildContext context, WidgetRef ref, Map<String, dynamic> p,
@@ -154,7 +155,7 @@ class ProjectDetailScreen extends ConsumerWidget {
       icon: Icon(has ? Icons.description_outlined : Icons.upload_file_outlined, size: 16),
       label: Text(has ? 'View $label' : 'Upload $label'),
       style: OutlinedButton.styleFrom(
-        foregroundColor: has ? AppColors.primary : null,
+        foregroundColor: has ? Theme.of(context).colorScheme.primary : null,
       ),
     );
   }
@@ -162,6 +163,7 @@ class ProjectDetailScreen extends ConsumerWidget {
   // ── Availability breakdown + stacked bar ──
   Widget _availability(BuildContext context, Map<String, dynamic> p) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     int n(String k) => int.tryParse('${p[k] ?? 0}') ?? 0;
     final total = n('total');
     final available = n('available');
@@ -183,7 +185,7 @@ class ProjectDetailScreen extends ConsumerWidget {
           Row(children: [
             Text('Availability', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
             const Spacer(),
-            Text('$total units', style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+            Text('$total units', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ]),
           const SizedBox(height: AppSpacing.x12),
           ClipRRect(

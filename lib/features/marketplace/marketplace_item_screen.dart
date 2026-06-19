@@ -45,15 +45,18 @@ class MarketplaceItemScreen extends ConsumerWidget {
     );
   }
 
-  Widget _notFound(BuildContext context) => Center(
+  Widget _notFound(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.search_off, size: 44, color: AppColors.textMuted),
+          Icon(Icons.search_off, size: 44, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
           const SizedBox(height: AppSpacing.x12),
           const Text('This item is no longer available.'),
           const SizedBox(height: AppSpacing.x16),
           FilledButton(onPressed: () => context.go('/marketplace'), child: const Text('Back to marketplace')),
         ]),
       );
+  }
 }
 
 class _Detail extends ConsumerWidget {
@@ -64,6 +67,7 @@ class _Detail extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
     final price = num.tryParse('${m['price']}') ?? 0;
     final unit = '${m['price_unit'] ?? ''}'.trim();
@@ -95,15 +99,15 @@ class _Detail extends ConsumerWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (category.isNotEmpty)
                 Text(category.toUpperCase(),
-                    style: t.labelSmall?.copyWith(color: AppColors.textMuted, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                    style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
               const SizedBox(height: 4),
               Text('${m['title'] ?? ''}', style: t.headlineSmall),
               if (supplier.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.x8),
                 Row(children: [
-                  const Icon(Icons.storefront_outlined, size: 16, color: AppColors.textMuted),
+                  Icon(Icons.storefront_outlined, size: 16, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                   const SizedBox(width: 6),
-                  Text(supplier, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                  Text(supplier, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ],
               if (rating != null && reviewCount > 0) ...[
@@ -113,7 +117,7 @@ class _Detail extends ConsumerWidget {
                     Icon(i <= rating.round() ? Icons.star : Icons.star_border, size: 16, color: AppColors.accentGold),
                   const SizedBox(width: 6),
                   Text('${rating.toStringAsFixed(1)} · $reviewCount review${reviewCount == 1 ? '' : 's'}',
-                      style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                      style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ],
               const SizedBox(height: AppSpacing.x12),
@@ -138,9 +142,9 @@ class _Detail extends ConsumerWidget {
               if (contact.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.x16),
                 Row(children: [
-                  const Icon(Icons.call_outlined, size: 16, color: AppColors.textMuted),
+                  Icon(Icons.call_outlined, size: 16, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                   const SizedBox(width: 6),
-                  Text(contact, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                  Text(contact, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ],
               const SizedBox(height: AppSpacing.x24),
@@ -148,10 +152,10 @@ class _Detail extends ConsumerWidget {
               const SizedBox(height: AppSpacing.x8),
               reviews.when(
                 loading: () => const LinearProgressIndicator(),
-                error: (_, __) => Text('Couldn’t load reviews.', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                error: (_, __) => Text('Couldn’t load reviews.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 data: (list) => list.isEmpty
                     ? Text('No reviews yet. Be the first after your order completes.',
-                        style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                        style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                     : Column(children: list.map((r) => _ReviewRow(Map<String, dynamic>.from(r))).toList()),
               ),
               const SizedBox(height: AppSpacing.x24),
@@ -207,6 +211,7 @@ class _ReviewRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final rating = num.tryParse('${r['rating'] ?? ''}')?.round() ?? 0;
     final name = '${r['customer_name'] ?? 'Customer'}'.trim();
     final review = '${r['review'] ?? ''}'.trim();
@@ -223,7 +228,7 @@ class _ReviewRow extends StatelessWidget {
             child: Text(name.isEmpty ? 'Customer' : name,
                 style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
-          if (when.isNotEmpty) Text(when, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+          if (when.isNotEmpty) Text(when, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
         ]),
         if (review.isNotEmpty) ...[
           const SizedBox(height: 2),

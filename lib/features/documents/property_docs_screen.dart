@@ -39,6 +39,7 @@ class PropertyDocsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final requests = ref.watch(propertyDocRequestsProvider(propertyId));
     final documents = ref.watch(propertyDocumentsProvider(propertyId));
     final activity = ref.watch(propertyDocActivityProvider(propertyId));
@@ -74,7 +75,7 @@ class PropertyDocsScreen extends ConsumerWidget {
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('No document requests yet.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  ? Text('No document requests yet.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Column(children: [for (final r in list) _requestTile(context, ref, r, t)]),
             ),
             const SizedBox(height: AppSpacing.x16),
@@ -87,7 +88,7 @@ class PropertyDocsScreen extends ConsumerWidget {
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('No documents uploaded yet.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  ? Text('No documents uploaded yet.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Column(children: [for (final d in list) _docTile(context, ref, d, t)]),
             ),
             const SizedBox(height: AppSpacing.x16),
@@ -100,8 +101,8 @@ class PropertyDocsScreen extends ConsumerWidget {
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('Nothing logged yet.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
-                  : Column(children: [for (final a in list) _activityTile(a, t)]),
+                  ? Text('Nothing logged yet.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
+                  : Column(children: [for (final a in list) _activityTile(a, t, dark)]),
             ),
           ],
         ),
@@ -161,7 +162,7 @@ class PropertyDocsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _activityTile(Map<String, dynamic> a, TextTheme t) {
+  Widget _activityTile(Map<String, dynamic> a, TextTheme t, bool dark) {
     final when = DateTime.tryParse('${a['created_at'] ?? ''}');
     final isReq = a['kind'] == 'request';
     final verb = isReq ? 'requested' : 'uploaded';
@@ -171,7 +172,7 @@ class PropertyDocsScreen extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.only(top: 2),
           child: Icon(isReq ? Icons.request_page_outlined : Icons.upload_file,
-              size: 16, color: AppColors.primary),
+              size: 16, color: dark ? AppColors.dPrimary : AppColors.primary),
         ),
         const SizedBox(width: AppSpacing.x12),
         Expanded(
@@ -180,7 +181,7 @@ class PropertyDocsScreen extends ConsumerWidget {
                 style: t.bodyMedium),
             if (when != null)
               Text(DateFormat.yMMMd().add_jm().format(when),
-                  style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ]),
         ),
       ]),

@@ -48,6 +48,7 @@ class _OrdersList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final provider = mine ? myOrdersProvider : incomingOrdersProvider;
     final orders = ref.watch(provider);
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(provider),
       child: AsyncView<List<Map<String, dynamic>>>(
@@ -60,7 +61,7 @@ class _OrdersList extends ConsumerWidget {
                 padding: const EdgeInsets.all(48),
                 child: Center(
                   child: Text(mine ? 'You have no orders yet.' : 'No incoming orders.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ),
               ),
             ]);
@@ -254,6 +255,7 @@ class _OrderCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final kind = '${o['kind'] ?? 'service'}';
     final status = '${o['status'] ?? 'requested'}';
     final title = '${o['title'] ?? 'Order'}';
@@ -299,7 +301,7 @@ class _OrderCard extends ConsumerWidget {
               if (counterpart.isNotEmpty) (mine ? 'Provider: $counterpart' : counterpart),
               if (price != null) aed.format(price),
               if (created != null) DateFormat('d MMM').format(created),
-            ].join('  ·  '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            ].join('  ·  '), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ],
           // Status progress (the flow, current step highlighted). Hidden when
           // cancelled or still pre-order (quote_requested / quoted → curIdx < 0).
@@ -310,7 +312,9 @@ class _OrderCard extends ConsumerWidget {
                 Text(
                   orderStatusLabels[flow[i]] ?? flow[i],
                   style: t.bodySmall?.copyWith(
-                    color: i <= curIdx && curIdx >= 0 ? AppColors.primary : AppColors.textSubtle,
+                    color: i <= curIdx && curIdx >= 0
+                        ? Theme.of(context).colorScheme.primary
+                        : (dark ? AppColors.dTextSubtle : AppColors.textSubtle),
                     fontWeight: i == curIdx ? FontWeight.w700 : FontWeight.w400,
                   ),
                 ),

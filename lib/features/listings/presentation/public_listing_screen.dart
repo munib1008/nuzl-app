@@ -75,11 +75,13 @@ class PublicListingScreen extends ConsumerWidget {
     );
   }
 
-  Widget _notFound(BuildContext context) => Center(
+  Widget _notFound(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Center(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.x24),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.search_off, size: 44, color: AppColors.textMuted),
+            Icon(Icons.search_off, size: 44, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
             const SizedBox(height: AppSpacing.x12),
             const Text('This listing is no longer available.'),
             const SizedBox(height: AppSpacing.x16),
@@ -87,6 +89,7 @@ class PublicListingScreen extends ConsumerWidget {
           ]),
         ),
       );
+  }
 }
 
 class _Body extends ConsumerWidget {
@@ -97,6 +100,7 @@ class _Body extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
     final wide = MediaQuery.of(context).size.width >= 900;
     final price = num.tryParse('${m['price']}') ?? 0;
@@ -149,21 +153,21 @@ class _Body extends ConsumerWidget {
       if (community.isNotEmpty) ...[
         const SizedBox(height: 2),
         Row(children: [
-          const Icon(Icons.place_outlined, size: 16, color: AppColors.textMuted),
+          Icon(Icons.place_outlined, size: 16, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
           const SizedBox(width: 4),
-          Text(community, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+          Text(community, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
         ]),
       ],
       if (refCode.isNotEmpty) ...[
         const SizedBox(height: 4),
-        Text('Ref $refCode', style: t.bodySmall?.copyWith(color: AppColors.textSubtle, fontWeight: FontWeight.w600)),
+        Text('Ref $refCode', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w600)),
       ],
       const SizedBox(height: AppSpacing.x12),
       Text('${aed.format(price)}${isRent ? ' / yr' : ''}',
           style: t.displaySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800)),
       if (!isRent && est > 0)
         Text('~${aed.format(est)}/mo estimated mortgage',
-            style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
       const SizedBox(height: AppSpacing.x16),
       Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x12, children: [
         _fact(context, Icons.bed_outlined, '${m['bedrooms'] ?? '-'}', 'Bedrooms'),
@@ -393,6 +397,7 @@ class _SimilarCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final sid = '${m['id']}';
     final price = num.tryParse('${m['price']}') ?? 0;
     final isRent = '${m['purpose']}' == 'rent';
@@ -422,7 +427,7 @@ class _SimilarCard extends StatelessWidget {
                   Text(money, style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
                 if (community.isNotEmpty)
                   Text(community, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                      style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 const SizedBox(height: 4),
                 Text([
                   if (beds != null) '$beds bed',
@@ -447,6 +452,7 @@ class _AgentCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final name = '${m['agent_name'] ?? ''}'.trim();
     final phone = '${m['agent_phone'] ?? ''}'.trim();
     final whatsapp = '${m['agent_whatsapp'] ?? ''}'.trim();
@@ -484,7 +490,7 @@ class _AgentCard extends ConsumerWidget {
                   Row(children: [
                     const Icon(Icons.star, size: 14, color: AppColors.accentGold),
                     const SizedBox(width: 2),
-                    Text('${score.toStringAsFixed(1)} rating', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                    Text('${score.toStringAsFixed(1)} rating', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                   ]),
               ]),
             ),
@@ -515,7 +521,7 @@ class _AgentCard extends ConsumerWidget {
         if (!authed) ...[
           const SizedBox(height: AppSpacing.x8),
           Text('Free account — save searches, track mortgages and manage your property.',
-              style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
         ],
       ]),
     );

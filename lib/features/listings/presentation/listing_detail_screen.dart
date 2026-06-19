@@ -96,6 +96,7 @@ class _Detail extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final price = num.tryParse('${l['price']}') ?? 0;
     final money = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price);
     final isRent = '${l['purpose']}' == 'rent';
@@ -153,12 +154,12 @@ class _Detail extends ConsumerWidget {
                       ),
                       if (l['community'] != null) ...[
                         const SizedBox(height: AppSpacing.x4),
-                        Text('${l['community']}', style: t.bodyLarge?.copyWith(color: AppColors.textMuted)),
+                        Text('${l['community']}', style: t.bodyLarge?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       ],
                       if ('${l['ref_code'] ?? ''}'.trim().isNotEmpty) ...[
                         const SizedBox(height: 2),
                         Text('Ref ${l['ref_code']}',
-                            style: t.bodySmall?.copyWith(color: AppColors.textSubtle, fontWeight: FontWeight.w600)),
+                            style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w600)),
                       ],
                       const SizedBox(height: AppSpacing.x8),
                       ListingRibbons(listing: l),
@@ -449,6 +450,7 @@ class _AgentCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final agent = ref.watch(_agentProvider(brokerId));
     final name = agent.maybeWhen(data: (m) => '${m['full_name'] ?? 'Listing agent'}', orElse: () => 'Listing agent');
     final role = agent.maybeWhen(data: (m) => personaFromRole('${m['role'] ?? ''}').label, orElse: () => '');
@@ -470,7 +472,7 @@ class _AgentCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(name, style: t.titleSmall),
-                      if (role.isNotEmpty) Text(role, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                      if (role.isNotEmpty) Text(role, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                     ],
                   ),
                 ),
@@ -641,6 +643,7 @@ class _OwnershipCardState extends ConsumerState<_OwnershipCard> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final status = '${widget.listing['ownership_status'] ?? 'none'}';
     final reason = '${widget.listing['ownership_rejection_reason'] ?? ''}'.trim();
     final (IconData icon, Color color, String label, String sub) = switch (status) {
@@ -664,7 +667,7 @@ class _OwnershipCardState extends ConsumerState<_OwnershipCard> {
         ),
       _ => (
           Icons.shield_outlined,
-          AppColors.textMuted,
+          dark ? AppColors.dTextMuted : AppColors.textMuted,
           'Verify ownership',
           'Submit a title deed so buyers can trust this listing.'
         ),
@@ -682,7 +685,7 @@ class _OwnershipCardState extends ConsumerState<_OwnershipCard> {
               Text(label, style: t.titleSmall?.copyWith(color: color)),
             ]),
             const SizedBox(height: 4),
-            Text(sub, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            Text(sub, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             if (canSubmit) ...[
               const SizedBox(height: AppSpacing.x12),
               SizedBox(
@@ -774,6 +777,7 @@ class _PropertyAgentsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final agents = ref.watch(_propertyAgentsProvider(propertyId));
     return Card(
       margin: const EdgeInsets.only(top: AppSpacing.x12),
@@ -781,7 +785,7 @@ class _PropertyAgentsCard extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            const Icon(Icons.support_agent_outlined, size: 20, color: AppColors.primary),
+            Icon(Icons.support_agent_outlined, size: 20, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
             Expanded(child: Text('Assigned agents', style: t.titleSmall)),
             TextButton.icon(
@@ -795,13 +799,13 @@ class _PropertyAgentsCard extends ConsumerWidget {
             ),
           ]),
           Text('Agents you assign can see this property’s rental requests and viewings.',
-              style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           const SizedBox(height: AppSpacing.x8),
           agents.when(
             loading: () => const Padding(padding: EdgeInsets.all(8), child: LinearProgressIndicator()),
             error: (e, _) => Text('$e', style: t.bodySmall),
             data: (list) => list.isEmpty
-                ? Text('No agents assigned.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                ? Text('No agents assigned.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                 : Column(
                     children: list.map((m) {
                       final a = Map<String, dynamic>.from(m);
@@ -816,7 +820,7 @@ class _PropertyAgentsCard extends ConsumerWidget {
                               style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w700)),
                         ),
                         title: Text(name),
-                        subtitle: Text('${a['user_role'] ?? ''}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                        subtitle: Text('${a['user_role'] ?? ''}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                         trailing: IconButton(
                             icon: const Icon(Icons.close, size: 18),
                             tooltip: 'Revoke',
@@ -1199,12 +1203,13 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
   Widget build(BuildContext context) {
     if (widget.price <= 0) return const SizedBox.shrink();
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
 
     Widget control(String label, String value, double v, double min, double max, int divisions, ValueChanged<double> onChanged) =>
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text(label, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+            Text(label, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             Text(value, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
           ]),
           Slider(value: v, min: min, max: max, divisions: divisions, onChanged: onChanged),
@@ -1214,7 +1219,7 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
           padding: const EdgeInsets.symmetric(vertical: 3),
           child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
             Text(k, style: t.bodyMedium?.copyWith(
-                color: strong ? null : AppColors.textMuted,
+                color: strong ? null : (dark ? AppColors.dTextMuted : AppColors.textMuted),
                 fontWeight: strong ? FontWeight.w700 : null)),
             Text(v, style: t.bodyMedium?.copyWith(fontWeight: strong ? FontWeight.w700 : FontWeight.w600)),
           ]),
@@ -1230,10 +1235,10 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Expanded(child: Text('$label$suffix', style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
+          Expanded(child: Text('$label$suffix', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
           if (waived) ...[
             Text(aed.format(full),
-                style: t.bodySmall?.copyWith(color: AppColors.textMuted, decoration: TextDecoration.lineThrough)),
+                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, decoration: TextDecoration.lineThrough)),
             const SizedBox(width: AppSpacing.x8),
             Text(aed.format(net),
                 style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.success)),
@@ -1248,7 +1253,7 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
       children: [
         const SizedBox(height: AppSpacing.x16),
         Row(children: [
-          const Icon(Icons.account_balance_outlined, size: 18, color: AppColors.primary),
+          Icon(Icons.account_balance_outlined, size: 18, color: Theme.of(context).colorScheme.primary),
           const SizedBox(width: AppSpacing.x8),
           Text('Mortgage estimate', style: t.titleMedium),
         ]),
@@ -1287,7 +1292,7 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
               control('Loan term', '$_years years',
                   _years.toDouble(), 5, 30, 25, (v) => setState(() => _years = v.round())),
               const Divider(height: AppSpacing.x16),
-              Text('Estimated monthly payment', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              Text('Estimated monthly payment', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               Text(aed.format(_monthly),
                   style: t.headlineSmall?.copyWith(
                       // Brighter teal in dark mode — the colorScheme primary is too
@@ -1305,7 +1310,7 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
               row('Total acquisition cost', aed.format(_acquisition), strong: true),
               const SizedBox(height: AppSpacing.x8),
               Text('Estimate only — final terms depend on the lender.',
-                  style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ]),
           ),
         ),
@@ -1329,7 +1334,7 @@ class _TimelineBlock extends ConsumerWidget {
         return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const SizedBox(height: AppSpacing.x16),
           Row(children: [
-            const Icon(Icons.history_outlined, size: 18, color: AppColors.primary),
+            Icon(Icons.history_outlined, size: 18, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: AppSpacing.x8),
             Text('Property timeline', style: t.titleMedium),
           ]),
@@ -1377,6 +1382,7 @@ class _TimelineRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final (icon, label) = _eventMeta('${e['event']}');
     final when = DateTime.tryParse('${e['created_at']}');
     final actor = '${e['actor_name'] ?? ''}'.trim();
@@ -1393,11 +1399,11 @@ class _TimelineRow extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: AppSpacing.x12),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(label, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-              if (detail != null) Text(detail, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              if (detail != null) Text(detail, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               Text([
                 if (when != null) DateFormat('d MMM yyyy').format(when),
                 if (actor.isNotEmpty) actor,
-              ].join('  ·  '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              ].join('  ·  '), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ]),
           ),
         ),

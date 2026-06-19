@@ -43,6 +43,7 @@ class CollaborationScreen extends ConsumerWidget {
     final incoming = ref.watch(collabIncomingProvider);
     final outgoing = ref.watch(collabOutgoingProvider);
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: const NuzlAppBar(title: 'Collaboration'),
       drawer: const NuzlDrawer(),
@@ -57,7 +58,7 @@ class CollaborationScreen extends ConsumerWidget {
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('No incoming requests.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  ? Text('No incoming requests.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Column(children: [for (final r in list) _IncomingCard(r)]),
             ),
             const SizedBox(height: AppSpacing.x20),
@@ -67,7 +68,7 @@ class CollaborationScreen extends ConsumerWidget {
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('You have no outgoing requests.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  ? Text('You have no outgoing requests.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Column(children: [for (final r in list) _OutgoingCard(r)]),
             ),
           ],
@@ -114,6 +115,7 @@ class _IncomingCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final countered = r['status'] == 'countered';
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.x12),
@@ -126,7 +128,7 @@ class _IncomingCard extends ConsumerWidget {
             if (r['requester_name'] != null) 'from ${r['requester_name']}',
             if (_split(r['proposed_split']).isNotEmpty) 'wants ${_split(r['proposed_split'])}',
             if (countered && _split(r['counter_split']).isNotEmpty) 'you countered ${_split(r['counter_split'])}',
-          ].join('  ·  '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+          ].join('  ·  '), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           if ('${r['message'] ?? ''}'.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x4),
             Text('${r['message']}', style: t.bodyMedium),
@@ -166,6 +168,7 @@ class _OutgoingCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final status = '${r['status'] ?? 'pending'}';
     final countered = status == 'countered';
     final open = status == 'pending' || countered;
@@ -183,7 +186,7 @@ class _OutgoingCard extends ConsumerWidget {
             if (r['owner_name'] != null) 'to ${r['owner_name']}',
             if (_split(r['proposed_split']).isNotEmpty) 'you asked ${_split(r['proposed_split'])}',
             if (countered && _split(r['counter_split']).isNotEmpty) 'countered ${_split(r['counter_split'])}',
-          ].join('  ·  '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+          ].join('  ·  '), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           if (open) ...[
             const SizedBox(height: AppSpacing.x12),
             Wrap(spacing: AppSpacing.x8, children: [

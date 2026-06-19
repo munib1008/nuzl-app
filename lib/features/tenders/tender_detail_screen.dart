@@ -60,6 +60,7 @@ class TenderDetailScreen extends ConsumerWidget {
 
   Widget _body(BuildContext context, WidgetRef ref, Map<String, dynamic> r, String? myId) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final isOwner = myId != null && '${r['created_by']}' == myId;
     final status = '${r['status'] ?? 'open'}';
     final isProduct = '${r['kind']}' == 'product';
@@ -68,7 +69,7 @@ class TenderDetailScreen extends ConsumerWidget {
     final preferred = '${r['preferred_date'] ?? ''}'.split('T').first;
     return ListView(padding: const EdgeInsets.all(AppSpacing.x16), children: [
       Row(children: [
-        Text('${r['ref_code'] ?? ''}', style: t.labelMedium?.copyWith(color: AppColors.textMuted, fontWeight: FontWeight.w700)),
+        Text('${r['ref_code'] ?? ''}', style: t.labelMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w700)),
         const Spacer(),
         StatusBadge(status.replaceAll('_', ' '), tone: tenderTone(status)),
       ]),
@@ -115,7 +116,7 @@ class TenderDetailScreen extends ConsumerWidget {
           data: (list) => list.isEmpty
               ? Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
-                  child: Text('No quotes yet.', style: t.bodyMedium?.copyWith(color: AppColors.textMuted)))
+                  child: Text('No quotes yet.', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)))
               : Column(children: [
                   for (final b in list)
                     _BidCard(
@@ -225,6 +226,7 @@ class _BidCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
     final price = num.tryParse('${bid['price']}');
     final days = int.tryParse('${bid['completion_days'] ?? ''}');
@@ -249,14 +251,14 @@ class _BidCard extends ConsumerWidget {
           ]),
           const SizedBox(height: 6),
           Wrap(spacing: AppSpacing.x16, runSpacing: 4, children: [
-            if (price != null) _kv(t, 'Price', aed.format(price)),
-            if (days != null) _kv(t, 'Time', '$days days'),
-            if ('${bid['warranty'] ?? ''}'.trim().isNotEmpty) _kv(t, 'Warranty', '${bid['warranty']}'),
-            if (rating != null && reviews > 0) _kv(t, 'Rating', '${rating.toStringAsFixed(1)} ($reviews)'),
+            if (price != null) _kv(t, 'Price', aed.format(price), dark),
+            if (days != null) _kv(t, 'Time', '$days days', dark),
+            if ('${bid['warranty'] ?? ''}'.trim().isNotEmpty) _kv(t, 'Warranty', '${bid['warranty']}', dark),
+            if (rating != null && reviews > 0) _kv(t, 'Rating', '${rating.toStringAsFixed(1)} ($reviews)', dark),
           ]),
           if ('${bid['note'] ?? ''}'.trim().isNotEmpty) ...[
             const SizedBox(height: 6),
-            Text('${bid['note']}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            Text('${bid['note']}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ],
           if (canAward && !accepted) ...[
             const SizedBox(height: AppSpacing.x8),
@@ -274,8 +276,8 @@ class _BidCard extends ConsumerWidget {
     );
   }
 
-  Widget _kv(TextTheme t, String k, String v) => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-        Text(k, style: t.labelSmall?.copyWith(color: AppColors.textMuted)),
+  Widget _kv(TextTheme t, String k, String v, bool dark) => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        Text(k, style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
         Text(v, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
       ]);
 

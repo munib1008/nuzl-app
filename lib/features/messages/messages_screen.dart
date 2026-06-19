@@ -46,6 +46,7 @@ class _ConversationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final avatar = c.primaryOther?.avatarUrl;
     final unread = c.unread > 0;
     return ListTile(
@@ -67,7 +68,7 @@ class _ConversationTile extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: t.bodySmall?.copyWith(
-            color: unread ? null : AppColors.textMuted,
+            color: unread ? null : (dark ? AppColors.dTextMuted : AppColors.textMuted),
             fontWeight: unread ? FontWeight.w500 : FontWeight.w400,
           )),
       trailing: Column(
@@ -75,7 +76,7 @@ class _ConversationTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(c.lastAt != null ? _shortTime(c.lastAt!) : '',
-              style: t.labelSmall?.copyWith(color: AppColors.textMuted)),
+              style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           const SizedBox(height: 4),
           if (unread)
             // Fixed-height, width-capped pill — can never stretch to a full-width bar.
@@ -105,18 +106,19 @@ class _EmptyInbox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.forum_outlined, size: 56, color: AppColors.textSubtle),
+            Icon(Icons.forum_outlined, size: 56, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
             const SizedBox(height: AppSpacing.x16),
             Text('No conversations yet', style: t.titleMedium),
             const SizedBox(height: AppSpacing.x8),
             Text('Start a chat from a member’s profile or a listing’s agent card.',
-                textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ],
         ),
       ),

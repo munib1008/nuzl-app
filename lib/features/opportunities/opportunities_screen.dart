@@ -25,6 +25,7 @@ class OpportunitiesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final opps = ref.watch(opportunitiesProvider);
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: const NuzlAppBar(title: 'CRM pipeline'),
       drawer: const NuzlDrawer(),
@@ -39,7 +40,7 @@ class OpportunitiesScreen extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.all(48),
                   child: Center(child: Text('No opportunities yet.',
-                      style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
+                      style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
                 ),
               ]);
             }
@@ -50,7 +51,7 @@ class OpportunitiesScreen extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
-                _summaryStrip(byStage, list.length, t),
+                _summaryStrip(byStage, list.length, t, dark),
                 const SizedBox(height: AppSpacing.x16),
                 for (final s in oppStageOrder)
                   if (byStage[s]?.isNotEmpty == true) ...[
@@ -59,7 +60,7 @@ class OpportunitiesScreen extends ConsumerWidget {
                       child: Row(children: [
                         Text(oppStageLabels[s] ?? s, style: t.titleSmall),
                         const SizedBox(width: AppSpacing.x8),
-                        Text('${byStage[s]!.length}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                        Text('${byStage[s]!.length}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       ]),
                     ),
                     for (final o in byStage[s]!) _OppCard(o),
@@ -72,7 +73,7 @@ class OpportunitiesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _summaryStrip(Map<String, List> byStage, int total, TextTheme t) {
+  Widget _summaryStrip(Map<String, List> byStage, int total, TextTheme t, bool dark) {
     final won = byStage['closed_won']?.length ?? 0;
     final lost = byStage['closed_lost']?.length ?? 0;
     final active = total - won - lost;
@@ -91,7 +92,7 @@ class OpportunitiesScreen extends ConsumerWidget {
             for (final s in stats)
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(s.$2, style: t.titleLarge),
-                Text(s.$1, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                Text(s.$1, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               ]),
           ],
         ),
@@ -107,6 +108,7 @@ class _OppCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final source = '${o['source']}';
     final isLead = source == 'lead';
     final value = o['value'];
@@ -140,7 +142,7 @@ class _OppCard extends StatelessWidget {
                   Text([
                     if ('${o['subtitle'] ?? ''}'.isNotEmpty) '${o['subtitle']}',
                     if (money != null) money,
-                  ].join('  ·  '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  ].join('  ·  '), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               ]),
             ),
             const SizedBox(width: AppSpacing.x8),

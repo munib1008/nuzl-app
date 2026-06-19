@@ -47,6 +47,7 @@ class OrgOwnershipScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final claims = ref.watch(orgClaimsProvider);
     final joinReqs = ref.watch(joinRequestsProvider);
     return Scaffold(
@@ -70,7 +71,7 @@ class OrgOwnershipScreen extends ConsumerWidget {
                     Text('Claim ownership', style: t.titleMedium),
                     const SizedBox(height: AppSpacing.x4),
                     Text('Request to become the owner of your organization. The current owner approves or declines.',
-                        style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                        style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                     const SizedBox(height: AppSpacing.x12),
                     FilledButton.icon(
                       onPressed: () => _claim(context, ref),
@@ -89,7 +90,7 @@ class OrgOwnershipScreen extends ConsumerWidget {
                 data: (list) => list.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
-                        child: Text('No pending claims.', style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                        child: Text('No pending claims.', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       )
                     : Column(children: [for (final c in list) _ClaimTile(c)]),
               ),
@@ -102,7 +103,7 @@ class OrgOwnershipScreen extends ConsumerWidget {
                 data: (list) => list.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
-                        child: Text('No join requests.', style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                        child: Text('No join requests.', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       )
                     : Column(children: [for (final j in list) _JoinTile(j)]),
               ),
@@ -160,6 +161,7 @@ class _JoinTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final iAmOwner = j['i_am_owner'] == true;
     final orgName = '${j['org_name'] ?? 'the company'}';
     final requester = '${j['requester_name'] ?? 'A user'}';
@@ -172,10 +174,10 @@ class _JoinTile extends ConsumerWidget {
               Text(iAmOwner ? '$requester wants to join $orgName' : 'Your request to join $orgName',
                   style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
               if (iAmOwner && '${j['requester_email'] ?? ''}'.trim().isNotEmpty)
-                Text('${j['requester_email']}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                Text('${j['requester_email']}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               if (!iAmOwner)
                 Text('Awaiting the company owner’s decision.',
-                    style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                    style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ]),
           ),
           if (iAmOwner) ...[
@@ -196,13 +198,14 @@ class _CompanyVerificationCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final company = ref.watch(myCompanyProvider);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: company.when(
           loading: () => const SizedBox(height: 48, child: Center(child: CircularProgressIndicator())),
-          error: (_, __) => Text('Company unavailable.', style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+          error: (_, __) => Text('Company unavailable.', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           data: (c) {
             if (c == null) return _noCompany(context, ref, t);
             final status = '${c['verification_status'] ?? 'pending'}';
@@ -219,7 +222,7 @@ class _CompanyVerificationCard extends ConsumerWidget {
                   style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: AppSpacing.x8),
               Text(_blurb(status, submitted),
-                  style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               if (status == 'rejected' && note.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.x8),
                 Container(
@@ -245,7 +248,7 @@ class _CompanyVerificationCard extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: AppSpacing.x8),
                   child: Text('Only the company owner can submit for verification.',
-                      style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                      style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ),
             ]);
           },
@@ -268,13 +271,14 @@ class _CompanyVerificationCard extends ConsumerWidget {
   }
 
   Widget _noCompany(BuildContext context, WidgetRef ref, TextTheme t) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final name = TextEditingController();
     String type = 'agency';
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('Company verification', style: t.titleMedium),
       const SizedBox(height: AppSpacing.x4),
       Text('You’re not part of a company yet. Create one to list services, products or inventory.',
-          style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+          style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
       const SizedBox(height: AppSpacing.x12),
       FilledButton.icon(
         onPressed: () async {
@@ -323,6 +327,7 @@ class _CompanyVerificationCard extends ConsumerWidget {
   }
 
   Future<void> _submit(BuildContext context, WidgetRef ref, Map<String, dynamic> c) async {
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final license = TextEditingController(text: '${c['trade_license'] ?? ''}');
     final phone = TextEditingController(text: '${c['phone'] ?? ''}');
     final email = TextEditingController(text: '${c['email'] ?? ''}');
@@ -342,7 +347,7 @@ class _CompanyVerificationCard extends ConsumerWidget {
               Expanded(
                 child: Text(
                   docUrl == null ? 'Attach trade-license document' : 'Document attached ✓',
-                  style: TextStyle(color: docUrl == null ? AppColors.textMuted : AppColors.success),
+                  style: TextStyle(color: docUrl == null ? (dark ? AppColors.dTextMuted : AppColors.textMuted) : AppColors.success),
                 ),
               ),
               TextButton.icon(
@@ -430,6 +435,7 @@ class _ClaimTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final iAmOwner = c['i_am_owner'] == true;
     final orgName = '${c['org_name'] ?? 'Organization'}';
     final claimant = '${c['claimant_name'] ?? 'A member'}';
@@ -442,10 +448,10 @@ class _ClaimTile extends ConsumerWidget {
               Text(iAmOwner ? '$claimant wants to own $orgName' : 'Your claim on $orgName',
                   style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
               if ('${c['reason'] ?? ''}'.trim().isNotEmpty)
-                Text('${c['reason']}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                Text('${c['reason']}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               if (!iAmOwner)
                 Text('Awaiting the current owner’s decision.',
-                    style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                    style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ]),
           ),
           if (iAmOwner) ...[

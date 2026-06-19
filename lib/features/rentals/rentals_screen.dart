@@ -238,6 +238,7 @@ class _Documents extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final docs = ref.watch(tenancyDocsProvider(tenancyId));
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpacing.x16, 0, AppSpacing.x16, AppSpacing.x12),
@@ -259,7 +260,7 @@ class _Documents extends ConsumerWidget {
                   canManage
                       ? 'No lease attached yet. Attach the tenancy contract so your tenant can access it.'
                       : 'No documents shared yet.',
-                  style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
               : Column(children: list.map((m) {
                   final d = Map<String, dynamic>.from(m);
                   final created = DateTime.tryParse('${d['created_at']}');
@@ -270,7 +271,7 @@ class _Documents extends ConsumerWidget {
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.description_outlined, size: 20),
                     title: Text(_humanizeDoc('${d['doc_type'] ?? 'document'}')),
-                    subtitle: Text(when, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                    subtitle: Text(when, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                     trailing: key.isEmpty
                         ? null
                         : IconButton(
@@ -473,6 +474,7 @@ class _Renewal extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final end = DateTime.tryParse('${tc['end_date'] ?? ''}');
     final noticeAt = DateTime.tryParse('${tc['notice_issued_at'] ?? ''}');
     final daysLeft = end?.difference(DateTime.now()).inDays;
@@ -505,7 +507,7 @@ class _Renewal extends ConsumerWidget {
         ]),
         const SizedBox(height: 4),
         if (end != null)
-          Text('Term ends ${df.format(end)}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+          Text('Term ends ${df.format(end)}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
         if ('${tc['tenant_user_id'] ?? ''}'.isNotEmpty)
           Row(children: [
             const Icon(Icons.link, size: 14, color: AppColors.success),
@@ -536,7 +538,7 @@ class _Renewal extends ConsumerWidget {
                     ? 'Notice issued ${df.format(noticeAt)} · rent increase allowed now'
                     : 'Notice issued ${df.format(noticeAt)} · increase allowed from ${df.format(eligibleFrom!)}',
             style: t.bodySmall?.copyWith(
-                color: (noticeAt != null && increaseAllowed) ? AppColors.success : AppColors.textMuted),
+                color: (noticeAt != null && increaseAllowed) ? AppColors.success : (dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ),
           if (declined)
             Text('Renewal declined — runs to term end',
@@ -658,6 +660,7 @@ class _RentSchedule extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final payments = ref.watch(rentPaymentsProvider(tenancyId));
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
+    final primary = Theme.of(context).colorScheme.primary;
     return Padding(
       padding: const EdgeInsets.fromLTRB(AppSpacing.x16, 0, AppSpacing.x16, AppSpacing.x12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -680,7 +683,7 @@ class _RentSchedule extends ConsumerWidget {
                   canManage
                       ? 'No schedule yet — generate one to track due/paid installments.'
                       : 'No rent schedule yet.',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted))
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted))
               : Column(children: list.map((m) {
                   final p = Map<String, dynamic>.from(m);
                   final status = '${p['status']}';
@@ -692,7 +695,7 @@ class _RentSchedule extends ConsumerWidget {
                     contentPadding: EdgeInsets.zero,
                     leading: Icon(
                         paid ? Icons.check_circle : submitted ? Icons.hourglass_bottom : Icons.schedule,
-                        color: paid ? AppColors.primary : submitted ? AppColors.warning : AppColors.accentGold, size: 20),
+                        color: paid ? primary : submitted ? AppColors.warning : AppColors.accentGold, size: 20),
                     title: Text(aed.format(num.tryParse('${p['amount']}') ?? 0)),
                     subtitle: Text(
                         submitted ? 'due $due · receipt awaiting confirmation' : 'due $due',
@@ -737,7 +740,7 @@ class _RentSchedule extends ConsumerWidget {
     if (paid) {
       return Row(mainAxisSize: MainAxisSize.min, children: [
         if (hasProof) viewBtn,
-        const Text('Paid', style: TextStyle(color: AppColors.primary, fontSize: 12)),
+        Text('Paid', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 12)),
       ]);
     }
     if (canManage) {

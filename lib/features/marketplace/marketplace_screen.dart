@@ -193,6 +193,7 @@ class _MarketListState extends ConsumerState<_MarketList> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final items = ref.watch(marketplaceProvider(widget.kind));
     return RefreshIndicator(
       onRefresh: () async {
@@ -255,7 +256,7 @@ class _MarketListState extends ConsumerState<_MarketList> {
                   padding: const EdgeInsets.all(40),
                   child: Center(
                       child: Text(all.isEmpty ? 'Nothing here yet.' : 'No matches — try a different search or category.',
-                          style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
+                          style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
                 )
               else
                 LayoutBuilder(builder: (ctx, cons) {
@@ -282,6 +283,7 @@ class _ItemCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final price = num.tryParse('${m['price']}') ?? 0;
     final money = price > 0 ? NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price) : '';
     final unit = '${m['price_unit'] ?? ''}'.trim();
@@ -335,12 +337,12 @@ class _ItemCard extends ConsumerWidget {
                       ),
                     )
                   else ...[
-                    const Icon(Icons.storefront_outlined, size: 13, color: AppColors.textMuted),
+                    Icon(Icons.storefront_outlined, size: 13, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                     const SizedBox(width: 4),
                   ],
                   Flexible(
                     child: Text(supplier,
-                        style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+                        style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                         maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
                   if (verified) ...[
@@ -356,7 +358,7 @@ class _ItemCard extends ConsumerWidget {
                     Icon(i <= rating.round() ? Icons.star : Icons.star_border, size: 13, color: AppColors.accentGold),
                   const SizedBox(width: 4),
                   Text('${rating.toStringAsFixed(1)} ($reviews)',
-                      style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                      style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ],
               if (money.isNotEmpty) ...[

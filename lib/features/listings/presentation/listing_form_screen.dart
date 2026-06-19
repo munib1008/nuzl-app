@@ -391,6 +391,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final user = ref.watch(authControllerProvider).user;
     final isOwner = user?.activeRole == 'owner';
     final ownerFullName = user?.fullName ?? '';
@@ -423,7 +424,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
             Text(
               '${imageUrls.length} added · at least 3 to publish',
               style: t.bodySmall?.copyWith(
-                  color: imageUrls.length >= 3 ? AppColors.success : AppColors.textMuted),
+                  color: imageUrls.length >= 3 ? AppColors.success : (dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ),
             const SizedBox(height: AppSpacing.x8),
             Wrap(
@@ -588,7 +589,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
             Text('Developer incentives', style: t.titleSmall),
             const SizedBox(height: AppSpacing.x4),
             Text('Fee waivers a developer covers — reflected in the buyer\'s mortgage estimate.',
-                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const SizedBox(height: AppSpacing.x8),
             FieldPair(
               DropdownButtonFormField<double>(
@@ -624,7 +625,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
             ),
             const SizedBox(height: AppSpacing.x12),
             Text('Offers list — shown as "Incentives & offers" on the property',
-                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const SizedBox(height: AppSpacing.x8),
             for (var i = 0; i < _incentives.length; i++)
               Padding(
@@ -680,7 +681,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
             const SizedBox(height: AppSpacing.x8),
             ref.watch(amenitiesProvider).maybeWhen(
               data: (list) => list.isEmpty
-                  ? Text('No amenities available', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  ? Text('No amenities available', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Wrap(
                       spacing: AppSpacing.x8,
                       runSpacing: AppSpacing.x8,

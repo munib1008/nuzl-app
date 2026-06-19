@@ -35,6 +35,7 @@ class PlansScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final plans = ref.watch(plansProvider);
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final isAdmin = ref.watch(personaProvider) == Persona.admin;
     final orgId = ref.watch(authControllerProvider).user?.organizationId;
     final sub = (orgId == null) ? null : ref.watch(_subscriptionProvider(orgId)).asData?.value;
@@ -62,13 +63,13 @@ class PlansScreen extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.x8),
                   child: Text('Tap a plan to edit, or “New plan” to add one. Changes are live immediately.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted)),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 )
               else
                 Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.x8),
                   child: Text('Subscribe to lift your free-tier usage limits for the period.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted)),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ),
               if (list.isEmpty)
                 const Padding(padding: EdgeInsets.all(40), child: Center(child: Text('No plans configured.')))
@@ -261,7 +262,7 @@ class _PlanCard extends StatelessWidget {
                     style: t.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
                 if (onEdit != null) ...[
                   const SizedBox(width: AppSpacing.x8),
-                  const Icon(Icons.edit_outlined, size: 18, color: AppColors.textMuted),
+                  Icon(Icons.edit_outlined, size: 18, color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted),
                 ],
               ]),
               if (plan['seats'] != null) ...[
@@ -273,7 +274,7 @@ class _PlanCard extends StatelessWidget {
                 ..._features.map((f) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 2),
                       child: Row(children: [
-                        const Icon(Icons.check, size: 16, color: AppColors.primary),
+                        Icon(Icons.check, size: 16, color: Theme.of(context).colorScheme.primary),
                         const SizedBox(width: AppSpacing.x8),
                         Expanded(child: Text(f, style: t.bodyMedium)),
                       ]),

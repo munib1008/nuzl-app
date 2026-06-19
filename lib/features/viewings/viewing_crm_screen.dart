@@ -29,6 +29,7 @@ class ViewingCrmScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final crm = ref.watch(viewingCrmProvider(id));
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final myId = ref.watch(authControllerProvider).user?.id;
     return Scaffold(
       appBar: AppBar(title: const Text('Lead')),
@@ -52,7 +53,7 @@ class ViewingCrmScreen extends ConsumerWidget {
                 Text([
                   if ('${v['requested_by_name'] ?? ''}'.isNotEmpty) 'Customer: ${v['requested_by_name']}',
                   if ('${v['assigned_agent_name'] ?? ''}'.isNotEmpty) 'Agent: ${v['assigned_agent_name']}',
-                ].join('  ·  '), style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                ].join('  ·  '), style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 const SizedBox(height: AppSpacing.x20),
 
                 Text('Leasing pipeline', style: t.titleSmall),
@@ -62,7 +63,7 @@ class ViewingCrmScreen extends ConsumerWidget {
                     v['assigned_agent_id'] == null
                         ? 'Not yet assigned.'
                         : 'Assigned to another agent — read only.',
-                    style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+                    style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                   ),
                 const SizedBox(height: AppSpacing.x8),
                 Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
@@ -105,9 +106,10 @@ class ViewingCrmScreen extends ConsumerWidget {
                 ]),
                 const SizedBox(height: AppSpacing.x8),
                 if (activities.isEmpty)
-                  Text('No activity yet.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  Text('No activity yet.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                 else
-                  for (final a in activities) _activityTile(Map<String, dynamic>.from(a), t),
+                  for (final a in activities)
+                    _activityTile(Map<String, dynamic>.from(a), t, dark, Theme.of(context).colorScheme.primary),
               ],
             );
           },
@@ -116,7 +118,7 @@ class ViewingCrmScreen extends ConsumerWidget {
     );
   }
 
-  Widget _activityTile(Map<String, dynamic> a, TextTheme t) {
+  Widget _activityTile(Map<String, dynamic> a, TextTheme t, bool dark, Color primary) {
     final when = DateTime.tryParse('${a['created_at'] ?? ''}');
     final sub = [
       if (a['actor_name'] != null) '${a['actor_name']}',
@@ -126,13 +128,13 @@ class ViewingCrmScreen extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Padding(padding: EdgeInsets.only(top: 4),
-            child: Icon(Icons.circle, size: 8, color: AppColors.primary)),
+        Padding(padding: const EdgeInsets.only(top: 4),
+            child: Icon(Icons.circle, size: 8, color: primary)),
         const SizedBox(width: AppSpacing.x12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('${a['note'] ?? a['activity_type'] ?? ''}', style: t.bodyMedium),
-            if (sub.isNotEmpty) Text(sub, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            if (sub.isNotEmpty) Text(sub, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ]),
         ),
       ]),

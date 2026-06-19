@@ -106,6 +106,7 @@ class _SavedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final id = '${m['id']}';
     final price = num.tryParse('${m['price']}') ?? 0;
     final money = price > 0 ? NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price) : '';
@@ -135,7 +136,7 @@ class _SavedCard extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(title, style: t.titleSmall),
                 if (community.isNotEmpty)
-                  Text(community, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  Text(community, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 if (money.isNotEmpty)
                   Text(money, style: t.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
               ]),

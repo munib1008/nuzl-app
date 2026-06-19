@@ -84,6 +84,7 @@ class _PricingScreenState extends State<PricingScreen> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final wide = MediaQuery.of(context).size.width >= 760;
     final plans = _plans[_role] ?? const [];
 
@@ -134,12 +135,12 @@ class _PricingScreenState extends State<PricingScreen> {
                   const SizedBox(height: AppSpacing.x8),
                   Text('Start free. Upgrade only when you need more — built for owners, agents, tenants, '
                       'service providers and suppliers.',
-                      style: t.bodyLarge?.copyWith(color: AppColors.textMuted)),
+                      style: t.bodyLarge?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                   const SizedBox(height: AppSpacing.x24),
 
                   // Role selector
                   Text('CHOOSE YOUR ROLE',
-                      style: t.labelSmall?.copyWith(color: AppColors.textMuted, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
+                      style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                   const SizedBox(height: AppSpacing.x8),
                   Wrap(spacing: 8, runSpacing: 8, children: [
                     for (final r in _roles)
@@ -164,7 +165,7 @@ class _PricingScreenState extends State<PricingScreen> {
                   if (_role == 'Customer') ...[
                     const SizedBox(height: AppSpacing.x12),
                     Text('Customers never pay — your access stays free for life.',
-                        style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                        style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                   ],
 
                   // Founder program (owners)
@@ -190,7 +191,7 @@ class _PricingScreenState extends State<PricingScreen> {
                         children: [
                           Align(
                             alignment: Alignment.centerLeft,
-                            child: Text(f.$2, style: t.bodyMedium?.copyWith(color: AppColors.textMuted, height: 1.5)),
+                            child: Text(f.$2, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, height: 1.5)),
                           ),
                         ],
                       ),
@@ -278,6 +279,7 @@ class _PlanCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x20),
       decoration: BoxDecoration(
@@ -299,11 +301,11 @@ class _PlanCard extends StatelessWidget {
         Text(plan.name, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: AppSpacing.x8),
         Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(plan.price, style: t.headlineMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary)),
+          Text(plan.price, style: t.headlineMedium?.copyWith(fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.primary)),
           if (plan.period.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 4, left: 2),
-              child: Text(plan.period, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+              child: Text(plan.period, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ),
         ]),
         const SizedBox(height: AppSpacing.x16),

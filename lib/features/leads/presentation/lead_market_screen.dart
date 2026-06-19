@@ -112,17 +112,20 @@ class _LeadMarketScreenState extends ConsumerState<LeadMarketScreen> with Single
     );
   }
 
-  Widget _empty(String title, String body) => ListView(children: [
+  Widget _empty(String title, String body) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return ListView(children: [
         const SizedBox(height: 80),
-        const Icon(Icons.sell_outlined, size: 48, color: AppColors.textSubtle),
+        Icon(Icons.sell_outlined, size: 48, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
         const SizedBox(height: 12),
         Center(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w700))),
         const SizedBox(height: 4),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 40),
-          child: Text(body, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
+          child: Text(body, textAlign: TextAlign.center, style: TextStyle(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
         ),
       ]);
+  }
 
   Future<void> _listLead() async {
     final leads = await ref.read(_myLeadsRawProvider.future);
@@ -207,6 +210,7 @@ class _MarketCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final exclusive = '${m['lead_exclusivity']}' == 'exclusive';
     final price = num.tryParse('${m['lead_price']}');
     final claimedByMe = m['claimed_by_me'] == true;
@@ -225,19 +229,19 @@ class _MarketCard extends ConsumerWidget {
             StatusBadge(exclusive ? 'Exclusive' : 'Shared', tone: exclusive ? BadgeTone.gold : BadgeTone.neutral),
             const Spacer(),
             if (price != null)
-              Text(_aed.format(price), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
+              Text(_aed.format(price), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary)),
           ]),
           const SizedBox(height: 6),
           if (specs.isNotEmpty) Text(specs, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
           if (budget[0] != null || budget[1] != null) ...[
             const SizedBox(height: 2),
             Text('Budget ${_aed.format(budget[0] ?? budget[1])}${budget[1] != null && budget[0] != null ? ' – ${_aed.format(budget[1])}' : ''}',
-                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ],
           const SizedBox(height: AppSpacing.x12),
           Row(children: [
             Text(exclusive ? 'One buyer only' : '$claims ${claims == 1 ? 'buyer' : 'buyers'} so far',
-                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const Spacer(),
             claimedByMe
                 ? const StatusBadge('Claimed', tone: BadgeTone.success)
@@ -269,6 +273,7 @@ class _ClaimCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final paid = '${m['claim_status']}' == 'paid';
     final canPay = ref.watch(paymentsConfigProvider).asData?.value ?? false;
     final price = num.tryParse('${m['price']}');
@@ -288,7 +293,7 @@ class _ClaimCard extends ConsumerWidget {
           ]),
           if (specs.isNotEmpty) ...[
             const SizedBox(height: 2),
-            Text(specs, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            Text(specs, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ],
           if (phone.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x8),

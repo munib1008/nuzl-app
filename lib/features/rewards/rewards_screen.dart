@@ -34,6 +34,7 @@ class RewardsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final board = ref.watch(leaderboardProvider);
     final myId = ref.watch(authControllerProvider).user?.id;
     final body = ResponsiveCenter(
@@ -70,13 +71,13 @@ class RewardsScreen extends ConsumerWidget {
 
             const SizedBox(height: AppSpacing.x16),
             Row(children: [
-              const Icon(Icons.leaderboard_outlined, size: 20, color: AppColors.primary),
+              Icon(Icons.leaderboard_outlined, size: 20, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: AppSpacing.x8),
               Text('Top contributors', style: t.titleMedium),
             ]),
             const SizedBox(height: AppSpacing.x4),
             Text('Members who added the most properties.',
-                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const SizedBox(height: AppSpacing.x12),
             board.when(
               loading: () => const Padding(padding: EdgeInsets.all(16), child: LinearProgressIndicator()),
@@ -86,7 +87,7 @@ class RewardsScreen extends ConsumerWidget {
                 final myCount = int.tryParse('${m['my_count'] ?? 0}') ?? 0;
                 if (top.isEmpty) {
                   return Text('No rankings yet — add properties to climb the board.',
-                      style: t.bodyMedium?.copyWith(color: AppColors.textMuted));
+                      style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted));
                 }
                 return Column(children: [
                   for (var i = 0; i < top.length; i++)
@@ -158,6 +159,7 @@ class _OfferCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(AppSpacing.rCard),
@@ -175,10 +177,10 @@ class _OfferCard extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(title, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
-                Text(body, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                Text(body, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               ]),
             ),
-            if (route != null) const Icon(Icons.chevron_right, color: AppColors.textSubtle),
+            if (route != null) Icon(Icons.chevron_right, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
           ]),
         ),
       ),
@@ -195,9 +197,10 @@ class _RankTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final isMe = me != null && '${row['id']}' == me;
     final count = int.tryParse('${row['property_count'] ?? 0}') ?? 0;
-    final medal = rank == 1 ? AppColors.accentGold : rank == 2 ? AppColors.textMuted : rank == 3 ? AppColors.warning : null;
+    final medal = rank == 1 ? AppColors.accentGold : rank == 2 ? (dark ? AppColors.dTextMuted : AppColors.textMuted) : rank == 3 ? AppColors.warning : null;
     return Card(
       color: isMe ? AppColors.primary.withValues(alpha: 0.06) : null,
       child: Padding(
@@ -207,7 +210,7 @@ class _RankTile extends StatelessWidget {
             width: 28,
             child: medal != null
                 ? Icon(Icons.emoji_events, size: 20, color: medal)
-                : Text('$rank', textAlign: TextAlign.center, style: t.titleSmall?.copyWith(color: AppColors.textMuted, fontWeight: FontWeight.w700)),
+                : Text('$rank', textAlign: TextAlign.center, style: t.titleSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w700)),
           ),
           const SizedBox(width: AppSpacing.x8),
           CircleAvatar(
@@ -225,10 +228,10 @@ class _RankTile extends StatelessWidget {
               Text('${row['full_name'] ?? 'Member'}${isMe ? ' (you)' : ''}',
                   style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
               if ('${row['org_name'] ?? ''}'.isNotEmpty)
-                Text('${row['org_name']}', style: t.bodySmall?.copyWith(color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                Text('${row['org_name']}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
             ]),
           ),
-          Text('$count', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.primary)),
+          Text('$count', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary)),
         ]),
       ),
     );

@@ -52,6 +52,7 @@ class ListingsScreen extends ConsumerWidget {
     final query = ref.watch(listingsSearchProvider).trim().toLowerCase();
     final myId = ref.watch(authControllerProvider).user?.id;
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: NuzlAppBar(title: 'Properties', actions: [
@@ -174,13 +175,13 @@ class ListingsScreen extends ConsumerWidget {
                           padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
                           child: Center(
                             child: Column(children: [
-                              const Icon(Icons.search_off_outlined, size: 40, color: AppColors.textMuted),
+                              Icon(Icons.search_off_outlined, size: 40, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                               const SizedBox(height: AppSpacing.x8),
                               Text('No properties match your filters',
                                   style: t.titleMedium, textAlign: TextAlign.center),
                               const SizedBox(height: 4),
                               Text('Try a higher budget, a wider area, or fewer bedrooms.',
-                                  textAlign: TextAlign.center, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                                  textAlign: TextAlign.center, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                               if (filtersActive) ...[
                                 const SizedBox(height: AppSpacing.x12),
                                 FilledButton.icon(
@@ -269,13 +270,14 @@ class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final q = ref.watch(listingsSearchProvider);
     // Keep the field's text in sync when the query is set elsewhere (chips / clear).
     if (_qc.text != q) {
       _qc.value = TextEditingValue(text: q, selection: TextSelection.collapsed(offset: q.length));
     }
     Widget heading(String s) => Text(s,
-        style: t.labelSmall?.copyWith(color: AppColors.textMuted, fontWeight: FontWeight.w700, letterSpacing: 0.5));
+        style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w700, letterSpacing: 0.5));
 
     const goals = [
       ('Buy a home', Icons.home_outlined, 'sale', null),
@@ -311,7 +313,7 @@ class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
       Wrap(spacing: 6, runSpacing: 6, children: [
         for (final g in goals)
           ActionChip(
-            avatar: Icon(g.$2, size: 16, color: AppColors.primary),
+            avatar: Icon(g.$2, size: 16, color: Theme.of(context).colorScheme.primary),
             label: Text(g.$1),
             onPressed: () => _goal(g.$3, g.$4),
           ),

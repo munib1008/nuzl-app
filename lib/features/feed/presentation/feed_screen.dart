@@ -273,6 +273,7 @@ class _PostCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final author = '${p['author'] ?? 'Member'}';
     final created = DateTime.tryParse('${p['created_at']}');
     final liked = p['liked'] == true;
@@ -298,12 +299,12 @@ class _PostCard extends ConsumerWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(author, style: t.titleSmall),
                   if (created != null)
-                    Text(DateFormat('d MMM · HH:mm').format(created), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                    Text(DateFormat('d MMM · HH:mm').format(created), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ),
               StatusBadge(label, tone: tone),
               PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, size: 18, color: AppColors.textMuted),
+                icon: Icon(Icons.more_vert, size: 18, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                 onSelected: (v) { if (v == 'report') _report(context, ref); },
                 itemBuilder: (_) => const [PopupMenuItem(value: 'report', child: Text('Report post'))],
               ),
@@ -346,14 +347,14 @@ class _PostCard extends ConsumerWidget {
               _ActionButton(
                 icon: liked ? Icons.favorite : Icons.favorite_border,
                 label: '$likeCount',
-                color: liked ? AppColors.danger : AppColors.textMuted,
+                color: liked ? AppColors.danger : (dark ? AppColors.dTextMuted : AppColors.textMuted),
                 onTap: () => _like(ref),
               ),
               const SizedBox(width: AppSpacing.x16),
               _ActionButton(
                 icon: Icons.mode_comment_outlined,
                 label: '$commentCount',
-                color: AppColors.textMuted,
+                color: dark ? AppColors.dTextMuted : AppColors.textMuted,
                 onTap: () => _openComments(context, ref),
               ),
             ]),

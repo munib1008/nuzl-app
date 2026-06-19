@@ -26,6 +26,7 @@ class LeadAnalyticsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final data = ref.watch(leadAnalyticsProvider);
     int n(Map m, String k) => int.tryParse('${m[k] ?? 0}') ?? 0;
     return Scaffold(
@@ -44,7 +45,7 @@ class LeadAnalyticsScreen extends ConsumerWidget {
                   Padding(
                     padding: const EdgeInsets.all(48),
                     child: Center(child: Text('No leads to analyse yet.',
-                        style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
+                        style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
                   ),
                 ]);
               }
@@ -60,20 +61,20 @@ class LeadAnalyticsScreen extends ConsumerWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.x16),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Conversion rate', style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                        Text('Conversion rate', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                         Text('$rate%',
                             style: t.displaySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
                         Text('of decided leads converted (won vs lost)',
-                            style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                            style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       ]),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.x12),
                   Row(children: [
-                    _stat('Total', total, AppColors.primary, t),
-                    _stat('Active', n(m, 'active'), AppColors.info, t),
-                    _stat('Won', n(m, 'converted'), AppColors.success, t),
-                    _stat('Lost', n(m, 'lost'), AppColors.danger, t),
+                    _stat('Total', total, Theme.of(context).colorScheme.primary, t, dark),
+                    _stat('Active', n(m, 'active'), AppColors.info, t, dark),
+                    _stat('Won', n(m, 'converted'), AppColors.success, t, dark),
+                    _stat('Lost', n(m, 'lost'), AppColors.danger, t, dark),
                   ]),
                   const SizedBox(height: AppSpacing.x24),
                   if (labels.isNotEmpty) ...[
@@ -85,7 +86,7 @@ class LeadAnalyticsScreen extends ConsumerWidget {
                   Text('By source', style: t.titleMedium),
                   const SizedBox(height: AppSpacing.x8),
                   if (sources.isEmpty)
-                    Text('No source data.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                    Text('No source data.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   else
                     ...sources.map((s) {
                       final sm = Map<String, dynamic>.from(s as Map);
@@ -93,7 +94,7 @@ class LeadAnalyticsScreen extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         child: Row(children: [
                           Expanded(child: Text('${sm['source']}', style: t.bodyMedium)),
-                          Text('${sm['total']} total', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                          Text('${sm['total']} total', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                           const SizedBox(width: AppSpacing.x12),
                           Text('${sm['converted']} won',
                               style: t.bodySmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
@@ -112,10 +113,10 @@ class LeadAnalyticsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _stat(String label, int value, Color color, TextTheme t) => Expanded(
+  Widget _stat(String label, int value, Color color, TextTheme t, bool dark) => Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('$value', style: t.titleLarge?.copyWith(color: color, fontWeight: FontWeight.w700)),
-          Text(label, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+          Text(label, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
         ]),
       );
 }
@@ -132,6 +133,7 @@ class _TrendBars extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     var max = 1;
     for (var i = 0; i < labels.length; i++) {
       max = [max, _v(converted, i), _v(lost, i)].reduce((a, b) => a > b ? a : b);
@@ -150,7 +152,7 @@ class _TrendBars extends StatelessWidget {
                   _bar(_v(lost, i), max, AppColors.danger),
                 ]),
                 const SizedBox(height: 4),
-                Text('${labels[i]}', style: t.labelSmall?.copyWith(color: AppColors.textMuted)),
+                Text('${labels[i]}', style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               ]),
             ),
         ],

@@ -54,6 +54,7 @@ class ReferScreen extends ConsumerWidget {
 
   Widget _body(BuildContext context, Map<String, dynamic> m) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final code = '${m['code'] ?? ''}';
     final joined = int.tryParse('${m['joined_count'] ?? 0}') ?? 0;
     final months = int.tryParse('${m['free_months'] ?? 0}') ?? 0;
@@ -86,7 +87,7 @@ class ReferScreen extends ConsumerWidget {
 
       // Stats
       Row(children: [
-        Expanded(child: _stat(context, '$joined', joined == 1 ? 'Friend joined' : 'Friends joined', Icons.group_add_outlined, AppColors.primary)),
+        Expanded(child: _stat(context, '$joined', joined == 1 ? 'Friend joined' : 'Friends joined', Icons.group_add_outlined, Theme.of(context).colorScheme.primary)),
         const SizedBox(width: AppSpacing.x12),
         Expanded(child: _stat(context, '$months', months == 1 ? 'Free month' : 'Free months', Icons.calendar_month_outlined, AppColors.success)),
       ]),
@@ -121,7 +122,7 @@ class ReferScreen extends ConsumerWidget {
             ),
             if (link.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.x12),
-              Text('Share link', style: t.labelMedium?.copyWith(color: AppColors.textMuted)),
+              Text('Share link', style: t.labelMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               const SizedBox(height: 4),
               Text(link, style: t.bodySmall?.copyWith(color: AppColors.info), maxLines: 1, overflow: TextOverflow.ellipsis),
               const SizedBox(height: AppSpacing.x12),
@@ -145,7 +146,7 @@ class ReferScreen extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
           child: Text('No referrals yet — share your link to start earning free months.',
-              style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+              style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
         )
       else
         Column(children: [for (final r in referrals) _ReferralTile(Map<String, dynamic>.from(r))]),
@@ -154,6 +155,7 @@ class ReferScreen extends ConsumerWidget {
 
   Widget _stat(BuildContext context, String value, String label, IconData icon, Color color) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
@@ -161,7 +163,7 @@ class ReferScreen extends ConsumerWidget {
           Icon(icon, color: color, size: 20),
           const SizedBox(height: AppSpacing.x8),
           Text(value, style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w700, color: color)),
-          Text(label, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+          Text(label, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
         ]),
       ),
     );

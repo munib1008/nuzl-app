@@ -197,7 +197,7 @@ class DashboardScreen extends ConsumerWidget {
                 style: t.headlineSmall),
             const SizedBox(height: 2),
             Text(isBuyer ? 'Discover and track your next property.' : "Here's what's happening today.",
-                style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                style: t.bodyMedium?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const SizedBox(height: AppSpacing.x16),
             const _GlobalSearchBar(),
             if (user?.pendingDeletion == true) ...[
@@ -397,13 +397,14 @@ class _KpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final box = _flatBox(
       context,
       accent: card.color,
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(card.label, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            Text(card.label, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const SizedBox(height: 6),
             Text(card.value, style: t.headlineMedium?.copyWith(fontWeight: FontWeight.w700)),
           ]),
@@ -470,6 +471,7 @@ class _SalesCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final async = ref.watch(_salesSeriesProvider);
     return _PanelCard(
       title: title,
@@ -477,10 +479,10 @@ class _SalesCard extends ConsumerWidget {
         height: 140,
         child: async.when(
           loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-          error: (_, __) => _empty(t),
+          error: (_, __) => _empty(t, dark),
           data: (series) {
             final hasData = series.length >= 2 && series.any((v) => v > 0);
-            if (!hasData) return _empty(t);
+            if (!hasData) return _empty(t, dark);
             final secondary = series.map((v) => v * 0.82).toList();
             return Stack(children: [
               Positioned.fill(child: CustomPaint(painter: _SparkPainter(secondary, AppColors.secondary))),
@@ -492,12 +494,12 @@ class _SalesCard extends ConsumerWidget {
     );
   }
 
-  Widget _empty(TextTheme t) => Center(
+  Widget _empty(TextTheme t, bool dark) => Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.show_chart, size: 28, color: AppColors.textSubtle),
+          Icon(Icons.show_chart, size: 28, color: dark ? AppColors.dTextMuted : AppColors.textSubtle),
           const SizedBox(height: AppSpacing.x8),
-          Text('No sales recorded yet', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
-          Text('Closed deals will chart here.', style: t.bodySmall?.copyWith(color: AppColors.textSubtle)),
+          Text('No sales recorded yet', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+          Text('Closed deals will chart here.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textSubtle)),
         ]),
       );
 }
@@ -526,7 +528,7 @@ class _RoiCard extends StatelessWidget {
           const SizedBox(width: AppSpacing.x8),
           Padding(
             padding: const EdgeInsets.only(bottom: 6),
-            child: Text('annual return on equity', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            child: Text('annual return on equity', style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ),
         ]),
         const SizedBox(height: AppSpacing.x12),
@@ -547,7 +549,7 @@ class _RoiLine extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(children: [
-        Expanded(child: Text(label, style: t.bodySmall?.copyWith(color: AppColors.textMuted))),
+        Expanded(child: Text(label, style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted))),
         Text(value, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
       ]),
     );
@@ -606,13 +608,14 @@ class _ActivityCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final acts = ref.watch(_activityProvider);
     return _PanelCard(
       title: 'Recent activity',
       action: TextButton(onPressed: () => context.go('/notifications'), child: const Text('View all')),
       child: acts.maybeWhen(
         data: (list) => list.isEmpty
-            ? Text('No recent activity.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+            ? Text('No recent activity.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
             : Column(
                 children: list.map((e) {
                   final m = Map<String, dynamic>.from(e);
@@ -627,7 +630,7 @@ class _ActivityCard extends ConsumerWidget {
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Text('${m['title'] ?? 'Update'}', style: t.bodyMedium),
                           if ('${m['body'] ?? ''}'.isNotEmpty)
-                            Text('${m['body']}', style: t.bodySmall?.copyWith(color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            Text('${m['body']}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
                         ]),
                       ),
                     ]),
@@ -656,7 +659,7 @@ class _RecentProperties extends ConsumerWidget {
         const SizedBox(height: AppSpacing.x12),
         listings.maybeWhen(
           data: (list) => list.isEmpty
-              ? Text('No listings yet.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+              ? Text('No listings yet.', style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted))
               : SizedBox(
                   height: 210,
                   child: ListView.separated(
@@ -817,7 +820,7 @@ class _QuickActions extends StatelessWidget {
           .map((a) => ListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                leading: Icon(a.$2, color: AppColors.primary, size: 20),
+                leading: Icon(a.$2, color: Theme.of(context).colorScheme.primary, size: 20),
                 title: Text(a.$1),
                 trailing: const Icon(Icons.chevron_right, size: 18),
                 onTap: () => context.go(a.$3),
@@ -851,7 +854,7 @@ class _DeletionBanner extends ConsumerWidget {
             Text('Account scheduled for deletion',
                 style: t.titleSmall?.copyWith(color: AppColors.danger, fontWeight: FontWeight.w700)),
             Text('Your account will be permanently deleted on $when. Reactivate to cancel.',
-                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ]),
         ),
         const SizedBox(width: AppSpacing.x8),
@@ -1084,11 +1087,11 @@ class _RecCard extends StatelessWidget {
                   Text(aed.format(price), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 2),
                   Text('${l['community'] ?? l['property_type'] ?? ''}',
-                      style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+                      style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
                   Text('$beds BR  ·  ${isRent ? 'For rent' : 'For sale'}',
-                      style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                      style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ),
             ]),
@@ -1119,7 +1122,7 @@ class _MarketIntelligence extends ConsumerWidget {
               padding: const EdgeInsets.all(AppSpacing.x16),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  const Icon(Icons.insights_outlined, size: 18, color: AppColors.primary),
+                  Icon(Icons.insights_outlined, size: 18, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: AppSpacing.x8),
                   Text('Market intelligence', style: t.titleMedium),
                 ]),
@@ -1155,7 +1158,7 @@ class _IntelRow extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(name, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
             Text('$listings active listing${listings == 1 ? '' : 's'}',
-                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ]),
         ),
         const SizedBox(width: AppSpacing.x8),
@@ -1186,7 +1189,7 @@ class _ToolsList extends StatelessWidget {
           .map((tool) => ListTile(
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                leading: Icon(tool.$2, color: AppColors.primary, size: 20),
+                leading: Icon(tool.$2, color: Theme.of(context).colorScheme.primary, size: 20),
                 title: Text(tool.$1),
                 trailing: const Icon(Icons.chevron_right, size: 18),
                 onTap: () => context.go(tool.$3),

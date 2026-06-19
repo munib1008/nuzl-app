@@ -169,7 +169,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 Center(child: Text('Welcome to nuzl', style: GoogleFonts.manrope(fontSize: 22, fontWeight: FontWeight.w700))),
                 Center(
                     child: Text("Let's set up your profile to get started",
-                        style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
+                        style: t.bodyMedium?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted))),
                 const SizedBox(height: AppSpacing.x20),
                 _Stepper(step: step, count: _stepBuilders.length),
                 const SizedBox(height: AppSpacing.x24),
@@ -193,6 +193,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final selected = role == value;
     final meta = _goalMeta[value];
     final accent = Theme.of(context).colorScheme.primary;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       width: 158,
       child: InkWell(
@@ -215,13 +216,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 color: selected ? accent : Theme.of(context).dividerColor, width: selected ? 1.5 : 1),
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-            Icon(meta?.$1 ?? Icons.badge_outlined, size: 22, color: selected ? accent : AppColors.textMuted),
+            Icon(meta?.$1 ?? Icons.badge_outlined, size: 22, color: selected ? accent : (dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const SizedBox(height: AppSpacing.x8),
             Text(label,
                 style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: selected ? accent : null)),
             const SizedBox(height: 2),
             Text(meta?.$2 ?? '',
-                style: t.bodySmall?.copyWith(color: AppColors.textMuted), maxLines: 2, overflow: TextOverflow.ellipsis),
+                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted), maxLines: 2, overflow: TextOverflow.ellipsis),
           ]),
         ),
       ),
@@ -234,7 +235,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       children: [
         Text('What brings you to NUZL?', style: t.titleLarge),
         Text('Pick your main goal — you stay a Customer and can add more roles later.',
-            style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
         const SizedBox(height: AppSpacing.x16),
         Wrap(
           spacing: AppSpacing.x12,
@@ -294,7 +295,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget _companyStep(TextTheme t) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text('Your company', style: t.titleLarge),
-      Text('Do you belong to a company?', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+      Text('Do you belong to a company?', style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
       const SizedBox(height: AppSpacing.x12),
       Row(children: [
         Expanded(child: _choiceTile('join', Icons.search, 'Join existing')),
@@ -314,6 +315,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Widget _choiceTile(String value, IconData icon, String label) {
     final selected = _companyChoice == value;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       borderRadius: BorderRadius.circular(AppSpacing.rMd),
       onTap: () => setState(() => _companyChoice = value),
@@ -325,9 +327,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           borderRadius: BorderRadius.circular(AppSpacing.rMd),
         ),
         child: Column(children: [
-          Icon(icon, color: selected ? AppColors.primary : AppColors.textMuted),
+          Icon(icon, color: selected ? Theme.of(context).colorScheme.primary : (dark ? AppColors.dTextMuted : AppColors.textMuted)),
           const SizedBox(height: 6),
-          Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: selected ? AppColors.primary : null)),
+          Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: selected ? Theme.of(context).colorScheme.primary : null)),
         ]),
       ),
     );
@@ -483,7 +485,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       children: [
         Text('Contact & expertise', style: t.titleLarge),
         Text('Help others find and connect with you',
-            style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
         const SizedBox(height: AppSpacing.x16),
         TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone number', hintText: '+971 …')),
         const SizedBox(height: AppSpacing.x12),

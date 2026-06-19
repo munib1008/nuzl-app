@@ -81,6 +81,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final country = _country;
     final dbrCap = country.dbr;
     final aed = NumberFormat.currency(symbol: '${country.currency} ', decimalDigits: 0);
@@ -125,7 +126,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
             Text('Plan your purchase', style: t.headlineSmall),
             const SizedBox(height: 2),
             Text('See what you can afford, the monthly cost, and the income a bank looks for.',
-                style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const SizedBox(height: AppSpacing.x20),
 
             // ── Inputs ──
@@ -197,7 +198,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(aed.format(maxPrice),
                       style: t.displaySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800)),
-                  Text('estimated maximum property price', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  Text('estimated maximum property price', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                   const SizedBox(height: AppSpacing.x12),
                   // DBR breakdown — how the available instalment is derived.
                   _kv('Gross monthly income', aed.format(income)),
@@ -235,7 +236,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                   if (approval != null) ...[
                     const SizedBox(height: AppSpacing.x8),
                     Row(children: [
-                      Text('Approval likelihood  ', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                      Text('Approval likelihood  ', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
@@ -255,7 +256,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                 title: 'Get started',
                 child: Text('Enter your monthly income to see what you can afford, or a property price to see the '
                     'monthly cost and the income a bank typically looks for.',
-                    style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                    style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               ),
 
             if (income > 0 || price > 0) ...[
@@ -298,7 +299,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
 
             const SizedBox(height: AppSpacing.x12),
             Text('Estimates only — actual eligibility, rates and fees are set by your bank or finance provider.',
-                style: t.bodySmall?.copyWith(color: AppColors.textSubtle)),
+                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textSubtle)),
           ],
         ),
       ),
@@ -314,10 +315,11 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
 
   Widget _kv(String k, String v) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(children: [
-        Expanded(child: Text(k, style: t.bodySmall?.copyWith(color: AppColors.textMuted))),
+        Expanded(child: Text(k, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
         Text(v, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
       ]),
     );
@@ -396,6 +398,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
 
   Widget _scenarioTile(Map<String, dynamic> s, NumberFormat aed) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final price = num.tryParse('${s['property_price']}');
     final inst = num.tryParse('${s['monthly_installment']}');
     final sub = [
@@ -405,9 +408,9 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
     ].join('  ·  ');
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: const Icon(Icons.savings_outlined, color: AppColors.primary),
+      leading: Icon(Icons.savings_outlined, color: Theme.of(context).colorScheme.primary),
       title: Text('${s['label'] ?? 'Scenario'}', maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: sub.isEmpty ? null : Text(sub, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+      subtitle: sub.isEmpty ? null : Text(sub, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
       onTap: () => _load(s),
       trailing: IconButton(
         tooltip: 'Delete',

@@ -77,6 +77,7 @@ class _ViewingCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final status = '${v['status'] ?? 'requested'}';
     final (label, tone) = _statusTag(status);
     final beds = v['bedrooms'] == null ? '' : '${v['bedrooms']}BR ';
@@ -98,12 +99,12 @@ class _ViewingCard extends ConsumerWidget {
           if (community.isNotEmpty || money.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x4),
             Text([community, money].where((x) => x.isNotEmpty).join('  ·  '),
-                style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ],
           if (_isBroker && '${v['requested_by_name'] ?? ''}'.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x4),
             Row(children: [
-              const Icon(Icons.person_outline, size: 14, color: AppColors.textMuted),
+              Icon(Icons.person_outline, size: 14, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
               const SizedBox(width: 4),
               Text('${v['requested_by_name']}', style: t.bodySmall),
             ]),
@@ -111,7 +112,7 @@ class _ViewingCard extends ConsumerWidget {
           if (sched != null) ...[
             const SizedBox(height: AppSpacing.x4),
             Row(children: [
-              const Icon(Icons.event_outlined, size: 14, color: AppColors.primary),
+              Icon(Icons.event_outlined, size: 14, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 4),
               Text(DateFormat('EEE d MMM · HH:mm').format(sched),
                   style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),

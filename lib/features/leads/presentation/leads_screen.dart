@@ -127,6 +127,7 @@ class _LeadCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final f = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
     final budget = (lead.minBudget != null && lead.maxBudget != null)
         ? '${f.format(lead.minBudget)} – ${f.format(lead.maxBudget)}'
@@ -162,7 +163,7 @@ class _LeadCard extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(lead.buyerName ?? 'Unnamed buyer', style: t.titleMedium),
                   if (lead.phone != null && lead.phone!.isNotEmpty)
-                    Text(lead.phone!, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                    Text(lead.phone!, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ),
               Tooltip(
@@ -220,15 +221,15 @@ class _LeadCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.x8),
             // Footer: created + last-activity dates
             Row(children: [
-              const Icon(Icons.schedule, size: 14, color: AppColors.textSubtle),
+              Icon(Icons.schedule, size: 14, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
               const SizedBox(width: 4),
               Text(created != null ? 'Created $created' : 'Created —',
-                  style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               const Spacer(),
-              const Icon(Icons.history, size: 14, color: AppColors.textSubtle),
+              Icon(Icons.history, size: 14, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
               const SizedBox(width: 4),
               Text('Active ${_ago(lead.lastActivityAt)}',
-                  style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ]),
           ],
         ),
