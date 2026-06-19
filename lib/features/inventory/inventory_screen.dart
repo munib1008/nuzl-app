@@ -44,14 +44,14 @@ final _unitHistoryProvider = FutureProvider.autoDispose.family<List<dynamic>, St
 
 /// Status → board colour. Null = unreleased (held inventory, not yet on market).
 Color _statusColor(String? s) => switch (s) {
-      'available' => AppColors.success,
-      'reserved' => AppColors.warning,
-      'booked' => AppColors.info,
-      'sold' => AppColors.primary,
-      'rented' => AppColors.accentGold,
+      'available' => AppColors.statusAvailable,
+      'reserved' => AppColors.statusReserved,
+      'booked' => AppColors.statusNewLaunch,
+      'sold' => AppColors.statusSold,
+      'rented' => AppColors.statusReady,
       'blocked' => AppColors.danger,
       'cancelled' => AppColors.textMuted,
-      'transferred' => AppColors.secondary,
+      'transferred' => AppColors.statusOffPlan,
       _ => AppColors.textSubtle, // unreleased
     };
 

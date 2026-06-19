@@ -41,12 +41,20 @@ class AppColors {
   static const textMuted = Color(0xFF5A6B73);
   static const textSubtle = Color(0xFF8A9BA2);
 
-  // ── Dark neutrals (ink-based) ──
-  static const dBg = Color(0xFF0C171E);
-  static const dSurface = Color(0xFF172B36);     // sidebar + app bars
-  static const dSurface2 = Color(0xFF1E343F);    // cards
-  static const dBorder = Color(0xFF2A3F49);
-  static const dBorderStrong = Color(0xFF3A4F59);
+  // ── Property status palette (consistent platform-wide — "Luxury Property OS") ──
+  static const statusAvailable = Color(0xFF10B981); // emerald
+  static const statusReserved = Color(0xFFF59E0B);  // amber
+  static const statusSold = Color(0xFF64748B);      // slate
+  static const statusNewLaunch = Color(0xFF06B6D4); // cyan
+  static const statusOffPlan = Color(0xFF8B5CF6);   // violet
+  static const statusReady = Color(0xFF14B8A6);     // teal
+
+  // ── Dark neutrals (deep-navy "Luxury Property OS") ──
+  static const dBg = Color(0xFF07111B);          // deep navy page
+  static const dSurface = Color(0xFF102536);     // sidebar + app bars
+  static const dSurface2 = Color(0xFF163042);    // cards
+  static const dBorder = Color(0xFF22414F);
+  static const dBorderStrong = Color(0xFF31505E);
   static const dText = Color(0xFFF1F6F4);
   static const dTextMuted = Color(0xFFA9BCC2);
   static const dTextSubtle = Color(0xFF7A8D94);

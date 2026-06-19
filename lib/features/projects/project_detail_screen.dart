@@ -230,10 +230,10 @@ class ProjectDetailScreen extends ConsumerWidget {
     final sold = n('sold');
     final unreleased = n('unreleased');
     final segs = <(int, Color, String)>[
-      (available, AppColors.success, 'Available'),
-      (reserved, AppColors.warning, 'Reserved'),
+      (available, AppColors.statusAvailable, 'Available'),
+      (reserved, AppColors.statusReserved, 'Reserved'),
       (blocked, AppColors.danger, 'Blocked'),
-      (sold, AppColors.primary, 'Sold'),
+      (sold, AppColors.statusSold, 'Sold'),
       (unreleased, AppColors.textSubtle, 'Unreleased'),
     ];
     return Card(
