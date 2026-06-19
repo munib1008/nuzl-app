@@ -239,7 +239,7 @@ class _MessageCta extends ConsumerWidget {
               if (convId.isNotEmpty && context.mounted) context.push('/messages/$convId');
             } catch (e) {
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
               }
             }
           },

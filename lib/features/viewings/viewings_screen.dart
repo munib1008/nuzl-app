@@ -45,7 +45,7 @@ class ViewingsScreen extends ConsumerWidget {
         child: ResponsiveCenter(
           child: viewings.when(
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text('$e')))]),
+            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(friendlyError(e))))]),
             data: (list) => list.isEmpty
                 ? ListView(children: const [
                     Padding(
@@ -155,7 +155,7 @@ class _ViewingCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(toast)));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 

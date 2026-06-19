@@ -63,7 +63,7 @@ class RentalsScreen extends ConsumerWidget {
           onRefresh: () async => ref.refresh(tenanciesProvider.future),
           child: tenancies.when(
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text('$e'))]),
+            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (list) => list.isEmpty
                 ? ListView(children: [Padding(padding: const EdgeInsets.all(40), child: Column(children: [
                     Icon(Icons.vpn_key_outlined, size: 44, color: Theme.of(context).hintColor),
@@ -224,7 +224,7 @@ Future<void> _addTenancy(BuildContext context, WidgetRef ref) async {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tenancy created.')));
     }
   } catch (e) {
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
   }
 }
 
@@ -252,7 +252,7 @@ class _Documents extends ConsumerWidget {
         ]),
         docs.when(
           loading: () => const LinearProgressIndicator(),
-          error: (e, _) => Text('$e'),
+          error: (e, _) => Text(friendlyError(e)),
           data: (list) => list.isEmpty
               ? Text(
                   canManage
@@ -337,7 +337,7 @@ class _Documents extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Document attached.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }
@@ -379,7 +379,7 @@ class _Renewal extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Renewal notice recorded.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -413,7 +413,7 @@ class _Renewal extends ConsumerWidget {
       }
     } catch (e) {
       // Surfaces the server-side 90-day-notice block message when applicable.
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -439,7 +439,7 @@ class _Renewal extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tenancy terminated.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -452,7 +452,7 @@ class _Renewal extends ConsumerWidget {
             .showSnackBar(const SnackBar(content: Text('Renewal declined — the other party was notified.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -465,7 +465,7 @@ class _Renewal extends ConsumerWidget {
             .showSnackBar(const SnackBar(content: Text('Tenant linked to their NUZL account.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -594,7 +594,7 @@ class _Cheques extends ConsumerWidget {
         ]),
         cheques.when(
           loading: () => const LinearProgressIndicator(),
-          error: (e, _) => Text('$e'),
+          error: (e, _) => Text(friendlyError(e)),
           data: (list) => list.isEmpty
               ? const Text('No cheques recorded.')
               : Column(children: list.map((m) {
@@ -673,7 +673,7 @@ class _RentSchedule extends ConsumerWidget {
         ]),
         payments.when(
           loading: () => const LinearProgressIndicator(),
-          error: (e, _) => Text('$e'),
+          error: (e, _) => Text(friendlyError(e)),
           data: (list) => list.isEmpty
               ? Text(
                   canManage
@@ -709,7 +709,7 @@ class _RentSchedule extends ConsumerWidget {
       await ref.read(apiClientProvider).post('/tenancies/$tenancyId/schedule');
       ref.invalidate(rentPaymentsProvider(tenancyId));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -718,7 +718,7 @@ class _RentSchedule extends ConsumerWidget {
       await ref.read(apiClientProvider).patch('/rent-payments/$id/paid');
       ref.invalidate(rentPaymentsProvider(tenancyId));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -775,7 +775,7 @@ class _RentSchedule extends ConsumerWidget {
             const SnackBar(content: Text('Receipt uploaded — your landlord has been notified.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -785,7 +785,7 @@ class _RentSchedule extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('Payment receipt'),
         content: SizedBox(
-          width: 360,
+          width: MediaQuery.sizeOf(ctx).width - 80 < 360 ? MediaQuery.sizeOf(ctx).width - 80 : 360,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(AppSpacing.rSm),
             child: Image.network(url, fit: BoxFit.contain,

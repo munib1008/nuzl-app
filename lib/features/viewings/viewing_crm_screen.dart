@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/async_view.dart';
@@ -143,7 +144,7 @@ class ViewingCrmScreen extends ConsumerWidget {
       final convId = await ref.read(viewingLeadsRepoProvider).openConversation(id);
       if (context.mounted) context.push('/messages/$convId');
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -162,7 +163,7 @@ class ViewingCrmScreen extends ConsumerWidget {
       ref.invalidate(viewingCrmProvider(id));
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(note)));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -173,7 +174,7 @@ class ViewingCrmScreen extends ConsumerWidget {
       ref.invalidate(viewingAssignedProvider);
       ref.invalidate(viewingMetricsProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -215,7 +216,7 @@ class ViewingCrmScreen extends ConsumerWidget {
       await ref.read(viewingLeadsRepoProvider).logActivity(id, type, ctrl.text.trim());
       ref.invalidate(viewingCrmProvider(id));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

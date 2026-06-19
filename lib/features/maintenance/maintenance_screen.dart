@@ -77,7 +77,7 @@ class MaintenanceScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.x8),
               jobs.when(
                 loading: () => const LinearProgressIndicator(),
-                error: (e, _) => Text('$e'),
+                error: (e, _) => Text(friendlyError(e)),
                 data: (list) => list.isEmpty
                     ? const Text('No requests yet — raise one with the button below.')
                     : Column(children: list.map((m) => _JobCard(j: Map<String, dynamic>.from(m))).toList()),
@@ -87,7 +87,7 @@ class MaintenanceScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.x8),
               providers.when(
                 loading: () => const LinearProgressIndicator(),
-                error: (e, _) => Text('$e'),
+                error: (e, _) => Text(friendlyError(e)),
                 data: (list) => list.isEmpty
                     ? const Text('No providers listed yet.')
                     : Column(children: list.map((m) {
@@ -142,7 +142,7 @@ class _JobCard extends ConsumerWidget {
       await ref.read(apiClientProvider).patch('/maintenance/jobs/${j['id']}/status', body: {'status': picked});
       ref.invalidate(jobsProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -210,7 +210,7 @@ class _JobCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Provider assigned.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -299,7 +299,7 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
       final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
       setState(() => _imageUrl = url);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Photo not added: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Photo not added — ${friendlyError(e)}')));
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
@@ -321,7 +321,7 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
       ref.invalidate(jobsProvider);
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -341,7 +341,7 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
           const SizedBox(height: AppSpacing.x16),
           props.when(
             loading: () => const Padding(padding: EdgeInsets.all(8), child: LinearProgressIndicator()),
-            error: (e, _) => Text('$e'),
+            error: (e, _) => Text(friendlyError(e)),
             data: (list) => list.isEmpty
                 ? const Text('No properties found. You can raise maintenance once you own a property or have an active tenancy.')
                 : DropdownButtonFormField<String>(

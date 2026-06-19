@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -144,7 +145,7 @@ class LeadCrmScreen extends ConsumerWidget {
       await ref.read(leadsRepositoryProvider).setCrmStage(id, stage);
       ref.invalidate(leadCrmProvider(id));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -186,7 +187,7 @@ class LeadCrmScreen extends ConsumerWidget {
       await ref.read(leadsRepositoryProvider).addCrmActivity(id, type, ctrl.text.trim());
       ref.invalidate(leadCrmProvider(id));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -204,7 +205,7 @@ class LeadCrmScreen extends ConsumerWidget {
             SnackBar(content: Text('Offered to ${picked.length} agent(s) — first to accept gets it')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }
@@ -245,7 +246,7 @@ class _QuickNoteState extends ConsumerState<_QuickNote> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Note saved')));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     } finally {
       if (mounted) setState(() => _saving = false);
     }

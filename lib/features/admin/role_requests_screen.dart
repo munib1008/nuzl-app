@@ -30,7 +30,7 @@ class RoleRequestsScreen extends ConsumerWidget {
           onRefresh: () async => ref.refresh(roleRequestsProvider.future),
           child: reqs.when(
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text('$e'))]),
+            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (list) => list.isEmpty
                 ? ListView(children: const [
                     SizedBox(height: 80),
@@ -68,7 +68,7 @@ class _RoleCard extends ConsumerWidget {
             SnackBar(content: Text(approve ? 'Role approved ✓' : 'Role request declined')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 

@@ -66,7 +66,7 @@ class FinancialsScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: props.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) {
             final propMap = <String, String>{};
             for (final e in list) {
@@ -241,7 +241,7 @@ class _PropertyFinancials extends ConsumerWidget {
       ref.invalidate(_txProvider(propertyId));
       ref.invalidate(_financialsProvider(propertyId));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -292,7 +292,7 @@ class _PropertyFinancials extends ConsumerWidget {
       ref.invalidate(_eventsProvider(propertyId));
       ref.invalidate(_financialsProvider(propertyId));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

@@ -53,7 +53,7 @@ class ReportsScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: report.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (m) {
             final entries = m.entries
                 .where((e) => e.value is num || num.tryParse('${e.value}') != null)

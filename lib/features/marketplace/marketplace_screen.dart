@@ -174,7 +174,7 @@ class MarketplaceScreen extends ConsumerWidget {
         ));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }
@@ -204,7 +204,7 @@ class _MarketListState extends ConsumerState<_MarketList> {
           padding: const EdgeInsets.all(AppSpacing.x16),
           children: const [SkeletonListingGrid(count: 6)],
         ),
-        error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text('$e')))]),
+        error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(friendlyError(e))))]),
         data: (raw) {
           final all = raw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
           final cats = <String>{
@@ -418,7 +418,7 @@ class _ItemCard extends ConsumerWidget {
         ));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

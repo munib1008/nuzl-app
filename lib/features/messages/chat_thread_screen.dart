@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../auth/application/auth_controller.dart';
@@ -49,7 +50,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       _input.clear();
       ref.invalidate(threadMessagesProvider(widget.id)); // refresh now, don't wait for the poll
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -87,7 +88,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
             child: messages.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) =>
-                  Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+                  Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
               data: (list) => list.isEmpty
                   ? Center(
                       child: Text('Say hello 👋',

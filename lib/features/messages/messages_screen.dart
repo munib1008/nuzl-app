@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
@@ -23,7 +24,7 @@ class MessagesScreen extends ConsumerWidget {
         child: inbox.when(
           loading: () => const Center(
               child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) => list.isEmpty
               ? const _EmptyInbox()
               : ListView.separated(

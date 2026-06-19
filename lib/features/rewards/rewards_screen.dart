@@ -80,7 +80,7 @@ class RewardsScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.x12),
             board.when(
               loading: () => const Padding(padding: EdgeInsets.all(16), child: LinearProgressIndicator()),
-              error: (e, _) => Text('$e'),
+              error: (e, _) => Text(friendlyError(e)),
               data: (m) {
                 final top = (m['top'] is List) ? m['top'] as List : const [];
                 final myCount = int.tryParse('${m['my_count'] ?? 0}') ?? 0;

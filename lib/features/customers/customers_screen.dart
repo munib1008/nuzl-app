@@ -27,7 +27,7 @@ class CustomersScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: customers.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) => list.isEmpty
               ? const _Empty()
               : ListView.separated(
@@ -78,7 +78,7 @@ class CustomersScreen extends ConsumerWidget {
       });
       ref.invalidate(customersProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

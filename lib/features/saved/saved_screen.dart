@@ -48,7 +48,7 @@ class SaveListingButton extends ConsumerWidget {
               ..showSnackBar(SnackBar(content: Text(saved ? 'Removed from saved' : 'Saved')));
           }
         } catch (e) {
-          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
         }
       },
     );
@@ -78,7 +78,7 @@ class SavedScreen extends ConsumerWidget {
         child: ResponsiveCenter(
           child: saved.when(
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text('$e')))]),
+            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(friendlyError(e))))]),
             data: (list) => list.isEmpty
                 ? ListView(children: const [
                     Padding(

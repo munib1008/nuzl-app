@@ -33,7 +33,7 @@ class NetworkScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: people.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) {
             final roles = <String>{
               'all',

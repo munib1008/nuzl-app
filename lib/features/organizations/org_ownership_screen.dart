@@ -138,7 +138,7 @@ class OrgOwnershipScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Claim submitted')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }
@@ -153,7 +153,7 @@ class _JoinTile extends ConsumerWidget {
       await ref.read(apiClientProvider).post('/organizations/join-requests/${j['id']}/decide', body: {'approve': approve});
       ref.invalidate(joinRequestsProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -313,7 +313,7 @@ class _CompanyVerificationCard extends ConsumerWidget {
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Company created')));
             }
           } catch (e) {
-            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+            if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
           }
         },
         icon: const Icon(Icons.add_business_outlined, size: 18),
@@ -362,7 +362,7 @@ class _CompanyVerificationCard extends ConsumerWidget {
                           final url = (up is Map) ? up['url'] : null;
                           if (url != null) setS(() => docUrl = '$url');
                         } catch (e) {
-                          if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('$e')));
+                          if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(friendlyError(e))));
                         } finally {
                           setS(() => uploading = false);
                         }
@@ -409,7 +409,7 @@ class _CompanyVerificationCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Submitted for verification')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }
@@ -423,7 +423,7 @@ class _ClaimTile extends ConsumerWidget {
       await ref.read(apiClientProvider).post('/organizations/claims/${c['id']}/decide', body: {'approve': approve});
       ref.invalidate(orgClaimsProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 

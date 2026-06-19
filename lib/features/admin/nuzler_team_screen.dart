@@ -41,7 +41,7 @@ class NuzlerTeamScreen extends ConsumerWidget {
           child: team.when(
             loading: () => const Center(
                 child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text('$e'))]),
+            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (list) => list.isEmpty
                 ? ListView(children: const [SizedBox(height: 80), _Empty()])
                 : ListView.separated(
@@ -67,7 +67,7 @@ class _MemberTile extends ConsumerWidget {
           .patch('/admin/users/${m['id']}/designation', body: {'designation': slug});
       ref.invalidate(nuzlerTeamProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 

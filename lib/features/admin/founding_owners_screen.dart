@@ -35,7 +35,7 @@ class FoundingOwnersScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: owners.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) => ListView(
             padding: const EdgeInsets.all(AppSpacing.x16),
             children: [
@@ -70,7 +70,7 @@ class FoundingOwnersScreen extends ConsumerWidget {
             SnackBar(content: Text('${picked['full_name'] ?? 'User'} is now a founding owner')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }
@@ -129,7 +129,7 @@ class _OwnerTile extends ConsumerWidget {
           body: {'is_founding_owner': true, 'free_property_limit': int.tryParse(ctl.text.trim()) ?? 5});
       ref.invalidate(foundingOwnersProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -139,7 +139,7 @@ class _OwnerTile extends ConsumerWidget {
           body: {'is_founding_owner': false});
       ref.invalidate(foundingOwnersProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

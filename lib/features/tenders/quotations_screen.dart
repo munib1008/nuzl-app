@@ -33,7 +33,7 @@ class QuotationsScreen extends ConsumerWidget {
           onRefresh: () async => ref.refresh(myQuotesProvider.future),
           child: quotes.when(
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text('$e'))]),
+            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (list) => list.isEmpty
                 ? ListView(children: [
                     const SizedBox(height: 80),

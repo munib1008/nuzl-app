@@ -89,7 +89,7 @@ class _OrderCard extends ConsumerWidget {
       ref.invalidate(myOrdersProvider);
       ref.invalidate(incomingOrdersProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -100,7 +100,7 @@ class _OrderCard extends ConsumerWidget {
           .startDirect(providerId, contextTable: 'marketplace_orders', contextId: '${o['id']}');
       if (convId.isNotEmpty && context.mounted) context.push('/messages/$convId');
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -127,7 +127,7 @@ class _OrderCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dispute submitted')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -157,7 +157,7 @@ class _OrderCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Dispute resolved.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -192,7 +192,7 @@ class _OrderCard extends ConsumerWidget {
       ref.invalidate(incomingOrdersProvider);
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quote sent.')));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -208,7 +208,7 @@ class _OrderCard extends ConsumerWidget {
             SnackBar(content: Text(accept ? 'Quote accepted — order placed.' : 'Quote declined.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -247,7 +247,7 @@ class _OrderCard extends ConsumerWidget {
       ref.invalidate(myOrdersProvider);
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Thanks for the rating!')));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 

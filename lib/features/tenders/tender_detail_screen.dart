@@ -48,7 +48,7 @@ class TenderDetailScreen extends ConsumerWidget {
           },
           child: req.when(
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text('$e'))]),
+            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (r) => r == null
                 ? ListView(children: const [Padding(padding: EdgeInsets.all(40), child: Center(child: Text('Request not found.')))])
                 : _body(context, ref, r, myId),
@@ -111,7 +111,7 @@ class TenderDetailScreen extends ConsumerWidget {
         final bids = r2.watch(_bidsProvider(id));
         return bids.when(
           loading: () => const Padding(padding: EdgeInsets.all(16), child: LinearProgressIndicator()),
-          error: (e, _) => Text('$e'),
+          error: (e, _) => Text(friendlyError(e)),
           data: (list) => list.isEmpty
               ? Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
@@ -175,7 +175,7 @@ class TenderDetailScreen extends ConsumerWidget {
       ref.invalidate(_bidsProvider(id));
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quote submitted')));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }
@@ -210,7 +210,7 @@ class _StatusBar extends ConsumerWidget {
       await ref.read(apiClientProvider).patch('/tenders/$id/status', body: {'status': s});
       ref.invalidate(_tenderProvider(id));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }
@@ -298,7 +298,7 @@ class _BidCard extends ConsumerWidget {
       ref.invalidate(_tenderProvider(requestId));
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quote awarded ✓')));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

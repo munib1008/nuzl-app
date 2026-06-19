@@ -151,7 +151,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             const SnackBar(content: Text('Organization created — pending verification. Reload to manage it.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -279,7 +279,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             SnackBar(content: Text(url.isEmpty ? 'Photo removed' : 'Photo updated')));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -328,7 +328,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await ref.read(authControllerProvider.notifier).logout();
       if (mounted) context.go('/');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 

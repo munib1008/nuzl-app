@@ -30,7 +30,7 @@ class LimitsScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: limits.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) => list.isEmpty
               ? const Center(
                   child: Padding(
@@ -133,7 +133,7 @@ class _LimitTile extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Limit updated')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

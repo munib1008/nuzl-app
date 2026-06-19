@@ -311,7 +311,7 @@ Future<void> showAddRoleDialog(BuildContext context, WidgetRef ref, List<String>
           : 'Role added — switch to it from the role chip under the logo.'),
     ));
   } catch (e) {
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
   }
 }
 

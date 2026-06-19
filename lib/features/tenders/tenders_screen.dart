@@ -83,7 +83,7 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
       onRefresh: () async => ref.refresh(myTendersProvider.future),
       child: reqs.when(
         loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-        error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text('$e'))]),
+        error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
         data: (list) => list.isEmpty
             ? _empty('No requests yet', 'Post a service request or product RFQ and let providers quote.')
             : ListView.separated(
@@ -115,7 +115,7 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
           onRefresh: () async => ref.refresh(openTendersProvider(_openKind).future),
           child: reqs.when(
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text('$e'))]),
+            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (list) => list.isEmpty
                 ? _empty('No open requests', 'New service requests and RFQs in your categories appear here to bid on.')
                 : ListView.separated(
@@ -244,7 +244,7 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request posted — providers will be notified.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

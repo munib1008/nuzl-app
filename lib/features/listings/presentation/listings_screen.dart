@@ -90,7 +90,7 @@ class ListingsScreen extends ConsumerWidget {
         child: listings.when(
           loading: () => const Padding(
               padding: EdgeInsets.all(AppSpacing.x16), child: SkeletonListingGrid()),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (raw) {
             final all = raw.map((e) => Map<String, dynamic>.from(e)).toList();
             final types = <String>{'all', ...all.map((m) => '${m['property_type'] ?? ''}').where((s) => s.isNotEmpty)};

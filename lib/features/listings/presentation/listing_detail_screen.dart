@@ -72,7 +72,7 @@ class ListingDetailScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Listing'), actions: [SaveListingButton(listingId: id)]),
       body: detail.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+        error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
         data: (l) => _Detail(id: id, l: l),
       ),
     );
@@ -407,7 +407,7 @@ class _AgentCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request sent to the listing agent')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -425,7 +425,7 @@ class _AgentCard extends ConsumerWidget {
             const SnackBar(content: Text('Viewing requested — the agent will confirm your slot.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -442,7 +442,7 @@ class _AgentCard extends ConsumerWidget {
             const SnackBar(content: Text('New time proposed — the agent will confirm.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -491,7 +491,7 @@ class _AgentCard extends ConsumerWidget {
                       if (convId.isNotEmpty && context.mounted) context.push('/messages/$convId');
                     } catch (e) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
                       }
                     }
                   },
@@ -632,7 +632,7 @@ class _OwnershipCardState extends ConsumerState<_OwnershipCard> {
             const SnackBar(content: Text('Title deed submitted — a Nuzler will review it.')));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -721,7 +721,7 @@ class _PublishRow extends ConsumerWidget {
             content: Text(action == 'publish' ? 'Listing published.' : 'Listing taken offline.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -767,7 +767,7 @@ class _PropertyAgentsCard extends ConsumerWidget {
       await ref.read(apiClientProvider).delete('/properties/$propertyId/agents/$agentId');
       ref.invalidate(_propertyAgentsProvider(propertyId));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -878,7 +878,7 @@ class _AssignAgentDialogState extends ConsumerState<_AssignAgentDialog> {
           .post('/properties/${widget.propertyId}/agents', body: {'agent_id': agentId});
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -888,7 +888,7 @@ class _AssignAgentDialogState extends ConsumerState<_AssignAgentDialog> {
     return AlertDialog(
       title: const Text('Assign an agent'),
       content: SizedBox(
-        width: 360,
+        width: MediaQuery.sizeOf(context).width - 80 < 360 ? MediaQuery.sizeOf(context).width - 80 : 360,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(
             controller: _q,

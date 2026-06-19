@@ -30,7 +30,7 @@ class DealsScreen extends ConsumerWidget {
           onRefresh: () async => ref.refresh(dealsProvider.future),
           child: deals.when(
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text('$e'))]),
+            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (list) => list.isEmpty
                 ? ListView(children: [Padding(
                     padding: const EdgeInsets.all(40),
@@ -113,7 +113,7 @@ class DealsScreen extends ConsumerWidget {
       await ref.read(apiClientProvider).patch('/deals/$id/stage', body: {'stage': picked});
       ref.invalidate(dealsProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -153,7 +153,7 @@ class DealsScreen extends ConsumerWidget {
       await ref.read(apiClientProvider).patch('/deals/$id', body: body);
       ref.invalidate(dealsProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

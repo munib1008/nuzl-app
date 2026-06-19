@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -260,7 +261,7 @@ class _OfferCardState extends ConsumerState<_OfferCard> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
       ref.invalidate(leadOffersProvider); // it may have just been claimed by someone else
     }
   }

@@ -33,7 +33,7 @@ class ActivitiesScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: activities.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) => list.isEmpty
               ? const Center(child: Padding(padding: EdgeInsets.all(40), child: Text('No activity yet. Log your first one.')))
               : ListView.separated(
@@ -85,7 +85,7 @@ class ActivitiesScreen extends ConsumerWidget {
       });
       ref.invalidate(activitiesProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

@@ -45,7 +45,7 @@ class ProjectsScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: projects.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) => list.isEmpty
               ? const Center(child: Padding(padding: EdgeInsets.all(40), child: Text('No projects yet. Create one.')))
               : ListView.separated(
@@ -123,7 +123,7 @@ class ProjectsScreen extends ConsumerWidget {
       });
       ref.invalidate(projectsProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

@@ -864,7 +864,7 @@ class _DeletionBanner extends ConsumerWidget {
                     const SnackBar(content: Text('Account reactivated — welcome back!')));
               }
             } catch (e) {
-              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
             }
           },
           child: const Text('Reactivate'),

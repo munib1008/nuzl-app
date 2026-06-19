@@ -54,7 +54,7 @@ class _ReportCard extends ConsumerWidget {
       await ref.read(apiClientProvider).post('/admin/post-reports/${r['id']}/resolve', body: {'action': action});
       ref.invalidate(_reportsProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 

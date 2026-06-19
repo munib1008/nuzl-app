@@ -53,7 +53,7 @@ class PlansScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: plans.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) => ListView(
             padding: const EdgeInsets.all(AppSpacing.x16),
             children: [
@@ -130,7 +130,7 @@ class PlansScreen extends ConsumerWidget {
             const SnackBar(content: Text('Subscribed — your usage limits are lifted for this period.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -216,7 +216,7 @@ class PlansScreen extends ConsumerWidget {
       ref.invalidate(plansProvider);
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Plan saved')));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

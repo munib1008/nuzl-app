@@ -47,7 +47,7 @@ class DocumentsScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: docs.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) => list.isEmpty
               ? const EmptyState(
                   icon: Icons.folder_open_outlined,
@@ -121,7 +121,7 @@ class DocumentsScreen extends ConsumerWidget {
       });
       ref.invalidate(documentsProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

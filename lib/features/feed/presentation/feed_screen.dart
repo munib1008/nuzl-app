@@ -65,7 +65,7 @@ class FeedScreen extends ConsumerWidget {
         },
         child: posts.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text('$e')))]),
+          error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(friendlyError(e))))]),
           data: (list) => list.isEmpty
               ? ListView(children: const [
                   EmptyState(
@@ -182,7 +182,7 @@ class FeedScreen extends ConsumerWidget {
       ref.invalidate(feedPostsProvider);
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Posted to the feed')));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }
@@ -211,7 +211,7 @@ Future<Map<String, dynamic>?> _pickUser(BuildContext context, WidgetRef ref) {
         return AlertDialog(
           title: const Text('Tag someone'),
           content: SizedBox(
-            width: 360,
+            width: MediaQuery.sizeOf(ctx).width - 80 < 360 ? MediaQuery.sizeOf(ctx).width - 80 : 360,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               TextField(
                 controller: search,
@@ -403,7 +403,7 @@ class _PostCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reported — thank you')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -466,7 +466,7 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
       ref.invalidate(_commentsProvider(widget.postId));
       ref.invalidate(feedPostsProvider);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -492,7 +492,7 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
               Expanded(
                 child: comments.when(
                   loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+                  error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
                   data: (list) => list.isEmpty
                       ? const Center(child: Text('No comments yet. Be the first.'))
                       : ListView(

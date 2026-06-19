@@ -80,7 +80,7 @@ class _LeadMarketScreenState extends ConsumerState<LeadMarketScreen> with Single
       onRefresh: () async => ref.refresh(leadMarketProvider.future),
       child: market.when(
         loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-        error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text('$e'))]),
+        error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
         data: (list) => list.isEmpty
             ? _empty('No leads on the market', 'Listed buyer leads from other members appear here to claim.')
             : ListView.separated(
@@ -99,7 +99,7 @@ class _LeadMarketScreenState extends ConsumerState<LeadMarketScreen> with Single
       onRefresh: () async => ref.refresh(myLeadClaimsProvider.future),
       child: claims.when(
         loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-        error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text('$e'))]),
+        error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
         data: (list) => list.isEmpty
             ? _empty('No claimed leads', 'Leads you claim show their full contact details here.')
             : ListView.separated(
@@ -186,7 +186,7 @@ class _LeadMarketScreenState extends ConsumerState<LeadMarketScreen> with Single
       ref.invalidate(leadMarketProvider);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lead listed on the market')));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -257,7 +257,7 @@ class _MarketCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lead claimed — see it under My claims.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

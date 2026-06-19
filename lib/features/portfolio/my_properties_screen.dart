@@ -47,7 +47,7 @@ class MyPropertiesScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: portfolios.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) {
             if (list.isEmpty) {
               return EmptyState(
@@ -90,7 +90,7 @@ class MyPropertiesScreen extends ConsumerWidget {
       await ref.read(apiClientProvider).post('/portfolio', body: {'name': 'My Portfolio'});
       ref.invalidate(_portfoliosProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }
@@ -104,7 +104,7 @@ class _Overview extends ConsumerWidget {
     final ov = ref.watch(_overviewProvider(portfolioId));
     return ov.when(
       loading: () => const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Padding(padding: const EdgeInsets.all(24), child: Text('$e')),
+      error: (e, _) => Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e))),
       data: (m) {
         final totals = m['totals'] is Map ? Map<String, dynamic>.from(m['totals']) : <String, dynamic>{};
         final properties = m['properties'] is List ? (m['properties'] as List) : const [];

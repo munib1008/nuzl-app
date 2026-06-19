@@ -159,7 +159,7 @@ class ContactsScreen extends ConsumerWidget {
       ref.invalidate(contactsProvider);
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contact added')));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -205,7 +205,7 @@ class ContactsScreen extends ConsumerWidget {
                     ref.invalidate(contactsProvider);
                   } catch (e) {
                     setS(() => lifecycle = prev);
-                    if (sheetCtx.mounted) ScaffoldMessenger.of(sheetCtx).showSnackBar(SnackBar(content: Text('$e')));
+                    if (sheetCtx.mounted) ScaffoldMessenger.of(sheetCtx).showSnackBar(SnackBar(content: Text(friendlyError(e))));
                   }
                 },
               ),

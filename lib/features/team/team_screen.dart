@@ -38,7 +38,7 @@ class TeamScreen extends ConsumerWidget {
                 ])))
             : members.when(
                 loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-                error: (e, _) => Center(child: Text('$e')),
+                error: (e, _) => Center(child: Text(friendlyError(e))),
                 data: (list) => ListView(
                   padding: const EdgeInsets.all(AppSpacing.x16),
                   children: [

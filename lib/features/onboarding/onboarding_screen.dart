@@ -438,7 +438,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       await ref.read(apiClientProvider).post('/organizations/${o['id']}/join-request', body: {});
       if (mounted) setState(() => _joinedOrgName = '${o['name']}');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -464,7 +464,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       await ref.read(authControllerProvider.notifier).bootstrap();
       if (mounted) setState(() => _companyCreated = true);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 

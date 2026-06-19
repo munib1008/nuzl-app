@@ -360,7 +360,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
       ref.invalidate(financeScenariosProvider);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Scenario saved')));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -390,7 +390,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
       await ref.read(apiClientProvider).delete('/finance-scenarios/$id');
       ref.invalidate(financeScenariosProvider);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 

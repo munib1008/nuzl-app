@@ -39,7 +39,7 @@ class ReferScreen extends ConsumerWidget {
         onRefresh: () async => ref.refresh(referralProgramProvider.future),
         child: program.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text('$e'))]),
+          error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
           data: (m) => _body(context, m),
         ),
       ),

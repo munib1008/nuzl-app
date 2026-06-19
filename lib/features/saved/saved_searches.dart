@@ -96,7 +96,7 @@ class SaveSearchAction extends ConsumerWidget {
             const SnackBar(content: Text('Search saved — we’ll alert you on new matches.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }
@@ -192,7 +192,7 @@ class _SavedSearchesScreenState extends ConsumerState<SavedSearchesScreen> {
               searches.when(
                 loading: () => const Padding(
                     padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
-                error: (e, _) => Padding(padding: const EdgeInsets.all(24), child: Text('$e')),
+                error: (e, _) => Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e))),
                 data: (list) => list.isEmpty
                     ? const Padding(
                         padding: EdgeInsets.symmetric(vertical: 32),
@@ -235,7 +235,7 @@ class _SavedSearchesScreenState extends ConsumerState<SavedSearchesScreen> {
     try {
       await _deleteSavedSearch(ref, id);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

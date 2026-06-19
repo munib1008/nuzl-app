@@ -51,7 +51,7 @@ class ProjectDetailScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: detail.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (d) {
             final p = Map<String, dynamic>.from(d['project'] ?? {});
             final units = (d['units'] as List? ?? []);
@@ -345,7 +345,7 @@ class ProjectDetailScreen extends ConsumerWidget {
       ref.invalidate(projectDetailProvider(id));
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Units added')));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -374,7 +374,7 @@ class ProjectDetailScreen extends ConsumerWidget {
       final n = (res is Map) ? res['released'] ?? 0 : 0;
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Released $n unit(s) to market')));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -416,7 +416,7 @@ class ProjectDetailScreen extends ConsumerWidget {
             SnackBar(content: Text(agentId == null ? 'Agent cleared' : 'Unit assigned to agent')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -468,7 +468,7 @@ class ProjectDetailScreen extends ConsumerWidget {
       ref.invalidate(projectDetailProvider(id));
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Project updated')));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

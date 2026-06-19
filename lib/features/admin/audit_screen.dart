@@ -32,7 +32,7 @@ class AuditScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: logs.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) {
             final filtered = list.where((e) {
               if (search.isEmpty) return true;

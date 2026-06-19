@@ -29,7 +29,7 @@ class VerificationQueueScreen extends ConsumerWidget {
             loading: () => const Center(
                 child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
             error: (e, _) => ListView(children: [
-              Padding(padding: const EdgeInsets.all(24), child: Text('$e')),
+              Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e))),
             ]),
             data: (list) => list.isEmpty
                 ? ListView(children: const [SizedBox(height: 80), _Empty()])
@@ -58,7 +58,7 @@ class _QueueCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing verified ✓')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -73,7 +73,7 @@ class _QueueCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Submission rejected')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
