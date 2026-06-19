@@ -10,12 +10,17 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/status_badge.dart';
+import '../../auth/application/auth_controller.dart';
 import '../../shell/app_shell.dart';
+
+/// Feed scope: 'public' (everyone, approved) vs 'company' (internal to my org).
+final _feedScopeProvider = StateProvider.autoDispose<String>((ref) => 'public');
 
 /// Professional Feed — social posts (market updates, showcases, success stories…).
 final feedPostsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final scope = ref.watch(_feedScopeProvider);
   try {
-    final d = await ref.read(apiClientProvider).get('/posts');
+    final d = await ref.read(apiClientProvider).get('/posts', query: {'scope': scope});
     return d is List ? d : [];
   } catch (_) {
     return [];
@@ -40,6 +45,26 @@ const _kinds = [
   ('educational', 'Educational'),
 ];
 
+/// Public (everyone) vs Company (internal team) feed switch.
+class _ScopeToggle extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scope = ref.watch(_feedScopeProvider);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x12, AppSpacing.x16, 0),
+      child: SegmentedButton<String>(
+        segments: const [
+          ButtonSegment(value: 'public', label: Text('Public'), icon: Icon(Icons.public, size: 16)),
+          ButtonSegment(value: 'company', label: Text('Company'), icon: Icon(Icons.apartment, size: 16)),
+        ],
+        selected: {scope},
+        showSelectedIcon: false,
+        onSelectionChanged: (s) => ref.read(_feedScopeProvider.notifier).state = s.first,
+      ),
+    );
+  }
+}
+
 class FeedScreen extends ConsumerWidget {
   const FeedScreen({super.key});
 
@@ -58,7 +83,10 @@ class FeedScreen extends ConsumerWidget {
               label: const Text('New post'),
             )
           : null,
-      body: RefreshIndicator(
+      body: Column(children: [
+        if (ref.watch(authControllerProvider).user?.organizationId != null) _ScopeToggle(),
+        Expanded(
+          child: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(feedPostsProvider);
           await ref.read(feedPostsProvider.future);
@@ -86,7 +114,9 @@ class FeedScreen extends ConsumerWidget {
                   ),
                 ),
         ),
-      ),
+          ),
+        ),
+      ]),
     );
   }
 
@@ -94,6 +124,8 @@ class FeedScreen extends ConsumerWidget {
     final title = TextEditingController();
     final body = TextEditingController();
     var kind = 'market_update';
+    var audience = 'public';
+    final hasOrg = ref.read(authControllerProvider).user?.organizationId != null;
     final media = <String>[];
     final mentions = <Map<String, dynamic>>[]; // {id, name}
     final ok = await AppDialog.show<bool>(
@@ -109,6 +141,24 @@ class FeedScreen extends ConsumerWidget {
               items: _kinds.map((k) => DropdownMenuItem(value: k.$1, child: Text(k.$2))).toList(),
               onChanged: (v) => setS(() => kind = v ?? 'market_update'),
             ),
+            if (hasOrg) ...[
+              const SizedBox(height: AppSpacing.x8),
+              DropdownButtonFormField<String>(
+                initialValue: audience,
+                decoration: const InputDecoration(labelText: 'Audience'),
+                items: const [
+                  DropdownMenuItem(value: 'public', child: Text('Public — everyone')),
+                  DropdownMenuItem(value: 'company', child: Text('Company — internal team only')),
+                ],
+                onChanged: (v) => setS(() => audience = v ?? 'public'),
+              ),
+              if (audience == 'public')
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text('Company marketing posts are reviewed before going live.',
+                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).hintColor)),
+                ),
+            ],
             const SizedBox(height: AppSpacing.x8),
             TextField(controller: title, decoration: const InputDecoration(labelText: 'Title')),
             const SizedBox(height: AppSpacing.x8),
@@ -174,13 +224,17 @@ class FeedScreen extends ConsumerWidget {
       await ref.read(apiClientProvider).post('/posts', body: {
         'kind': kind,
         'post_type': 'need_help',
+        'audience': audience,
         'title': title.text.trim(),
         'body': body.text.trim(),
         if (media.isNotEmpty) 'media': media,
         if (mentions.isNotEmpty) 'mentions': mentions.map((m) => m['id']).toList(),
       });
       ref.invalidate(feedPostsProvider);
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Posted to the feed')));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
+            audience == 'company' ? 'Posted to your company feed' : 'Posted — public marketing posts may be reviewed first')));
+      }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
