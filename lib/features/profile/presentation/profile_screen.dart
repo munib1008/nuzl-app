@@ -9,6 +9,7 @@ import 'profile_completion_banner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_dialog.dart';
+import '../../../core/widgets/field_pair.dart';
 import '../../../core/widgets/image_crop_dialog.dart';
 import '../../../core/widgets/multi_select_field.dart';
 import '../../../core/widgets/nuzl_logo.dart';
@@ -495,13 +496,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     TextField(controller: nationality, onChanged: (_) => _markDirty(),
                         decoration: const InputDecoration(labelText: 'Nationality *', prefixIcon: Icon(Icons.flag_outlined))),
                     const SizedBox(height: AppSpacing.x12),
-                    Row(children: [
-                      Expanded(child: TextField(controller: country, onChanged: (_) => _markDirty(),
-                          decoration: const InputDecoration(labelText: 'Country *'))),
-                      const SizedBox(width: AppSpacing.x12),
-                      Expanded(child: TextField(controller: city, onChanged: (_) => _markDirty(),
-                          decoration: const InputDecoration(labelText: 'City *'))),
-                    ]),
+                    FieldPair(
+                      TextField(controller: country, onChanged: (_) => _markDirty(),
+                          decoration: const InputDecoration(labelText: 'Country *')),
+                      TextField(controller: city, onChanged: (_) => _markDirty(),
+                          decoration: const InputDecoration(labelText: 'City *')),
+                    ),
                   ]),
                   const SizedBox(height: AppSpacing.x16),
 

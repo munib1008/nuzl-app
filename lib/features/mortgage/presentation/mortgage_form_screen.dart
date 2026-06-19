@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/util/mortgage_math.dart';
+import '../../../core/widgets/field_pair.dart';
 import '../domain/finance_type.dart';
 import '../data/mortgage_repository.dart';
 
@@ -463,11 +464,10 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
   // ── Step 2 — Costs ─────────────────────────────────────────────────────
   List<Widget> _stepCosts(TextTheme t) => [
         _stepIntro(t, 'Purchase costs', 'Upfront cash${_isCash ? '' : _isl ? ' and Takaful' : ' and insurance'}.'),
-        Row(children: [
-          Expanded(child: _money(_dld, 'DLD charges *', helper: 'e.g. 4% of value')),
-          const SizedBox(width: AppSpacing.x12),
-          Expanded(child: _money(_processing, 'Processing fees *')),
-        ]),
+        FieldPair(
+          _money(_dld, 'DLD charges *', helper: 'e.g. 4% of value'),
+          _money(_processing, 'Processing fees *'),
+        ),
         const SizedBox(height: AppSpacing.x12),
         _money(_registration, 'Registration fees'),
         const SizedBox(height: AppSpacing.x12),
@@ -512,11 +512,10 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
         // Insurance / Takaful — only for financed products.
         if (!_isCash) ...[
           _sectionTitle(_isl ? 'Takaful' : 'Insurance', t),
-          Row(children: [
-            Expanded(child: _money(_propInsurance, _propInsLabel)),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(child: _money(_lifeInsurance, _lifeInsLabel)),
-          ]),
+          FieldPair(
+            _money(_propInsurance, _propInsLabel),
+            _money(_lifeInsurance, _lifeInsLabel),
+          ),
           const SizedBox(height: AppSpacing.x12),
           DropdownButtonFormField<String>(
             initialValue: _insuranceFreq,
@@ -528,11 +527,10 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
             onChanged: (v) => setState(() => _insuranceFreq = v ?? 'yearly'),
           ),
           const SizedBox(height: AppSpacing.x12),
-          Row(children: [
-            Expanded(child: _dateField(_isl ? 'Takaful start' : 'Insurance start', _insStart, () => _pickDate(3))),
-            const SizedBox(width: AppSpacing.x12),
-            Expanded(child: _dateField('Renewal date', _insRenewal, () => _pickDate(4))),
-          ]),
+          FieldPair(
+            _dateField(_isl ? 'Takaful start' : 'Insurance start', _insStart, () => _pickDate(3)),
+            _dateField('Renewal date', _insRenewal, () => _pickDate(4)),
+          ),
         ],
       ];
 
@@ -562,18 +560,15 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
       _money(_principal, _financeLabel, live: true,
           helper: _isl ? "Statement: 'Ijarah Finance Amount Disbursed'" : null),
       const SizedBox(height: AppSpacing.x12),
-      Row(children: [
-        Expanded(
-          child: TextField(
-              controller: _rate,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                  labelText: _rateLabel, helperText: _isl ? "Statement: 'Rental Rate' (variable)" : null)),
-        ),
-        const SizedBox(width: AppSpacing.x12),
-        Expanded(child: _dateField(_rateValidLabel, _rateValidUntil, () => _pickDate(2))),
-      ]),
+      FieldPair(
+        TextField(
+            controller: _rate,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+                labelText: _rateLabel, helperText: _isl ? "Statement: 'Rental Rate' (variable)" : null)),
+        _dateField(_rateValidLabel, _rateValidUntil, () => _pickDate(2)),
+      ),
       const SizedBox(height: AppSpacing.x12),
       TextField(
           controller: _years,
@@ -581,11 +576,10 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
           onChanged: (_) => setState(() {}),
           decoration: InputDecoration(labelText: _termLabel)),
       const SizedBox(height: AppSpacing.x12),
-      Row(children: [
-        Expanded(child: _dateField(_startLabel, _loanStart, () => _pickDate(0))),
-        const SizedBox(width: AppSpacing.x12),
-        Expanded(child: _dateField(_firstLabel, _firstInstallment, () => _pickDate(1))),
-      ]),
+      FieldPair(
+        _dateField(_startLabel, _loanStart, () => _pickDate(0)),
+        _dateField(_firstLabel, _firstInstallment, () => _pickDate(1)),
+      ),
       const SizedBox(height: AppSpacing.x16),
       Card(
         child: Padding(
@@ -606,21 +600,16 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
         ),
       ),
       _sectionTitle('Fixed intro period (optional)', t),
-      Row(children: [
-        Expanded(
-          child: TextField(
-              controller: _fixedMonths,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Fixed for (months)')),
-        ),
-        const SizedBox(width: AppSpacing.x12),
-        Expanded(
-          child: TextField(
-              controller: _rateAfter,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(labelText: _isl ? 'Profit rate after (%)' : 'Rate after (%)')),
-        ),
-      ]),
+      FieldPair(
+        TextField(
+            controller: _fixedMonths,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(labelText: 'Fixed for (months)')),
+        TextField(
+            controller: _rateAfter,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(labelText: _isl ? 'Profit rate after (%)' : 'Rate after (%)')),
+      ),
     ];
   }
 
@@ -752,10 +741,20 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
       ));
       if (y < years) rows.add(Divider(height: 1, color: border));
     }
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.x12),
-      decoration: BoxDecoration(border: Border.all(color: border), borderRadius: BorderRadius.circular(AppSpacing.rMd)),
-      child: Column(children: rows),
-    );
+    // Keep the proportional columns, but never let the AED values crush: hold a
+    // 440px minimum and scroll horizontally below that (phones) instead.
+    return LayoutBuilder(builder: (context, c) {
+      final tableWidth = c.maxWidth < 440 ? 440.0 : c.maxWidth;
+      final table = Container(
+        width: tableWidth,
+        padding: const EdgeInsets.all(AppSpacing.x12),
+        decoration:
+            BoxDecoration(border: Border.all(color: border), borderRadius: BorderRadius.circular(AppSpacing.rMd)),
+        child: Column(children: rows),
+      );
+      return c.maxWidth < 440
+          ? SingleChildScrollView(scrollDirection: Axis.horizontal, child: table)
+          : table;
+    });
   }
 }

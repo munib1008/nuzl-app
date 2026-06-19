@@ -6,6 +6,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/upload_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/field_pair.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/sticky_save_bar.dart';
 import '../../auth/application/auth_controller.dart';
@@ -200,7 +201,8 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Auto-fill from a message'),
         content: SizedBox(
-          width: 420,
+          // Cap at 420 on desktop, but never wider than a phone dialog can hold.
+          width: MediaQuery.sizeOf(ctx).width - 80 < 420 ? MediaQuery.sizeOf(ctx).width - 80 : 420,
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Paste a WhatsApp-style property message — we’ll extract the details.',
                 style: TextStyle(fontSize: 13)),
@@ -407,21 +409,20 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
               onChanged: (v) => setState(() => propertyType = v ?? 'apartment'),
             ),
             const SizedBox(height: AppSpacing.x12),
-            Row(children: [
-              Expanded(child: DropdownButtonFormField<String>(
+            FieldPair(
+              DropdownButtonFormField<String>(
                 initialValue: purpose, decoration: const InputDecoration(labelText: 'Purpose'),
                 items: const [DropdownMenuItem(value: 'sale', child: Text('Sale')), DropdownMenuItem(value: 'rent', child: Text('Rent'))],
-                onChanged: (v) => setState(() => purpose = v ?? 'sale'))),
-              const SizedBox(width: AppSpacing.x12),
-              Expanded(child: DropdownButtonFormField<String>(
+                onChanged: (v) => setState(() => purpose = v ?? 'sale')),
+              DropdownButtonFormField<String>(
                 initialValue: furnishing, decoration: const InputDecoration(labelText: 'Furnishing'),
                 items: const [
                   DropdownMenuItem(value: 'unfurnished', child: Text('Unfurnished')),
                   DropdownMenuItem(value: 'partly_furnished', child: Text('Partly furnished')),
                   DropdownMenuItem(value: 'furnished', child: Text('Furnished')),
                 ],
-                onChanged: (v) => setState(() => furnishing = v ?? 'unfurnished'))),
-            ]),
+                onChanged: (v) => setState(() => furnishing = v ?? 'unfurnished')),
+            ),
             const SizedBox(height: AppSpacing.x12),
             TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price (AED)')),
             const SizedBox(height: AppSpacing.x12),
