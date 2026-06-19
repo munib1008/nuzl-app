@@ -23,6 +23,7 @@ import '../../features/admin/post_moderation_screen.dart';
 import '../../features/admin/founding_owners_screen.dart';
 import '../../features/organizations/org_ownership_screen.dart';
 import '../../features/organizations/company_dashboard_screen.dart';
+import '../../features/organizations/partners_screen.dart';
 import '../../features/referral/refer_screen.dart';
 import '../../features/rewards/rewards_screen.dart';
 import '../../features/leads/presentation/lead_market_screen.dart';
@@ -180,6 +181,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/inventory', builder: (_, __) => const InventoryScreen()),
       GoRoute(path: '/projects', builder: (_, __) => const ProjectsScreen()),
       GoRoute(path: '/projects/:id', builder: (_, s) => ProjectDetailScreen(projectId: s.pathParameters['id']!)),
+      GoRoute(path: '/partners', builder: (_, __) => const PartnersScreen()),
       GoRoute(path: '/my-properties', builder: (_, __) => const MyPropertiesScreen()),
       GoRoute(path: '/property/:id', builder: (_, s) => PropertyRecordScreen(propertyId: s.pathParameters['id']!)),
       GoRoute(path: '/lead-matches', builder: (_, __) => const LeadMatchesScreen()),

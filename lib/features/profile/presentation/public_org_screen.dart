@@ -196,7 +196,11 @@ class _Body extends StatelessWidget {
                   // projects (developers)
                   if (projects.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.x24),
-                    Text('Projects', style: t.titleMedium),
+                    Row(children: [
+                      Expanded(child: Text('Projects', style: t.titleMedium)),
+                      if ('${org['org_type'] ?? ''}' == 'developer')
+                        _PartnerRequestButton(developerOrg: '${org['id'] ?? ''}', developerName: name),
+                    ]),
                     const SizedBox(height: AppSpacing.x8),
                     Column(children: projects.map((e) => _ProjectTile(Map<String, dynamic>.from(e))).toList()),
                   ],
@@ -353,6 +357,36 @@ class _OfferingCard extends StatelessWidget {
           ]),
         ),
       ]),
+    );
+  }
+}
+
+/// Shown to agent/brokerage personas on a developer's page — request to sell
+/// the developer's projects. The developer approves from their Partners screen.
+class _PartnerRequestButton extends ConsumerWidget {
+  const _PartnerRequestButton({required this.developerOrg, required this.developerName});
+  final String developerOrg;
+  final String developerName;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final persona = ref.watch(personaProvider);
+    final canPartner = persona == Persona.broker || persona == Persona.agent || persona == Persona.salesperson;
+    if (!canPartner || developerOrg.isEmpty) return const SizedBox.shrink();
+    return OutlinedButton.icon(
+      onPressed: () async {
+        try {
+          await ref.read(apiClientProvider).post('/developer/partners/request', body: {'developer_org': developerOrg});
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Request sent to $developerName — they\'ll review your partnership.')));
+          }
+        } catch (e) {
+          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+        }
+      },
+      icon: const Icon(Icons.handshake_outlined, size: 16),
+      label: const Text('Request to partner'),
+      style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
     );
   }
 }

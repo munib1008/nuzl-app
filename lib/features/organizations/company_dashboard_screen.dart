@@ -132,6 +132,7 @@ class CompanyDashboardScreen extends ConsumerWidget {
           _tile(context, w, Icons.receipt_long_outlined, 'Orders', 'Bookings & sales', AppColors.success, '/orders'),
           _tile(context, w, Icons.assignment_outlined, 'Requests', 'Bid on open requests', AppColors.warning, '/tenders'),
           _tile(context, w, Icons.groups_outlined, 'Members', pendingJoins > 0 ? '$pendingJoins join request${pendingJoins == 1 ? '' : 's'}' : 'Team & join requests', AppColors.secondary, '/org-ownership'),
+          _tile(context, w, Icons.handshake_outlined, 'Sales partners', 'Agencies selling your projects', AppColors.primary, '/partners'),
           _tile(context, w, Icons.verified_user_outlined, 'Verification', status[0].toUpperCase() + status.substring(1), AppColors.info, '/org-ownership'),
         ];
         return Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x12, children: tiles);
