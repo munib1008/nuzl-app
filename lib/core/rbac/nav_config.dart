@@ -123,16 +123,15 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
     case Persona.owner:
+      // Slimmed: the Cockpit merged into the Dashboard, and Financials /
+      // Mortgages / Requests are surfaced via dashboard widgets + quick actions
+      // (routes still live) — so the top nav stays an operational shortlist.
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
-        NavItem(Icons.space_dashboard_outlined, 'Cockpit', '/owner-cockpit'),
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.vpn_key_outlined, 'Rentals', '/rentals'),
         NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
-        NavItem(Icons.assignment_outlined, 'Requests', '/tenders'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
-        NavItem(Icons.account_balance_wallet_outlined, 'Financials', '/financials'),
-        NavItem(Icons.account_balance_outlined, 'Mortgages', '/mortgages'),
         NavItem(Icons.folder_outlined, 'Documents', '/documents'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];

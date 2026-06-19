@@ -199,7 +199,9 @@ class DashboardScreen extends ConsumerWidget {
             Text(isBuyer ? 'Discover and track your next property.' : "Here's what's happening today.",
                 style: t.bodyMedium?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const SizedBox(height: AppSpacing.x16),
-            const _GlobalSearchBar(),
+            // Owners manage a portfolio, they don't browse the market — search
+            // lives inside Properties for them (operational workspace, not discovery).
+            if (persona != Persona.owner) const _GlobalSearchBar(),
             if (user?.pendingDeletion == true) ...[
               const SizedBox(height: AppSpacing.x16),
               _DeletionBanner(deletionAt: user!.deletionAt),
@@ -242,6 +244,12 @@ class DashboardScreen extends ConsumerWidget {
             if (isBuyer) const _MarketplaceStrip(),
             if (!isBuyer && persona != Persona.owner) ...[
               const _RecentProperties(),
+              const SizedBox(height: AppSpacing.x24),
+            ],
+            // Owner command centre — portfolio/viewing/document stats + the agents
+            // working your properties (merged in from the retired Owner Cockpit).
+            if (persona == Persona.owner) ...[
+              const _OwnerCockpit(),
               const SizedBox(height: AppSpacing.x24),
             ],
 
@@ -775,7 +783,15 @@ class _QuickActions extends StatelessWidget {
           ('Manage inventory', Icons.inventory_2_outlined, '/inventory'),
           ('View feed', Icons.dynamic_feed_outlined, '/feed'),
         ],
-      Persona.investor || Persona.owner => [
+      Persona.owner => [
+          ('Add property', Icons.add_home_work_outlined, '/properties/new'),
+          ('My properties', Icons.home_work_outlined, '/my-properties'),
+          ('Documents', Icons.folder_outlined, '/documents'),
+          ('Request maintenance', Icons.build_outlined, '/maintenance'),
+          ('Financials', Icons.account_balance_wallet_outlined, '/financials'),
+          ('Track mortgages', Icons.account_balance_outlined, '/mortgages'),
+        ],
+      Persona.investor => [
           ('Mortgage calculator', Icons.calculate_outlined, '/calculator'),
           ('Track mortgages', Icons.account_balance_outlined, '/mortgages'),
           ('My properties', Icons.home_work_outlined, '/my-properties'),
@@ -826,6 +842,126 @@ class _QuickActions extends StatelessWidget {
                 onTap: () => context.go(a.$3),
               ))
           .toList(),
+    );
+  }
+}
+
+/// Owner command-centre block (merged in from the retired Owner Cockpit page):
+/// portfolio / viewing / document roll-ups + the agents working your properties.
+final _ownerCockpitProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/reports/owner-cockpit');
+    return d is Map ? Map<String, dynamic>.from(d) : <String, dynamic>{};
+  } catch (_) {
+    return <String, dynamic>{};
+  }
+});
+
+String _fmtResp(int secs) {
+  if (secs <= 0) return '—';
+  if (secs < 3600) return '${(secs / 60).round()}m';
+  final h = secs ~/ 3600, m = (secs % 3600) ~/ 60;
+  return m == 0 ? '${h}h' : '${h}h ${m}m';
+}
+
+int _ci(dynamic v) => v is int ? v : int.tryParse('$v') ?? 0;
+
+class _OwnerCockpit extends ConsumerWidget {
+  const _OwnerCockpit();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final d = ref.watch(_ownerCockpitProvider).asData?.value ?? const <String, dynamic>{};
+    if (d.isEmpty) return const SizedBox.shrink();
+    final props = Map<String, dynamic>.from(d['properties'] ?? {});
+    final v = Map<String, dynamic>.from(d['viewings'] ?? {});
+    final docs = Map<String, dynamic>.from(d['documents'] ?? {});
+    final agents = (d['agents'] is List) ? List.from(d['agents']) : const [];
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('Portfolio activity', style: t.titleMedium),
+      const SizedBox(height: AppSpacing.x12),
+      _statCard(context, 'Properties', [
+        ('Total', '${_ci(props['total'])}'),
+        ('Published', '${_ci(props['published'])}'),
+        ('Drafts', '${_ci(props['drafts'])}'),
+      ], t, muted, onTap: () => context.go('/my-properties')),
+      const SizedBox(height: AppSpacing.x12),
+      _statCard(context, 'Viewing activity', [
+        ('Requests', '${_ci(v['requests'])}'),
+        ('Pending', '${_ci(v['pending'])}'),
+        ('Scheduled', '${_ci(v['scheduled'])}'),
+        ('Completed', '${_ci(v['completed'])}'),
+        ('Won', '${_ci(v['closed_won'])}'),
+      ], t, muted),
+      const SizedBox(height: AppSpacing.x12),
+      _statCard(context, 'Documents', [
+        ('Uploaded', '${_ci(docs['uploaded'])}'),
+        ('Pending requests', '${_ci(docs['pending_requests'])}'),
+      ], t, muted, onTap: () => context.go('/documents')),
+      if (agents.isNotEmpty) ...[
+        const SizedBox(height: AppSpacing.x20),
+        Text('Agents working your properties', style: t.titleMedium),
+        const SizedBox(height: AppSpacing.x8),
+        for (final a in agents) _agentRow(context, Map<String, dynamic>.from(a), t, muted),
+      ],
+    ]);
+  }
+
+  Widget _statCard(BuildContext context, String title, List<(String, String)> stats, TextTheme t, Color muted,
+      {VoidCallback? onTap}) {
+    final card = Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Text(title, style: t.titleSmall),
+            if (onTap != null) ...[const Spacer(), Icon(Icons.chevron_right, size: 18, color: muted)],
+          ]),
+          const SizedBox(height: AppSpacing.x12),
+          Wrap(spacing: AppSpacing.x24, runSpacing: AppSpacing.x12, children: [
+            for (final s in stats)
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(s.$2, style: t.titleLarge),
+                Text(s.$1, style: t.bodySmall?.copyWith(color: muted)),
+              ]),
+          ]),
+        ]),
+      ),
+    );
+    return onTap == null
+        ? card
+        : InkWell(onTap: onTap, borderRadius: BorderRadius.circular(AppSpacing.rMd), child: card);
+  }
+
+  Widget _agentRow(BuildContext context, Map<String, dynamic> a, TextTheme t, Color muted) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: AppSpacing.x8),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x12),
+        child: Row(children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: AppColors.primaryTint,
+            child: Text('${a['name'] ?? '?'}'.isNotEmpty ? '${a['name']}'[0].toUpperCase() : '?',
+                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(width: AppSpacing.x12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('${a['name'] ?? 'Agent'}', style: t.titleSmall),
+              Text([
+                '${_ci(a['viewings'])} viewings',
+                '${_ci(a['scheduled'])} scheduled',
+                '${_ci(a['closed_won'])} won',
+                'resp ${_fmtResp(_ci(a['avg_response_secs']))}',
+              ].join('  ·  '), style: t.bodySmall?.copyWith(color: muted)),
+            ]),
+          ),
+        ]),
+      ),
     );
   }
 }

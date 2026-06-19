@@ -19,7 +19,6 @@ import '../../features/listings/presentation/listing_detail_screen.dart';
 import '../../features/listings/presentation/public_listing_screen.dart';
 import '../../features/documents/property_docs_screen.dart';
 import '../../features/opportunities/opportunities_screen.dart';
-import '../../features/dashboard/owner_cockpit_screen.dart';
 import '../../features/admin/post_moderation_screen.dart';
 import '../../features/admin/founding_owners_screen.dart';
 import '../../features/organizations/org_ownership_screen.dart';
@@ -185,7 +184,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/crm', builder: (_, __) => const CrmScreen()),
       GoRoute(path: '/opportunities', builder: (_, __) => const OpportunitiesScreen()),
       GoRoute(path: '/contacts', builder: (_, __) => const ContactsScreen()),
-      GoRoute(path: '/owner-cockpit', builder: (_, __) => const OwnerCockpitScreen()),
+      // Cockpit merged into the Dashboard — keep the path as a redirect so old
+      // links/bookmarks don't dead-end.
+      GoRoute(path: '/owner-cockpit', redirect: (_, __) => '/dashboard'),
       GoRoute(path: '/post-moderation', builder: (_, __) => const PostModerationScreen()),
       GoRoute(path: '/founding-owners', builder: (_, __) => const FoundingOwnersScreen()),
       GoRoute(path: '/org-ownership', builder: (_, __) => const OrgOwnershipScreen()),
