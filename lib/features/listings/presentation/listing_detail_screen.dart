@@ -9,6 +9,7 @@ import '../../../core/rbac/persona.dart';
 import '../../../core/util/mortgage_math.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/location_map.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../messages/data/messaging_repository.dart';
 import '../../saved/saved_screen.dart';
@@ -229,7 +230,7 @@ class _Detail extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.x20),
                       Text('Location', style: t.titleMedium),
                       const SizedBox(height: AppSpacing.x8),
-                      _MapPlaceholder(
+                      LocationMap(
                         lat: double.tryParse('${l['latitude'] ?? ''}'),
                         lng: double.tryParse('${l['longitude'] ?? ''}'),
                       ),
@@ -263,52 +264,78 @@ class _GalleryState extends State<_Gallery> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (widget.images.isEmpty) {
-      return AspectRatio(
-        aspectRatio: 16 / 9,
-        child: Container(
-          color: AppColors.surface2,
-          child: const Center(child: Icon(Icons.apartment_outlined, size: 56, color: AppColors.textSubtle)),
+  void _go(int delta) {
+    final n = widget.images.length;
+    if (n < 2) return;
+    _controller.animateToPage((_page + delta).clamp(0, n - 1),
+        duration: const Duration(milliseconds: 280), curve: Curves.easeOut);
+  }
+
+  Widget _navArrow(IconData icon, VoidCallback onTap) => Material(
+        color: Colors.black.withValues(alpha: 0.42),
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(padding: const EdgeInsets.all(8), child: Icon(icon, color: Colors.white, size: 22)),
         ),
       );
-    }
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: Stack(
-        alignment: Alignment.bottomCenter,
-        children: [
-          PageView.builder(
-            controller: _controller,
-            itemCount: widget.images.length,
-            onPageChanged: (i) => setState(() => _page = i),
-            itemBuilder: (_, i) => Image.network(widget.images[i], fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                    color: AppColors.surface2,
-                    child: const Center(child: Icon(Icons.broken_image_outlined, size: 40, color: AppColors.textSubtle)))),
-          ),
-          if (widget.images.length > 1)
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.x8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  widget.images.length,
-                  (i) => Container(
-                    width: 7,
-                    height: 7,
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: i == _page ? Colors.white : Colors.white54,
+
+  @override
+  Widget build(BuildContext context) {
+    final wide = MediaQuery.sizeOf(context).width >= 760;
+    final multi = widget.images.length > 1;
+    final Widget content = widget.images.isEmpty
+        ? Container(
+            color: AppColors.surface2,
+            child: const Center(child: Icon(Icons.apartment_outlined, size: 56, color: AppColors.textSubtle)))
+        : Stack(fit: StackFit.expand, children: [
+            PageView.builder(
+              controller: _controller,
+              itemCount: widget.images.length,
+              onPageChanged: (i) => setState(() => _page = i),
+              itemBuilder: (_, i) => Image.network(widget.images[i], fit: BoxFit.cover,
+                  loadingBuilder: (c, child, p) => p == null ? child : Container(color: AppColors.surface2),
+                  errorBuilder: (_, __, ___) => Container(
+                      color: AppColors.surface2,
+                      child: const Center(child: Icon(Icons.broken_image_outlined, size: 40, color: AppColors.textSubtle)))),
+            ),
+            const Positioned(
+              left: 0, right: 0, bottom: 0, height: 64,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Color(0x55000000)],
                     ),
                   ),
                 ),
               ),
             ),
-        ],
-      ),
+            if (multi)
+              Positioned(
+                bottom: AppSpacing.x12, left: 0, right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    widget.images.length,
+                    (i) => Container(
+                      width: 7, height: 7,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: i == _page ? Colors.white : Colors.white54),
+                    ),
+                  ),
+                ),
+              ),
+            if (multi && wide) ...[
+              Positioned(left: 14, top: 0, bottom: 0, child: Center(child: _navArrow(Icons.chevron_left, () => _go(-1)))),
+              Positioned(right: 14, top: 0, bottom: 0, child: Center(child: _navArrow(Icons.chevron_right, () => _go(1)))),
+            ],
+          ]);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppSpacing.rXl),
+      child: AspectRatio(aspectRatio: 16 / 9, child: content),
     );
   }
 }
@@ -879,40 +906,6 @@ class _AssignAgentDialogState extends ConsumerState<_AssignAgentDialog> {
         ]),
       ),
       actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Close'))],
-    );
-  }
-}
-
-class _MapPlaceholder extends StatelessWidget {
-  const _MapPlaceholder({this.lat, this.lng});
-  final double? lat;
-  final double? lng;
-  @override
-  Widget build(BuildContext context) {
-    final pinned = lat != null && lng != null;
-    return Container(
-      height: 160,
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(AppSpacing.rMd),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(pinned ? Icons.place : Icons.map_outlined, size: 32,
-                color: pinned ? AppColors.primary : AppColors.textSubtle),
-            const SizedBox(height: 6),
-            Text(
-              pinned
-                  ? 'Pinned at ${lat!.toStringAsFixed(5)}, ${lng!.toStringAsFixed(5)}'
-                  : 'No location pinned',
-              style: const TextStyle(color: AppColors.textSubtle),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
