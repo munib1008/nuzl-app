@@ -1079,6 +1079,22 @@ class _PropertyTimelineState extends State<_PropertyTimeline> with SingleTickerP
           final frac = pos - pos.floorToDouble();
           // Gentle pulse on the active node (peaks mid-dwell).
           final pulse = 1 + 0.14 * math.sin(frac * math.pi);
+          final wide = MediaQuery.sizeOf(context).width >= 760;
+          // Wide: spread the stages edge-to-edge with stretching connectors so
+          // the timeline fills the section instead of clustering in the centre.
+          if (wide) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                for (var i = 0; i < _steps.length; i++) ...[
+                  _node(context, t, primary, i, active, pulse),
+                  if (i < _steps.length - 1)
+                    Expanded(child: _connector(context, primary, done: i < active)),
+                ],
+              ],
+            );
+          }
+          // Narrow: wrap to multiple rows.
           return Wrap(
             alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
@@ -1094,6 +1110,22 @@ class _PropertyTimelineState extends State<_PropertyTimeline> with SingleTickerP
             ],
           );
         },
+      ),
+    );
+  }
+
+  /// Stretching connector between two stages (wide layout). Sits at the node
+  /// circle's vertical centre and colours in as progress passes it.
+  Widget _connector(BuildContext context, Color primary, {required bool done}) {
+    final c = done ? primary : _subtle(context).withValues(alpha: 0.45);
+    return SizedBox(
+      height: 60, // match the node circle so the line aligns to its centre
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x8),
+        child: Row(children: [
+          Expanded(child: Container(height: 2, color: c)),
+          Icon(Icons.chevron_right, size: 18, color: c),
+        ]),
       ),
     );
   }
@@ -1118,16 +1150,16 @@ class _PropertyTimelineState extends State<_PropertyTimeline> with SingleTickerP
         scale: isActive ? pulse : 1.0,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
-          width: 52,
-          height: 52,
+          width: 60,
+          height: 60,
           decoration: BoxDecoration(
             color: bg,
             shape: BoxShape.circle,
             boxShadow: isActive
-                ? [BoxShadow(color: primary.withValues(alpha: 0.35), blurRadius: 16, spreadRadius: 1)]
+                ? [BoxShadow(color: primary.withValues(alpha: 0.35), blurRadius: 18, spreadRadius: 1)]
                 : null,
           ),
-          child: Icon(_steps[i].$1, color: fg, size: 24),
+          child: Icon(_steps[i].$1, color: fg, size: 26),
         ),
       ),
       const SizedBox(height: 6),
