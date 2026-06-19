@@ -12,55 +12,7 @@ import '../../core/widgets/hover_lift.dart';
 import '../../core/widgets/hover_zoom_image.dart';
 import '../../core/widgets/status_badge.dart';
 import '../auth/application/auth_controller.dart';
-import '../listings/presentation/listings_screen.dart' show listingsSearchProvider;
 import '../shell/app_shell.dart';
-
-/// Global property search — seeds the shared listings query and routes to the
-/// Properties screen (which resolves community / building / area / property-ID).
-class _GlobalSearchBar extends ConsumerStatefulWidget {
-  const _GlobalSearchBar();
-  @override
-  ConsumerState<_GlobalSearchBar> createState() => _GlobalSearchBarState();
-}
-
-class _GlobalSearchBarState extends ConsumerState<_GlobalSearchBar> {
-  final _c = TextEditingController();
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  void _go() {
-    ref.read(listingsSearchProvider.notifier).state = _c.text.trim();
-    context.go('/properties');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: _c,
-      textInputAction: TextInputAction.search,
-      onSubmitted: (_) => _go(),
-      decoration: InputDecoration(
-        isDense: true,
-        hintText: 'Search by community, building or property ID (e.g. NUZL-DXB-90001)',
-        prefixIcon: const Icon(Icons.search),
-        suffixIcon: IconButton(
-          tooltip: 'Search',
-          icon: const Icon(Icons.arrow_forward),
-          onPressed: _go,
-        ),
-        filled: true,
-        fillColor: Theme.of(context).cardColor,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.rInput),
-          borderSide: BorderSide(color: Theme.of(context).dividerColor),
-        ),
-      ),
-    );
-  }
-}
 
 /// Role-appropriate KPI report. Graceful: {} on error / no permission.
 final dashboardProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
@@ -198,10 +150,8 @@ class DashboardScreen extends ConsumerWidget {
             const SizedBox(height: 2),
             Text(isBuyer ? 'Discover and track your next property.' : "Here's what's happening today.",
                 style: t.bodyMedium?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
-            const SizedBox(height: AppSpacing.x16),
-            // Owners manage a portfolio, they don't browse the market — search
-            // lives inside Properties for them (operational workspace, not discovery).
-            if (persona != Persona.owner) const _GlobalSearchBar(),
+            // Property search lives in the Properties tab (single search surface) —
+            // the dashboard is for tracking, not discovery.
             if (user?.pendingDeletion == true) ...[
               const SizedBox(height: AppSpacing.x16),
               _DeletionBanner(deletionAt: user!.deletionAt),

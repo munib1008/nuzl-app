@@ -64,6 +64,12 @@ class ListingsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: NuzlAppBar(title: 'Properties', actions: [
+        // Quick access to the viewings the user has booked / scheduled.
+        IconButton(
+          tooltip: 'Viewings booked',
+          icon: const Icon(Icons.event_available_outlined),
+          onPressed: () => context.push('/viewings'),
+        ),
         // Saved lives inside Properties (combined nav) — bookmark opens it.
         IconButton(
           tooltip: 'Saved',
@@ -702,6 +708,10 @@ class _Drop<T> extends StatelessWidget {
         child: DropdownButton<T>(
           value: value,
           isDense: true,
+          icon: Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: on ? primary : Theme.of(context).hintColor),
+          ),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600, color: on ? primary : Theme.of(context).textTheme.bodyMedium?.color),
           borderRadius: BorderRadius.circular(AppSpacing.rMd),

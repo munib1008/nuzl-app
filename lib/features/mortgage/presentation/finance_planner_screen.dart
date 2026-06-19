@@ -64,6 +64,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
   final _price = TextEditingController();
   final _downPct = TextEditingController(text: '20');
   final _rate = TextEditingController(text: '4.5');
+  final _scrollCtrl = ScrollController();
   String _financeType = 'conventional';
   String _countryCode = 'AE';
   int _years = 25;
@@ -99,6 +100,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
     for (final c in [_income, _obligations, _price, _downPct, _rate]) {
       c.dispose();
     }
+    _scrollCtrl.dispose();
     super.dispose();
   }
 
@@ -171,6 +173,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: ListView(
+          controller: _scrollCtrl,
           padding: const EdgeInsets.all(AppSpacing.x20),
           children: [
             Text('Plan your purchase', style: t.headlineSmall),
@@ -474,7 +477,13 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
         _downPct.text = ((down / price) * 100).round().toString();
       }
     });
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Scenario loaded')));
+    // Bring the editable inputs back into view so it's clear the scenario loaded
+    // into the form (not a read-only card) and can be edited and re-saved.
+    if (_scrollCtrl.hasClients) {
+      _scrollCtrl.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Loaded into the form — edit the numbers and save again.')));
   }
 
   Future<void> _delete(String id) async {
@@ -502,11 +511,19 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
       title: Text('${s['label'] ?? 'Scenario'}', maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: sub.isEmpty ? null : Text(sub, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
       onTap: () => _load(s),
-      trailing: IconButton(
-        tooltip: 'Delete',
-        icon: const Icon(Icons.delete_outline, size: 20),
-        onPressed: () => _delete('${s['id']}'),
-      ),
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+        TextButton.icon(
+          onPressed: () => _load(s),
+          icon: const Icon(Icons.edit_outlined, size: 16),
+          label: const Text('Edit'),
+          style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
+        ),
+        IconButton(
+          tooltip: 'Delete',
+          icon: const Icon(Icons.delete_outline, size: 20),
+          onPressed: () => _delete('${s['id']}'),
+        ),
+      ]),
     );
   }
 }
