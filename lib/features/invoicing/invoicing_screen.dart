@@ -158,19 +158,40 @@ void showDocDetail(BuildContext context, WidgetRef ref, Map<String, dynamic> d) 
   );
 }
 
-class _DocDetailSheet extends ConsumerWidget {
+class _DocDetailSheet extends ConsumerStatefulWidget {
   const _DocDetailSheet(this.d);
   final Map<String, dynamic> d;
+  @override
+  ConsumerState<_DocDetailSheet> createState() => _DocDetailSheetState();
+}
+
+class _DocDetailSheetState extends ConsumerState<_DocDetailSheet> {
+  late String _status = '${widget.d['status'] ?? 'draft'}'; // optimistic local status
+  Map<String, dynamic> get d => widget.d;
+
+  Future<void> _changeStatus(String s) async {
+    final prev = _status;
+    setState(() => _status = s); // flip the badge instantly
+    try {
+      await ref.read(invoicingRepoProvider).setStatus('${d['id']}', s);
+      ref.invalidate(invoicingListProvider);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _status = prev);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+      }
+    }
+  }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
     final type = '${d['doc_type'] ?? 'quote'}';
     final cur = '${d['currency'] ?? 'AED'}';
     final items = (d['line_items'] as List? ?? const []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-    final (tone, label) = _statusMeta('${d['status'] ?? 'draft'}');
+    final (tone, label) = _statusMeta(_status);
     return DraggableScrollableSheet(
       initialChildSize: 0.7,
       maxChildSize: 0.95,
@@ -249,7 +270,7 @@ class _DocDetailSheet extends ConsumerWidget {
             for (final s in const ['draft', 'sent', 'accepted', 'paid', 'cancelled'])
               ActionChip(
                 label: Text(_statusMeta(s).$2),
-                onPressed: '${d['status']}' == s ? null : () => _setStatus(context, ref, '${d['id']}', s),
+                onPressed: _status == s ? null : () => _changeStatus(s),
               ),
           ]),
         ],
@@ -267,16 +288,6 @@ class _DocDetailSheet extends ConsumerWidget {
         Text(value, style: style),
       ]),
     );
-  }
-}
-
-Future<void> _setStatus(BuildContext context, WidgetRef ref, String id, String status) async {
-  try {
-    await ref.read(invoicingRepoProvider).setStatus(id, status);
-    ref.invalidate(invoicingListProvider);
-    if (context.mounted) Navigator.pop(context);
-  } catch (e) {
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
   }
 }
 

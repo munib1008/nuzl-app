@@ -583,7 +583,8 @@ class _CommentsSheet extends ConsumerStatefulWidget {
 
 class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
   final _input = TextEditingController();
-  bool _sending = false;
+  // Optimistic comments — shown the instant Send is tapped, reconciled on reopen.
+  final _optimistic = <Map<String, dynamic>>[];
 
   @override
   void dispose() {
@@ -594,16 +595,22 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
   Future<void> _send() async {
     final text = _input.text.trim();
     if (text.isEmpty) return;
-    setState(() => _sending = true);
+    final me = ref.read(authControllerProvider).user;
+    final temp = <String, dynamic>{
+      'author': me?.fullName ?? 'You',
+      'author_avatar': me?.avatarUrl ?? '',
+      'body': text,
+    };
+    // Append instantly + clear the box; no spinner, no refetch flicker.
+    setState(() { _optimistic.add(temp); _input.clear(); });
     try {
       await ref.read(apiClientProvider).post('/posts/${widget.postId}/comments', body: {'body': text});
-      _input.clear();
-      ref.invalidate(_commentsProvider(widget.postId));
-      ref.invalidate(feedPostsProvider);
+      ref.invalidate(feedPostsProvider); // bump the post's comment count underneath
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
-    } finally {
-      if (mounted) setState(() => _sending = false);
+      if (mounted) {
+        setState(() { _optimistic.remove(temp); _input.text = text; });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+      }
     }
   }
 
@@ -628,19 +635,21 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                 child: comments.when(
                   loading: () => const Center(child: CircularProgressIndicator()),
                   error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
-                  data: (list) => list.isEmpty
-                      ? const Center(child: Text('No comments yet. Be the first.'))
-                      : ListView(
-                          controller: scroll,
-                          children: list.map((e) {
-                            final c = Map<String, dynamic>.from(e);
-                            return ListTile(
-                              leading: UserAvatar(name: '${c['author'] ?? 'Member'}', url: '${c['author_avatar'] ?? ''}', radius: 16),
-                              title: Text('${c['author'] ?? 'Member'}'),
-                              subtitle: Text('${c['body'] ?? ''}'),
-                            );
-                          }).toList(),
-                        ),
+                  data: (list) {
+                    final all = [...list.map((e) => Map<String, dynamic>.from(e)), ..._optimistic];
+                    return all.isEmpty
+                        ? const Center(child: Text('No comments yet. Be the first.'))
+                        : ListView(
+                            controller: scroll,
+                            children: all.map((c) {
+                              return ListTile(
+                                leading: UserAvatar(name: '${c['author'] ?? 'Member'}', url: '${c['author_avatar'] ?? ''}', radius: 16),
+                                title: Text('${c['author'] ?? 'Member'}'),
+                                subtitle: Text('${c['body'] ?? ''}'),
+                              );
+                            }).toList(),
+                          );
+                  },
                 ),
               ),
               Padding(
@@ -655,10 +664,8 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                   ),
                   const SizedBox(width: AppSpacing.x8),
                   IconButton(
-                    icon: _sending
-                        ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Icon(Icons.send),
-                    onPressed: _sending ? null : _send,
+                    icon: const Icon(Icons.send),
+                    onPressed: _send,
                   ),
                 ]),
               ),
