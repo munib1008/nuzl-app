@@ -140,6 +140,14 @@ class CompanyDashboardScreen extends ConsumerWidget {
                 ]),
               ),
             ]),
+            if (c['i_am_owner'] == true) ...[
+              const SizedBox(height: AppSpacing.x12),
+              OutlinedButton.icon(
+                onPressed: () => context.push('/company/edit'),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: const Text('Edit public page'),
+              ),
+            ],
             if (!verified) ...[
               const SizedBox(height: AppSpacing.x12),
               Text('Get verified to publish listings publicly and appear in the marketplace.',

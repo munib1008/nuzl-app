@@ -23,6 +23,7 @@ import '../../features/admin/post_moderation_screen.dart';
 import '../../features/admin/founding_owners_screen.dart';
 import '../../features/organizations/org_ownership_screen.dart';
 import '../../features/organizations/company_dashboard_screen.dart';
+import '../../features/organizations/company_edit_screen.dart';
 import '../../features/sales/sales_performance_screen.dart';
 import '../../features/organizations/partners_screen.dart';
 import '../../features/referral/refer_screen.dart';
@@ -226,6 +227,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/founding-owners', builder: (_, __) => const FoundingOwnersScreen()),
       GoRoute(path: '/org-ownership', builder: (_, __) => const OrgOwnershipScreen()),
       GoRoute(path: '/company-dashboard', builder: (_, __) => const CompanyDashboardScreen()),
+      GoRoute(path: '/company/edit', builder: (_, __) => const CompanyEditScreen()),
       GoRoute(path: '/sales-performance', builder: (_, __) => const SalesPerformanceScreen()),
       GoRoute(path: '/refer', builder: (_, __) => const ReferScreen()),
       GoRoute(path: '/rewards', builder: (_, __) => const RewardsScreen()),
