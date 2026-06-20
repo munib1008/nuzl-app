@@ -37,6 +37,7 @@ import '../../features/leads/presentation/post_lead_screen.dart';
 import '../../features/leads/presentation/bulk_lead_import_screen.dart';
 import '../../features/deals/presentation/deals_screen.dart';
 import '../../features/customers/customers_screen.dart';
+import '../../features/customers/customer_detail_screen.dart';
 import '../../features/contacts/contacts_screen.dart';
 import '../../features/contacts/contact_detail_screen.dart';
 import '../../features/marketplace/orders_screen.dart';
@@ -176,6 +177,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/leads/:id', builder: (_, st) => LeadCrmScreen(id: st.pathParameters['id']!)),
       GoRoute(path: '/deals', builder: (_, __) => const DealsScreen()),
       GoRoute(path: '/customers', builder: (_, __) => const CustomersScreen()),
+      GoRoute(path: '/customers/:id', builder: (_, st) => CustomerDetailScreen(id: st.pathParameters['id']!)),
       GoRoute(path: '/team', builder: (_, __) => const TeamScreen()),
       GoRoute(path: '/view-as', builder: (_, __) => const ViewAsScreen()),
       GoRoute(path: '/rentals', builder: (_, __) => const RentalsScreen()),

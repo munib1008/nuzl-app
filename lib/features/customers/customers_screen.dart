@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
@@ -42,6 +43,7 @@ class CustomersScreen extends ConsumerWidget {
                       title: Text(c['full_name'] ?? 'Customer'),
                       subtitle: Text([c['customer_type'], c['phone'], c['email']].where((e) => e != null && '$e'.isNotEmpty).join(' · ')),
                       trailing: Text('${c['properties'] ?? 0} props'),
+                      onTap: c['id'] != null ? () => context.push('/customers/${c['id']}') : null,
                     ));
                   }),
         ),
@@ -74,10 +76,16 @@ class CustomersScreen extends ConsumerWidget {
     );
     if (ok != true) return;
     try {
-      await ref.read(apiClientProvider).post('/customers', body: {
+      final res = await ref.read(apiClientProvider).post('/customers', body: {
         'full_name': name.text.trim(), 'email': email.text.trim(), 'phone': phone.text.trim(), 'customer_type': type,
       });
       ref.invalidate(customersProvider);
+      final id = res is Map ? '${res['id'] ?? ''}' : '';
+      if (context.mounted) {
+        // Consistent post-submit workflow: confirm + land on the new customer.
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Customer added successfully.')));
+        if (id.isNotEmpty) context.push('/customers/$id');
+      }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
