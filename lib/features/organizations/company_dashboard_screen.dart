@@ -112,11 +112,18 @@ class CompanyDashboardScreen extends ConsumerWidget {
               ),
             ] else if (slug.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.x12),
-              OutlinedButton.icon(
-                onPressed: () => context.push('/org/$slug'),
-                icon: const Icon(Icons.open_in_new, size: 18),
-                label: const Text('View public page'),
-              ),
+              Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
+                OutlinedButton.icon(
+                  onPressed: () => context.push('/org/$slug'),
+                  icon: const Icon(Icons.open_in_new, size: 18),
+                  label: const Text('View public page'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => context.push('/sales-performance'),
+                  icon: const Icon(Icons.leaderboard_outlined, size: 18),
+                  label: const Text('Sales performance'),
+                ),
+              ]),
             ],
           ]),
         ),
