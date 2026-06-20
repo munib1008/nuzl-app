@@ -48,13 +48,25 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
       leading: MediaQuery.sizeOf(context).width >= 1000
           ? null
           : Builder(
-              builder: (ctx) => IconButton(
-                icon: const Icon(Icons.menu),
-                onPressed: () => Scaffold.of(ctx).openDrawer(),
-              ),
+              builder: (ctx) {
+                // A back arrow whenever there's somewhere to pop (detail screens,
+                // Performance, etc.); the drawer menu only on top-level tabs.
+                final canBack = ctx.canPop();
+                return IconButton(
+                  tooltip: canBack ? 'Back' : 'Menu',
+                  icon: Icon(canBack ? Icons.arrow_back : Icons.menu),
+                  onPressed: () => canBack ? ctx.pop() : Scaffold.of(ctx).openDrawer(),
+                );
+              },
             ),
       title: title != null
-          ? Text(title!)
+          ? Text(title!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: MediaQuery.sizeOf(context).width < 400 ? 17 : 20,
+              ))
           : (MediaQuery.sizeOf(context).width >= 1000 ? const SizedBox.shrink() : const NuzlLogo(size: 28)),
       actions: [
         // Role switching lives in ONE place — the role chip under the logo in the
@@ -617,6 +629,16 @@ Widget _roleStatusPill(String label, Color c, IconData icon) => Container(
       ]),
     );
 
+/// Compact labels for the mobile bottom bar so long names don't wrap/overflow.
+String _shortNavLabel(String label) => switch (label) {
+      'Leasing Leads' => 'Leasing',
+      'Finance Planner' => 'Finance',
+      'Marketplace' => 'Market',
+      'Performance' => 'KPIs',
+      'My Properties' => 'Mine',
+      _ => label,
+    };
+
 /// Mobile-only bottom navigation: the role's top 4 destinations. The drawer
 /// still carries the full menu. Hidden on wide (web) layouts.
 class NuzlBottomNav extends ConsumerWidget {
@@ -638,9 +660,14 @@ class NuzlBottomNav extends ConsumerWidget {
         backgroundColor: Theme.of(context).colorScheme.surface,
         surfaceTintColor: Colors.transparent,
         selectedIndex: index,
+        // On narrow phones the five labels overflow — show the label only for the
+        // selected tab so nothing wraps; full labels return on wider screens.
+        labelBehavior: MediaQuery.sizeOf(context).width < 400
+            ? NavigationDestinationLabelBehavior.onlyShowSelected
+            : NavigationDestinationLabelBehavior.alwaysShow,
         onDestinationSelected: (i) => context.go(items[i].route),
         destinations: items
-            .map((it) => NavigationDestination(icon: Icon(it.icon), label: it.label))
+            .map((it) => NavigationDestination(icon: Icon(it.icon), label: _shortNavLabel(it.label)))
             .toList(),
       ),
     );
