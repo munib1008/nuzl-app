@@ -528,6 +528,18 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.x16),
+            // Optional enrichments collapsed by default so the form isn't
+            // overwhelming — the essentials above are all that's needed to post.
+            Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: EdgeInsets.zero,
+                expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+                title: Text('More details (optional)', style: t.titleSmall),
+                subtitle: Text('Developer info · highlights · incentives',
+                    style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                children: [
             Text('Property details', style: t.titleSmall),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
@@ -676,6 +688,9 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                 onPressed: () => setState(() => _incentives.add(_IncentiveInput())),
                 icon: const Icon(Icons.add, size: 18),
                 label: const Text('Add an offer'),
+              ),
+            ),
+                ],
               ),
             ),
             const SizedBox(height: AppSpacing.x16),
