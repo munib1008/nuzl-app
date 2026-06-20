@@ -356,7 +356,7 @@ class _RolesBody extends ConsumerWidget {
       child: Row(children: [
         Container(width: 10, height: 10, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
         const SizedBox(width: 8),
-        Expanded(child: Text(personaFromRole(role).label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14))),
+        Expanded(child: Text(personaFromRole(role).label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14))),
         _roleStatusPill(m.label, m.color, m.icon),
       ]),
     );
@@ -381,7 +381,7 @@ Widget _addRoleCard(BuildContext context, WidgetRef ref, _RoleOption o) {
       Row(children: [
         Container(width: 10, height: 10, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
         const SizedBox(width: 8),
-        Expanded(child: Text(o.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
+        Expanded(child: Text(o.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
         badge,
       ]),
       const SizedBox(height: 6),
@@ -390,7 +390,7 @@ Widget _addRoleCard(BuildContext context, WidgetRef ref, _RoleOption o) {
       Row(children: [
         Icon(Icons.description_outlined, size: 14, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
         const SizedBox(width: 4),
-        Expanded(child: Text(o.req, style: TextStyle(fontSize: 12, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle))),
+        Expanded(child: Text(o.req, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle))),
         const SizedBox(width: 8),
         FilledButton(
           onPressed: () => _applyForRole(context, ref, o),
@@ -513,7 +513,7 @@ class _DocUploadWizardState extends ConsumerState<_DocUploadWizard> {
         Icon(done ? Icons.check_circle : Icons.upload_file_outlined,
             size: 18, color: done ? AppColors.success : muted),
         const SizedBox(width: AppSpacing.x8),
-        Expanded(child: Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
+        Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
         busy
             ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
             : TextButton(onPressed: () => _pick(label), child: Text(done ? 'Replace' : 'Upload')),

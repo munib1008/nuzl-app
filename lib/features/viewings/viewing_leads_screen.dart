@@ -174,12 +174,12 @@ class _PendingCardState extends ConsumerState<_PendingCard> {
         child: Row(children: [
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(_propTitle(v), style: t.titleMedium),
+              Text(_propTitle(v), maxLines: 1, overflow: TextOverflow.ellipsis, style: t.titleMedium),
               const SizedBox(height: 2),
               Text([
                 if ('${v['requested_by_name'] ?? ''}'.isNotEmpty) 'from ${v['requested_by_name']}',
                 if ('${v['community'] ?? ''}'.isNotEmpty) '${v['community']}',
-              ].join('  ·  '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              ].join('  ·  '), maxLines: 2, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
             ]),
           ),
           const SizedBox(width: AppSpacing.x12),
@@ -212,10 +212,10 @@ class _AssignedCard extends StatelessWidget {
           child: Row(children: [
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(_propTitle(v), style: t.titleMedium),
+                Text(_propTitle(v), maxLines: 1, overflow: TextOverflow.ellipsis, style: t.titleMedium),
                 if ('${v['requested_by_name'] ?? ''}'.isNotEmpty) ...[
                   const SizedBox(height: 2),
-                  Text('${v['requested_by_name']}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                  Text('${v['requested_by_name']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ],
               ]),
             ),
