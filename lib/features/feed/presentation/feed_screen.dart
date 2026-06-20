@@ -219,6 +219,14 @@ class FeedScreen extends ConsumerWidget {
       children: [
         StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
+            // Primary inputs first so they're visible the moment the sheet opens
+            // (even when the keyboard shrinks the dialog on mobile).
+            TextField(controller: title, autofocus: true, textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(labelText: 'Title')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: body, minLines: 2, maxLines: 4,
+                decoration: const InputDecoration(labelText: 'Share an update…')),
+            const SizedBox(height: AppSpacing.x8),
             DropdownButtonFormField<String>(
               initialValue: kind,
               decoration: const InputDecoration(labelText: 'Category'),
@@ -243,10 +251,6 @@ class FeedScreen extends ConsumerWidget {
                       style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).hintColor)),
                 ),
             ],
-            const SizedBox(height: AppSpacing.x8),
-            TextField(controller: title, decoration: const InputDecoration(labelText: 'Title')),
-            const SizedBox(height: AppSpacing.x8),
-            TextField(controller: body, maxLines: 4, decoration: const InputDecoration(labelText: 'Share an update…')),
             const SizedBox(height: AppSpacing.x8),
             Align(
               alignment: Alignment.centerLeft,

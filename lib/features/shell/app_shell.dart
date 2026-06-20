@@ -49,13 +49,26 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
           ? null
           : Builder(
               builder: (ctx) {
-                // A back arrow whenever there's somewhere to pop (detail screens,
-                // Performance, etc.); the drawer menu only on top-level tabs.
                 final canBack = ctx.canPop();
+                final loc = GoRouterState.of(ctx).matchedLocation;
+                // Primary tabs = the bottom-nav destinations (+ dashboard); those
+                // keep the drawer button. Everything else (Performance, Reports,
+                // detail pages, …) gets a back arrow so you can always return.
+                final primary = loc == '/dashboard' ||
+                    navItemsFor(ref.watch(personaProvider)).take(5).any((it) => isActiveRoute(loc, it.route));
+                final showBack = canBack || !primary;
                 return IconButton(
-                  tooltip: canBack ? 'Back' : 'Menu',
-                  icon: Icon(canBack ? Icons.arrow_back : Icons.menu),
-                  onPressed: () => canBack ? ctx.pop() : Scaffold.of(ctx).openDrawer(),
+                  tooltip: showBack ? 'Back' : 'Menu',
+                  icon: Icon(showBack ? Icons.arrow_back : Icons.menu),
+                  onPressed: () {
+                    if (canBack) {
+                      ctx.pop();
+                    } else if (!primary) {
+                      ctx.go('/dashboard');
+                    } else {
+                      Scaffold.of(ctx).openDrawer();
+                    }
+                  },
                 );
               },
             ),
