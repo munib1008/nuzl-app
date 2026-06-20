@@ -118,8 +118,7 @@ class _SectionGrid extends StatelessWidget {
       CrmTab.collaboration: 'Work referrals with partners',
       CrmTab.leadMarket: 'Buy & sell marketplace leads',
       CrmTab.invoicing: 'Quotations & invoices for clients',
-      CrmTab.analytics: 'Conversion & source insight',
-      CrmTab.reports: 'Export performance reports',
+      CrmTab.insights: 'Analytics & exportable reports',
     };
     final tiles = crmTabs.where((d) => d.tab != CrmTab.overview).toList();
     return LayoutBuilder(builder: (context, c) {

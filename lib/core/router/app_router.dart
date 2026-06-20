@@ -90,6 +90,7 @@ import '../../features/billing/plans_screen.dart';
 import '../../features/billing/my_plan_screen.dart';
 import '../../features/crm/crm_screen.dart';
 import '../../features/crm/crm_workspace_screen.dart';
+import '../../features/crm/insights_screen.dart';
 import '../../features/invoicing/invoicing_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../network/api_client.dart';
@@ -204,8 +205,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/crm/collaboration', builder: (_, __) => const CollaborationScreen()),
       GoRoute(path: '/crm/lead-market', builder: (_, __) => const LeadMarketScreen()),
       GoRoute(path: '/crm/invoicing', builder: (_, __) => const InvoicingScreen()),
-      GoRoute(path: '/crm/analytics', builder: (_, __) => const LeadAnalyticsScreen()),
-      GoRoute(path: '/crm/reports', builder: (_, __) => const ReportsScreen()),
+      // Analytics + Reports merged into one Insights tab; old paths redirect.
+      GoRoute(path: '/crm/insights', builder: (_, __) => const InsightsScreen()),
+      GoRoute(path: '/crm/analytics', redirect: (_, __) => '/crm/insights'),
+      GoRoute(path: '/crm/reports', redirect: (_, __) => '/crm/insights'),
       // Lead-scoring CRM (legacy standalone) kept reachable.
       GoRoute(path: '/crm/scoring', builder: (_, __) => const CrmScreen()),
       // Stand-alone routes (non-CRM personas) — same screens, plain chrome.

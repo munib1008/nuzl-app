@@ -21,7 +21,8 @@ final leadAnalyticsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((
 
 /// Conversion funnel + lost-lead analytics (enterprise-CRM).
 class LeadAnalyticsScreen extends ConsumerWidget {
-  const LeadAnalyticsScreen({super.key});
+  const LeadAnalyticsScreen({super.key, this.embedded = false});
+  final bool embedded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,8 +31,9 @@ class LeadAnalyticsScreen extends ConsumerWidget {
     final data = ref.watch(leadAnalyticsProvider);
     int n(Map m, String k) => int.tryParse('${m[k] ?? 0}') ?? 0;
     return CrmScaffold(
-      tab: CrmTab.analytics,
+      tab: CrmTab.insights,
       title: 'Lead analytics',
+      embedded: embedded,
       body: ResponsiveCenter(
         child: RefreshIndicator(
           onRefresh: () async => ref.invalidate(leadAnalyticsProvider),

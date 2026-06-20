@@ -44,7 +44,8 @@ bool _orgPersona(Persona p) =>
     p == Persona.broker || p == Persona.bank || p == Persona.provider || p == Persona.developer;
 
 class ReportsScreen extends ConsumerWidget {
-  const ReportsScreen({super.key});
+  const ReportsScreen({super.key, this.embedded = false});
+  final bool embedded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -54,6 +55,7 @@ class ReportsScreen extends ConsumerWidget {
     return CrmScaffold(
       tab: CrmTab.reports,
       title: 'Reports',
+      embedded: embedded,
       body: ResponsiveCenter(
         child: report.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),

@@ -5,7 +5,7 @@ import '../../core/theme/app_spacing.dart';
 import '../shell/app_shell.dart';
 
 /// The sections of the unified CRM workspace.
-enum CrmTab { overview, pipeline, contacts, activities, deals, dealBoard, collaboration, leadMarket, invoicing, analytics, reports }
+enum CrmTab { overview, pipeline, contacts, activities, deals, dealBoard, collaboration, leadMarket, invoicing, insights, analytics, reports }
 
 class CrmTabDef {
   const CrmTabDef(this.tab, this.icon, this.label, this.route);
@@ -26,8 +26,7 @@ const List<CrmTabDef> crmTabs = [
   CrmTabDef(CrmTab.collaboration, Icons.diversity_3_outlined, 'Collaboration', '/crm/collaboration'),
   CrmTabDef(CrmTab.leadMarket, Icons.sell_outlined, 'Lead Market', '/crm/lead-market'),
   CrmTabDef(CrmTab.invoicing, Icons.request_quote_outlined, 'Invoicing', '/crm/invoicing'),
-  CrmTabDef(CrmTab.analytics, Icons.query_stats_outlined, 'Analytics', '/crm/analytics'),
-  CrmTabDef(CrmTab.reports, Icons.insights_outlined, 'Reports', '/crm/reports'),
+  CrmTabDef(CrmTab.insights, Icons.insights_outlined, 'Insights', '/crm/insights'),
 ];
 
 CrmTabDef crmTabDef(CrmTab t) => crmTabs.firstWhere((d) => d.tab == t);
@@ -48,6 +47,7 @@ class CrmScaffold extends StatelessWidget {
     required this.body,
     this.actions,
     this.floatingActionButton,
+    this.embedded = false,
   });
 
   final CrmTab tab;
@@ -56,8 +56,13 @@ class CrmScaffold extends StatelessWidget {
   final List<Widget>? actions;
   final Widget? floatingActionButton;
 
+  /// When embedded inside another CRM screen (e.g. the Insights tab hosting both
+  /// Analytics and Reports), render only the body — no Scaffold/app-bar/tab-strip.
+  final bool embedded;
+
   @override
   Widget build(BuildContext context) {
+    if (embedded) return body;
     final loc = GoRouterState.of(context).matchedLocation;
     final inCrm = loc == '/crm' || loc.startsWith('/crm/');
     return Scaffold(
