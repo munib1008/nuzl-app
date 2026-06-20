@@ -24,50 +24,58 @@ String _propLine(Map d) {
 /// Internal deal board (marketplace): agents broadcast deals; others browse,
 /// filter by category, and chat the poster.
 class DealBoardScreen extends ConsumerWidget {
-  const DealBoardScreen({super.key});
+  const DealBoardScreen({super.key, this.embedded = false});
+
+  /// When embedded (the Community "Deals" tab) render only the board body — no
+  /// CrmScaffold and no FAB; the host supplies the app-bar + "Post a deal".
+  final bool embedded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final deals = ref.watch(dealBoardProvider);
     final myId = ref.watch(authControllerProvider).user?.id;
+    final body = RefreshIndicator(
+      onRefresh: () async => ref.invalidate(dealBoardProvider),
+      child: AsyncView<List<Map<String, dynamic>>>(
+        value: deals,
+        onRetry: () => ref.invalidate(dealBoardProvider),
+        data: (list) => list.isEmpty
+            ? ListView(children: const [
+                EmptyState(
+                  icon: Icons.campaign_outlined,
+                  title: 'No deals on the board yet',
+                  message: 'Post a deal to share it with the network and find a co-broker.',
+                ),
+              ])
+            : ListView(
+                padding: const EdgeInsets.all(AppSpacing.x16),
+                children: [for (final d in list) _DealCard(d, mine: '${d['agent_id']}' == myId)],
+              ),
+      ),
+    );
+    if (embedded) return body;
     return CrmScaffold(
       tab: CrmTab.dealBoard,
       title: 'Deal board',
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _postDeal(context, ref),
+        onPressed: () => openDealComposer(context, ref),
         icon: const Icon(Icons.campaign_outlined),
         label: const Text('Post a deal'),
       ),
-      body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(dealBoardProvider),
-        child: AsyncView<List<Map<String, dynamic>>>(
-          value: deals,
-          onRetry: () => ref.invalidate(dealBoardProvider),
-          data: (list) => list.isEmpty
-              ? ListView(children: const [
-                  EmptyState(
-                    icon: Icons.campaign_outlined,
-                    title: 'No deals on the board yet',
-                    message: 'Post a deal to share it with the network and find a co-broker.',
-                  ),
-                ])
-              : ListView(
-                  padding: const EdgeInsets.all(AppSpacing.x16),
-                  children: [for (final d in list) _DealCard(d, mine: '${d['agent_id']}' == myId)],
-                ),
-        ),
-      ),
+      body: body,
     );
   }
+}
 
-  Future<void> _postDeal(BuildContext context, WidgetRef ref) async {
-    final saved = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => const _PostDealSheet(),
-    );
-    if (saved == true) ref.invalidate(dealBoardProvider);
-  }
+/// Opens the "Post a deal" sheet and refreshes the board on save. Top-level so
+/// both the standalone Deal Board and the Community "Deals" tab can trigger it.
+Future<void> openDealComposer(BuildContext context, WidgetRef ref) async {
+  final saved = await showModalBottomSheet<bool>(
+    context: context,
+    isScrollControlled: true,
+    builder: (_) => const _PostDealSheet(),
+  );
+  if (saved == true) ref.invalidate(dealBoardProvider);
 }
 
 class _DealCard extends ConsumerStatefulWidget {

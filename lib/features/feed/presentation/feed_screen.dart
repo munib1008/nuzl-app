@@ -14,14 +14,13 @@ import '../../../core/widgets/status_badge.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../shell/app_shell.dart';
 
-/// Feed scope: 'public' (everyone, approved) vs 'company' (internal to my org).
-final _feedScopeProvider = StateProvider.autoDispose<String>((ref) => 'public');
 // Community Board category filter ('' = All); filters the loaded posts by kind.
 final _feedCategoryProvider = StateProvider.autoDispose<String>((ref) => '');
 
-/// Professional Feed — social posts (market updates, showcases, success stories…).
-final feedPostsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
-  final scope = ref.watch(_feedScopeProvider);
+/// Posts by scope: 'public' (the public Feed — everyone) vs 'company' (the
+/// agents-only Community discussion). Keyed by scope so the two surfaces load
+/// independently and never clobber each other.
+final feedPostsProvider = FutureProvider.autoDispose.family<List<dynamic>, String>((ref, scope) async {
   try {
     final d = await ref.read(apiClientProvider).get('/posts', query: {'scope': scope});
     return d is List ? d : [];
@@ -82,26 +81,6 @@ List<(String, String)> _kindsFor(Persona p) {
   }
 }
 
-/// Public (everyone) vs Company (internal team) feed switch.
-class _ScopeToggle extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scope = ref.watch(_feedScopeProvider);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x12, AppSpacing.x16, 0),
-      child: SegmentedButton<String>(
-        segments: const [
-          ButtonSegment(value: 'public', label: Text('Public'), icon: Icon(Icons.public, size: 16)),
-          ButtonSegment(value: 'company', label: Text('Company'), icon: Icon(Icons.apartment, size: 16)),
-        ],
-        selected: {scope},
-        showSelectedIcon: false,
-        onSelectionChanged: (s) => ref.read(_feedScopeProvider.notifier).state = s.first,
-      ),
-    );
-  }
-}
-
 /// Community Board category filter — All + the role's post categories, filtering
 /// the feed by kind (client-side over the loaded posts).
 class _CategoryBar extends ConsumerWidget {
@@ -132,231 +111,230 @@ class _CategoryBar extends ConsumerWidget {
   }
 }
 
+/// The public Feed (everyone) — and, when [embedded], the body reused inside the
+/// agents-only Community "Discussion" tab.
+///
+/// - `scope: 'public'`  → the public Feed, visible to and postable by everyone.
+/// - `scope: 'company'` → the professional/agents discussion (Community).
 class FeedScreen extends ConsumerWidget {
-  const FeedScreen({super.key});
+  const FeedScreen({super.key, this.embedded = false, this.scope = 'public'});
+
+  /// When embedded (e.g. inside the Community tabs) render only the body — no
+  /// Scaffold / app-bar / drawer / FAB; the host provides those.
+  final bool embedded;
+  final String scope;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final posts = ref.watch(feedPostsProvider);
+    final body = _FeedBody(scope: scope);
+    if (embedded) return body;
     final persona = ref.watch(personaProvider);
     final canPost = persona.canManageLeads || persona.canListProperty;
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Community'),
+      appBar: const NuzlAppBar(title: 'Feed'),
       drawer: const NuzlDrawer(),
       floatingActionButton: canPost
           ? FloatingActionButton.extended(
-              onPressed: () => _composer(context, ref),
+              onPressed: () => openFeedComposer(context, ref, audience: 'public'),
               icon: const Icon(Icons.edit_outlined),
               label: const Text('New post'),
             )
           : null,
-      body: Column(children: [
-        if (ref.watch(authControllerProvider).user?.organizationId != null) _ScopeToggle(),
-        const _CategoryBar(),
-        Expanded(
-          child: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(feedPostsProvider);
-          await ref.read(feedPostsProvider.future);
-        },
-        child: posts.when(
-          loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(friendlyError(e))))]),
-          data: (list) {
-            final cat = ref.watch(_feedCategoryProvider);
-            final filtered = cat.isEmpty
-                ? list
-                : list.where((p) {
-                    final m = p as Map;
-                    return '${m['kind'] ?? m['post_type'] ?? ''}' == cat;
-                  }).toList();
-            if (filtered.isEmpty) {
-              return ListView(children: [
-                EmptyState(
-                  icon: Icons.dynamic_feed_outlined,
-                  title: cat.isEmpty ? 'No posts yet' : 'Nothing in this category yet',
-                  message: cat.isEmpty
-                      ? 'Share a market update or a success story to start the conversation.'
-                      : 'Be the first to post in this category — tap “New post”.',
-                ),
-              ]);
-            }
-            return Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 720),
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(AppSpacing.x16),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x12),
-                  itemBuilder: (_, i) => _PostCard(Map<String, dynamic>.from(filtered[i])),
-                ),
-              ),
-            );
-          },
-        ),
-          ),
-        ),
-      ]),
+      body: body,
     );
   }
+}
 
-  Future<void> _composer(BuildContext context, WidgetRef ref) async {
-    final title = TextEditingController();
-    final body = TextEditingController();
-    final kinds = _kindsFor(ref.read(personaProvider));
-    var kind = kinds.first.$1;
-    final hasOrg = ref.read(authControllerProvider).user?.organizationId != null;
-    // Default the audience to whichever feed the user is currently viewing, so a
-    // post doesn't silently land in a scope they're not looking at.
-    var audience = hasOrg ? ref.read(_feedScopeProvider) : 'public';
-    var uploading = false;
-    final media = <String>[];
-    final mentions = <Map<String, dynamic>>[]; // {id, name}
-    final ok = await AppDialog.show<bool>(
-      context,
-      title: 'New post',
-      maxWidth: 460,
-      children: [
-        StatefulBuilder(
-          builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
-            // Primary inputs first so they're visible the moment the sheet opens
-            // (even when the keyboard shrinks the dialog on mobile).
-            TextField(controller: title, autofocus: true, textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(labelText: 'Title')),
-            const SizedBox(height: AppSpacing.x8),
-            TextField(controller: body, minLines: 2, maxLines: 4,
-                decoration: const InputDecoration(labelText: 'Share an update…')),
-            const SizedBox(height: AppSpacing.x8),
-            DropdownButtonFormField<String>(
-              initialValue: kind,
-              decoration: const InputDecoration(labelText: 'Category'),
-              items: kinds.map((k) => DropdownMenuItem(value: k.$1, child: Text(k.$2))).toList(),
-              onChanged: (v) => setS(() => kind = v ?? kinds.first.$1),
-            ),
-            if (hasOrg) ...[
-              const SizedBox(height: AppSpacing.x8),
-              DropdownButtonFormField<String>(
-                initialValue: audience,
-                decoration: const InputDecoration(labelText: 'Audience'),
-                items: const [
-                  DropdownMenuItem(value: 'public', child: Text('Public — everyone')),
-                  DropdownMenuItem(value: 'company', child: Text('Company — internal team only')),
-                ],
-                onChanged: (v) => setS(() => audience = v ?? 'public'),
-              ),
-              if (audience == 'public')
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Text('Company marketing posts are reviewed before going live.',
-                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).hintColor)),
+/// Feed body for a given scope — category filter + posts list. Reused by the
+/// public [FeedScreen] and the Community "Discussion" tab.
+class _FeedBody extends ConsumerWidget {
+  const _FeedBody({required this.scope});
+  final String scope;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final posts = ref.watch(feedPostsProvider(scope));
+    return Column(children: [
+      const _CategoryBar(),
+      Expanded(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(feedPostsProvider(scope));
+            await ref.read(feedPostsProvider(scope).future);
+          },
+          child: posts.when(
+            loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
+            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(friendlyError(e))))]),
+            data: (list) {
+              final cat = ref.watch(_feedCategoryProvider);
+              final filtered = cat.isEmpty
+                  ? list
+                  : list.where((p) {
+                      final m = p as Map;
+                      return '${m['kind'] ?? m['post_type'] ?? ''}' == cat;
+                    }).toList();
+              if (filtered.isEmpty) {
+                return ListView(children: [
+                  EmptyState(
+                    icon: Icons.dynamic_feed_outlined,
+                    title: cat.isEmpty ? 'No posts yet' : 'Nothing in this category yet',
+                    message: cat.isEmpty
+                        ? 'Share a market update or a success story to start the conversation.'
+                        : 'Be the first to post in this category — tap “New post”.',
+                  ),
+                ]);
+              }
+              return Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 720),
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(AppSpacing.x16),
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x12),
+                    itemBuilder: (_, i) => _PostCard(Map<String, dynamic>.from(filtered[i])),
+                  ),
                 ),
-            ],
+              );
+            },
+          ),
+        ),
+      ),
+    ]);
+  }
+}
+
+/// Opens the new-post composer. [audience] is fixed by the surface that opens it
+/// ('public' from the Feed; 'company' from the agents-only Community), so there's
+/// no audience picker — you post where you are.
+Future<void> openFeedComposer(BuildContext context, WidgetRef ref, {required String audience}) async {
+  final title = TextEditingController();
+  final body = TextEditingController();
+  final kinds = _kindsFor(ref.read(personaProvider));
+  var kind = kinds.first.$1;
+  var uploading = false;
+  final media = <String>[];
+  final mentions = <Map<String, dynamic>>[]; // {id, name}
+  final ok = await AppDialog.show<bool>(
+    context,
+    title: 'New post',
+    maxWidth: 460,
+    children: [
+      StatefulBuilder(
+        builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
+          // Primary inputs first so they're visible the moment the sheet opens.
+          TextField(controller: title, autofocus: true, textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(labelText: 'Title')),
+          const SizedBox(height: AppSpacing.x8),
+          TextField(controller: body, minLines: 2, maxLines: 4,
+              decoration: const InputDecoration(labelText: 'Share an update…')),
+          const SizedBox(height: AppSpacing.x8),
+          DropdownButtonFormField<String>(
+            initialValue: kind,
+            decoration: const InputDecoration(labelText: 'Category'),
+            items: kinds.map((k) => DropdownMenuItem(value: k.$1, child: Text(k.$2))).toList(),
+            onChanged: (v) => setS(() => kind = v ?? kinds.first.$1),
+          ),
+          const SizedBox(height: AppSpacing.x8),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              for (final url in media)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppSpacing.rMd),
+                  child: Image.network(url, width: 56, height: 56, fit: BoxFit.cover),
+                ),
+              OutlinedButton.icon(
+                onPressed: uploading
+                    ? null
+                    : () async {
+                        final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1280, imageQuality: 70);
+                        if (picked == null) return;
+                        final bytes = await picked.readAsBytes();
+                        setS(() => uploading = true);
+                        try {
+                          final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
+                          if (url != null) {
+                            setS(() => media.add(url));
+                          } else if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Photo upload failed — please try again')));
+                          }
+                        } catch (e) {
+                          if (ctx.mounted) {
+                            ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Photo upload failed — ${friendlyError(e)}')));
+                          }
+                        } finally {
+                          setS(() => uploading = false);
+                        }
+                      },
+                icon: uploading
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.add_photo_alternate_outlined, size: 18),
+                label: Text(uploading ? 'Uploading…' : 'Photo'),
+              ),
+              OutlinedButton.icon(
+                onPressed: () async {
+                  final picked = await _pickUser(ctx, ref);
+                  if (picked == null) return;
+                  if (mentions.any((m) => m['id'] == picked['id'])) return;
+                  setS(() => mentions.add(picked));
+                },
+                icon: const Icon(Icons.alternate_email, size: 18),
+                label: const Text('Tag'),
+              ),
+            ]),
+          ),
+          if (mentions.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x8),
             Align(
               alignment: Alignment.centerLeft,
-              child: Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                for (final url in media)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(AppSpacing.rMd),
-                    child: Image.network(url, width: 56, height: 56, fit: BoxFit.cover),
+              child: Wrap(spacing: 6, runSpacing: 6, children: [
+                for (final m in mentions)
+                  InputChip(
+                    label: Text('@${m['name'] ?? 'user'}'),
+                    onDeleted: () => setS(() => mentions.removeWhere((x) => x['id'] == m['id'])),
                   ),
-                OutlinedButton.icon(
-                  onPressed: uploading
-                      ? null
-                      : () async {
-                          final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1280, imageQuality: 70);
-                          if (picked == null) return;
-                          final bytes = await picked.readAsBytes();
-                          setS(() => uploading = true);
-                          try {
-                            final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
-                            if (url != null) {
-                              setS(() => media.add(url));
-                            } else if (ctx.mounted) {
-                              ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Photo upload failed — please try again')));
-                            }
-                          } catch (e) {
-                            if (ctx.mounted) {
-                              ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Photo upload failed — ${friendlyError(e)}')));
-                            }
-                          } finally {
-                            setS(() => uploading = false);
-                          }
-                        },
-                  icon: uploading
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Icon(Icons.add_photo_alternate_outlined, size: 18),
-                  label: Text(uploading ? 'Uploading…' : 'Photo'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    final picked = await _pickUser(ctx, ref);
-                    if (picked == null) return;
-                    if (mentions.any((m) => m['id'] == picked['id'])) return;
-                    setS(() => mentions.add(picked));
-                  },
-                  icon: const Icon(Icons.alternate_email, size: 18),
-                  label: const Text('Tag'),
-                ),
               ]),
             ),
-            if (mentions.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.x8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Wrap(spacing: 6, runSpacing: 6, children: [
-                  for (final m in mentions)
-                    InputChip(
-                      label: Text('@${m['name'] ?? 'user'}'),
-                      onDeleted: () => setS(() => mentions.removeWhere((x) => x['id'] == m['id'])),
-                    ),
-                ]),
-              ),
-            ],
-          ]),
-        ),
-      ],
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(
-          // Validate BEFORE closing so an empty post gives clear feedback instead
-          // of silently doing nothing (the old behaviour read as "can't post").
-          onPressed: () {
-            if (title.text.trim().isEmpty && body.text.trim().isEmpty) {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(const SnackBar(content: Text('Add a title or a few words to post.')));
-              return;
-            }
-            Navigator.pop(context, true);
-          },
-          child: const Text('Post'),
-        ),
-      ],
-    );
-    if (ok != true) return;
-    if (title.text.trim().isEmpty && body.text.trim().isEmpty) return;
-    try {
-      await ref.read(apiClientProvider).post('/posts', body: {
-        'kind': kind,
-        'post_type': 'need_help',
-        'audience': audience,
-        'title': title.text.trim(),
-        'body': body.text.trim(),
-        if (media.isNotEmpty) 'media': media,
-        if (mentions.isNotEmpty) 'mentions': mentions.map((m) => m['id']).toList(),
-      });
-      // Switch the feed to the scope we just posted to, so the new post is
-      // visible immediately instead of landing in a tab the user isn't viewing.
-      if (hasOrg) ref.read(_feedScopeProvider.notifier).state = audience;
-      ref.invalidate(feedPostsProvider);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
-            audience == 'company' ? 'Posted to your company feed' : 'Posted — public marketing posts may be reviewed first')));
-      }
-    } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+          ],
+        ]),
+      ),
+    ],
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+      FilledButton(
+        onPressed: () {
+          if (title.text.trim().isEmpty && body.text.trim().isEmpty) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(const SnackBar(content: Text('Add a title or a few words to post.')));
+            return;
+          }
+          Navigator.pop(context, true);
+        },
+        child: const Text('Post'),
+      ),
+    ],
+  );
+  if (ok != true) return;
+  if (title.text.trim().isEmpty && body.text.trim().isEmpty) return;
+  try {
+    await ref.read(apiClientProvider).post('/posts', body: {
+      'kind': kind,
+      'post_type': 'need_help',
+      'audience': audience,
+      'title': title.text.trim(),
+      'body': body.text.trim(),
+      if (media.isNotEmpty) 'media': media,
+      if (mentions.isNotEmpty) 'mentions': mentions.map((m) => m['id']).toList(),
+    });
+    // Refresh both surfaces (the family) so the new post shows wherever relevant.
+    ref.invalidate(feedPostsProvider);
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
+          audience == 'company' ? 'Posted to your Community' : 'Posted — public marketing posts may be reviewed first')));
     }
+  } catch (e) {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
   }
 }
 

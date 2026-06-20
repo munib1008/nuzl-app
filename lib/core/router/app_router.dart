@@ -12,6 +12,7 @@ import '../../features/profile/presentation/public_org_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/feed/presentation/feed_screen.dart';
+import '../../features/community/community_screen.dart';
 import '../../features/listings/presentation/listings_screen.dart';
 import '../../features/listings/presentation/bulk_property_import_screen.dart';
 import '../../features/listings/presentation/listing_form_screen.dart';
@@ -163,6 +164,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
       GoRoute(path: '/dashboard', builder: (_, __) => const DashboardScreen()),
       GoRoute(path: '/feed', builder: (_, __) => const FeedScreen()),
+      GoRoute(path: '/community', builder: (_, __) => const CommunityScreen()),
       GoRoute(path: '/properties', builder: (_, __) => const ListingsScreen()),
       GoRoute(path: '/properties/import', builder: (_, __) => const BulkPropertyImportScreen()),
       GoRoute(path: '/properties/new', builder: (_, __) => const ListingFormScreen()),

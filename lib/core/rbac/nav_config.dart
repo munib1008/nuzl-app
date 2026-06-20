@@ -10,13 +10,19 @@ class NavItem {
 
 /// Menu items per persona. Real routes where built; '/soon/...' placeholders
 /// for sections still on the roadmap so navigation never dead-ends.
+///
+/// Two social surfaces (kept distinct on purpose):
+///  • **Feed** (`/feed`) — PUBLIC, for everyone: general sharing visible to all.
+///  • **Community** (`/community`) — AGENTS-ONLY professional hub that merges the
+///    Deal Board (broadcast/co-broke deals) with professional discussion. Not
+///    public. Only the deal-working personas (agent, broker, developer) get it.
 List<NavItem> navItemsFor(Persona p) {
   switch (p) {
     case Persona.leadGenerator:
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
-        NavItem(Icons.dynamic_feed_outlined, 'Community', '/feed'),
+        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.add_circle_outline, 'Post Lead', '/leads/new'),
         NavItem(Icons.trending_up, 'My Leads', '/leads'),
         NavItem(Icons.sell_outlined, 'Lead Market', '/lead-market'),
@@ -24,30 +30,28 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.people_outline, 'Network', '/network'),
       ];
-    // Mostly consolidated under the CRM hub (Contacts, Activities, Deals,
-    // Collaboration, Lead Market, Analytics & Reports live on /crm). EXCEPTION:
-    // the Deal Board is a top-level destination — it's core daily flow for agents
-    // (broadcast/co-broke deals) and was a show-stopper buried in the CRM tabs,
-    // so it gets its own independent /deal-board entry, in the mobile bottom 5.
+    // Most CRM modules live under the /crm hub. Community is the agents-only
+    // merge of the Deal Board + professional discussion; Feed is the separate
+    // public feed for everyone.
     case Persona.agent:
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
-        NavItem(Icons.dynamic_feed_outlined, 'Community', '/feed'),
+        NavItem(Icons.diversity_3_outlined, 'Community', '/community'),
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.trending_up, 'CRM', '/crm'),
-        NavItem(Icons.campaign_outlined, 'Deal Board', '/deal-board'),
         NavItem(Icons.event_available_outlined, 'Leasing Leads', '/viewing-leads'),
+        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.emoji_events_outlined, 'Performance', '/kpi'),
       ];
     case Persona.broker:
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
-        NavItem(Icons.dynamic_feed_outlined, 'Community', '/feed'),
+        NavItem(Icons.diversity_3_outlined, 'Community', '/community'),
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.trending_up, 'CRM', '/crm'),
-        NavItem(Icons.campaign_outlined, 'Deal Board', '/deal-board'),
         NavItem(Icons.event_available_outlined, 'Leasing Leads', '/viewing-leads'),
+        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.inventory_2_outlined, 'Inventory', '/inventory'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
@@ -59,10 +63,11 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.domain_outlined, 'Projects', '/projects'),
         NavItem(Icons.inventory_2_outlined, 'Inventory', '/inventory'),
+        NavItem(Icons.diversity_3_outlined, 'Community', '/community'),
+        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
         NavItem(Icons.business_outlined, 'My Company', '/company-dashboard'),
         NavItem(Icons.emoji_events_outlined, 'Performance', '/kpi'),
-        NavItem(Icons.dynamic_feed_outlined, 'Community', '/feed'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
@@ -73,6 +78,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.trending_up, 'Leads', '/leads'),
         NavItem(Icons.contacts_outlined, 'Contacts', '/contacts'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
+        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
     case Persona.salesperson:
@@ -84,6 +90,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.trending_up_outlined, 'Opportunities', '/opportunities'),
         NavItem(Icons.request_quote_outlined, 'Quotations', '/quotations'),
         NavItem(Icons.event_note_outlined, 'Activities', '/activities'),
+        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
     case Persona.provider:
@@ -95,6 +102,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.receipt_long_outlined, 'Orders', '/orders'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
         NavItem(Icons.contacts_outlined, 'Contacts', '/contacts'),
+        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
@@ -105,6 +113,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
         NavItem(Icons.assignment_outlined, 'Requests', '/tenders'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
+        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.folder_outlined, 'Documents', '/documents'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
@@ -115,6 +124,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.account_balance_wallet_outlined, 'Financials', '/financials'),
         NavItem(Icons.account_balance_outlined, 'Mortgages', '/mortgages'),
         NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
+        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.folder_outlined, 'Documents', '/documents'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
@@ -128,6 +138,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.vpn_key_outlined, 'Rentals', '/rentals'),
         NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
+        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.folder_outlined, 'Documents', '/documents'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
@@ -141,6 +152,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.calculate_outlined, 'Finance Planner', '/finance-planner'),
+        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.receipt_long_outlined, 'Orders', '/orders'),
       ];
     case Persona.admin:
