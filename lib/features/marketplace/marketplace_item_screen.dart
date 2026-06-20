@@ -128,6 +128,26 @@ class _Detail extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.all(AppSpacing.x20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // Approval status for a just-submitted draft (visible to the owner).
+              if (m['is_active'] == false) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.x12),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentGoldTint,
+                    borderRadius: BorderRadius.circular(AppSpacing.rMd),
+                  ),
+                  child: Row(children: [
+                    const Icon(Icons.hourglass_top, size: 16, color: AppColors.accentGold),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text('Pending approval — visible only to you until your company is verified, then it publishes automatically.',
+                          style: t.bodySmall?.copyWith(color: AppColors.accentGold, fontWeight: FontWeight.w600)),
+                    ),
+                  ]),
+                ),
+                const SizedBox(height: AppSpacing.x12),
+              ],
               if (category.isNotEmpty)
                 Text(category.toUpperCase(),
                     style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w700, letterSpacing: 0.5)),

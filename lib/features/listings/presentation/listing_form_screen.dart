@@ -370,17 +370,19 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       ref.invalidate(listingsProvider);
       ref.invalidate(listingsRawProvider);
       if (!mounted) return;
-      // An owner's new listing is a draft until a title deed is submitted + published;
-      // take them straight to the listing so they can do that (it won't show in the
-      // public browse yet, only under "My listings").
-      if (!editing && created?['is_visible'] == false && created?['id'] != null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Saved as a draft — submit a title deed, then publish it to go live.')));
-        context.go('/listings/${created!['id']}');
+      // Always land on the item's detail page after submit (consistent workflow).
+      final id = '${created?['id'] ?? widget.editId ?? ''}';
+      final String msg;
+      if (editing) {
+        msg = 'Your property has been updated.';
+      } else if (created?['is_visible'] == false) {
+        // Owner draft — pending a title deed before it goes public.
+        msg = 'Your property has been submitted and saved as a draft. Submit a title deed, then publish it to go live.';
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(editing ? 'Listing updated' : 'Listing added')));
-        context.go('/properties');
+        msg = 'Your property has been posted successfully and is now live.';
       }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      context.go(id.isNotEmpty ? '/listings/$id' : '/properties');
     } catch (e) {
       setState(() => error = e.toString());
     } finally {

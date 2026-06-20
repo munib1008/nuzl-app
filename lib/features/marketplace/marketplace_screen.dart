@@ -286,12 +286,17 @@ class MarketplaceScreen extends ConsumerWidget {
       });
       ref.invalidate(marketplaceProvider(kind));
       final draft = res is Map && res['is_active'] == false;
+      final id = res is Map ? '${res['id'] ?? ''}' : '';
+      final noun = kind == 'product' ? 'product' : 'service';
       if (context.mounted) {
+        // Consistent post-submit workflow: confirm (live vs sent-for-approval) and
+        // land on the new item's detail page.
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(draft
-              ? 'Saved as draft — it publishes once your company is verified.'
-              : 'Listed'),
+              ? 'Your $noun has been submitted and sent for approval. You’ll be notified once it’s approved and published.'
+              : 'Your $noun has been posted successfully and is now live.'),
         ));
+        if (id.isNotEmpty) context.push('/marketplace/$id');
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
