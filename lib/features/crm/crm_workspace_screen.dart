@@ -117,6 +117,7 @@ class _SectionGrid extends StatelessWidget {
       CrmTab.dealBoard: 'Broadcast & co-broke deals',
       CrmTab.collaboration: 'Work referrals with partners',
       CrmTab.leadMarket: 'Buy & sell marketplace leads',
+      CrmTab.invoicing: 'Quotations & invoices for clients',
       CrmTab.analytics: 'Conversion & source insight',
       CrmTab.reports: 'Export performance reports',
     };

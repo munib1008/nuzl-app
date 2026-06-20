@@ -5,7 +5,7 @@ import '../../core/theme/app_spacing.dart';
 import '../shell/app_shell.dart';
 
 /// The sections of the unified CRM workspace.
-enum CrmTab { overview, pipeline, contacts, activities, deals, dealBoard, collaboration, leadMarket, analytics, reports }
+enum CrmTab { overview, pipeline, contacts, activities, deals, dealBoard, collaboration, leadMarket, invoicing, analytics, reports }
 
 class CrmTabDef {
   const CrmTabDef(this.tab, this.icon, this.label, this.route);
@@ -25,6 +25,7 @@ const List<CrmTabDef> crmTabs = [
   CrmTabDef(CrmTab.dealBoard, Icons.campaign_outlined, 'Deal board', '/crm/deal-board'),
   CrmTabDef(CrmTab.collaboration, Icons.diversity_3_outlined, 'Collaboration', '/crm/collaboration'),
   CrmTabDef(CrmTab.leadMarket, Icons.sell_outlined, 'Lead Market', '/crm/lead-market'),
+  CrmTabDef(CrmTab.invoicing, Icons.request_quote_outlined, 'Invoicing', '/crm/invoicing'),
   CrmTabDef(CrmTab.analytics, Icons.query_stats_outlined, 'Analytics', '/crm/analytics'),
   CrmTabDef(CrmTab.reports, Icons.insights_outlined, 'Reports', '/crm/reports'),
 ];

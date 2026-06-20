@@ -88,6 +88,7 @@ import '../../features/admin/limits_screen.dart';
 import '../../features/billing/plans_screen.dart';
 import '../../features/crm/crm_screen.dart';
 import '../../features/crm/crm_workspace_screen.dart';
+import '../../features/invoicing/invoicing_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../network/api_client.dart';
 
@@ -200,12 +201,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/crm/deal-board', builder: (_, __) => const DealBoardScreen()),
       GoRoute(path: '/crm/collaboration', builder: (_, __) => const CollaborationScreen()),
       GoRoute(path: '/crm/lead-market', builder: (_, __) => const LeadMarketScreen()),
+      GoRoute(path: '/crm/invoicing', builder: (_, __) => const InvoicingScreen()),
       GoRoute(path: '/crm/analytics', builder: (_, __) => const LeadAnalyticsScreen()),
       GoRoute(path: '/crm/reports', builder: (_, __) => const ReportsScreen()),
       // Lead-scoring CRM (legacy standalone) kept reachable.
       GoRoute(path: '/crm/scoring', builder: (_, __) => const CrmScreen()),
       // Stand-alone routes (non-CRM personas) — same screens, plain chrome.
       GoRoute(path: '/opportunities', builder: (_, __) => const OpportunitiesScreen()),
+      GoRoute(path: '/invoicing', builder: (_, __) => const InvoicingScreen()),
       GoRoute(path: '/contacts', builder: (_, __) => const ContactsScreen()),
       // Cockpit merged into the Dashboard — keep the path as a redirect so old
       // links/bookmarks don't dead-end.
