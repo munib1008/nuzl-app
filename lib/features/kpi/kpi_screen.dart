@@ -29,6 +29,14 @@ const _metricLabels = <String, String>{
   'sales_value': 'Sales value',
 };
 
+/// Human turnaround time: minutes under an hour, else hours.
+String _fmtHours(dynamic h) {
+  final v = num.tryParse('$h') ?? 0;
+  if (v <= 0) return '—';
+  if (v < 1) return '${(v * 60).round()} min';
+  return '${v.toStringAsFixed(v < 10 ? 1 : 0)}h';
+}
+
 Color _statusColor(String s) {
   switch (s) {
     case 'Outstanding':
@@ -134,6 +142,15 @@ class _Scorecard extends StatelessWidget {
                     style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
               ]),
       ),
+      if (data['avg_response_hours'] != null) ...[
+        const SizedBox(height: AppSpacing.x8),
+        Row(children: [
+          const Icon(Icons.timer_outlined, size: 16, color: AppColors.textMuted),
+          const SizedBox(width: 6),
+          Text('Avg response (TAT): ${_fmtHours(data['avg_response_hours'])}',
+              style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+        ]),
+      ],
       const SizedBox(height: AppSpacing.x16),
       for (final key in _metricLabels.keys)
         if (metrics[key] is Map) _MetricRow(label: _metricLabels[key]!, m: Map<String, dynamic>.from(metrics[key]), money: key == 'sales_value'),
@@ -296,8 +313,11 @@ class _LeaderRow extends ConsumerWidget {
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
               Text(name, style: t.bodyLarge?.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-              if (teamRole.trim().isNotEmpty)
-                Text(teamRole, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              Text([
+                if (teamRole.trim().isNotEmpty) teamRole,
+                if (m['avg_response_hours'] != null) 'TAT ${_fmtHours(m['avg_response_hours'])}',
+              ].join('  ·  '), maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
             ]),
           ),
           Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
