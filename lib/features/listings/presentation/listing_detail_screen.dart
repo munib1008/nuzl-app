@@ -227,6 +227,7 @@ class _Detail extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.x4),
                         Text('${l['description']}', style: t.bodyMedium),
                       ],
+                      _FloorPlanBlock(url: '${l['floorplan_url'] ?? ''}'),
                       _AmenitiesBlock(l: l),
                       _IncentivesBlock(l: l),
                       _VerificationBlock(l: l),
@@ -238,6 +239,9 @@ class _Detail extends ConsumerWidget {
                         processingWaiverPct: (num.tryParse('${l['processing_waiver_pct'] ?? 0}') ?? 0).toDouble(),
                         incentiveNote: '${l['incentive_note'] ?? ''}',
                       ),
+                      // Indicative rental ROI from comparable rentals (for-sale only) —
+                      // an investor-facing yield read on the property page.
+                      if (!isRent) _RoiEstimate(listingId: id),
                       // Living-asset history — property parties only (Listing 2.0).
                       if (l['viewer_can_docs'] == true && '${l['property_id'] ?? ''}'.isNotEmpty)
                         _TimelineBlock(propertyId: '${l['property_id']}'),
@@ -1149,6 +1153,137 @@ String _formatIncentiveValue(dynamic value, String unit) {
       return '${v.toInt()} ${v.toInt() == 1 ? 'month' : 'months'}';
     default:
       return '$v';
+  }
+}
+
+/// Floor-plan image (if the property has one). Tap to view full-size + zoom.
+class _FloorPlanBlock extends StatelessWidget {
+  const _FloorPlanBlock({required this.url});
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.trim().isEmpty) return const SizedBox.shrink();
+    final t = Theme.of(context).textTheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SizedBox(height: AppSpacing.x16),
+      Row(children: [
+        const Icon(Icons.architecture_outlined, size: 18, color: AppColors.primary),
+        const SizedBox(width: AppSpacing.x8),
+        Text('Floor plan', style: t.titleMedium),
+      ]),
+      const SizedBox(height: AppSpacing.x8),
+      GestureDetector(
+        onTap: () => showDialog<void>(
+          context: context,
+          builder: (dctx) => Dialog(
+            insetPadding: const EdgeInsets.all(AppSpacing.x16),
+            child: Stack(children: [
+              InteractiveViewer(
+                maxScale: 5,
+                child: Image.network(url, fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Padding(
+                        padding: EdgeInsets.all(AppSpacing.x24), child: Text('Floor plan unavailable'))),
+              ),
+              Positioned(
+                top: 4, right: 4,
+                child: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(dctx).pop()),
+              ),
+            ]),
+          ),
+        ),
+        child: Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(maxHeight: 420),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppSpacing.rCard),
+            border: Border.all(color: Theme.of(context).dividerColor),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Image.network(url, fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text('Tap to enlarge', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+    ]);
+  }
+}
+
+/// Indicative rental ROI from comparable rentals (for-sale only). Hidden when
+/// the backend has no comparable rentals to base an estimate on.
+final _yieldProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/listings/$id/yield');
+    return d is Map ? Map<String, dynamic>.from(d) : <String, dynamic>{};
+  } catch (_) {
+    return <String, dynamic>{};
+  }
+});
+
+class _RoiEstimate extends ConsumerWidget {
+  const _RoiEstimate({required this.listingId});
+  final String listingId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final async = ref.watch(_yieldProvider(listingId));
+    return async.maybeWhen(
+      data: (m) {
+        if (m['available'] != true) return const SizedBox.shrink();
+        final gross = num.tryParse('${m['grossYieldPct'] ?? 0}') ?? 0;
+        final net = num.tryParse('${m['netYieldPct'] ?? 0}') ?? 0;
+        final rent = num.tryParse('${m['estAnnualRent'] ?? 0}') ?? 0;
+        final n = m['sampleSize'] ?? 0;
+        final money = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SizedBox(height: AppSpacing.x16),
+          Row(children: [
+            const Icon(Icons.trending_up, size: 18, color: AppColors.success),
+            const SizedBox(width: AppSpacing.x8),
+            Text('Investor view — rental ROI', style: t.titleMedium),
+          ]),
+          const SizedBox(height: AppSpacing.x8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.x16),
+            decoration: BoxDecoration(
+              color: AppColors.success.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(AppSpacing.rCard),
+              border: Border.all(color: AppColors.success.withValues(alpha: 0.22)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(child: _metric(context, '${gross.toStringAsFixed(1)}%', 'Gross yield')),
+                Expanded(child: _metric(context, '${net.toStringAsFixed(1)}%', 'Net yield')),
+                Expanded(child: _metric(context, money.format(rent), 'Est. annual rent')),
+              ]),
+              const SizedBox(height: AppSpacing.x8),
+              Text(
+                'Indicative, based on $n comparable ${m['basis'] ?? 'rentals'}. '
+                'Net yield deducts the service charge and a 10% management / vacancy allowance.',
+                style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+              ),
+            ]),
+          ),
+        ]);
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _metric(BuildContext context, String value, String label) {
+    final t = Theme.of(context).textTheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(value, maxLines: 1,
+            style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.success)),
+      ),
+      Text(label, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+    ]);
   }
 }
 
