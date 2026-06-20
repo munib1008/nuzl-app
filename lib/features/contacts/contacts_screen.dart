@@ -185,7 +185,7 @@ class ContactsScreen extends ConsumerWidget {
                 AppSpacing.x20 + MediaQuery.of(sheetCtx).viewInsets.bottom),
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Expanded(child: Text('${c['full_name'] ?? 'Contact'}', style: t.titleLarge)),
+                Expanded(child: Text('${c['full_name'] ?? 'Contact'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: t.titleLarge)),
                 StatusBadge(contactLifecycleLabels[lifecycle] ?? lifecycle, tone: _lifeTone(lifecycle)),
               ]),
               const SizedBox(height: AppSpacing.x8),
@@ -237,7 +237,7 @@ class ContactsScreen extends ConsumerWidget {
         child: Row(children: [
           Icon(icon, size: 16, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
           const SizedBox(width: AppSpacing.x8),
-          Expanded(child: Text(text, style: t.bodyMedium)),
+          Expanded(child: Text(text, maxLines: 2, overflow: TextOverflow.ellipsis, style: t.bodyMedium)),
         ]),
       );
 }
