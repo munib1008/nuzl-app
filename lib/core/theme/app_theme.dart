@@ -72,7 +72,10 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: card,
-        elevation: 3,
+        // Flat, bordered cards (the shape already carries a 1px border) — the
+        // elevation-3 drop shadow on top of the border read as heavy / floating.
+        // Thin border + no shadow is the premium, enterprise, Apple-like look.
+        elevation: 0,
         shadowColor: cardShadow,
         surfaceTintColor: Colors.transparent, // keep the card colour clean (no M3 elevation tint)
         shape: cardShape,
