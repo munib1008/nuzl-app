@@ -24,6 +24,10 @@ class AppTypography {
               : null,
         );
     // Manrope for headings — modern geometric sans, slightly tighter tracking.
+    // Tabular + slashed zero here too: many screens render metric VALUES with a
+    // heading style (e.g. the dashboard KPI cards use headlineMedium), so this
+    // makes every headline-based number align in columns without touching each
+    // screen. On text titles it only fixes digit width — imperceptible.
     TextStyle d(double size, FontWeight w, {Color? c, double ls = -0.3, double h = 1.2}) =>
         GoogleFonts.manrope(
           fontSize: size,
@@ -31,6 +35,7 @@ class AppTypography {
           color: c ?? text,
           letterSpacing: ls,
           height: h,
+          fontFeatures: const [FontFeature.tabularFigures(), FontFeature.slashedZero()],
         );
     return TextTheme(
       // KPI numbers — Inter with true tabular figures so dashboard metrics and
