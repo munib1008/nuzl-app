@@ -86,10 +86,16 @@ class LeadCrmScreen extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.x20),
 
                 if (canManage) ...[
-                  OutlinedButton.icon(
-                    onPressed: () => _assignDialog(context, ref),
-                    icon: const Icon(Icons.group_add_outlined),
-                    label: const Text('Offer to agents'),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _assignDialog(context, ref),
+                      // Override the theme's full-width minimum so this reads as a
+                      // button, not a large empty container.
+                      style: OutlinedButton.styleFrom(minimumSize: const Size(0, 40)),
+                      icon: const Icon(Icons.group_add_outlined, size: 18),
+                      label: const Text('Offer to agents'),
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.x20),
                 ],
