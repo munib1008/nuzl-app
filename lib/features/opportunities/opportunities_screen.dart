@@ -37,6 +37,7 @@ class OpportunitiesScreen extends ConsumerWidget {
           data: (list) {
             if (list.isEmpty) {
               return ListView(children: [
+                const _CrmHubBar(),
                 Padding(
                   padding: const EdgeInsets.all(48),
                   child: Center(child: Text('No opportunities yet.',
@@ -51,6 +52,7 @@ class OpportunitiesScreen extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
+                const _CrmHubBar(),
                 _summaryStrip(byStage, list.length, t, dark),
                 const SizedBox(height: AppSpacing.x16),
                 for (final s in oppStageOrder)
@@ -95,6 +97,41 @@ class OpportunitiesScreen extends ConsumerWidget {
                 Text(s.$1, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               ]),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// CRM hub launchpad — the pipeline doubles as the entry point to Contacts,
+/// Activities, Deals, etc. (§8: everything reachable from CRM).
+class _CrmHubBar extends StatelessWidget {
+  const _CrmHubBar();
+  @override
+  Widget build(BuildContext context) {
+    const links = <(IconData, String, String)>[
+      (Icons.contacts_outlined, 'Contacts', '/contacts'),
+      (Icons.event_note_outlined, 'Activities', '/activities'),
+      (Icons.handshake_outlined, 'Deals', '/deals'),
+      (Icons.campaign_outlined, 'Deal board', '/deal-board'),
+      (Icons.query_stats_outlined, 'Analytics', '/lead-analytics'),
+    ];
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.x12),
+      child: SizedBox(
+        height: 38,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: links.length,
+          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.x8),
+          itemBuilder: (_, i) {
+            final l = links[i];
+            return ActionChip(
+              avatar: Icon(l.$1, size: 16),
+              label: Text(l.$2),
+              onPressed: () => context.go(l.$3),
+            );
+          },
         ),
       ),
     );
