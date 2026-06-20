@@ -46,6 +46,17 @@ final _joinRequestsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) as
   }
 });
 
+final teamsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final orgId = ref.watch(authControllerProvider).user?.organizationId;
+  if (orgId == null) return [];
+  try {
+    final d = await ref.read(apiClientProvider).get('/organizations/$orgId/teams');
+    return d is List ? d : [];
+  } catch (_) {
+    return [];
+  }
+});
+
 class TeamScreen extends ConsumerWidget {
   const TeamScreen({super.key});
   @override
@@ -84,6 +95,7 @@ class TeamScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(AppSpacing.x16),
                 children: [
                   if (isOwner) const _JoinRequests(),
+                  if (isOwner) _TeamsSection(orgId: orgId),
                   members.when(
                     loading: () => const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
                     error: (e, _) => Text(friendlyError(e)),
@@ -94,11 +106,22 @@ class TeamScreen extends ConsumerWidget {
                       ...list.map((m) {
                         final u = Map<String, dynamic>.from(m);
                         final isMe = '${u['id']}' == user?.id;
+                        final teamName = '${u['team_name'] ?? ''}'.trim();
                         return Card(
                           child: ListTile(
+                            onTap: (isOwner && !isMe)
+                                ? () => _assignTeam(context, ref, orgId, '${u['id']}', '${u['team_id'] ?? ''}')
+                                : null,
                             leading: CircleAvatar(child: Text('${u['full_name'] ?? '?'}'.characters.first.toUpperCase())),
-                            title: Text('${u['full_name'] ?? 'Member'}${isMe ? ' (you)' : ''}'),
-                            subtitle: Text('${u['email'] ?? ''}'),
+                            title: Text('${u['full_name'] ?? 'Member'}${isMe ? ' (you)' : ''}',
+                                maxLines: 1, overflow: TextOverflow.ellipsis),
+                            subtitle: Text(
+                              [
+                                '${u['email'] ?? ''}',
+                                if (teamName.isNotEmpty) 'Team: $teamName',
+                              ].where((s) => s.trim().isNotEmpty).join('  ·  '),
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                            ),
                             trailing: isOwner && !isMe
                                 ? _RolePicker(orgId: orgId, userId: '${u['id']}', current: '${u['team_role'] ?? ''}')
                                 : Chip(
@@ -235,5 +258,126 @@ class _JoinRequests extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
+  }
+}
+
+/// Named teams: create, list with member counts, and activate / deactivate.
+class _TeamsSection extends ConsumerWidget {
+  const _TeamsSection({required this.orgId});
+  final String orgId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final teams = ref.watch(teamsProvider);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Text('Teams', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+        const Spacer(),
+        TextButton.icon(
+          onPressed: () => _createTeam(context, ref),
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text('New team'),
+        ),
+      ]),
+      teams.maybeWhen(
+        data: (list) => list.isEmpty
+            ? Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.x8),
+                child: Text('No teams yet — create one to group your agents, then tap a member to assign them.',
+                    style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)))
+            : Column(children: [for (final tm in list) _teamCard(context, ref, Map<String, dynamic>.from(tm as Map))]),
+        orElse: () => const SizedBox.shrink(),
+      ),
+      const SizedBox(height: AppSpacing.x12),
+    ]);
+  }
+
+  Widget _teamCard(BuildContext context, WidgetRef ref, Map<String, dynamic> tm) {
+    final active = tm['is_active'] != false;
+    final count = int.tryParse('${tm['member_count'] ?? 0}') ?? 0;
+    return Card(
+      child: ListTile(
+        leading: const Icon(Icons.groups_outlined),
+        title: Text('${tm['name'] ?? 'Team'}', maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text('$count member${count == 1 ? '' : 's'}${active ? '' : '  ·  inactive'}'),
+        trailing: Switch(
+          value: active,
+          onChanged: (v) async {
+            try {
+              await ref.read(apiClientProvider).patch('/organizations/$orgId/teams/${tm['id']}', body: {'is_active': v});
+              ref.invalidate(teamsProvider);
+            } catch (e) {
+              if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+            }
+          },
+        ),
+      ),
+    );
+  }
+
+  Future<void> _createTeam(BuildContext context, WidgetRef ref) async {
+    final name = TextEditingController();
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'New team',
+      maxWidth: 380,
+      children: [
+        TextField(controller: name, decoration: const InputDecoration(labelText: 'Team name', hintText: 'e.g. Marina Sales')),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Create')),
+      ],
+    );
+    if (ok != true || name.text.trim().isEmpty) return;
+    try {
+      await ref.read(apiClientProvider).post('/organizations/$orgId/teams', body: {'name': name.text.trim()});
+      ref.invalidate(teamsProvider);
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team created')));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+}
+
+/// Assign a member to a team (or clear it). Owner-only — tapped from a member row.
+Future<void> _assignTeam(BuildContext context, WidgetRef ref, String orgId, String userId, String currentTeamId) async {
+  final teams = await ref.read(teamsProvider.future);
+  if (!context.mounted) return;
+  String? selected = currentTeamId.isEmpty ? null : currentTeamId;
+  if (selected != null && !teams.any((t) => '${(t as Map)['id']}' == selected)) selected = null;
+  final ok = await AppDialog.show<bool>(
+    context,
+    title: 'Assign to team',
+    maxWidth: 380,
+    children: [
+      StatefulBuilder(
+        builder: (ctx, setS) => DropdownButtonFormField<String?>(
+          initialValue: selected,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'Team'),
+          items: [
+            const DropdownMenuItem<String?>(value: null, child: Text('No team')),
+            for (final t in teams)
+              DropdownMenuItem<String?>(value: '${(t as Map)['id']}', child: Text('${t['name']}')),
+          ],
+          onChanged: (v) => setS(() => selected = v),
+        ),
+      ),
+    ],
+    actions: [
+      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+      FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+    ],
+  );
+  if (ok != true) return;
+  try {
+    await ref.read(apiClientProvider).patch('/organizations/$orgId/members/$userId/team', body: {'team_id': selected});
+    ref.invalidate(teamMembersProvider);
+    ref.invalidate(teamsProvider);
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team updated')));
+  } catch (e) {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
   }
 }
