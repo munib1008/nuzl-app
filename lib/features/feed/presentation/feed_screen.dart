@@ -36,14 +36,48 @@ final _commentsProvider = FutureProvider.autoDispose.family<List<dynamic>, Strin
   }
 });
 
-const _kinds = [
-  ('market_update', 'Market update'),
-  ('property_showcase', 'Property showcase'),
-  ('project_update', 'Project update'),
-  ('service_promotion', 'Service promotion'),
-  ('success_story', 'Success story'),
-  ('educational', 'Educational'),
-];
+/// Post categories tailored to the active role (spec §4) — agents talk listings
+/// & deals, developers talk projects, providers talk services, etc.
+List<(String, String)> _kindsFor(Persona p) {
+  switch (p) {
+    case Persona.developer:
+      return const [
+        ('project_update', 'Project update'),
+        ('new_launch', 'New launch'),
+        ('construction_progress', 'Construction progress'),
+        ('unit_release', 'Unit release'),
+        ('investment_opportunity', 'Investment opportunity'),
+        ('success_story', 'Success story'),
+      ];
+    case Persona.provider:
+      return const [
+        ('service_promotion', 'Service promotion'),
+        ('completed_project', 'Completed project'),
+        ('tips_advice', 'Tips & advice'),
+        ('success_story', 'Success story'),
+      ];
+    case Persona.agent:
+    case Persona.salesperson:
+    case Persona.broker:
+      return const [
+        ('market_update', 'Market update'),
+        ('new_listing', 'New listing'),
+        ('buyer_requirement', 'Buyer requirement'),
+        ('off_market_deal', 'Off-market deal'),
+        ('deal_closed', 'Deal closed'),
+        ('property_showcase', 'Property showcase'),
+        ('success_story', 'Success story'),
+        ('educational', 'Educational'),
+      ];
+    default:
+      return const [
+        ('market_update', 'Market update'),
+        ('property_showcase', 'Property showcase'),
+        ('success_story', 'Success story'),
+        ('educational', 'Educational'),
+      ];
+  }
+}
 
 /// Public (everyone) vs Company (internal team) feed switch.
 class _ScopeToggle extends ConsumerWidget {
@@ -123,9 +157,13 @@ class FeedScreen extends ConsumerWidget {
   Future<void> _composer(BuildContext context, WidgetRef ref) async {
     final title = TextEditingController();
     final body = TextEditingController();
-    var kind = 'market_update';
-    var audience = 'public';
+    final kinds = _kindsFor(ref.read(personaProvider));
+    var kind = kinds.first.$1;
     final hasOrg = ref.read(authControllerProvider).user?.organizationId != null;
+    // Default the audience to whichever feed the user is currently viewing, so a
+    // post doesn't silently land in a scope they're not looking at.
+    var audience = hasOrg ? ref.read(_feedScopeProvider) : 'public';
+    var uploading = false;
     final media = <String>[];
     final mentions = <Map<String, dynamic>>[]; // {id, name}
     final ok = await AppDialog.show<bool>(
@@ -138,8 +176,8 @@ class FeedScreen extends ConsumerWidget {
             DropdownButtonFormField<String>(
               initialValue: kind,
               decoration: const InputDecoration(labelText: 'Category'),
-              items: _kinds.map((k) => DropdownMenuItem(value: k.$1, child: Text(k.$2))).toList(),
-              onChanged: (v) => setS(() => kind = v ?? 'market_update'),
+              items: kinds.map((k) => DropdownMenuItem(value: k.$1, child: Text(k.$2))).toList(),
+              onChanged: (v) => setS(() => kind = v ?? kinds.first.$1),
             ),
             if (hasOrg) ...[
               const SizedBox(height: AppSpacing.x8),
@@ -173,17 +211,32 @@ class FeedScreen extends ConsumerWidget {
                     child: Image.network(url, width: 56, height: 56, fit: BoxFit.cover),
                   ),
                 OutlinedButton.icon(
-                  onPressed: () async {
-                    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1280, imageQuality: 70);
-                    if (picked == null) return;
-                    final bytes = await picked.readAsBytes();
-                    try {
-                      final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
-                      if (url != null) setS(() => media.add(url));
-                    } catch (_) {/* surfaced elsewhere */}
-                  },
-                  icon: const Icon(Icons.add_photo_alternate_outlined, size: 18),
-                  label: const Text('Photo'),
+                  onPressed: uploading
+                      ? null
+                      : () async {
+                          final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1280, imageQuality: 70);
+                          if (picked == null) return;
+                          final bytes = await picked.readAsBytes();
+                          setS(() => uploading = true);
+                          try {
+                            final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
+                            if (url != null) {
+                              setS(() => media.add(url));
+                            } else if (ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Photo upload failed — please try again')));
+                            }
+                          } catch (e) {
+                            if (ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Photo upload failed — ${friendlyError(e)}')));
+                            }
+                          } finally {
+                            setS(() => uploading = false);
+                          }
+                        },
+                  icon: uploading
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.add_photo_alternate_outlined, size: 18),
+                  label: Text(uploading ? 'Uploading…' : 'Photo'),
                 ),
                 OutlinedButton.icon(
                   onPressed: () async {
@@ -230,6 +283,9 @@ class FeedScreen extends ConsumerWidget {
         if (media.isNotEmpty) 'media': media,
         if (mentions.isNotEmpty) 'mentions': mentions.map((m) => m['id']).toList(),
       });
+      // Switch the feed to the scope we just posted to, so the new post is
+      // visible immediately instead of landing in a tab the user isn't viewing.
+      if (hasOrg) ref.read(_feedScopeProvider.notifier).state = audience;
       ref.invalidate(feedPostsProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
