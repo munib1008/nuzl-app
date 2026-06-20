@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/network/api_client.dart';
+import '../../core/network/upload_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
@@ -35,7 +37,7 @@ class CompanyDashboardScreen extends ConsumerWidget {
           child: company.when(
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
             error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
-            data: (c) => c == null ? _noCompany(context, t) : _dashboard(context, t, c, pendingJoins),
+            data: (c) => c == null ? _noCompany(context, t) : _dashboard(context, ref, t, c, pendingJoins),
           ),
         ),
       ),
@@ -66,7 +68,27 @@ class CompanyDashboardScreen extends ConsumerWidget {
       );
   }
 
-  Widget _dashboard(BuildContext context, TextTheme t, Map<String, dynamic> c, int pendingJoins) {
+  /// Owner uploads/changes the company logo (drives invoice header, public page,
+  /// marketplace cards). The backend enforces owner-only.
+  Future<void> _uploadLogo(BuildContext context, WidgetRef ref) async {
+    try {
+      final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 512, imageQuality: 85);
+      if (picked == null) return;
+      final bytes = await picked.readAsBytes();
+      final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
+      if (url == null || url.isEmpty) {
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logo upload failed — try again.')));
+        return;
+      }
+      await ref.read(apiClientProvider).patch('/organizations/mine/logo', body: {'logo_url': url});
+      ref.invalidate(myCompanyProvider);
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Company logo updated.')));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  Widget _dashboard(BuildContext context, WidgetRef ref, TextTheme t, Map<String, dynamic> c, int pendingJoins) {
     final name = '${c['name'] ?? 'Your company'}';
     final logo = '${c['logo_url'] ?? ''}'.trim();
     final slug = '${c['slug'] ?? ''}'.trim();
@@ -79,17 +101,35 @@ class CompanyDashboardScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(AppSpacing.x16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Container(
-                width: 56, height: 56,
-                decoration: BoxDecoration(
-                  color: AppColors.surface2,
-                  borderRadius: BorderRadius.circular(AppSpacing.rMd),
-                  image: logo.isNotEmpty ? DecorationImage(image: NetworkImage(logo), fit: BoxFit.cover) : null,
-                ),
-                child: logo.isEmpty
-                    ? Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-                        style: t.titleLarge?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)))
-                    : null,
+              GestureDetector(
+                onTap: () => _uploadLogo(context, ref),
+                child: Stack(children: [
+                  Container(
+                    width: 56, height: 56,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface2,
+                      borderRadius: BorderRadius.circular(AppSpacing.rMd),
+                      image: logo.isNotEmpty ? DecorationImage(image: NetworkImage(logo), fit: BoxFit.cover) : null,
+                    ),
+                    child: logo.isEmpty
+                        ? Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
+                            style: t.titleLarge?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)))
+                        : null,
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Theme.of(context).colorScheme.surface, width: 1.5),
+                      ),
+                      child: const Icon(Icons.photo_camera, size: 11, color: Colors.white),
+                    ),
+                  ),
+                ]),
               ),
               const SizedBox(width: AppSpacing.x12),
               Expanded(
