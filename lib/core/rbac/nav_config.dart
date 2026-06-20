@@ -24,15 +24,18 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.people_outline, 'Network', '/network'),
       ];
-    // Consolidated to ~8 modules — Contacts, Activities, Deals, Deal board,
-    // Collaboration, Lead Market, Analytics & Reports are all reachable from the
-    // CRM hub launchpad on /opportunities, so they're off the flat nav.
+    // Mostly consolidated under the CRM hub (Contacts, Activities, Deals,
+    // Collaboration, Lead Market, Analytics & Reports live on /crm). EXCEPTION:
+    // the Deal Board is a top-level destination — it's core daily flow for agents
+    // (broadcast/co-broke deals) and was a show-stopper buried in the CRM tabs,
+    // so it gets its own independent /deal-board entry, in the mobile bottom 5.
     case Persona.agent:
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.dynamic_feed_outlined, 'Community', '/feed'),
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.trending_up, 'CRM', '/crm'),
+        NavItem(Icons.campaign_outlined, 'Deal Board', '/deal-board'),
         NavItem(Icons.event_available_outlined, 'Leasing Leads', '/viewing-leads'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.emoji_events_outlined, 'Performance', '/kpi'),
@@ -43,6 +46,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.dynamic_feed_outlined, 'Community', '/feed'),
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.trending_up, 'CRM', '/crm'),
+        NavItem(Icons.campaign_outlined, 'Deal Board', '/deal-board'),
         NavItem(Icons.event_available_outlined, 'Leasing Leads', '/viewing-leads'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.inventory_2_outlined, 'Inventory', '/inventory'),
