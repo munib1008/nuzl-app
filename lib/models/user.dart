@@ -8,6 +8,7 @@ class AppUser {
     this.deletedAt,
     this.activeRole,
     this.designation,
+    this.avatarUrl,
     this.roles = const [],
   });
   final String id;
@@ -15,6 +16,10 @@ class AppUser {
   final String fullName;
   final String? role;
   final String? organizationId;
+
+  /// Profile photo URL (avatar). Null when the user hasn't set one — UI falls
+  /// back to the name initial.
+  final String? avatarUrl;
 
   /// Set when the account is in the 14-day deletion grace window. Null = active.
   final DateTime? deletedAt;
@@ -53,6 +58,7 @@ class AppUser {
         deletedAt: DateTime.tryParse('${j['deleted_at'] ?? ''}'),
         activeRole: j['active_role'],
         designation: j['designation'],
+        avatarUrl: (j['avatar_url'] ?? j['avatarUrl'])?.toString(),
         roles: (j['roles'] is List)
             ? (j['roles'] as List).map((e) => Map<String, dynamic>.from(e)).toList()
             : const [],

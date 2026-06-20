@@ -99,14 +99,20 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
           ],
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x12),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.primary,
-              child: Text(
-                (user?.fullName.isNotEmpty == true ? user!.fullName[0] : 'N').toUpperCase(),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
-              ),
-            ),
+            child: Builder(builder: (_) {
+              final avatar = user?.avatarUrl ?? '';
+              return CircleAvatar(
+                radius: 16,
+                backgroundColor: AppColors.primary,
+                backgroundImage: avatar.isNotEmpty ? NetworkImage(avatar) : null,
+                child: avatar.isNotEmpty
+                    ? null
+                    : Text(
+                        (user?.fullName.isNotEmpty == true ? user!.fullName[0] : 'N').toUpperCase(),
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                      ),
+              );
+            }),
           ),
         ),
       ],

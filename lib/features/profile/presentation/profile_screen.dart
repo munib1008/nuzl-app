@@ -274,6 +274,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     try {
       await ref.read(apiClientProvider).patch('/users/me/avatar', body: {'avatar_url': url});
       ref.invalidate(_avatarProvider);
+      // Refresh the auth user so the new photo shows everywhere it's used (the
+      // top-right app-bar avatar, menus, etc.) — not just on this screen.
+      await ref.read(authControllerProvider.notifier).bootstrap();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(url.isEmpty ? 'Photo removed' : 'Photo updated')));
