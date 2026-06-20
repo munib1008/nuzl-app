@@ -37,6 +37,81 @@ final _similarProvider = FutureProvider.autoDispose.family<List<dynamic>, String
   }
 });
 
+final _publicYieldProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/public/listings/$id/yield');
+    return d is Map ? Map<String, dynamic>.from(d) : <String, dynamic>{};
+  } catch (_) {
+    return <String, dynamic>{};
+  }
+});
+
+/// Indicative rental ROI on the public property page (for-sale listings with
+/// comparable rentals). Hidden otherwise. Mirrors the in-app investor view.
+class _PublicRoiEstimate extends ConsumerWidget {
+  const _PublicRoiEstimate({required this.id});
+  final String id;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    return ref.watch(_publicYieldProvider(id)).maybeWhen(
+      data: (m) {
+        if (m['available'] != true) return const SizedBox.shrink();
+        final gross = num.tryParse('${m['grossYieldPct'] ?? 0}') ?? 0;
+        final net = num.tryParse('${m['netYieldPct'] ?? 0}') ?? 0;
+        final rent = num.tryParse('${m['estAnnualRent'] ?? 0}') ?? 0;
+        final n = m['sampleSize'] ?? 0;
+        final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
+        Widget metric(String v, String label) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(v, maxLines: 1,
+                      style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.success)),
+                ),
+                Text(label, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              ],
+            );
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SizedBox(height: AppSpacing.x24),
+          Row(children: [
+            const Icon(Icons.trending_up, size: 18, color: AppColors.success),
+            const SizedBox(width: AppSpacing.x8),
+            Text('Investor view — rental ROI', style: t.titleMedium),
+          ]),
+          const SizedBox(height: AppSpacing.x8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.x16),
+            decoration: BoxDecoration(
+              color: AppColors.success.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(AppSpacing.rCard),
+              border: Border.all(color: AppColors.success.withValues(alpha: 0.22)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(child: metric('${gross.toStringAsFixed(1)}%', 'Gross yield')),
+                Expanded(child: metric('${net.toStringAsFixed(1)}%', 'Net yield')),
+                Expanded(child: metric(aed.format(rent), 'Est. annual rent')),
+              ]),
+              const SizedBox(height: AppSpacing.x8),
+              Text(
+                'Indicative, based on $n comparable ${m['basis'] ?? 'rentals'}. '
+                'Net yield deducts the service charge and a 10% management / vacancy allowance.',
+                style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+              ),
+            ]),
+          ),
+        ]);
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
 double _estMonthly(num price) {
   final loan = price * 0.75;
   const r = 0.045 / 12;
@@ -231,6 +306,7 @@ class _Body extends ConsumerWidget {
         const SizedBox(height: 4),
         Text('Tap to enlarge', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
       ],
+      _PublicRoiEstimate(id: id),
       ...(() {
         final raw = m['amenities'];
         final items = raw is List
