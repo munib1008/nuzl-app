@@ -9,7 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_dialog.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/status_badge.dart';
-import '../../shell/app_shell.dart';
+import '../../crm/crm_scaffold.dart';
 
 final leadMarketProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   try {
@@ -57,9 +57,9 @@ class _LeadMarketScreenState extends ConsumerState<LeadMarketScreen> with Single
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const NuzlAppBar(title: 'Lead Market'),
-      drawer: const NuzlDrawer(),
+    return CrmScaffold(
+      tab: CrmTab.leadMarket,
+      title: 'Lead Market',
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _listLead,
         icon: const Icon(Icons.sell_outlined),

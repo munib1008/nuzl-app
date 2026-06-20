@@ -6,7 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/responsive.dart';
-import '../shell/app_shell.dart';
+import '../crm/crm_scaffold.dart';
 
 final leadAnalyticsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
   final persona = ref.watch(personaProvider);
@@ -29,9 +29,9 @@ class LeadAnalyticsScreen extends ConsumerWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final data = ref.watch(leadAnalyticsProvider);
     int n(Map m, String k) => int.tryParse('${m[k] ?? 0}') ?? 0;
-    return Scaffold(
-      appBar: const NuzlAppBar(title: 'Lead analytics'),
-      drawer: const NuzlDrawer(),
+    return CrmScaffold(
+      tab: CrmTab.analytics,
+      title: 'Lead analytics',
       body: ResponsiveCenter(
         child: RefreshIndicator(
           onRefresh: () async => ref.invalidate(leadAnalyticsProvider),

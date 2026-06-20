@@ -5,7 +5,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/responsive.dart';
-import '../../shell/app_shell.dart';
+import '../../crm/crm_scaffold.dart';
 
 final dealsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   try {
@@ -22,9 +22,9 @@ class DealsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final deals = ref.watch(dealsProvider);
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
-    return Scaffold(
-      appBar: const NuzlAppBar(title: 'Deals'),
-      drawer: const NuzlDrawer(),
+    return CrmScaffold(
+      tab: CrmTab.deals,
+      title: 'Deals',
       body: ResponsiveCenter(
         child: RefreshIndicator(
           onRefresh: () async => ref.refresh(dealsProvider.future),

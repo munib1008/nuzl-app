@@ -5,7 +5,7 @@ import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
-import '../shell/app_shell.dart';
+import '../crm/crm_scaffold.dart';
 
 final activitiesProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   try {
@@ -22,9 +22,9 @@ class ActivitiesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activities = ref.watch(activitiesProvider);
-    return Scaffold(
-      appBar: const NuzlAppBar(title: 'Activities'),
-      drawer: const NuzlDrawer(),
+    return CrmScaffold(
+      tab: CrmTab.activities,
+      title: 'Activities',
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _addDialog(context, ref),
         icon: const Icon(Icons.add),

@@ -10,7 +10,7 @@ import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../auth/application/auth_controller.dart';
 import '../messages/data/messaging_repository.dart';
-import '../shell/app_shell.dart';
+import '../crm/crm_scaffold.dart';
 import 'deal_board_repository.dart';
 
 String _propLine(Map d) {
@@ -30,9 +30,9 @@ class DealBoardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final deals = ref.watch(dealBoardProvider);
     final myId = ref.watch(authControllerProvider).user?.id;
-    return Scaffold(
-      appBar: const NuzlAppBar(title: 'Deal board'),
-      drawer: const NuzlDrawer(),
+    return CrmScaffold(
+      tab: CrmTab.dealBoard,
+      title: 'Deal board',
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _postDeal(context, ref),
         icon: const Icon(Icons.campaign_outlined),

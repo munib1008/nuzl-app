@@ -9,7 +9,7 @@ import '../../core/widgets/async_view.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/status_badge.dart';
 import '../../core/widgets/user_avatar.dart';
-import '../shell/app_shell.dart';
+import '../crm/crm_scaffold.dart';
 import 'contacts_repository.dart';
 
 BadgeTone _lifeTone(String l) => switch (l) {
@@ -30,18 +30,9 @@ class ContactsScreen extends ConsumerWidget {
     final contacts = ref.watch(contactsProvider);
     final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return Scaffold(
-      appBar: NuzlAppBar(
-        title: 'Contacts',
-        actions: [
-          IconButton(
-            tooltip: 'Pipeline',
-            icon: const Icon(Icons.view_kanban_outlined),
-            onPressed: () => context.push('/opportunities'),
-          ),
-        ],
-      ),
-      drawer: const NuzlDrawer(),
+    return CrmScaffold(
+      tab: CrmTab.contacts,
+      title: 'Contacts',
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _addContact(context, ref),
         icon: const Icon(Icons.person_add_alt_1),

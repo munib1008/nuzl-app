@@ -87,6 +87,7 @@ import '../../features/admin/audit_screen.dart';
 import '../../features/admin/limits_screen.dart';
 import '../../features/billing/plans_screen.dart';
 import '../../features/crm/crm_screen.dart';
+import '../../features/crm/crm_workspace_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../network/api_client.dart';
 
@@ -189,7 +190,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/my-properties', builder: (_, __) => const MyPropertiesScreen()),
       GoRoute(path: '/property/:id', builder: (_, s) => PropertyRecordScreen(propertyId: s.pathParameters['id']!)),
       GoRoute(path: '/lead-matches', builder: (_, __) => const LeadMatchesScreen()),
-      GoRoute(path: '/crm', builder: (_, __) => const CrmScreen()),
+      // CRM single workspace — /crm is the overview dashboard; every section is
+      // a nested /crm/* route so "CRM" stays highlighted across the whole area.
+      GoRoute(path: '/crm', builder: (_, __) => const CrmWorkspaceScreen()),
+      GoRoute(path: '/crm/pipeline', builder: (_, __) => const OpportunitiesScreen()),
+      GoRoute(path: '/crm/contacts', builder: (_, __) => const ContactsScreen()),
+      GoRoute(path: '/crm/activities', builder: (_, __) => const ActivitiesScreen()),
+      GoRoute(path: '/crm/deals', builder: (_, __) => const DealsScreen()),
+      GoRoute(path: '/crm/deal-board', builder: (_, __) => const DealBoardScreen()),
+      GoRoute(path: '/crm/collaboration', builder: (_, __) => const CollaborationScreen()),
+      GoRoute(path: '/crm/lead-market', builder: (_, __) => const LeadMarketScreen()),
+      GoRoute(path: '/crm/analytics', builder: (_, __) => const LeadAnalyticsScreen()),
+      GoRoute(path: '/crm/reports', builder: (_, __) => const ReportsScreen()),
+      // Lead-scoring CRM (legacy standalone) kept reachable.
+      GoRoute(path: '/crm/scoring', builder: (_, __) => const CrmScreen()),
+      // Stand-alone routes (non-CRM personas) — same screens, plain chrome.
       GoRoute(path: '/opportunities', builder: (_, __) => const OpportunitiesScreen()),
       GoRoute(path: '/contacts', builder: (_, __) => const ContactsScreen()),
       // Cockpit merged into the Dashboard — keep the path as a redirect so old

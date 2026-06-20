@@ -4,7 +4,7 @@ import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/status_badge.dart';
-import '../shell/app_shell.dart';
+import '../crm/crm_scaffold.dart';
 import 'collaboration_repository.dart';
 
 String _title(Map v) {
@@ -44,9 +44,9 @@ class CollaborationScreen extends ConsumerWidget {
     final outgoing = ref.watch(collabOutgoingProvider);
     final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return Scaffold(
-      appBar: const NuzlAppBar(title: 'Collaboration'),
-      drawer: const NuzlDrawer(),
+    return CrmScaffold(
+      tab: CrmTab.collaboration,
+      title: 'Collaboration',
       body: RefreshIndicator(
         onRefresh: () async => _refresh(ref),
         child: ListView(

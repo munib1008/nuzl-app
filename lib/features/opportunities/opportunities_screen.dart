@@ -6,7 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/status_badge.dart';
-import '../shell/app_shell.dart';
+import '../crm/crm_scaffold.dart';
 import 'opportunities_repository.dart';
 
 BadgeTone _stageTone(String s) => switch (s) {
@@ -26,9 +26,9 @@ class OpportunitiesScreen extends ConsumerWidget {
     final opps = ref.watch(opportunitiesProvider);
     final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    return Scaffold(
-      appBar: const NuzlAppBar(title: 'CRM pipeline'),
-      drawer: const NuzlDrawer(),
+    return CrmScaffold(
+      tab: CrmTab.pipeline,
+      title: 'CRM pipeline',
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(opportunitiesProvider),
         child: AsyncView<List<Map<String, dynamic>>>(
@@ -37,7 +37,6 @@ class OpportunitiesScreen extends ConsumerWidget {
           data: (list) {
             if (list.isEmpty) {
               return ListView(children: [
-                const _CrmHubBar(),
                 Padding(
                   padding: const EdgeInsets.all(48),
                   child: Center(child: Text('No opportunities yet.',
@@ -52,7 +51,6 @@ class OpportunitiesScreen extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
-                const _CrmHubBar(),
                 _summaryStrip(byStage, list.length, t, dark),
                 const SizedBox(height: AppSpacing.x16),
                 for (final s in oppStageOrder)
@@ -97,44 +95,6 @@ class OpportunitiesScreen extends ConsumerWidget {
                 Text(s.$1, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               ]),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// CRM hub launchpad — the pipeline doubles as the entry point to Contacts,
-/// Activities, Deals, etc. (§8: everything reachable from CRM).
-class _CrmHubBar extends StatelessWidget {
-  const _CrmHubBar();
-  @override
-  Widget build(BuildContext context) {
-    const links = <(IconData, String, String)>[
-      (Icons.contacts_outlined, 'Contacts', '/contacts'),
-      (Icons.event_note_outlined, 'Activities', '/activities'),
-      (Icons.handshake_outlined, 'Deals', '/deals'),
-      (Icons.campaign_outlined, 'Deal board', '/deal-board'),
-      (Icons.diversity_3_outlined, 'Collaboration', '/collaboration'),
-      (Icons.sell_outlined, 'Lead Market', '/lead-market'),
-      (Icons.query_stats_outlined, 'Lead analytics', '/lead-analytics'),
-      (Icons.insights_outlined, 'Reports', '/reports'),
-    ];
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.x12),
-      child: SizedBox(
-        height: 38,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: links.length,
-          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.x8),
-          itemBuilder: (_, i) {
-            final l = links[i];
-            return ActionChip(
-              avatar: Icon(l.$1, size: 16),
-              label: Text(l.$2),
-              onPressed: () => context.go(l.$3),
-            );
-          },
         ),
       ),
     );

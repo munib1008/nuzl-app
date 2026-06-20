@@ -9,7 +9,7 @@ import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
-import '../shell/app_shell.dart';
+import '../crm/crm_scaffold.dart';
 
 /// Role-aware reports: each persona hits its own summary endpoint.
 String _reportPath(Persona p) => switch (p) {
@@ -51,9 +51,9 @@ class ReportsScreen extends ConsumerWidget {
     final report = ref.watch(reportsProvider);
     final persona = ref.watch(personaProvider);
     final showTeam = _orgPersona(persona);
-    return Scaffold(
-      appBar: const NuzlAppBar(title: 'Reports'),
-      drawer: const NuzlDrawer(),
+    return CrmScaffold(
+      tab: CrmTab.reports,
+      title: 'Reports',
       body: ResponsiveCenter(
         child: report.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
