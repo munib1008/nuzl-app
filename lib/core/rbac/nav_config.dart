@@ -24,6 +24,9 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.people_outline, 'Network', '/network'),
       ];
+    // Consolidated to ~8 modules — Contacts, Activities, Deals, Deal board,
+    // Collaboration, Lead Market, Analytics & Reports are all reachable from the
+    // CRM hub launchpad on /opportunities, so they're off the flat nav.
     case Persona.agent:
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
@@ -31,16 +34,8 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.trending_up, 'CRM', '/opportunities'),
         NavItem(Icons.event_available_outlined, 'Leasing Leads', '/viewing-leads'),
-        NavItem(Icons.sell_outlined, 'Lead Market', '/lead-market'),
-        NavItem(Icons.handshake_outlined, 'Deals', '/deals'),
-        NavItem(Icons.diversity_3_outlined, 'Collaboration', '/collaboration'),
-        NavItem(Icons.campaign_outlined, 'Deal board', '/deal-board'),
-        NavItem(Icons.contacts_outlined, 'Contacts', '/contacts'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
-        NavItem(Icons.event_note_outlined, 'Activities', '/activities'),
         NavItem(Icons.emoji_events_outlined, 'Performance', '/kpi'),
-        NavItem(Icons.query_stats_outlined, 'Lead analytics', '/lead-analytics'),
-        NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
     case Persona.broker:
       return const [
@@ -49,17 +44,11 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.trending_up, 'CRM', '/opportunities'),
         NavItem(Icons.event_available_outlined, 'Leasing Leads', '/viewing-leads'),
-        NavItem(Icons.handshake_outlined, 'Deals', '/deals'),
-        NavItem(Icons.diversity_3_outlined, 'Collaboration', '/collaboration'),
-        NavItem(Icons.campaign_outlined, 'Deal board', '/deal-board'),
-        NavItem(Icons.contacts_outlined, 'Contacts', '/contacts'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.inventory_2_outlined, 'Inventory', '/inventory'),
         NavItem(Icons.groups_outlined, 'Team', '/team'),
         NavItem(Icons.business_outlined, 'My Company', '/company-dashboard'),
         NavItem(Icons.emoji_events_outlined, 'Performance', '/kpi'),
-        NavItem(Icons.query_stats_outlined, 'Lead analytics', '/lead-analytics'),
-        NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
     case Persona.developer:
       return const [

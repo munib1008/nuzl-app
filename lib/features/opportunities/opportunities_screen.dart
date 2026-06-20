@@ -114,7 +114,10 @@ class _CrmHubBar extends StatelessWidget {
       (Icons.event_note_outlined, 'Activities', '/activities'),
       (Icons.handshake_outlined, 'Deals', '/deals'),
       (Icons.campaign_outlined, 'Deal board', '/deal-board'),
-      (Icons.query_stats_outlined, 'Analytics', '/lead-analytics'),
+      (Icons.diversity_3_outlined, 'Collaboration', '/collaboration'),
+      (Icons.sell_outlined, 'Lead Market', '/lead-market'),
+      (Icons.query_stats_outlined, 'Lead analytics', '/lead-analytics'),
+      (Icons.insights_outlined, 'Reports', '/reports'),
     ];
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.x12),
