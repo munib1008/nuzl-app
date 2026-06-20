@@ -61,6 +61,11 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
         // sidebar/drawer (_RoleChip). No duplicate switcher in the app bar.
         ...?actions,
         IconButton(
+          tooltip: 'Report an issue / feedback',
+          icon: const Icon(Icons.bug_report_outlined),
+          onPressed: () => showFeedbackDialog(context, ref, title),
+        ),
+        IconButton(
           tooltip: 'Toggle light / dark',
           icon: Icon(Theme.of(context).brightness == Brightness.dark
               ? Icons.light_mode_outlined
@@ -117,6 +122,84 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
         ),
       ],
     );
+  }
+}
+
+/// Global "Report an issue" — reachable from the app bar on every authed page.
+/// Creates a support ticket (NUZL-YYYY-NNNNNN) and shows the number on success.
+Future<void> showFeedbackDialog(BuildContext context, WidgetRef ref, String? page) async {
+  const categories = <(String, String)>[
+    ('bug', 'Bug report'), ('feature', 'Feature request'), ('improvement', 'Improvement'),
+    ('data', 'Incorrect data'), ('billing', 'Billing issue'), ('account', 'Account issue'),
+    ('security', 'Security concern'), ('other', 'Other'),
+  ];
+  var category = 'bug';
+  var priority = 'medium';
+  final subject = TextEditingController();
+  final desc = TextEditingController();
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (dctx) => AlertDialog(
+      scrollable: true,
+      title: const Text('Report an issue'),
+      content: StatefulBuilder(
+        builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
+          DropdownButtonFormField<String>(
+            initialValue: category,
+            decoration: const InputDecoration(labelText: 'Category'),
+            items: [for (final c in categories) DropdownMenuItem(value: c.$1, child: Text(c.$2))],
+            onChanged: (v) => setS(() => category = v ?? 'bug'),
+          ),
+          const SizedBox(height: AppSpacing.x8),
+          DropdownButtonFormField<String>(
+            initialValue: priority,
+            decoration: const InputDecoration(labelText: 'Priority'),
+            items: const [
+              DropdownMenuItem(value: 'low', child: Text('Low')),
+              DropdownMenuItem(value: 'medium', child: Text('Medium')),
+              DropdownMenuItem(value: 'high', child: Text('High')),
+              DropdownMenuItem(value: 'critical', child: Text('Critical')),
+            ],
+            onChanged: (v) => setS(() => priority = v ?? 'medium'),
+          ),
+          const SizedBox(height: AppSpacing.x8),
+          TextField(controller: subject, decoration: const InputDecoration(labelText: 'Subject *')),
+          const SizedBox(height: AppSpacing.x8),
+          TextField(controller: desc, maxLines: 4, decoration: const InputDecoration(labelText: 'Describe what happened')),
+          if (page != null && page.trim().isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.x8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Screen: $page',
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: Theme.of(ctx).hintColor)),
+            ),
+          ],
+        ]),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(dctx, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(dctx, true), child: const Text('Submit')),
+      ],
+    ),
+  );
+  if (ok != true || subject.text.trim().isEmpty) return;
+  try {
+    final res = await ref.read(apiClientProvider).post('/feedback', body: {
+      'category': category,
+      'priority': priority,
+      'subject': subject.text.trim(),
+      'description': desc.text.trim(),
+      'page': page,
+    });
+    final ticket = (res is Map) ? '${res['ticket_no'] ?? ''}' : '';
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(ticket.isNotEmpty
+              ? 'Thanks — your report $ticket has been received.'
+              : 'Thanks — your report has been received.')));
+    }
+  } catch (e) {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
   }
 }
 
