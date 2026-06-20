@@ -64,6 +64,8 @@ class MarketplaceScreen extends ConsumerWidget {
     final unit = TextEditingController();
     final delivery = TextEditingController();
     final contact = TextEditingController();
+    final moq = TextEditingController();
+    final coverage = TextEditingController();
     final ok = await AppDialog.show<bool>(
       context,
       title: 'List a service / product',
@@ -126,6 +128,14 @@ class MarketplaceScreen extends ConsumerWidget {
               const SizedBox(width: AppSpacing.x8),
               Expanded(child: TextField(controller: contact, decoration: const InputDecoration(labelText: 'Contact'))),
             ]),
+            const SizedBox(height: AppSpacing.x8),
+            // Catalogue depth (§1): MOQ for products, coverage areas for services.
+            if (kind == 'product')
+              TextField(controller: moq, keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Min. order qty (MOQ)', hintText: 'e.g. 10'))
+            else
+              TextField(controller: coverage,
+                  decoration: const InputDecoration(labelText: 'Coverage areas', hintText: 'e.g. Dubai, Sharjah, Abu Dhabi')),
           ]),
         ),
       ],
@@ -163,6 +173,8 @@ class MarketplaceScreen extends ConsumerWidget {
         'price_unit': unit.text.trim(),
         'delivery_days': int.tryParse(delivery.text.trim()),
         'contact': contact.text.trim(),
+        if (kind == 'product') 'moq': int.tryParse(moq.text.trim()),
+        if (kind == 'service') 'coverage_areas': coverage.text.trim(),
       });
       ref.invalidate(marketplaceProvider(kind));
       final draft = res is Map && res['is_active'] == false;

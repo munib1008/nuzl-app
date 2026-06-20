@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -138,6 +139,35 @@ class _Detail extends ConsumerWidget {
                 Text('About', style: t.titleMedium),
                 const SizedBox(height: AppSpacing.x8),
                 Text(desc, style: t.bodyMedium?.copyWith(height: 1.5)),
+              ],
+              if (isProduct && (int.tryParse('${m['moq'] ?? ''}') ?? 0) > 0) ...[
+                const SizedBox(height: AppSpacing.x12),
+                Row(children: [
+                  Icon(Icons.inventory_2_outlined, size: 16, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
+                  const SizedBox(width: 6),
+                  Text('Minimum order: ${m['moq']}',
+                      style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                ]),
+              ],
+              if (!isProduct && '${m['coverage_areas'] ?? ''}'.trim().isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.x12),
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Icon(Icons.place_outlined, size: 16, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text('Coverage: ${m['coverage_areas']}', maxLines: 2, overflow: TextOverflow.ellipsis,
+                      style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
+                ]),
+              ],
+              if ('${m['brochure_url'] ?? ''}'.trim().isNotEmpty) ...[
+                const SizedBox(height: AppSpacing.x12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: () => launchUrl(Uri.parse('${m['brochure_url']}'), webOnlyWindowName: '_blank'),
+                    icon: const Icon(Icons.description_outlined, size: 18),
+                    label: const Text('Download brochure'),
+                  ),
+                ),
               ],
               if (contact.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.x16),
