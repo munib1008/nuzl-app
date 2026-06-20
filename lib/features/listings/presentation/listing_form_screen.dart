@@ -6,9 +6,11 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/upload_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/field_pair.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/sticky_save_bar.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../profile/presentation/profile_completion_banner.dart';
 import '../../shell/app_shell.dart';
 import '../data/listings_repository.dart' show listingsProvider, amenitiesProvider;
 import 'listings_screen.dart' show listingsRawProvider;
@@ -39,12 +41,24 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   final permit = TextEditingController();
   final building = TextEditingController();
   final location = TextEditingController(); // a Google Maps link or "lat, lng"
+  final originalPrice = TextEditingController();
+  final developer = TextEditingController();
+  final view = TextEditingController();
+  final parking = TextEditingController();
+  final serviceCharge = TextEditingController();
+  final incentiveNote = TextEditingController();
+  double dldWaiver = 0; // % of the 4% DLD the developer covers
+  double processingWaiver = 0; // % of the processing fee covered
+  final List<_IncentiveInput> _incentives = []; // structured "Incentives & offers"
+  DateTime? handover;
   final Set<int> selectedAmenities = {};
 
   final List<String> imageUrls = []; // uploaded photo URLs (first = cover)
   bool uploading = false;
   bool saving = false;
   bool aiBusy = false;
+  bool isExclusive = false;
+  bool isHotDeal = false;
   String? error;
 
   @override
@@ -65,6 +79,29 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       description.text = '${m['description'] ?? ''}';
       permit.text = '${m['permit_number'] ?? ''}';
       building.text = '${m['building_name'] ?? ''}';
+      isExclusive = m['is_exclusive'] == true;
+      isHotDeal = m['is_hot_deal'] == true;
+      if (m['original_price'] != null) originalPrice.text = '${m['original_price']}';
+      developer.text = '${m['developer'] ?? ''}';
+      view.text = '${m['view'] ?? ''}';
+      parking.text = m['parking'] != null ? '${m['parking']}' : '';
+      serviceCharge.text = m['service_charge'] != null ? '${m['service_charge']}' : '';
+      dldWaiver = (num.tryParse('${m['dld_waiver_pct'] ?? 0}') ?? 0).toDouble();
+      processingWaiver = (num.tryParse('${m['processing_waiver_pct'] ?? 0}') ?? 0).toDouble();
+      incentiveNote.text = '${m['incentive_note'] ?? ''}';
+      final inc = m['incentives'];
+      if (inc is List) {
+        for (final it in inc) {
+          if (it is Map) {
+            final r = _IncentiveInput(type: '${it['type'] ?? 'cash_back'}');
+            r.input.text = _structuredIncentiveUnit(r.type).isEmpty
+                ? '${it['label'] ?? ''}'
+                : '${it['value'] ?? ''}';
+            _incentives.add(r);
+          }
+        }
+      }
+      handover = DateTime.tryParse('${m['handover_date'] ?? ''}');
       final lat = m['latitude'], lng = m['longitude'];
       if (lat != null && lng != null) location.text = '$lat, $lng';
       final imgs = m['images'];
@@ -91,7 +128,13 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   void dispose() {
     price.dispose(); beds.dispose(); baths.dispose(); size.dispose(); unitNo.dispose();
     ownerName.dispose(); ownerPhone.dispose(); description.dispose(); permit.dispose();
-    building.dispose(); location.dispose(); super.dispose();
+    building.dispose(); location.dispose(); originalPrice.dispose();
+    developer.dispose(); view.dispose(); parking.dispose(); serviceCharge.dispose();
+    incentiveNote.dispose();
+    for (final r in _incentives) {
+      r.input.dispose();
+    }
+    super.dispose();
   }
 
   /// Pick + upload one photo, appended to the gallery. Compressed (1280px/q60)
@@ -181,7 +224,8 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Auto-fill from a message'),
         content: SizedBox(
-          width: 420,
+          // Cap at 420 on desktop, but never wider than a phone dialog can hold.
+          width: MediaQuery.sizeOf(ctx).width - 80 < 420 ? MediaQuery.sizeOf(ctx).width - 80 : 420,
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Paste a WhatsApp-style property message — we’ll extract the details.',
                 style: TextStyle(fontSize: 13)),
@@ -239,14 +283,35 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
 
   Future<void> _save() async {
     final editing = widget.editId != null;
-    // Building name + unit number are mandatory (owner #1). Unit number is only
-    // captured on create (it identifies the property), so require it there.
-    if (building.text.trim().isEmpty) {
-      setState(() => error = 'Building name is required.');
-      return;
+    final messenger = ScaffoldMessenger.of(context); // captured before any await
+    // Profile-completion gate (#15): a complete profile is required to post a new listing.
+    if (!editing) {
+      final pc = await ref.read(profileCompletionProvider.future).catchError((_) => <String, dynamic>{'complete': true});
+      if (pc['complete'] != true) {
+        final missing = (pc['missing'] is List) ? (pc['missing'] as List).join(', ') : 'some fields';
+        if (!mounted) return;
+        setState(() => error = 'Complete your profile ($missing) before posting — see Profile.');
+        return;
+      }
     }
-    if (!editing && unitNo.text.trim().isEmpty) {
-      setState(() => error = 'Unit number is required.');
+    // Validate all mandatory fields together and show a single, specific summary
+    // (don't clear the form — entered data is preserved).
+    final priceVal = double.tryParse(price.text.trim());
+    final missing = <String>[
+      if (building.text.trim().isEmpty) 'Building name',
+      if (!editing && unitNo.text.trim().isEmpty) 'Unit number',
+      if (priceVal == null || priceVal <= 0) 'A valid price',
+    ];
+    if (missing.isNotEmpty) {
+      final msg = missing.length == 1
+          ? '${missing.first} is required.'
+          : 'Please complete: ${missing.join(', ')}.';
+      setState(() => error = msg);
+      // Surface it above the pinned save bar too, so it's seen wherever the user
+      // is scrolled — without clearing any entered data.
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(msg)));
       return;
     }
     setState(() { saving = true; error = null; });
@@ -255,12 +320,31 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       'property_type': propertyType,
       'purpose': purpose,
       'furnishing': furnishing,
-      'price': double.tryParse(price.text) ?? 0,
+      'price': priceVal,
       'bedrooms': int.tryParse(beds.text),
       'bathrooms': int.tryParse(baths.text),
       'size_sqft': double.tryParse(size.text),
       'description': description.text.trim(),
       'building_name': building.text.trim(),
+      'is_exclusive': isExclusive,
+      'is_hot_deal': isHotDeal,
+      if (originalPrice.text.trim().isNotEmpty) 'original_price': double.tryParse(originalPrice.text.trim()),
+      if (developer.text.trim().isNotEmpty) 'developer': developer.text.trim(),
+      if (view.text.trim().isNotEmpty) 'view': view.text.trim(),
+      if (parking.text.trim().isNotEmpty) 'parking': int.tryParse(parking.text.trim()),
+      if (serviceCharge.text.trim().isNotEmpty) 'service_charge': double.tryParse(serviceCharge.text.trim()),
+      'dld_waiver_pct': dldWaiver,
+      'processing_waiver_pct': processingWaiver,
+      if (incentiveNote.text.trim().isNotEmpty) 'incentive_note': incentiveNote.text.trim(),
+      'incentives': [
+        for (final r in _incentives.where((r) => r.input.text.trim().isNotEmpty))
+          if (_structuredIncentiveUnit(r.type).isEmpty)
+            {'type': r.type, 'label': r.input.text.trim()}
+          else
+            {'type': r.type, 'value': double.tryParse(r.input.text.trim()), 'unit': _structuredIncentiveUnit(r.type)},
+      ],
+      if (handover != null)
+        'handover_date': '${handover!.year}-${handover!.month.toString().padLeft(2, '0')}-${handover!.day.toString().padLeft(2, '0')}',
       'amenities': selectedAmenities.toList(),
       if (permit.text.trim().isNotEmpty) 'permit_number': permit.text.trim(),
       if (coords != null) 'latitude': coords.$1,
@@ -286,17 +370,19 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       ref.invalidate(listingsProvider);
       ref.invalidate(listingsRawProvider);
       if (!mounted) return;
-      // An owner's new listing is a draft until a title deed is submitted + published;
-      // take them straight to the listing so they can do that (it won't show in the
-      // public browse yet, only under "My listings").
-      if (!editing && created?['is_visible'] == false && created?['id'] != null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Saved as a draft — submit a title deed, then publish it to go live.')));
-        context.go('/listings/${created!['id']}');
+      // Always land on the item's detail page after submit (consistent workflow).
+      final id = '${created?['id'] ?? widget.editId ?? ''}';
+      final String msg;
+      if (editing) {
+        msg = 'Your property has been updated.';
+      } else if (created?['is_visible'] == false) {
+        // Owner draft — pending a title deed before it goes public.
+        msg = 'Your property has been submitted and saved as a draft. Submit a title deed, then publish it to go live.';
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(editing ? 'Listing updated' : 'Listing added')));
-        context.go('/properties');
+        msg = 'Your property has been posted successfully and is now live.';
       }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      context.go(id.isNotEmpty ? '/listings/$id' : '/properties');
     } catch (e) {
       setState(() => error = e.toString());
     } finally {
@@ -307,6 +393,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final user = ref.watch(authControllerProvider).user;
     final isOwner = user?.activeRole == 'owner';
     final ownerFullName = user?.fullName ?? '';
@@ -339,7 +426,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
             Text(
               '${imageUrls.length} added · at least 3 to publish',
               style: t.bodySmall?.copyWith(
-                  color: imageUrls.length >= 3 ? AppColors.success : AppColors.textMuted),
+                  color: imageUrls.length >= 3 ? AppColors.success : (dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ),
             const SizedBox(height: AppSpacing.x8),
             Wrap(
@@ -358,21 +445,20 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
               onChanged: (v) => setState(() => propertyType = v ?? 'apartment'),
             ),
             const SizedBox(height: AppSpacing.x12),
-            Row(children: [
-              Expanded(child: DropdownButtonFormField<String>(
+            FieldPair(
+              DropdownButtonFormField<String>(
                 initialValue: purpose, decoration: const InputDecoration(labelText: 'Purpose'),
                 items: const [DropdownMenuItem(value: 'sale', child: Text('Sale')), DropdownMenuItem(value: 'rent', child: Text('Rent'))],
-                onChanged: (v) => setState(() => purpose = v ?? 'sale'))),
-              const SizedBox(width: AppSpacing.x12),
-              Expanded(child: DropdownButtonFormField<String>(
+                onChanged: (v) => setState(() => purpose = v ?? 'sale')),
+              DropdownButtonFormField<String>(
                 initialValue: furnishing, decoration: const InputDecoration(labelText: 'Furnishing'),
                 items: const [
                   DropdownMenuItem(value: 'unfurnished', child: Text('Unfurnished')),
                   DropdownMenuItem(value: 'partly_furnished', child: Text('Partly furnished')),
                   DropdownMenuItem(value: 'furnished', child: Text('Furnished')),
                 ],
-                onChanged: (v) => setState(() => furnishing = v ?? 'unfurnished'))),
-            ]),
+                onChanged: (v) => setState(() => furnishing = v ?? 'unfurnished')),
+            ),
             const SizedBox(height: AppSpacing.x12),
             TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price (AED)')),
             const SizedBox(height: AppSpacing.x12),
@@ -442,11 +528,177 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.x16),
+            // Optional enrichments collapsed by default so the form isn't
+            // overwhelming — the essentials above are all that's needed to post.
+            Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: EdgeInsets.zero,
+                expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+                title: Text('More details (optional)', style: t.titleSmall),
+                subtitle: Text('Developer info · highlights · incentives',
+                    style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                children: [
+            Text('Property details', style: t.titleSmall),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(child: TextField(controller: developer, decoration: const InputDecoration(labelText: 'Developer', hintText: 'e.g. Emaar'))),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(child: TextField(controller: view, decoration: const InputDecoration(labelText: 'View', hintText: 'e.g. Marina'))),
+            ]),
+            const SizedBox(height: AppSpacing.x12),
+            Row(children: [
+              Expanded(child: TextField(controller: parking, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Parking spaces'))),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(child: TextField(controller: serviceCharge, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Service charge (AED/sqft/yr)'))),
+            ]),
+            const SizedBox(height: AppSpacing.x12),
+            InkWell(
+              onTap: () async {
+                final now = DateTime.now();
+                final d = await showDatePicker(
+                  context: context,
+                  initialDate: handover ?? now,
+                  firstDate: DateTime(now.year - 10),
+                  lastDate: DateTime(now.year + 15),
+                  helpText: 'Handover date',
+                );
+                if (d != null) setState(() => handover = d);
+              },
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                    labelText: 'Handover date', suffixIcon: Icon(Icons.calendar_today_outlined, size: 18)),
+                child: Text(
+                  handover == null
+                      ? 'Select date (off-plan / ready)'
+                      : '${handover!.year}-${handover!.month.toString().padLeft(2, '0')}-${handover!.day.toString().padLeft(2, '0')}',
+                  style: TextStyle(color: handover == null ? Theme.of(context).hintColor : null),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x16),
+            Text('Highlights', style: t.titleSmall),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Exclusive listing'),
+              value: isExclusive,
+              onChanged: (v) => setState(() => isExclusive = v),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Hot deal'),
+              value: isHotDeal,
+              onChanged: (v) => setState(() => isHotDeal = v),
+            ),
+            TextField(
+              controller: originalPrice,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Original price (AED) — optional',
+                helperText: 'If above the current price, shows a "Price reduced" ribbon',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x16),
+            Text('Developer incentives', style: t.titleSmall),
+            const SizedBox(height: AppSpacing.x4),
+            Text('Fee waivers a developer covers — reflected in the buyer\'s mortgage estimate.',
+                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+            const SizedBox(height: AppSpacing.x8),
+            FieldPair(
+              DropdownButtonFormField<double>(
+                initialValue: dldWaiver,
+                decoration: const InputDecoration(labelText: 'DLD fee waiver'),
+                items: const [
+                  DropdownMenuItem(value: 0.0, child: Text('None')),
+                  DropdownMenuItem(value: 25.0, child: Text('25% covered')),
+                  DropdownMenuItem(value: 50.0, child: Text('50% covered')),
+                  DropdownMenuItem(value: 75.0, child: Text('75% covered')),
+                  DropdownMenuItem(value: 100.0, child: Text('Full DLD waiver')),
+                ],
+                onChanged: (v) => setState(() => dldWaiver = v ?? 0),
+              ),
+              DropdownButtonFormField<double>(
+                initialValue: processingWaiver,
+                decoration: const InputDecoration(labelText: 'Processing fee waiver'),
+                items: const [
+                  DropdownMenuItem(value: 0.0, child: Text('None')),
+                  DropdownMenuItem(value: 50.0, child: Text('50% covered')),
+                  DropdownMenuItem(value: 100.0, child: Text('Fully covered')),
+                ],
+                onChanged: (v) => setState(() => processingWaiver = v ?? 0),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            TextField(
+              controller: incentiveNote,
+              decoration: const InputDecoration(
+                labelText: 'Other incentives — optional',
+                hintText: 'e.g. Service-charge waiver for 2 years, free furnishing',
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            Text('Offers list — shown as "Incentives & offers" on the property',
+                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+            const SizedBox(height: AppSpacing.x8),
+            for (var i = 0; i < _incentives.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.x8),
+                child: Row(children: [
+                  Expanded(
+                    flex: 3,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _incentives[i].type,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Offer', isDense: true),
+                      items: const [
+                        DropdownMenuItem(value: 'cash_back', child: Text('Cash-back')),
+                        DropdownMenuItem(value: 'service_charge_holiday', child: Text('Service-charge holiday')),
+                        DropdownMenuItem(value: 'furniture', child: Text('Furniture allowance')),
+                        DropdownMenuItem(value: 'payment_plan', child: Text('Payment plan')),
+                        DropdownMenuItem(value: 'free_management', child: Text('Free management')),
+                        DropdownMenuItem(value: 'dld_waiver', child: Text('DLD waiver')),
+                        DropdownMenuItem(value: 'processing_waiver', child: Text('Processing waiver')),
+                        DropdownMenuItem(value: 'other', child: Text('Other')),
+                      ],
+                      onChanged: (v) => setState(() => _incentives[i].type = v ?? 'other'),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.x8),
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      controller: _incentives[i].input,
+                      keyboardType: _structuredIncentiveUnit(_incentives[i].type).isEmpty
+                          ? TextInputType.text
+                          : const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(labelText: _incFieldLabel(_incentives[i].type), isDense: true),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Remove',
+                    icon: const Icon(Icons.close, size: 18),
+                    onPressed: () => setState(() => _incentives.removeAt(i).input.dispose()),
+                  ),
+                ]),
+              ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => setState(() => _incentives.add(_IncentiveInput())),
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add an offer'),
+              ),
+            ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x16),
             Text('Amenities', style: t.titleSmall),
             const SizedBox(height: AppSpacing.x8),
             ref.watch(amenitiesProvider).maybeWhen(
               data: (list) => list.isEmpty
-                  ? Text('No amenities available', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  ? Text('No amenities available', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Wrap(
                       spacing: AppSpacing.x8,
                       runSpacing: AppSpacing.x8,
@@ -484,5 +736,44 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
         onPressed: _save,
       ),
     );
+  }
+}
+
+/// One editable row in the structured "Offers list" — a type + a single input
+/// that's a numeric value (for %/AED/months offers) or free text (for the rest).
+class _IncentiveInput {
+  _IncentiveInput({this.type = 'cash_back'});
+  String type;
+  final input = TextEditingController();
+}
+
+/// The unit an offer's value is measured in (drives parsing + the field label).
+/// Empty = the input is free text (e.g. a payment-plan description).
+String _structuredIncentiveUnit(String type) {
+  switch (type) {
+    case 'dld_waiver':
+    case 'processing_waiver':
+      return 'percent';
+    case 'cash_back':
+    case 'furniture':
+      return 'aed';
+    case 'service_charge_holiday':
+    case 'free_management':
+      return 'months';
+    default:
+      return '';
+  }
+}
+
+String _incFieldLabel(String type) {
+  switch (_structuredIncentiveUnit(type)) {
+    case 'percent':
+      return 'Percent (%)';
+    case 'aed':
+      return 'Amount (AED)';
+    case 'months':
+      return 'Months';
+    default:
+      return 'Details';
   }
 }

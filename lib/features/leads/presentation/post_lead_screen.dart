@@ -47,7 +47,7 @@ class _PostLeadScreenState extends ConsumerState<PostLeadScreen> {
     if (problem != null) { setState(() => error = problem); return; }
     setState(() { saving = true; error = null; });
     try {
-      await ref.read(apiClientProvider).post('/buyer-requirements', body: {
+      final res = await ref.read(apiClientProvider).post('/buyer-requirements', body: {
         'buyer_name': name.text.trim(),
         'buyer_phone': phone.text.trim(),
         'buyer_type': buyerType,
@@ -60,7 +60,13 @@ class _PostLeadScreenState extends ConsumerState<PostLeadScreen> {
         'lead_category': category,
       });
       ref.invalidate(leadsProvider);
-      if (mounted) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lead posted'))); context.go('/leads'); }
+      final id = res is Map ? '${res['id'] ?? ''}' : '';
+      if (mounted) {
+        // Consistent post-submit workflow: confirm + land on the new lead's detail.
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Your lead has been created successfully.')));
+        context.go(id.isNotEmpty ? '/leads/$id' : '/leads');
+      }
     } catch (e) {
       setState(() => error = e.toString());
     } finally {

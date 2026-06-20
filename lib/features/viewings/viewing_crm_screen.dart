@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/async_view.dart';
@@ -27,6 +29,7 @@ class ViewingCrmScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final crm = ref.watch(viewingCrmProvider(id));
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final myId = ref.watch(authControllerProvider).user?.id;
     return Scaffold(
       appBar: AppBar(title: const Text('Lead')),
@@ -41,6 +44,7 @@ class ViewingCrmScreen extends ConsumerWidget {
             final activities = (d['activities'] is List) ? List.from(d['activities']) : const [];
             final stage = '${v['crm_stage'] ?? 'new_inquiry'}';
             final isAssigned = myId != null && '${v['assigned_agent_id']}' == myId;
+            final isCustomer = myId != null && '${v['requested_by']}' == myId;
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
@@ -49,7 +53,7 @@ class ViewingCrmScreen extends ConsumerWidget {
                 Text([
                   if ('${v['requested_by_name'] ?? ''}'.isNotEmpty) 'Customer: ${v['requested_by_name']}',
                   if ('${v['assigned_agent_name'] ?? ''}'.isNotEmpty) 'Agent: ${v['assigned_agent_name']}',
-                ].join('  ·  '), style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                ].join('  ·  '), style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 const SizedBox(height: AppSpacing.x20),
 
                 Text('Leasing pipeline', style: t.titleSmall),
@@ -59,7 +63,7 @@ class ViewingCrmScreen extends ConsumerWidget {
                     v['assigned_agent_id'] == null
                         ? 'Not yet assigned.'
                         : 'Assigned to another agent — read only.',
-                    style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+                    style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                   ),
                 const SizedBox(height: AppSpacing.x8),
                 Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
@@ -71,6 +75,24 @@ class ViewingCrmScreen extends ConsumerWidget {
                     ),
                 ]),
                 const SizedBox(height: AppSpacing.x20),
+
+                // Communication — only the assigned agent and the customer (#23).
+                if (isAssigned || isCustomer) ...[
+                  Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
+                    FilledButton.icon(
+                      onPressed: () => _openChat(context, ref),
+                      icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                      label: Text(isAssigned ? 'Message customer' : 'Message agent'),
+                    ),
+                    if (isAssigned)
+                      OutlinedButton.icon(
+                        onPressed: () => _scheduleCall(context, ref),
+                        icon: const Icon(Icons.call_outlined, size: 18),
+                        label: const Text('Schedule call'),
+                      ),
+                  ]),
+                  const SizedBox(height: AppSpacing.x20),
+                ],
 
                 Row(children: [
                   Text('Activity & communications', style: t.titleSmall),
@@ -84,9 +106,10 @@ class ViewingCrmScreen extends ConsumerWidget {
                 ]),
                 const SizedBox(height: AppSpacing.x8),
                 if (activities.isEmpty)
-                  Text('No activity yet.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  Text('No activity yet.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                 else
-                  for (final a in activities) _activityTile(Map<String, dynamic>.from(a), t),
+                  for (final a in activities)
+                    _activityTile(Map<String, dynamic>.from(a), t, dark, Theme.of(context).colorScheme.primary),
               ],
             );
           },
@@ -95,7 +118,7 @@ class ViewingCrmScreen extends ConsumerWidget {
     );
   }
 
-  Widget _activityTile(Map<String, dynamic> a, TextTheme t) {
+  Widget _activityTile(Map<String, dynamic> a, TextTheme t, bool dark, Color primary) {
     final when = DateTime.tryParse('${a['created_at'] ?? ''}');
     final sub = [
       if (a['actor_name'] != null) '${a['actor_name']}',
@@ -105,17 +128,45 @@ class ViewingCrmScreen extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Padding(padding: EdgeInsets.only(top: 4),
-            child: Icon(Icons.circle, size: 8, color: AppColors.primary)),
+        Padding(padding: const EdgeInsets.only(top: 4),
+            child: Icon(Icons.circle, size: 8, color: primary)),
         const SizedBox(width: AppSpacing.x12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('${a['note'] ?? a['activity_type'] ?? ''}', style: t.bodyMedium),
-            if (sub.isNotEmpty) Text(sub, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            if (sub.isNotEmpty) Text(sub, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ]),
         ),
       ]),
     );
+  }
+
+  Future<void> _openChat(BuildContext context, WidgetRef ref) async {
+    try {
+      final convId = await ref.read(viewingLeadsRepoProvider).openConversation(id);
+      if (context.mounted) context.push('/messages/$convId');
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  Future<void> _scheduleCall(BuildContext context, WidgetRef ref) async {
+    final now = DateTime.now();
+    final date = await showDatePicker(
+        context: context, initialDate: now, firstDate: now, lastDate: now.add(const Duration(days: 365)));
+    if (date == null || !context.mounted) return;
+    final time = await showTimePicker(
+        context: context, initialTime: TimeOfDay.fromDateTime(now.add(const Duration(hours: 1))));
+    if (time == null || !context.mounted) return;
+    final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    final note = 'Call scheduled for ${DateFormat('EEE d MMM, h:mm a').format(dt)}';
+    try {
+      await ref.read(viewingLeadsRepoProvider).scheduleCall(id, dt.toIso8601String(), note);
+      ref.invalidate(viewingCrmProvider(id));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(note)));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
   }
 
   Future<void> _setStage(BuildContext context, WidgetRef ref, String stage) async {
@@ -125,7 +176,7 @@ class ViewingCrmScreen extends ConsumerWidget {
       ref.invalidate(viewingAssignedProvider);
       ref.invalidate(viewingMetricsProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -167,7 +218,7 @@ class ViewingCrmScreen extends ConsumerWidget {
       await ref.read(viewingLeadsRepoProvider).logActivity(id, type, ctrl.text.trim());
       ref.invalidate(viewingCrmProvider(id));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

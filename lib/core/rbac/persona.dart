@@ -35,6 +35,7 @@ Persona personaFromRole(String? role) {
     case 'gardens':
     case 'service':
     case 'seller':
+    case 'supplier':
     case 'provider':
       return Persona.provider;
     case 'tenant':

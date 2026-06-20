@@ -59,4 +59,13 @@ class ViewingLeadsRepository {
 
   Future<void> logActivity(String id, String type, String note) =>
       _api.post('/viewings/$id/activity', body: {'activity_type': type, 'note': note});
+
+  /// Open (or reuse) the customer<->assigned-agent chat; returns the conversation id (#23).
+  Future<String> openConversation(String id) async {
+    final res = await _api.post('/viewings/$id/conversation');
+    return '${(res as Map)['conversation_id']}';
+  }
+
+  Future<void> scheduleCall(String id, String scheduledAtIso, String note) =>
+      _api.post('/viewings/$id/schedule-call', body: {'scheduled_at': scheduledAtIso, 'note': note});
 }

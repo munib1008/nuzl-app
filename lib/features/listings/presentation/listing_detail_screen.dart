@@ -6,11 +6,17 @@ import 'package:intl/intl.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/upload_service.dart';
 import '../../../core/rbac/persona.dart';
+import '../../../core/util/mortgage_math.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/detail_grid.dart';
+import '../../../core/widgets/location_map.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../messages/data/messaging_repository.dart';
 import '../../saved/saved_screen.dart';
+import '../../collaboration/collaboration_repository.dart';
+import 'listing_ribbons.dart';
 
 final _detailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
   final d = await ref.read(apiClientProvider).get('/listings/$id');
@@ -45,6 +51,17 @@ final _myViewingProvider = FutureProvider.autoDispose.family<Map<String, dynamic
   }
 });
 
+/// Property Listing 2.0 (phase 1): the property's living-asset history. Party-gated
+/// on the server; the section only renders for property parties (viewer_can_docs).
+final _timelineProvider = FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, propertyId) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/properties/$propertyId/timeline');
+    return d is List ? d.map((e) => Map<String, dynamic>.from(e as Map)).toList() : <Map<String, dynamic>>[];
+  } catch (_) {
+    return <Map<String, dynamic>>[];
+  }
+});
+
 class ListingDetailScreen extends ConsumerWidget {
   const ListingDetailScreen({super.key, required this.id});
   final String id;
@@ -56,7 +73,7 @@ class ListingDetailScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Listing'), actions: [SaveListingButton(listingId: id)]),
       body: detail.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+        error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
         data: (l) => _Detail(id: id, l: l),
       ),
     );
@@ -80,6 +97,7 @@ class _Detail extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final price = num.tryParse('${l['price']}') ?? 0;
     final money = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price);
     final isRent = '${l['purpose']}' == 'rent';
@@ -91,6 +109,13 @@ class _Detail extends ConsumerWidget {
       if (l['bathrooms'] != null) ('Bathrooms', '${l['bathrooms']}'),
       if (l['size_sqft'] != null) ('Size', '${(num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0)} sqft'),
       if (l['furnishing'] != null) ('Furnishing', _cap('${l['furnishing']}')),
+      if ('${l['developer'] ?? ''}'.trim().isNotEmpty) ('Developer', '${l['developer']}'),
+      if ('${l['view'] ?? ''}'.trim().isNotEmpty) ('View', '${l['view']}'),
+      if (l['parking'] != null) ('Parking', '${l['parking']}'),
+      if (l['service_charge'] != null)
+        ('Service charge', 'AED ${(num.tryParse('${l['service_charge']}') ?? 0).toStringAsFixed(0)}/sqft/yr'),
+      if ('${l['handover_date'] ?? ''}'.trim().isNotEmpty)
+        ('Handover', '${l['handover_date']}'.split('T').first),
       if (l['community'] != null) ('Community', '${l['community']}'),
       if (l['building'] != null)
         ('Building', '${l['building']}')
@@ -130,8 +155,15 @@ class _Detail extends ConsumerWidget {
                       ),
                       if (l['community'] != null) ...[
                         const SizedBox(height: AppSpacing.x4),
-                        Text('${l['community']}', style: t.bodyLarge?.copyWith(color: AppColors.textMuted)),
+                        Text('${l['community']}', style: t.bodyLarge?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       ],
+                      if ('${l['ref_code'] ?? ''}'.trim().isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text('Ref ${l['ref_code']}',
+                            style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w600)),
+                      ],
+                      const SizedBox(height: AppSpacing.x8),
+                      ListingRibbons(listing: l),
                       // Owner-management actions (edit / documents / ownership / publish /
                       // agents) are hidden in Customer/buyer mode (owner #12) — gated by the
                       // same capability as the listings FAB, not just broker identity.
@@ -171,35 +203,64 @@ class _Detail extends ConsumerWidget {
                       ],
                       const SizedBox(height: AppSpacing.x16),
                       Text('Key facts', style: t.titleMedium),
-                      const SizedBox(height: AppSpacing.x8),
-                      ...facts.map((f) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(f.$1, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
-                                Text(f.$2, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                              ],
-                            ),
-                          )),
+                      const SizedBox(height: AppSpacing.x12),
+                      // Headline facts as scannable stat cards (the full table
+                      // below still carries every detail).
+                      Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x12, children: [
+                        if (l['bedrooms'] != null) _statCard(context, Icons.bed_outlined, '${l['bedrooms']}', 'Bedrooms'),
+                        if (l['bathrooms'] != null) _statCard(context, Icons.bathtub_outlined, '${l['bathrooms']}', 'Bathrooms'),
+                        if (l['size_sqft'] != null)
+                          _statCard(context, Icons.straighten, (num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0), 'Sq ft'),
+                        if (l['property_type'] != null) _statCard(context, Icons.home_work_outlined, _cap('${l['property_type']}'), 'Type'),
+                      ]),
+                      const SizedBox(height: AppSpacing.x16),
+                      // Remaining facts as a balanced, distributed grid (the
+                      // headline four are already the stat cards above).
+                      DetailGrid(
+                        items: facts
+                            .where((f) => !const {'Type', 'Bedrooms', 'Bathrooms', 'Size'}.contains(f.$1))
+                            .map((f) => (detailIcon(f.$1), f.$1, f.$2))
+                            .toList(),
+                      ),
                       if ('${l['description'] ?? ''}'.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.x16),
                         Text('Description', style: t.titleMedium),
                         const SizedBox(height: AppSpacing.x4),
                         Text('${l['description']}', style: t.bodyMedium),
                       ],
+                      _FloorPlanBlock(url: '${l['floorplan_url'] ?? ''}'),
                       _AmenitiesBlock(l: l),
+                      _IncentivesBlock(l: l),
                       _VerificationBlock(l: l),
+                      // Mortgage estimate is shown ONLY on for-sale listings (Customer
+                      // module spec — no standalone calculator for buyers).
+                      if (!isRent) _MortgageEstimate(
+                        price: price.toDouble(),
+                        dldWaiverPct: (num.tryParse('${l['dld_waiver_pct'] ?? 0}') ?? 0).toDouble(),
+                        processingWaiverPct: (num.tryParse('${l['processing_waiver_pct'] ?? 0}') ?? 0).toDouble(),
+                        incentiveNote: '${l['incentive_note'] ?? ''}',
+                      ),
+                      // Indicative rental ROI from comparable rentals (for-sale only) —
+                      // an investor-facing yield read on the property page.
+                      if (!isRent) _RoiEstimate(listingId: id),
+                      // Living-asset history — property parties only (Listing 2.0).
+                      if (l['viewer_can_docs'] == true && '${l['property_id'] ?? ''}'.isNotEmpty)
+                        _TimelineBlock(propertyId: '${l['property_id']}'),
                       const SizedBox(height: AppSpacing.x20),
                       if (brokerId.isNotEmpty) _AgentCard(brokerId: brokerId, listingId: id),
                       const SizedBox(height: AppSpacing.x20),
                       Text('Location', style: t.titleMedium),
                       const SizedBox(height: AppSpacing.x8),
-                      _MapPlaceholder(
+                      LocationMap(
                         lat: double.tryParse('${l['latitude'] ?? ''}'),
                         lng: double.tryParse('${l['longitude'] ?? ''}'),
+                        query: [l['building_name'], l['community'], 'United Arab Emirates']
+                            .map((e) => '${e ?? ''}'.trim())
+                            .where((e) => e.isNotEmpty)
+                            .join(', '),
                       ),
                       const SizedBox(height: AppSpacing.x24),
+                      _SimilarSection(id: id),
                     ],
                   ),
                 ),
@@ -229,52 +290,78 @@ class _GalleryState extends State<_Gallery> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (widget.images.isEmpty) {
-      return AspectRatio(
-        aspectRatio: 16 / 9,
-        child: Container(
-          color: AppColors.surface2,
-          child: const Center(child: Icon(Icons.apartment_outlined, size: 56, color: AppColors.textSubtle)),
+  void _go(int delta) {
+    final n = widget.images.length;
+    if (n < 2) return;
+    _controller.animateToPage((_page + delta).clamp(0, n - 1),
+        duration: const Duration(milliseconds: 280), curve: Curves.easeOut);
+  }
+
+  Widget _navArrow(IconData icon, VoidCallback onTap) => Material(
+        color: Colors.black.withValues(alpha: 0.42),
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(padding: const EdgeInsets.all(8), child: Icon(icon, color: Colors.white, size: 22)),
         ),
       );
-    }
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: Stack(
-        alignment: Alignment.bottomCenter,
-        children: [
-          PageView.builder(
-            controller: _controller,
-            itemCount: widget.images.length,
-            onPageChanged: (i) => setState(() => _page = i),
-            itemBuilder: (_, i) => Image.network(widget.images[i], fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                    color: AppColors.surface2,
-                    child: const Center(child: Icon(Icons.broken_image_outlined, size: 40, color: AppColors.textSubtle)))),
-          ),
-          if (widget.images.length > 1)
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.x8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(
-                  widget.images.length,
-                  (i) => Container(
-                    width: 7,
-                    height: 7,
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: i == _page ? Colors.white : Colors.white54,
+
+  @override
+  Widget build(BuildContext context) {
+    final wide = MediaQuery.sizeOf(context).width >= 760;
+    final multi = widget.images.length > 1;
+    final Widget content = widget.images.isEmpty
+        ? Container(
+            color: AppColors.surface2,
+            child: const Center(child: Icon(Icons.apartment_outlined, size: 56, color: AppColors.textSubtle)))
+        : Stack(fit: StackFit.expand, children: [
+            PageView.builder(
+              controller: _controller,
+              itemCount: widget.images.length,
+              onPageChanged: (i) => setState(() => _page = i),
+              itemBuilder: (_, i) => Image.network(widget.images[i], fit: BoxFit.cover,
+                  loadingBuilder: (c, child, p) => p == null ? child : Container(color: AppColors.surface2),
+                  errorBuilder: (_, __, ___) => Container(
+                      color: AppColors.surface2,
+                      child: const Center(child: Icon(Icons.broken_image_outlined, size: 40, color: AppColors.textSubtle)))),
+            ),
+            const Positioned(
+              left: 0, right: 0, bottom: 0, height: 64,
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Color(0x55000000)],
                     ),
                   ),
                 ),
               ),
             ),
-        ],
-      ),
+            if (multi)
+              Positioned(
+                bottom: AppSpacing.x12, left: 0, right: 0,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    widget.images.length,
+                    (i) => Container(
+                      width: 7, height: 7,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      decoration: BoxDecoration(shape: BoxShape.circle, color: i == _page ? Colors.white : Colors.white54),
+                    ),
+                  ),
+                ),
+              ),
+            if (multi && wide) ...[
+              Positioned(left: 14, top: 0, bottom: 0, child: Center(child: _navArrow(Icons.chevron_left, () => _go(-1)))),
+              Positioned(right: 14, top: 0, bottom: 0, child: Center(child: _navArrow(Icons.chevron_right, () => _go(1)))),
+            ],
+          ]);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppSpacing.rXl),
+      child: AspectRatio(aspectRatio: 16 / 9, child: content),
     );
   }
 }
@@ -303,6 +390,38 @@ class _AgentCard extends ConsumerWidget {
     return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
 
+  Future<void> _requestCollab(BuildContext context, WidgetRef ref) async {
+    final split = TextEditingController();
+    final msg = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Request collaboration'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('Propose a commission split to co-broke this listing.', style: TextStyle(fontSize: 13)),
+          const SizedBox(height: AppSpacing.x12),
+          TextField(controller: split, keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Your split (%)')),
+          const SizedBox(height: AppSpacing.x8),
+          TextField(controller: msg, maxLines: 2, decoration: const InputDecoration(labelText: 'Message (optional)')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(collabRepoProvider).request(listingId, double.tryParse(split.text.trim()), msg.text.trim());
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request sent to the listing agent')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
   Future<void> _requestViewing(BuildContext context, WidgetRef ref) async {
     final dt = await _pickDateTime(context);
     if (dt == null || !context.mounted) return;
@@ -317,7 +436,7 @@ class _AgentCard extends ConsumerWidget {
             const SnackBar(content: Text('Viewing requested — the agent will confirm your slot.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -334,13 +453,14 @@ class _AgentCard extends ConsumerWidget {
             const SnackBar(content: Text('New time proposed — the agent will confirm.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final agent = ref.watch(_agentProvider(brokerId));
     final name = agent.maybeWhen(data: (m) => '${m['full_name'] ?? 'Listing agent'}', orElse: () => 'Listing agent');
     final role = agent.maybeWhen(data: (m) => personaFromRole('${m['role'] ?? ''}').label, orElse: () => '');
@@ -362,7 +482,7 @@ class _AgentCard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(name, style: t.titleSmall),
-                      if (role.isNotEmpty) Text(role, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                      if (role.isNotEmpty) Text(role, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                     ],
                   ),
                 ),
@@ -383,7 +503,7 @@ class _AgentCard extends ConsumerWidget {
                       if (convId.isNotEmpty && context.mounted) context.push('/messages/$convId');
                     } catch (e) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
                       }
                     }
                   },
@@ -391,6 +511,17 @@ class _AgentCard extends ConsumerWidget {
                   label: const Text('Message agent'),
                 ),
               ),
+              if (ref.watch(personaProvider).canListProperty) ...[
+                const SizedBox(height: AppSpacing.x8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _requestCollab(context, ref),
+                    icon: const Icon(Icons.diversity_3_outlined, size: 18),
+                    label: const Text('Request collaboration'),
+                  ),
+                ),
+              ],
             ],
             const SizedBox(height: AppSpacing.x12),
             ref.watch(_myViewingProvider(listingId)).maybeWhen(
@@ -400,16 +531,18 @@ class _AgentCard extends ConsumerWidget {
                       child: FilledButton.icon(
                         onPressed: () => _requestViewing(context, ref),
                         icon: const Icon(Icons.event_available_outlined),
-                        label: const Text('Request viewing'),
+                        label: const Text('Schedule viewing'),
                       ),
                     )
                   : _BookingBox(v: v, onChange: () => _reschedule(context, ref, '${v['id']}')),
               orElse: () => SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: null,
+                  // Stay actionable even if the existing-viewing lookup is loading
+                  // or errored — scheduling doesn't depend on that data.
+                  onPressed: () => _requestViewing(context, ref),
                   icon: const Icon(Icons.event_available_outlined),
-                  label: const Text('Request viewing'),
+                  label: const Text('Schedule viewing'),
                 ),
               ),
             ),
@@ -511,7 +644,7 @@ class _OwnershipCardState extends ConsumerState<_OwnershipCard> {
             const SnackBar(content: Text('Title deed submitted — a Nuzler will review it.')));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -520,6 +653,7 @@ class _OwnershipCardState extends ConsumerState<_OwnershipCard> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final status = '${widget.listing['ownership_status'] ?? 'none'}';
     final reason = '${widget.listing['ownership_rejection_reason'] ?? ''}'.trim();
     final (IconData icon, Color color, String label, String sub) = switch (status) {
@@ -543,7 +677,7 @@ class _OwnershipCardState extends ConsumerState<_OwnershipCard> {
         ),
       _ => (
           Icons.shield_outlined,
-          AppColors.textMuted,
+          dark ? AppColors.dTextMuted : AppColors.textMuted,
           'Verify ownership',
           'Submit a title deed so buyers can trust this listing.'
         ),
@@ -561,7 +695,7 @@ class _OwnershipCardState extends ConsumerState<_OwnershipCard> {
               Text(label, style: t.titleSmall?.copyWith(color: color)),
             ]),
             const SizedBox(height: 4),
-            Text(sub, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            Text(sub, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             if (canSubmit) ...[
               const SizedBox(height: AppSpacing.x12),
               SizedBox(
@@ -600,7 +734,7 @@ class _PublishRow extends ConsumerWidget {
             content: Text(action == 'publish' ? 'Listing published.' : 'Listing taken offline.')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -646,13 +780,14 @@ class _PropertyAgentsCard extends ConsumerWidget {
       await ref.read(apiClientProvider).delete('/properties/$propertyId/agents/$agentId');
       ref.invalidate(_propertyAgentsProvider(propertyId));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final agents = ref.watch(_propertyAgentsProvider(propertyId));
     return Card(
       margin: const EdgeInsets.only(top: AppSpacing.x12),
@@ -660,7 +795,7 @@ class _PropertyAgentsCard extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            const Icon(Icons.support_agent_outlined, size: 20, color: AppColors.primary),
+            Icon(Icons.support_agent_outlined, size: 20, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
             Expanded(child: Text('Assigned agents', style: t.titleSmall)),
             TextButton.icon(
@@ -674,13 +809,13 @@ class _PropertyAgentsCard extends ConsumerWidget {
             ),
           ]),
           Text('Agents you assign can see this property’s rental requests and viewings.',
-              style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           const SizedBox(height: AppSpacing.x8),
           agents.when(
             loading: () => const Padding(padding: EdgeInsets.all(8), child: LinearProgressIndicator()),
             error: (e, _) => Text('$e', style: t.bodySmall),
             data: (list) => list.isEmpty
-                ? Text('No agents assigned.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                ? Text('No agents assigned.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                 : Column(
                     children: list.map((m) {
                       final a = Map<String, dynamic>.from(m);
@@ -688,14 +823,9 @@ class _PropertyAgentsCard extends ConsumerWidget {
                       return ListTile(
                         dense: true,
                         contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(
-                          radius: 16,
-                          backgroundColor: AppColors.primaryTint,
-                          child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-                              style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w700)),
-                        ),
+                        leading: UserAvatar(name: name, url: '${a['avatar_url'] ?? ''}', radius: 16),
                         title: Text(name),
-                        subtitle: Text('${a['user_role'] ?? ''}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                        subtitle: Text('${a['user_role'] ?? ''}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                         trailing: IconButton(
                             icon: const Icon(Icons.close, size: 18),
                             tooltip: 'Revoke',
@@ -757,7 +887,7 @@ class _AssignAgentDialogState extends ConsumerState<_AssignAgentDialog> {
           .post('/properties/${widget.propertyId}/agents', body: {'agent_id': agentId});
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -767,7 +897,7 @@ class _AssignAgentDialogState extends ConsumerState<_AssignAgentDialog> {
     return AlertDialog(
       title: const Text('Assign an agent'),
       content: SizedBox(
-        width: 360,
+        width: MediaQuery.sizeOf(context).width - 80 < 360 ? MediaQuery.sizeOf(context).width - 80 : 360,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(
             controller: _q,
@@ -800,40 +930,6 @@ class _AssignAgentDialogState extends ConsumerState<_AssignAgentDialog> {
         ]),
       ),
       actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Close'))],
-    );
-  }
-}
-
-class _MapPlaceholder extends StatelessWidget {
-  const _MapPlaceholder({this.lat, this.lng});
-  final double? lat;
-  final double? lng;
-  @override
-  Widget build(BuildContext context) {
-    final pinned = lat != null && lng != null;
-    return Container(
-      height: 160,
-      decoration: BoxDecoration(
-        color: AppColors.surface2,
-        borderRadius: BorderRadius.circular(AppSpacing.rMd),
-        border: Border.all(color: Theme.of(context).dividerColor),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(pinned ? Icons.place : Icons.map_outlined, size: 32,
-                color: pinned ? AppColors.primary : AppColors.textSubtle),
-            const SizedBox(height: 6),
-            Text(
-              pinned
-                  ? 'Pinned at ${lat!.toStringAsFixed(5)}, ${lng!.toStringAsFixed(5)}'
-                  : 'No location pinned',
-              style: const TextStyle(color: AppColors.textSubtle),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -969,9 +1065,599 @@ class _VerificationBlock extends StatelessWidget {
   }
 }
 
+/// In-context mortgage estimate for a FOR-SALE listing (Customer module spec):
+/// the only place buyers see mortgage math — there is no standalone calculator.
+/// Pure client-side amortisation + UAE acquisition costs (DLD 4%, ~1% processing).
+/// Structured developer incentives — a gold-tinted "Incentives & offers" card
+/// listing each typed offer with an icon and (optional) value.
+class _IncentivesBlock extends StatelessWidget {
+  const _IncentivesBlock({required this.l});
+  final Map<String, dynamic> l;
+
+  @override
+  Widget build(BuildContext context) {
+    final raw = l['incentives'];
+    final items = (raw is List) ? raw : const [];
+    if (items.isEmpty) return const SizedBox.shrink();
+    final t = Theme.of(context).textTheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SizedBox(height: AppSpacing.x16),
+      Row(children: [
+        const Icon(Icons.card_giftcard, size: 18, color: AppColors.accentGold),
+        const SizedBox(width: AppSpacing.x8),
+        Text('Incentives & offers', style: t.titleMedium),
+      ]),
+      const SizedBox(height: AppSpacing.x8),
+      Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpacing.x12),
+        decoration: BoxDecoration(
+          color: AppColors.accentGold.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppSpacing.rCard),
+          border: Border.all(color: AppColors.accentGold.withValues(alpha: 0.25)),
+        ),
+        child: Column(children: [
+          for (final it in items) _row(context, Map<String, dynamic>.from(it as Map)),
+        ]),
+      ),
+    ]);
+  }
+
+  Widget _row(BuildContext context, Map<String, dynamic> it) {
+    final t = Theme.of(context).textTheme;
+    final meta = _incentiveMeta('${it['type'] ?? 'other'}');
+    final label = '${it['label'] ?? ''}'.trim().isNotEmpty ? '${it['label']}' : meta.$2;
+    final value = _formatIncentiveValue(it['value'], '${it['unit'] ?? ''}');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(children: [
+        Icon(meta.$1, size: 18, color: AppColors.accentGold),
+        const SizedBox(width: AppSpacing.x8),
+        Expanded(child: Text(label, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600))),
+        if (value.isNotEmpty)
+          Text(value, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.success)),
+      ]),
+    );
+  }
+}
+
+(IconData, String) _incentiveMeta(String type) {
+  switch (type) {
+    case 'dld_waiver':
+      return (Icons.savings_outlined, 'DLD fee waiver');
+    case 'processing_waiver':
+      return (Icons.receipt_long_outlined, 'Processing fee waiver');
+    case 'service_charge_holiday':
+      return (Icons.event_busy_outlined, 'Service-charge holiday');
+    case 'cash_back':
+      return (Icons.payments_outlined, 'Cash-back');
+    case 'furniture':
+      return (Icons.chair_outlined, 'Furniture allowance');
+    case 'payment_plan':
+      return (Icons.calendar_month_outlined, 'Payment plan');
+    case 'free_management':
+      return (Icons.manage_accounts_outlined, 'Free property management');
+    default:
+      return (Icons.card_giftcard, 'Incentive');
+  }
+}
+
+String _formatIncentiveValue(dynamic value, String unit) {
+  final v = num.tryParse('${value ?? ''}');
+  if (v == null) return '';
+  switch (unit) {
+    case 'percent':
+      return '${v % 1 == 0 ? v.toInt() : v}%';
+    case 'aed':
+      return NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(v);
+    case 'months':
+      return '${v.toInt()} ${v.toInt() == 1 ? 'month' : 'months'}';
+    default:
+      return '$v';
+  }
+}
+
+/// Floor-plan image (if the property has one). Tap to view full-size + zoom.
+class _FloorPlanBlock extends StatelessWidget {
+  const _FloorPlanBlock({required this.url});
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.trim().isEmpty) return const SizedBox.shrink();
+    final t = Theme.of(context).textTheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SizedBox(height: AppSpacing.x16),
+      Row(children: [
+        const Icon(Icons.architecture_outlined, size: 18, color: AppColors.primary),
+        const SizedBox(width: AppSpacing.x8),
+        Text('Floor plan', style: t.titleMedium),
+      ]),
+      const SizedBox(height: AppSpacing.x8),
+      GestureDetector(
+        onTap: () => showDialog<void>(
+          context: context,
+          builder: (dctx) => Dialog(
+            insetPadding: const EdgeInsets.all(AppSpacing.x16),
+            child: Stack(children: [
+              InteractiveViewer(
+                maxScale: 5,
+                child: Image.network(url, fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Padding(
+                        padding: EdgeInsets.all(AppSpacing.x24), child: Text('Floor plan unavailable'))),
+              ),
+              Positioned(
+                top: 4, right: 4,
+                child: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(dctx).pop()),
+              ),
+            ]),
+          ),
+        ),
+        child: Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(maxHeight: 420),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppSpacing.rCard),
+            border: Border.all(color: Theme.of(context).dividerColor),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Image.network(url, fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+        ),
+      ),
+      const SizedBox(height: 4),
+      Text('Tap to enlarge', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+    ]);
+  }
+}
+
+/// Indicative rental ROI from comparable rentals (for-sale only). Hidden when
+/// the backend has no comparable rentals to base an estimate on.
+final _yieldProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/listings/$id/yield');
+    return d is Map ? Map<String, dynamic>.from(d) : <String, dynamic>{};
+  } catch (_) {
+    return <String, dynamic>{};
+  }
+});
+
+class _RoiEstimate extends ConsumerWidget {
+  const _RoiEstimate({required this.listingId});
+  final String listingId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final async = ref.watch(_yieldProvider(listingId));
+    return async.maybeWhen(
+      data: (m) {
+        if (m['available'] != true) return const SizedBox.shrink();
+        final gross = num.tryParse('${m['grossYieldPct'] ?? 0}') ?? 0;
+        final net = num.tryParse('${m['netYieldPct'] ?? 0}') ?? 0;
+        final rent = num.tryParse('${m['estAnnualRent'] ?? 0}') ?? 0;
+        final n = m['sampleSize'] ?? 0;
+        final money = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SizedBox(height: AppSpacing.x16),
+          Row(children: [
+            const Icon(Icons.trending_up, size: 18, color: AppColors.success),
+            const SizedBox(width: AppSpacing.x8),
+            Text('Investor view — rental ROI', style: t.titleMedium),
+          ]),
+          const SizedBox(height: AppSpacing.x8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.x16),
+            decoration: BoxDecoration(
+              color: AppColors.success.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(AppSpacing.rCard),
+              border: Border.all(color: AppColors.success.withValues(alpha: 0.22)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Expanded(child: _metric(context, '${gross.toStringAsFixed(1)}%', 'Gross yield')),
+                Expanded(child: _metric(context, '${net.toStringAsFixed(1)}%', 'Net yield')),
+                Expanded(child: _metric(context, money.format(rent), 'Est. annual rent')),
+              ]),
+              const SizedBox(height: AppSpacing.x8),
+              Text(
+                'Indicative, based on $n comparable ${m['basis'] ?? 'rentals'}. '
+                'Net yield deducts the service charge and a 10% management / vacancy allowance.',
+                style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+              ),
+            ]),
+          ),
+        ]);
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _metric(BuildContext context, String value, String label) {
+    final t = Theme.of(context).textTheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(value, maxLines: 1,
+            style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.success)),
+      ),
+      Text(label, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+    ]);
+  }
+}
+
+class _MortgageEstimate extends StatefulWidget {
+  const _MortgageEstimate({
+    required this.price,
+    this.dldWaiverPct = 0,
+    this.processingWaiverPct = 0,
+    this.incentiveNote = '',
+  });
+  final double price;
+  // % of each fee the developer covers (0 = none, 100 = full waiver).
+  final double dldWaiverPct;
+  final double processingWaiverPct;
+  final String incentiveNote;
+  @override
+  State<_MortgageEstimate> createState() => _MortgageEstimateState();
+}
+
+class _MortgageEstimateState extends State<_MortgageEstimate> {
+  double _downPct = 20;
+  double _ratePct = 4.5;
+  int _years = 25;
+
+  double get _downPayment => widget.price * _downPct / 100;
+  double get _loan => widget.price - _downPayment;
+  double get _monthly => MortgageMath.monthlyPayment(_loan, _ratePct, _years * 12);
+  double get _dldFull => widget.price * 0.04;
+  double get _processingFull => _loan * 0.01;
+  double get _dld => _dldFull * (1 - widget.dldWaiverPct.clamp(0, 100) / 100);
+  double get _processing => _processingFull * (1 - widget.processingWaiverPct.clamp(0, 100) / 100);
+  double get _acquisition => widget.price + _dld + _processing;
+  bool get _hasIncentive =>
+      widget.dldWaiverPct > 0 || widget.processingWaiverPct > 0 || widget.incentiveNote.trim().isNotEmpty;
+  String get _incentiveSummary {
+    final parts = <String>[];
+    if (widget.dldWaiverPct >= 100) {
+      parts.add('DLD waived');
+    } else if (widget.dldWaiverPct > 0) {
+      parts.add('${widget.dldWaiverPct.round()}% DLD covered');
+    }
+    if (widget.processingWaiverPct >= 100) {
+      parts.add('processing fee waived');
+    } else if (widget.processingWaiverPct > 0) {
+      parts.add('${widget.processingWaiverPct.round()}% processing covered');
+    }
+    if (widget.incentiveNote.trim().isNotEmpty) parts.add(widget.incentiveNote.trim());
+    return parts.join('  ·  ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.price <= 0) return const SizedBox.shrink();
+    final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
+
+    Widget control(String label, String value, double v, double min, double max, int divisions, ValueChanged<double> onChanged) =>
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text(label, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+            Text(value, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          ]),
+          Slider(value: v, min: min, max: max, divisions: divisions, onChanged: onChanged),
+        ]);
+
+    Widget row(String k, String v, {bool strong = false}) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text(k, style: t.bodyMedium?.copyWith(
+                color: strong ? null : (dark ? AppColors.dTextMuted : AppColors.textMuted),
+                fontWeight: strong ? FontWeight.w700 : null)),
+            Text(v, style: t.bodyMedium?.copyWith(fontWeight: strong ? FontWeight.w700 : FontWeight.w600)),
+          ]),
+        );
+
+    // Fee row: when the developer covers part/all of a fee, show the original
+    // struck-through next to the discounted amount.
+    Widget feeRow(String label, double full, double net, double waiverPct) {
+      final waived = waiverPct > 0;
+      final suffix = !waived
+          ? ''
+          : (waiverPct >= 100 ? '  ·  waived' : '  ·  ${waiverPct.round()}% covered');
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Expanded(child: Text('$label$suffix', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
+          if (waived) ...[
+            Text(aed.format(full),
+                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, decoration: TextDecoration.lineThrough)),
+            const SizedBox(width: AppSpacing.x8),
+            Text(aed.format(net),
+                style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.success)),
+          ] else
+            Text(aed.format(net), style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+        ]),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.x16),
+        Row(children: [
+          Icon(Icons.account_balance_outlined, size: 18, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: AppSpacing.x8),
+          Text('Mortgage estimate', style: t.titleMedium),
+        ]),
+        const SizedBox(height: AppSpacing.x8),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.x16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              if (_hasIncentive) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(AppSpacing.x12),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentGold.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppSpacing.rMd),
+                  ),
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Icon(Icons.card_giftcard, size: 18, color: AppColors.accentGold),
+                    const SizedBox(width: AppSpacing.x8),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text('Developer incentive',
+                            style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.accentGold)),
+                        if (_incentiveSummary.isNotEmpty)
+                          Text(_incentiveSummary, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                      ]),
+                    ),
+                  ]),
+                ),
+                const SizedBox(height: AppSpacing.x12),
+              ],
+              control('Down payment', '${_downPct.round()}%  ·  ${aed.format(_downPayment)}',
+                  _downPct, 10, 50, 8, (v) => setState(() => _downPct = v)),
+              control('Interest rate', '${_ratePct.toStringAsFixed(2)}%',
+                  _ratePct, 2, 8, 24, (v) => setState(() => _ratePct = v)),
+              control('Loan term', '$_years years',
+                  _years.toDouble(), 5, 30, 25, (v) => setState(() => _years = v.round())),
+              const Divider(height: AppSpacing.x16),
+              Text('Estimated monthly payment', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+              Text(aed.format(_monthly),
+                  style: t.headlineSmall?.copyWith(
+                      // Brighter teal in dark mode — the colorScheme primary is too
+                      // dim against the dark card.
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFF6FC3DA)
+                          : Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w700)),
+              const SizedBox(height: AppSpacing.x8),
+              row('Loan amount', aed.format(_loan)),
+              row('Down payment', aed.format(_downPayment)),
+              feeRow('DLD fee (4%)', _dldFull, _dld, widget.dldWaiverPct),
+              feeRow('Processing fee (~1%)', _processingFull, _processing, widget.processingWaiverPct),
+              const Divider(height: AppSpacing.x16),
+              row('Total acquisition cost', aed.format(_acquisition), strong: true),
+              const SizedBox(height: AppSpacing.x8),
+              Text('Estimate only — final terms depend on the lender.',
+                  style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+            ]),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Property Listing 2.0 (phase 1): the living-asset timeline section.
+class _TimelineBlock extends ConsumerWidget {
+  const _TimelineBlock({required this.propertyId});
+  final String propertyId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final tl = ref.watch(_timelineProvider(propertyId));
+    return tl.maybeWhen(
+      data: (events) {
+        if (events.isEmpty) return const SizedBox.shrink();
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SizedBox(height: AppSpacing.x16),
+          Row(children: [
+            Icon(Icons.history_outlined, size: 18, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: AppSpacing.x8),
+            Text('Property timeline', style: t.titleMedium),
+          ]),
+          const SizedBox(height: AppSpacing.x8),
+          for (var i = 0; i < events.length; i++) _TimelineRow(e: events[i], isLast: i == events.length - 1),
+        ]);
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+(IconData, String) _eventMeta(String event) => switch (event) {
+      'created' => (Icons.add_home_outlined, 'Property created'),
+      'listed' => (Icons.sell_outlined, 'Listed'),
+      'published' => (Icons.publish_outlined, 'Published — went live'),
+      'unpublished' => (Icons.visibility_off_outlined, 'Taken offline'),
+      'price_changed' => (Icons.trending_down, 'Price changed'),
+      'viewed' => (Icons.visibility_outlined, 'Viewing'),
+      'held' => (Icons.lock_clock_outlined, 'Placed on hold'),
+      'offer_submitted' => (Icons.local_offer_outlined, 'Offer submitted'),
+      'offer_accepted' => (Icons.handshake_outlined, 'Offer accepted'),
+      'sold' => (Icons.done_all, 'Sold'),
+      'leased' => (Icons.vpn_key_outlined, 'Leased'),
+      'maintenance' => (Icons.build_outlined, 'Maintenance'),
+      'tenant_change' => (Icons.people_outline, 'Tenant change'),
+      'ownership_verified' => (Icons.verified_user_outlined, 'Ownership verified'),
+      _ => (Icons.circle_outlined, _cap(event)),
+    };
+
+class _TimelineRow extends StatelessWidget {
+  const _TimelineRow({required this.e, required this.isLast});
+  final Map<String, dynamic> e;
+  final bool isLast;
+
+  String? _detailText() {
+    final d = e['detail'];
+    if (d is Map && '${e['event']}' == 'price_changed' && d['from'] != null && d['to'] != null) {
+      final f = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
+      return '${f.format(num.tryParse('${d['from']}') ?? 0)} → ${f.format(num.tryParse('${d['to']}') ?? 0)}';
+    }
+    return null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final (icon, label) = _eventMeta('${e['event']}');
+    final when = DateTime.tryParse('${e['created_at']}');
+    final actor = '${e['actor_name'] ?? ''}'.trim();
+    final detail = _detailText();
+    return IntrinsicHeight(
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Column(children: [
+          CircleAvatar(radius: 14, backgroundColor: AppColors.primaryTint, child: Icon(icon, size: 15, color: AppColors.primary)),
+          if (!isLast) Expanded(child: Container(width: 2, color: Theme.of(context).dividerColor)),
+        ]),
+        const SizedBox(width: AppSpacing.x12),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.x12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              if (detail != null) Text(detail, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+              Text([
+                if (when != null) DateFormat('d MMM yyyy').format(when),
+                if (actor.isNotEmpty) actor,
+              ].join('  ·  '), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+            ]),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
 /// Humanise an enum-ish value: drop underscores, capitalise the first letter.
 /// e.g. "partly_furnished" → "Partly furnished", "hotel_apartment" → "Hotel apartment".
 String _cap(String s) {
   final x = s.replaceAll('_', ' ').trim();
   return x.isEmpty ? x : '${x[0].toUpperCase()}${x.substring(1)}';
+}
+
+/// A premium, scannable key-fact stat card (icon + bold value + label).
+Widget _statCard(BuildContext context, IconData icon, String value, String label) {
+  final t = Theme.of(context).textTheme;
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  return Container(
+    constraints: const BoxConstraints(minWidth: 92),
+    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x12),
+    decoration: BoxDecoration(
+      color: Theme.of(context).cardColor,
+      borderRadius: BorderRadius.circular(AppSpacing.rLg),
+      border: Border.all(color: Theme.of(context).dividerColor),
+    ),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 22, color: Theme.of(context).colorScheme.primary),
+      const SizedBox(height: AppSpacing.x8),
+      Text(value, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+      Text(label, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+    ]),
+  );
+}
+
+// ── Similar properties (authed detail) — same community/type, like a UAE portal.
+final _detailSimilarProvider = FutureProvider.autoDispose.family<List<dynamic>, String>((ref, id) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/public/listings/$id/similar');
+    return d is List ? d : const [];
+  } catch (_) {
+    return const [];
+  }
+});
+
+class _SimilarSection extends ConsumerWidget {
+  const _SimilarSection({required this.id});
+  final String id;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(_detailSimilarProvider(id)).asData?.value ?? const [];
+    if (items.isEmpty) return const SizedBox.shrink();
+    final t = Theme.of(context).textTheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('Similar properties', style: t.titleMedium),
+      const SizedBox(height: AppSpacing.x12),
+      SizedBox(
+        height: 232,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: items.length,
+          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.x12),
+          itemBuilder: (_, i) => _SimilarTile(Map<String, dynamic>.from(items[i] as Map)),
+        ),
+      ),
+      const SizedBox(height: AppSpacing.x24),
+    ]);
+  }
+}
+
+class _SimilarTile extends StatelessWidget {
+  const _SimilarTile(this.m);
+  final Map<String, dynamic> m;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final sid = '${m['id']}';
+    final price = num.tryParse('${m['price']}') ?? 0;
+    final isRent = '${m['purpose']}' == 'rent';
+    final money = price > 0
+        ? '${NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price)}${isRent ? ' / yr' : ''}'
+        : '';
+    final cover = '${m['cover_image'] ?? ''}';
+    final community = '${m['community'] ?? ''}';
+    final beds = m['bedrooms'];
+    final baths = m['bathrooms'];
+    return SizedBox(
+      width: 230,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => context.push('/listings/$sid'),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            cover.isNotEmpty
+                ? Image.network(cover, height: 116, width: double.infinity, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(height: 116, color: AppColors.surface2))
+                : Container(height: 116, width: double.infinity, color: AppColors.surface2,
+                    child: const Icon(Icons.apartment_outlined, color: AppColors.textMuted)),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.x12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (money.isNotEmpty)
+                  Text(money, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                if (community.isNotEmpty)
+                  Text(community, style: t.bodySmall?.copyWith(color: muted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 4),
+                Text([
+                  if (beds != null) '$beds BR',
+                  if (baths != null) '$baths BA',
+                ].join(' · '), style: t.bodySmall?.copyWith(color: muted)),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
 }

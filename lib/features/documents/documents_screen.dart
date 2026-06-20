@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive.dart';
 import '../auth/application/auth_controller.dart';
 import '../shell/app_shell.dart';
@@ -46,9 +47,13 @@ class DocumentsScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: docs.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) => list.isEmpty
-              ? const Center(child: Padding(padding: EdgeInsets.all(40), child: Text('No documents yet. Upload one.')))
+              ? const EmptyState(
+                  icon: Icons.folder_open_outlined,
+                  title: 'No documents yet',
+                  message: 'Upload a document to keep everything for this property in one place.',
+                )
               : ListView.separated(
                   padding: const EdgeInsets.all(AppSpacing.x16),
                   itemCount: list.length,
@@ -116,7 +121,7 @@ class DocumentsScreen extends ConsumerWidget {
       });
       ref.invalidate(documentsProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

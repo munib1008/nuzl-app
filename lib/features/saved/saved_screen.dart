@@ -37,12 +37,18 @@ class SaveListingButton extends ConsumerWidget {
     final saved = ref.watch(savedIdsProvider).maybeWhen(data: (s) => s.contains(listingId), orElse: () => false);
     return IconButton(
       tooltip: saved ? 'Saved' : 'Save',
-      icon: Icon(saved ? Icons.bookmark : Icons.bookmark_border, color: saved ? AppColors.primary : null),
+      icon: Icon(saved ? Icons.bookmark : Icons.bookmark_border,
+          color: saved ? Theme.of(context).colorScheme.primary : null),
       onPressed: () async {
         try {
           await _toggleSaved(ref, listingId);
+          if (context.mounted) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(content: Text(saved ? 'Removed from saved' : 'Saved')));
+          }
         } catch (e) {
-          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
         }
       },
     );
@@ -72,7 +78,7 @@ class SavedScreen extends ConsumerWidget {
         child: ResponsiveCenter(
           child: saved.when(
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text('$e')))]),
+            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(friendlyError(e))))]),
             data: (list) => list.isEmpty
                 ? ListView(children: const [
                     Padding(
@@ -100,6 +106,7 @@ class _SavedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final id = '${m['id']}';
     final price = num.tryParse('${m['price']}') ?? 0;
     final money = price > 0 ? NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price) : '';
@@ -129,9 +136,9 @@ class _SavedCard extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(title, style: t.titleSmall),
                 if (community.isNotEmpty)
-                  Text(community, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  Text(community, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 if (money.isNotEmpty)
-                  Text(money, style: t.titleMedium?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                  Text(money, style: t.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
               ]),
             ),
             SaveListingButton(listingId: id),

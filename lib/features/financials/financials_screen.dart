@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
@@ -66,7 +65,7 @@ class FinancialsScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: props.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) {
             final propMap = <String, String>{};
             for (final e in list) {
@@ -241,7 +240,7 @@ class _PropertyFinancials extends ConsumerWidget {
       ref.invalidate(_txProvider(propertyId));
       ref.invalidate(_financialsProvider(propertyId));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -292,7 +291,7 @@ class _PropertyFinancials extends ConsumerWidget {
       ref.invalidate(_eventsProvider(propertyId));
       ref.invalidate(_financialsProvider(propertyId));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }
@@ -321,7 +320,7 @@ class _MortgageCard extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            const Icon(Icons.account_balance_outlined, size: 20, color: AppColors.primary),
+            Icon(Icons.account_balance_outlined, size: 20, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
             Expanded(child: Text('Mortgage', style: t.titleMedium)),
             TextButton(onPressed: () => context.push('/mortgages'), child: const Text('Manage')),
@@ -383,8 +382,8 @@ class _MortgageRows extends StatelessWidget {
           child: LinearProgressIndicator(
               value: (paid / 100).clamp(0, 1).toDouble(),
               minHeight: 6,
-              backgroundColor: AppColors.surface,
-              color: AppColors.primary),
+              backgroundColor: Theme.of(context).dividerColor,
+              color: Theme.of(context).colorScheme.primary),
         ),
         const SizedBox(height: 2),
         Text('${paid.toStringAsFixed(0)}% paid down',
@@ -424,7 +423,7 @@ class _SummaryCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(r.$1, style: t.bodyMedium?.copyWith(color: Theme.of(context).hintColor)),
-                      Text(r.$2, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: AppColors.primary)),
+                      Text(r.$2, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
                     ],
                   ),
                 )),

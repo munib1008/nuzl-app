@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../shell/app_shell.dart';
 
 /// Directory of verified members (users module). Search + filter by role.
@@ -33,7 +33,7 @@ class NetworkScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: people.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) {
             final roles = <String>{
               'all',
@@ -88,11 +88,7 @@ class NetworkScreen extends ConsumerWidget {
                             final name = '${m['full_name'] ?? 'Member'}';
                             return Card(
                               child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: AppColors.primary,
-                                  child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-                                      style: const TextStyle(color: Colors.white)),
-                                ),
+                                leading: UserAvatar(name: name, url: '${m['avatar_url'] ?? ''}'),
                                 title: Text(name),
                                 subtitle: Text([m['role'], m['email']]
                                     .where((x) => x != null && '$x'.isNotEmpty)

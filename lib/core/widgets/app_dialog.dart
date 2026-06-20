@@ -42,6 +42,16 @@ class AppDialog extends StatelessWidget {
     return showDialog<T>(
       context: context,
       barrierDismissible: barrierDismissible,
+      // CRITICAL: must stay false. Authed screens live under go_router's
+      // ShellRoute (a nested Navigator). Callers close these dialogs with
+      // `Navigator.pop(context, value)` using the *screen* context, which
+      // resolves to that shell navigator (rootNavigator:false). If the dialog
+      // were pushed on the root navigator (the showDialog default), that pop
+      // would pop the page instead of the dialog — blanking the screen and
+      // leaving the dialog's future unresolved, so the submit code after
+      // `await AppDialog.show` never ran. Showing the dialog on the same
+      // navigator the buttons pop keeps push/pop consistent. Do not flip back.
+      useRootNavigator: false,
       builder: (_) => AppDialog(
         title: title,
         actions: actions,

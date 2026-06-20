@@ -36,6 +36,21 @@ class Lead {
   final DateTime? createdAt;
   final DateTime? lastActivityAt;
 
+  /// Lead score 0–100: qualification checklist (up to 60) + temperature (up to 25)
+  /// + recency of activity (up to 15). A simple, transparent enterprise-CRM signal.
+  int get score {
+    var s = qualificationSteps.clamp(0, 5) * 12;
+    s += switch (temperature) { 'hot' => 25, 'warm' => 12, _ => 0 };
+    final days = lastActivityAt == null ? 999 : DateTime.now().difference(lastActivityAt!).inDays;
+    if (days <= 7) {
+      s += 15;
+    } else if (days <= 30) {
+      s += 8;
+    }
+    if (status == 'lost') s = 0;
+    return s.clamp(0, 100);
+  }
+
   factory Lead.fromJson(Map<String, dynamic> j) => Lead(
         id: j['id'].toString(),
         buyerName: j['buyer_name'],

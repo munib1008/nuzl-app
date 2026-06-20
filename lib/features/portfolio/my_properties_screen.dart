@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive.dart';
@@ -47,7 +47,7 @@ class MyPropertiesScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: portfolios.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) {
             if (list.isEmpty) {
               return EmptyState(
@@ -90,7 +90,7 @@ class MyPropertiesScreen extends ConsumerWidget {
       await ref.read(apiClientProvider).post('/portfolio', body: {'name': 'My Portfolio'});
       ref.invalidate(_portfoliosProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }
@@ -104,7 +104,7 @@ class _Overview extends ConsumerWidget {
     final ov = ref.watch(_overviewProvider(portfolioId));
     return ov.when(
       loading: () => const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Padding(padding: const EdgeInsets.all(24), child: Text('$e')),
+      error: (e, _) => Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e))),
       data: (m) {
         final totals = m['totals'] is Map ? Map<String, dynamic>.from(m['totals']) : <String, dynamic>{};
         final properties = m['properties'] is List ? (m['properties'] as List) : const [];
@@ -154,7 +154,7 @@ class _Stat extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(value, style: t.titleLarge?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+            Text(value, style: t.titleLarge?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
             const SizedBox(height: AppSpacing.x4),
             Text(label, style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
           ],
@@ -170,6 +170,7 @@ class _PropCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final yield_ = p['net_yield_pct'];
+    final pid = '${p['property_id'] ?? ''}'.trim();
     return Card(
       child: ListTile(
         leading: const Icon(Icons.home_outlined),
@@ -177,10 +178,15 @@ class _PropCard extends StatelessWidget {
             .where((x) => x != null && '$x'.isNotEmpty)
             .join('  ·  ')),
         subtitle: Text('Equity ${_money(p['equity'])}'),
-        trailing: yield_ == null
-            ? null
-            : Text('${(num.tryParse('$yield_') ?? 0).toStringAsFixed(1)}%',
-                style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.primary)),
+        // Open the full property record hub (lease, mortgage, maintenance, docs, timeline).
+        onTap: pid.isEmpty ? null : () => context.push('/property/$pid'),
+        trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (yield_ != null)
+            Text('${(num.tryParse('$yield_') ?? 0).toStringAsFixed(1)}%',
+                style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
+          if (pid.isNotEmpty)
+            const Padding(padding: EdgeInsets.only(left: 4), child: Icon(Icons.chevron_right, size: 18)),
+        ]),
       ),
     );
   }

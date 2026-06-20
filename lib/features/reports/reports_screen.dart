@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
-import '../shell/app_shell.dart';
+import '../crm/crm_scaffold.dart';
 
 /// Role-aware reports: each persona hits its own summary endpoint.
 String _reportPath(Persona p) => switch (p) {
@@ -26,19 +30,36 @@ final reportsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) a
   }
 });
 
+/// Per-agent leaderboard for organization-scoped personas (manager/broker view).
+final orgLeaderboardProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/reports/org-leaderboard');
+    return d is List ? d.map((e) => Map<String, dynamic>.from(e as Map)).toList() : <Map<String, dynamic>>[];
+  } catch (_) {
+    return <Map<String, dynamic>>[];
+  }
+});
+
+bool _orgPersona(Persona p) =>
+    p == Persona.broker || p == Persona.bank || p == Persona.provider || p == Persona.developer;
+
 class ReportsScreen extends ConsumerWidget {
-  const ReportsScreen({super.key});
+  const ReportsScreen({super.key, this.embedded = false});
+  final bool embedded;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final report = ref.watch(reportsProvider);
-    return Scaffold(
-      appBar: const NuzlAppBar(title: 'Reports'),
-      drawer: const NuzlDrawer(),
+    final persona = ref.watch(personaProvider);
+    final showTeam = _orgPersona(persona);
+    return CrmScaffold(
+      tab: CrmTab.reports,
+      title: 'Reports',
+      embedded: embedded,
       body: ResponsiveCenter(
         child: report.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (m) {
             final entries = m.entries
                 .where((e) => e.value is num || num.tryParse('${e.value}') != null)
@@ -66,12 +87,42 @@ class ReportsScreen extends ConsumerWidget {
                 Text('Breakdown', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: AppSpacing.x8),
                 ...entries.map((e) => _Bar(label: e.key, value: e.value, max: maxVal)),
+                if (showTeam) ...[
+                  const SizedBox(height: AppSpacing.x24),
+                  Text('Team performance', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: AppSpacing.x8),
+                  Consumer(builder: (context, ref, _) {
+                    final lb = ref.watch(orgLeaderboardProvider);
+                    return lb.when(
+                      loading: () => const Padding(
+                          padding: EdgeInsets.symmetric(vertical: AppSpacing.x8),
+                          child: LinearProgressIndicator()),
+                      error: (_, __) => const SizedBox.shrink(),
+                      data: (rows) => rows.isEmpty
+                          ? const Padding(
+                              padding: EdgeInsets.symmetric(vertical: AppSpacing.x8),
+                              child: Text('No team members yet.'))
+                          : Column(children: [for (final r in rows) _AgentRow(r)]),
+                    );
+                  }),
+                ],
                 const SizedBox(height: AppSpacing.x24),
-                const Card(
+                Card(
                   child: ListTile(
-                    leading: Icon(Icons.file_download_outlined),
-                    title: Text('Excel / PDF export'),
-                    subtitle: Text('Coming soon.'),
+                    leading: const Icon(Icons.file_download_outlined),
+                    title: const Text('Export report'),
+                    subtitle: const Text('Download as a spreadsheet or a PDF.'),
+                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                      OutlinedButton(
+                        onPressed: () => _exportCsv(context, ref, entries, showTeam),
+                        child: const Text('CSV'),
+                      ),
+                      const SizedBox(width: AppSpacing.x8),
+                      FilledButton(
+                        onPressed: () => _exportPdf(context, ref, entries, showTeam),
+                        child: const Text('PDF'),
+                      ),
+                    ]),
                   ),
                 ),
               ],
@@ -88,6 +139,80 @@ String _humanize(String k) => k
     .split(' ')
     .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
     .join(' ');
+
+String _csvCell(String s) => (s.contains(',') || s.contains('"') || s.contains('\n'))
+    ? '"${s.replaceAll('"', '""')}"'
+    : s;
+
+/// Build a CSV from the report metrics (+ team leaderboard) and export it: open
+/// it in a new tab (downloadable on web) and copy it to the clipboard.
+Future<void> _exportCsv(BuildContext context, WidgetRef ref, List<MapEntry<String, num>> entries, bool team) async {
+  final sb = StringBuffer()..writeln('Metric,Value');
+  for (final e in entries) {
+    sb.writeln('${_csvCell(e.key)},${_fmt(e.value)}');
+  }
+  if (team) {
+    try {
+      final rows = await ref.read(orgLeaderboardProvider.future);
+      if (rows.isNotEmpty) {
+        sb..writeln()..writeln('Agent,Listings,Leads,Deals,Won');
+        for (final r in rows) {
+          sb.writeln('${_csvCell('${r['name'] ?? 'Agent'}')},${r['listings'] ?? 0},'
+              '${r['active_leads'] ?? 0},${r['active_deals'] ?? 0},${r['closed_deals'] ?? 0}');
+        }
+      }
+    } catch (_) {/* team optional */}
+  }
+  final csv = sb.toString();
+  await Clipboard.setData(ClipboardData(text: csv));
+  try {
+    await launchUrl(Uri.parse('data:text/csv;charset=utf-8,${Uri.encodeComponent(csv)}'), webOnlyWindowName: '_blank');
+  } catch (_) {/* fall back to clipboard only */}
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('CSV exported — opened in a new tab and copied to clipboard')));
+  }
+}
+
+/// Build a branded PDF of the report (metrics + team) and open the print /
+/// download dialog (works on web + mobile via the printing package).
+Future<void> _exportPdf(BuildContext context, WidgetRef ref, List<MapEntry<String, num>> entries, bool team) async {
+  List<List<String>> teamRows = [];
+  if (team) {
+    try {
+      final rows = await ref.read(orgLeaderboardProvider.future);
+      teamRows = rows
+          .map((r) => ['${r['name'] ?? 'Agent'}', '${r['listings'] ?? 0}', '${r['active_leads'] ?? 0}',
+              '${r['active_deals'] ?? 0}', '${r['closed_deals'] ?? 0}'])
+          .toList();
+    } catch (_) {/* team optional */}
+  }
+  final doc = pw.Document();
+  doc.addPage(pw.MultiPage(build: (ctx) => [
+        pw.Text('NUZL — Report', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+        pw.SizedBox(height: 12),
+        pw.TableHelper.fromTextArray(
+          headers: const ['Metric', 'Value'],
+          data: entries.map((e) => [e.key, _fmt(e.value)]).toList(),
+          headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+        ),
+        if (teamRows.isNotEmpty) ...[
+          pw.SizedBox(height: 18),
+          pw.Text('Team performance', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+          pw.SizedBox(height: 6),
+          pw.TableHelper.fromTextArray(
+            headers: const ['Agent', 'Listings', 'Leads', 'Deals', 'Won'],
+            data: teamRows,
+            headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+          ),
+        ],
+      ]));
+  try {
+    await Printing.layoutPdf(onLayout: (format) async => doc.save());
+  } catch (e) {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF export failed: $e')));
+  }
+}
 
 String _fmt(num v) => v == v.roundToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
 
@@ -106,11 +231,53 @@ class _StatCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(_fmt(value),
-                style: t.headlineMedium?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                style: t.headlineMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
             const SizedBox(height: AppSpacing.x4),
             Text(label, style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AgentRow extends StatelessWidget {
+  const _AgentRow(this.r);
+  final Map<String, dynamic> r;
+  int _n(String k) => int.tryParse('${r[k] ?? 0}') ?? 0;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final name = '${r['name'] ?? 'Agent'}';
+    final designation = '${r['designation'] ?? ''}'.trim();
+    Widget chip(String label, int v, Color c) => Padding(
+          padding: const EdgeInsets.only(left: AppSpacing.x8),
+          child: Column(children: [
+            Text('$v', style: t.titleSmall?.copyWith(color: c, fontWeight: FontWeight.w700)),
+            Text(label, style: t.labelSmall?.copyWith(color: Theme.of(context).hintColor)),
+          ]),
+        );
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x12),
+        child: Row(children: [
+          CircleAvatar(
+            radius: 18,
+            child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
+          ),
+          const SizedBox(width: AppSpacing.x12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(name, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+              if (designation.isNotEmpty)
+                Text(designation, style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
+            ]),
+          ),
+          chip('Listings', _n('listings'), AppColors.primary),
+          chip('Leads', _n('active_leads'), AppColors.info),
+          chip('Deals', _n('active_deals'), AppColors.warning),
+          chip('Won', _n('closed_deals'), AppColors.success),
+        ]),
       ),
     );
   }

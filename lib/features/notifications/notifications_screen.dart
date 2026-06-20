@@ -42,7 +42,7 @@ class NotificationsScreen extends ConsumerWidget {
           child: items.when(
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
             error: (e, _) => ListView(children: [
-              Padding(padding: const EdgeInsets.all(24), child: Center(child: Text('$e'))),
+              Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(friendlyError(e)))),
             ]),
             data: (list) => list.isEmpty
                 ? ListView(children: const [
@@ -76,7 +76,7 @@ class NotificationsScreen extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('All notifications marked read')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }
@@ -95,8 +95,14 @@ String? _deepLink(Map<String, dynamic> n) {
       return '/viewings/$id/crm';
     case 'conversations':
       return '/messages/$id';
+    case 'collaboration_requests':
+      return '/collaboration';
     case 'deals':
       return '/deals';
+    case 'deal_broadcasts':
+      return '/deal-board';
+    case 'posts':
+      return '/feed';
     default:
       return null;
   }

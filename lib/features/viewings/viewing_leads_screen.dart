@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/status_badge.dart';
@@ -37,6 +38,7 @@ class ViewingLeadsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final pending = ref.watch(viewingPendingProvider);
     final assigned = ref.watch(viewingAssignedProvider);
     final metrics = ref.watch(viewingMetricsProvider);
@@ -54,13 +56,13 @@ class ViewingLeadsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.x20),
 
-            Text('Pending — first to accept gets the lead', style: t.titleSmall?.copyWith(color: AppColors.primary)),
+            Text('Pending — first to accept gets the lead', style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
             const SizedBox(height: AppSpacing.x8),
             pending.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('No pending viewing requests.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  ? Text('No pending viewing requests.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Column(children: [for (final v in list) _PendingCard(v)]),
             ),
             const SizedBox(height: AppSpacing.x20),
@@ -71,7 +73,7 @@ class ViewingLeadsScreen extends ConsumerWidget {
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('No leads assigned to you yet.', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  ? Text('No leads assigned to you yet.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Column(children: [for (final v in list) _AssignedCard(v)]),
             ),
           ],
@@ -109,6 +111,7 @@ class _MetricsCard extends StatelessWidget {
       ('Avg response', _avg()),
     ];
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
@@ -121,7 +124,7 @@ class _MetricsCard extends StatelessWidget {
                 width: 120,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(s.$2, style: t.titleLarge),
-                  Text(s.$1, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  Text(s.$1, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ),
           ],
@@ -155,7 +158,7 @@ class _PendingCardState extends ConsumerState<_PendingCard> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
       ref.invalidate(viewingPendingProvider); // it may have just been claimed
     }
   }
@@ -171,12 +174,12 @@ class _PendingCardState extends ConsumerState<_PendingCard> {
         child: Row(children: [
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(_propTitle(v), style: t.titleMedium),
+              Text(_propTitle(v), maxLines: 1, overflow: TextOverflow.ellipsis, style: t.titleMedium),
               const SizedBox(height: 2),
               Text([
                 if ('${v['requested_by_name'] ?? ''}'.isNotEmpty) 'from ${v['requested_by_name']}',
                 if ('${v['community'] ?? ''}'.isNotEmpty) '${v['community']}',
-              ].join('  ·  '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              ].join('  ·  '), maxLines: 2, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
             ]),
           ),
           const SizedBox(width: AppSpacing.x12),
@@ -198,6 +201,7 @@ class _AssignedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final stage = '${v['crm_stage'] ?? 'new_inquiry'}';
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -208,16 +212,16 @@ class _AssignedCard extends StatelessWidget {
           child: Row(children: [
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(_propTitle(v), style: t.titleMedium),
+                Text(_propTitle(v), maxLines: 1, overflow: TextOverflow.ellipsis, style: t.titleMedium),
                 if ('${v['requested_by_name'] ?? ''}'.isNotEmpty) ...[
                   const SizedBox(height: 2),
-                  Text('${v['requested_by_name']}', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  Text('${v['requested_by_name']}', maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ],
               ]),
             ),
             StatusBadge(viewingStageLabels[stage] ?? stage, tone: _stageTone(stage)),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right, color: AppColors.textMuted),
+            Icon(Icons.chevron_right, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
           ]),
         ),
       ),

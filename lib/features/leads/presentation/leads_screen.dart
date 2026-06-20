@@ -2,10 +2,12 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/async_view.dart';
+import '../../../core/widgets/contact_actions.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../data/leads_repository.dart';
@@ -20,7 +22,15 @@ class LeadsScreen extends ConsumerWidget {
     final leads = ref.watch(leadsProvider);
     final canManage = ref.watch(personaProvider).canManageLeads;
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Leads'),
+      appBar: NuzlAppBar(title: 'Leads', actions: canManage
+          ? [
+              IconButton(
+                tooltip: 'Import leads',
+                icon: const Icon(Icons.upload_file_outlined),
+                onPressed: () => context.push('/leads/import'),
+              ),
+            ]
+          : null),
       drawer: const NuzlDrawer(),
       floatingActionButton: canManage
           ? FloatingActionButton.extended(
@@ -57,7 +67,7 @@ class LeadsScreen extends ConsumerWidget {
               children: [
                 if (offers.isNotEmpty) ...[
                   Text('Offered to you — first to accept gets it',
-                      style: t.titleSmall?.copyWith(color: AppColors.primary)),
+                      style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
                   const SizedBox(height: AppSpacing.x8),
                   for (final o in offers)
                     Padding(padding: const EdgeInsets.only(bottom: AppSpacing.x12), child: _OfferCard(o)),
@@ -101,6 +111,8 @@ class _LeadCard extends StatelessWidget {
         _ => BadgeTone.neutral,
       };
 
+  Color _scoreColor(int s) => s >= 70 ? AppColors.success : (s >= 40 ? AppColors.warning : AppColors.textMuted);
+
   static String _label(String s) => s.replaceAll('_', ' ');
 
   static String _ago(DateTime? d) {
@@ -115,6 +127,7 @@ class _LeadCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final f = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
     final budget = (lead.minBudget != null && lead.maxBudget != null)
         ? '${f.format(lead.minBudget)} – ${f.format(lead.maxBudget)}'
@@ -142,7 +155,7 @@ class _LeadCard extends StatelessWidget {
                 backgroundColor: AppColors.primaryTint,
                 child: Text(
                   (lead.buyerName?.isNotEmpty == true ? lead.buyerName![0] : '?').toUpperCase(),
-                  style: t.titleSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700),
+                  style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700),
                 ),
               ),
               const SizedBox(width: AppSpacing.x12),
@@ -150,9 +163,21 @@ class _LeadCard extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(lead.buyerName ?? 'Unnamed buyer', style: t.titleMedium),
                   if (lead.phone != null && lead.phone!.isNotEmpty)
-                    Text(lead.phone!, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                    Text(lead.phone!, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ),
+              Tooltip(
+                message: 'Lead score',
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                      color: _scoreColor(lead.score).withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                  child: Text('${lead.score}',
+                      style: t.labelSmall?.copyWith(color: _scoreColor(lead.score), fontWeight: FontWeight.w700)),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.x8),
               if (lead.temperature != null) StatusBadge(_label(lead.temperature!), tone: _tempTone),
             ]),
             const SizedBox(height: AppSpacing.x12),
@@ -184,19 +209,27 @@ class _LeadCard extends StatelessWidget {
               Text('${lead.qualificationSteps}/5', style: t.bodySmall),
             ]),
             const SizedBox(height: AppSpacing.x12),
+            // One-tap reach-out without leaving the inbox (Call / WhatsApp).
+            if (lead.phone != null && lead.phone!.isNotEmpty) ...[
+              Align(
+                alignment: Alignment.centerLeft,
+                child: ContactActions(phone: lead.phone!, compact: true),
+              ),
+              const SizedBox(height: AppSpacing.x8),
+            ],
             const Divider(height: 1),
             const SizedBox(height: AppSpacing.x8),
             // Footer: created + last-activity dates
             Row(children: [
-              const Icon(Icons.schedule, size: 14, color: AppColors.textSubtle),
+              Icon(Icons.schedule, size: 14, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
               const SizedBox(width: 4),
               Text(created != null ? 'Created $created' : 'Created —',
-                  style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               const Spacer(),
-              const Icon(Icons.history, size: 14, color: AppColors.textSubtle),
+              Icon(Icons.history, size: 14, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
               const SizedBox(width: 4),
               Text('Active ${_ago(lead.lastActivityAt)}',
-                  style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ]),
           ],
         ),
@@ -229,7 +262,7 @@ class _OfferCardState extends ConsumerState<_OfferCard> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
       ref.invalidate(leadOffersProvider); // it may have just been claimed by someone else
     }
   }

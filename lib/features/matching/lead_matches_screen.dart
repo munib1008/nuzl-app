@@ -40,7 +40,7 @@ class LeadMatchesScreen extends ConsumerWidget {
       body: ResponsiveCenter(
         child: leads.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) {
             if (list.isEmpty) {
               return const Center(
@@ -66,7 +66,7 @@ class LeadMatchesScreen extends ConsumerWidget {
                       ? const Center(child: Text('Pick a lead to see suggested listings.'))
                       : ref.watch(_matchesProvider(selected)).when(
                           loading: () => const Center(child: CircularProgressIndicator()),
-                          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+                          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
                           data: (matches) => matches.isEmpty
                               ? const Center(child: Text('No strong matches yet.'))
                               : ListView.separated(

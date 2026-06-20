@@ -5,10 +5,14 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
+import 'profile_completion_banner.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/data/geo.dart';
 import '../../../core/widgets/app_dialog.dart';
+import '../../../core/widgets/field_pair.dart';
 import '../../../core/widgets/image_crop_dialog.dart';
+import '../../../core/widgets/picker_field.dart';
 import '../../../core/widgets/multi_select_field.dart';
 import '../../../core/widgets/nuzl_logo.dart';
 import '../../../core/widgets/sticky_save_bar.dart';
@@ -54,6 +58,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final whatsapp = TextEditingController();
   final bio = TextEditingController();
   final reraBrn = TextEditingController();
+  final nationality = TextEditingController();
+  final country = TextEditingController();
+  final city = TextEditingController();
   final areas = <String>{};
   final languages = <String>{};
   final specialties = <String>{};
@@ -64,7 +71,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void dispose() {
     fullName.dispose(); company.dispose(); phone.dispose(); whatsapp.dispose();
-    bio.dispose(); reraBrn.dispose(); super.dispose();
+    bio.dispose(); reraBrn.dispose(); nationality.dispose(); country.dispose(); city.dispose();
+    super.dispose();
   }
 
   void _markDirty() { if (!_dirty) setState(() => _dirty = true); }
@@ -94,6 +102,59 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   void _leave() => context.canPop() ? context.pop() : context.go('/dashboard');
 
+  Future<void> _createOrg(BuildContext context) async {
+    final name = TextEditingController();
+    final email = TextEditingController();
+    final phone = TextEditingController();
+    var type = 'agency';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text('Create an organization'),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(controller: name, decoration: const InputDecoration(labelText: 'Organization name')),
+              const SizedBox(height: AppSpacing.x8),
+              DropdownButtonFormField<String>(
+                initialValue: type,
+                decoration: const InputDecoration(labelText: 'Type'),
+                items: const [
+                  DropdownMenuItem(value: 'agency', child: Text('Agency')),
+                  DropdownMenuItem(value: 'developer', child: Text('Developer')),
+                  DropdownMenuItem(value: 'bank', child: Text('Bank')),
+                  DropdownMenuItem(value: 'service', child: Text('Service')),
+                ],
+                onChanged: (v) => setS(() => type = v ?? 'agency'),
+              ),
+              const SizedBox(height: AppSpacing.x8),
+              TextField(controller: email, decoration: const InputDecoration(labelText: 'Official email')),
+              const SizedBox(height: AppSpacing.x8),
+              TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone')),
+            ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Create')),
+          ],
+        ),
+      ),
+    );
+    if (ok != true || name.text.trim().isEmpty) return;
+    try {
+      await ref.read(apiClientProvider).post('/organizations/mine', body: {
+        'name': name.text.trim(), 'org_type': type, 'email': email.text.trim(), 'phone': phone.text.trim(),
+      });
+      ref.invalidate(_meProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Organization created — pending verification. Reload to manage it.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
@@ -104,6 +165,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         'whatsapp': whatsapp.text.trim(),
         'bio': bio.text.trim(),
         'rera_brn': reraBrn.text.trim().isEmpty ? null : reraBrn.text.trim(),
+        'nationality': nationality.text.trim(),
+        'country': country.text.trim(),
+        'city': city.text.trim(),
         'areas': areas.toList(),
         'languages': languages.toList(),
         'specialties': specialties.toList(),
@@ -112,6 +176,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       // header user, so the user sees confirmed values.
       if (res is Map) _applyServer(Map<String, dynamic>.from(res));
       ref.invalidate(_meProvider);
+      ref.invalidate(profileCompletionProvider);
       await ref.read(authControllerProvider.notifier).bootstrap();
       _dirty = false;
       if (mounted) {
@@ -119,7 +184,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile saved')));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not save: $e')));
+      // Never surface a raw "Internal server error" — show a friendly message,
+      // but keep any 4xx validation detail the API returned.
+      final code = e is ApiException ? (e.statusCode ?? 0) : 0;
+      final msg = (e is ApiException && code >= 400 && code < 500 && e.message.trim().isNotEmpty)
+          ? e.message
+          : 'Unable to save profile. Please try again, or contact support if it persists.';
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -132,6 +203,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     whatsapp.text = '${m['whatsapp'] ?? ''}';
     bio.text = '${m['bio'] ?? ''}';
     reraBrn.text = '${m['rera_brn'] ?? ''}';
+    nationality.text = '${m['nationality'] ?? ''}';
+    country.text = '${m['country'] ?? ''}';
+    city.text = '${m['city'] ?? ''}';
     void fill(Set<String> set, dynamic v) { set.clear(); if (v is List) set.addAll(v.map((e) => '$e')); }
     fill(areas, m['areas']); fill(languages, m['languages']); fill(specialties, m['specialties']);
   }
@@ -200,38 +274,64 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     try {
       await ref.read(apiClientProvider).patch('/users/me/avatar', body: {'avatar_url': url});
       ref.invalidate(_avatarProvider);
+      // Refresh the auth user so the new photo shows everywhere it's used (the
+      // top-right app-bar avatar, menus, etc.) — not just on this screen.
+      await ref.read(authControllerProvider.notifier).bootstrap();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(url.isEmpty ? 'Photo removed' : 'Photo updated')));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
   // ── Account deletion (soft delete) ────────────────────────────
   Future<void> _deleteAccount() async {
+    final confirm = TextEditingController();
+    // Drives the Delete button's enabled state from the confirm field. The
+    // buttons live in AppDialog's `actions` slot (always visible, never inside
+    // the scroll view) so the submit button can't get clipped on short screens.
+    final canDelete = ValueNotifier<bool>(false);
     final ok = await AppDialog.show<bool>(
       context,
       title: 'Delete account?',
-      children: const [Text(
-        'Your account will be deactivated and you will be signed out. You have 14 days '
-        'to sign back in and reactivate — after that it is permanently deleted.')],
+      children: [
+        const Text(
+          'Your account will be deactivated and you will be signed out. You have 14 days '
+          'to sign back in and reactivate — after that it is permanently deleted.'),
+        const SizedBox(height: AppSpacing.x12),
+        const Text('Type DELETE to confirm.', style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: AppSpacing.x8),
+        TextField(
+          controller: confirm,
+          autofocus: true,
+          textCapitalization: TextCapitalization.characters,
+          decoration: const InputDecoration(hintText: 'DELETE'),
+          onChanged: (v) => canDelete.value = v.trim().toUpperCase() == 'DELETE',
+        ),
+      ],
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(
-          style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text('Delete')),
+        ValueListenableBuilder<bool>(
+          valueListenable: canDelete,
+          builder: (ctx, enabled, _) => FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: enabled ? () => Navigator.pop(ctx, true) : null,
+            child: const Text('Delete'),
+          ),
+        ),
       ],
     );
+    confirm.dispose();
+    canDelete.dispose();
     if (ok != true) return;
     try {
       await ref.read(apiClientProvider).post('/users/me/deactivate');
       await ref.read(authControllerProvider.notifier).logout();
       if (mounted) context.go('/');
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -244,12 +344,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     whatsapp.text = '${m['whatsapp'] ?? ''}';
     bio.text = '${m['bio'] ?? ''}';
     reraBrn.text = '${m['rera_brn'] ?? ''}';
+    nationality.text = '${m['nationality'] ?? ''}';
+    country.text = '${m['country'] ?? ''}';
+    city.text = '${m['city'] ?? ''}';
     void fill(Set<String> set, dynamic v) { if (v is List) set.addAll(v.map((e) => '$e')); }
     fill(areas, m['areas']); fill(languages, m['languages']); fill(specialties, m['specialties']);
   }
 
   Widget _section(String title, String? subtitle, List<Widget> children) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
@@ -257,7 +361,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           Text(title, style: t.titleMedium),
           if (subtitle != null) ...[
             const SizedBox(height: 2),
-            Text(subtitle, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            Text(subtitle, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ],
           const SizedBox(height: AppSpacing.x16),
           ...children,
@@ -269,8 +373,23 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final user = ref.watch(authControllerProvider).user;
     final isAdmin = personaFromRole(user?.role) == Persona.admin;
+    // Client-facing professionals get Company / Expertise / RERA fields; consumers
+    // (buyer, tenant, owner, investor) get a simpler, role-appropriate profile.
+    final persona = personaFromRole(user?.activeRole ?? user?.role);
+    const proPersonas = {
+      Persona.leadGenerator, Persona.agent, Persona.broker,
+      Persona.developer, Persona.bank, Persona.salesperson, Persona.provider,
+    };
+    final pro = proPersonas.contains(persona);
+    // Agent-like personas genuinely "cover areas / have a RERA BRN / help buyers
+    // find a match" — the Expertise + RERA fields apply only to them. A developer
+    // or service company is an ORG; its details live in My Company, not here.
+    final agentLike = persona == Persona.agent || persona == Persona.broker ||
+        persona == Persona.salesperson || persona == Persona.leadGenerator;
+    final companyRole = persona.canManageTeam; // developer / agency / provider / bank
     final avatarUrl = ref.watch(_avatarProvider).asData?.value;
     ref.watch(_meProvider).whenData(_prefill);
     final verified = reraBrn.text.trim().isNotEmpty;
@@ -294,6 +413,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 720),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  const ProfileCompletionBanner(),
+                  const SizedBox(height: AppSpacing.x12),
                   // ── Identity header ──────────────────────────────
                   Center(child: Column(children: [
                     Stack(children: [
@@ -319,21 +440,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     ]),
                     const SizedBox(height: AppSpacing.x12),
                     Text(user?.fullName ?? 'Account', style: t.titleLarge),
-                    Text(user?.email ?? '', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
-                    const SizedBox(height: AppSpacing.x8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                          color: verified ? AppColors.accentGoldTint : AppColors.surface2,
-                          borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(verified ? Icons.verified : Icons.verified_outlined, size: 14,
-                            color: verified ? AppColors.accentGold : AppColors.textMuted),
-                        const SizedBox(width: 4),
-                        Text(verified ? 'RERA verified' : 'Unverified',
-                            style: t.bodySmall?.copyWith(color: verified ? AppColors.accentGold : AppColors.textMuted)),
-                      ]),
-                    ),
+                    Text(user?.email ?? '', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                    // RERA verification badge is only meaningful for professionals.
+                    if (pro) ...[
+                      const SizedBox(height: AppSpacing.x8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                            color: verified ? AppColors.accentGoldTint : AppColors.surface2,
+                            borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(verified ? Icons.verified : Icons.verified_outlined, size: 14,
+                              color: verified ? AppColors.accentGold : AppColors.textMuted),
+                          const SizedBox(width: 4),
+                          Text(verified ? 'RERA verified' : 'Unverified',
+                              style: t.bodySmall?.copyWith(color: verified ? AppColors.accentGold : AppColors.textMuted)),
+                        ]),
+                      ),
+                    ],
                   ])),
                   const SizedBox(height: AppSpacing.x24),
 
@@ -360,12 +484,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         child: Text(_designationLabel('${user!.designation}')),
                       ),
                     ],
-                    const SizedBox(height: AppSpacing.x12),
-                    TextField(controller: company, onChanged: (_) => _markDirty(),
-                        decoration: const InputDecoration(labelText: 'Company name', hintText: 'Your company or brokerage', prefixIcon: Icon(Icons.business_outlined))),
+                    if (companyRole) ...[
+                      const SizedBox(height: AppSpacing.x12),
+                      // A developer / agency / service company is an organisation — its
+                      // name, licence, website and address live in My Company, not on
+                      // the personal profile (company ≠ user).
+                      InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Company',
+                          prefixIcon: Icon(Icons.business_outlined),
+                          helperText: 'Company name, licence, website and address are managed in My Company.',
+                        ),
+                        child: Text(
+                          user?.organizationId == null ? 'Not set up yet — open My Company' : 'Managed in My Company',
+                          style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted),
+                        ),
+                      ),
+                    ] else if (agentLike) ...[
+                      const SizedBox(height: AppSpacing.x12),
+                      TextField(controller: company, onChanged: (_) => _markDirty(),
+                          decoration: const InputDecoration(labelText: 'Company / brokerage', hintText: 'Your brokerage or firm', prefixIcon: Icon(Icons.business_outlined))),
+                    ],
                     const SizedBox(height: AppSpacing.x12),
                     TextField(controller: bio, onChanged: (_) => _markDirty(), maxLines: 3,
-                        decoration: const InputDecoration(labelText: 'Bio', hintText: 'Tell others about yourself…')),
+                        decoration: InputDecoration(
+                            labelText: 'Bio',
+                            hintText: pro ? 'Tell clients about yourself and your experience…' : 'Tell others a little about yourself…')),
                   ]),
                   const SizedBox(height: AppSpacing.x16),
 
@@ -376,26 +520,96 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: AppSpacing.x12),
                     TextField(controller: whatsapp, onChanged: (_) => _markDirty(), keyboardType: TextInputType.phone,
                         decoration: const InputDecoration(labelText: 'WhatsApp', hintText: '+971 …', prefixIcon: Icon(Icons.chat_outlined))),
+                    const SizedBox(height: AppSpacing.x12),
+                    PickerField(
+                      label: 'Nationality *',
+                      icon: Icons.flag_outlined,
+                      value: nationality.text,
+                      options: kNationalities,
+                      onChanged: (v) => setState(() {
+                        nationality.text = v;
+                        _markDirty();
+                      }),
+                    ),
+                    const SizedBox(height: AppSpacing.x12),
+                    FieldPair(
+                      PickerField(
+                        label: 'Country *',
+                        value: country.text,
+                        options: kCountries,
+                        onChanged: (v) => setState(() {
+                          country.text = v;
+                          // City depends on country — drop a city that doesn't belong.
+                          final cities = kCitiesByCountry[v];
+                          if (cities != null && !cities.contains(city.text)) city.clear();
+                          _markDirty();
+                        }),
+                      ),
+                      // Known country → pick from its cities; otherwise free text.
+                      Builder(builder: (_) {
+                        final cities = kCitiesByCountry[country.text];
+                        if (cities != null) {
+                          return PickerField(
+                            label: 'City *',
+                            value: city.text,
+                            options: cities,
+                            onChanged: (v) => setState(() {
+                              city.text = v;
+                              _markDirty();
+                            }),
+                          );
+                        }
+                        return TextField(
+                          controller: city,
+                          onChanged: (_) => _markDirty(),
+                          decoration: const InputDecoration(labelText: 'City *'),
+                        );
+                      }),
+                    ),
                   ]),
                   const SizedBox(height: AppSpacing.x16),
 
-                  // ── Expertise ────────────────────────────────────
-                  _section('Expertise', 'Helps buyers find the right match', [
-                    MultiSelectField(label: 'Areas you cover', icon: Icons.map_outlined, options: _emirates, selected: areas,
-                        onChanged: (v) => setState(() { areas..clear()..addAll(v); _dirty = true; })),
-                    MultiSelectField(label: 'Languages', icon: Icons.translate_outlined, options: _langs, selected: languages,
-                        onChanged: (v) => setState(() { languages..clear()..addAll(v); _dirty = true; })),
-                    MultiSelectField(label: 'Property specialties', icon: Icons.star_outline, options: _specs, selected: specialties,
-                        onChanged: (v) => setState(() { specialties..clear()..addAll(v); _dirty = true; })),
-                  ]),
-                  const SizedBox(height: AppSpacing.x16),
+                  if (pro && user?.organizationId == null) ...[
+                    _section('Organization', null, [
+                      Text('You are not part of an organization yet.',
+                          style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                      const SizedBox(height: AppSpacing.x8),
+                      OutlinedButton.icon(
+                        onPressed: () => _createOrg(context),
+                        icon: const Icon(Icons.business_outlined, size: 18),
+                        label: const Text('Create an organization'),
+                      ),
+                    ]),
+                    const SizedBox(height: AppSpacing.x16),
+                  ],
 
-                  // ── Credentials ──────────────────────────────────
-                  _section('Credentials', 'A RERA BRN turns on the verified badge', [
-                    TextField(controller: reraBrn, onChanged: (_) => setState(() => _dirty = true),
-                        decoration: const InputDecoration(labelText: 'RERA BRN', hintText: 'Broker registration number', prefixIcon: Icon(Icons.verified_outlined))),
-                  ]),
-                  const SizedBox(height: AppSpacing.x16),
+                  // ── Expertise + Credentials (agent-like roles only) ──
+                  // Developers / service companies don't "cover areas" or carry a
+                  // personal RERA BRN — those are brokerage concepts.
+                  if (agentLike) ...[
+                    _section('Expertise', 'Helps buyers find the right match', [
+                      MultiSelectField(label: 'Areas you cover', icon: Icons.map_outlined, options: _emirates, selected: areas,
+                          onChanged: (v) => setState(() { areas..clear()..addAll(v); _dirty = true; })),
+                      MultiSelectField(label: 'Languages', icon: Icons.translate_outlined, options: _langs, selected: languages,
+                          onChanged: (v) => setState(() { languages..clear()..addAll(v); _dirty = true; })),
+                      MultiSelectField(label: 'Property specialties', icon: Icons.star_outline, options: _specs, selected: specialties,
+                          onChanged: (v) => setState(() { specialties..clear()..addAll(v); _dirty = true; })),
+                    ]),
+                    const SizedBox(height: AppSpacing.x16),
+                    _section('Credentials', 'A RERA BRN turns on the verified badge', [
+                      TextField(controller: reraBrn, onChanged: (_) => setState(() => _dirty = true),
+                          decoration: const InputDecoration(labelText: 'RERA BRN', hintText: 'Broker registration number', prefixIcon: Icon(Icons.verified_outlined))),
+                    ]),
+                    const SizedBox(height: AppSpacing.x16),
+                  ] else ...[
+                    // Consumers get a single, optional "languages" preference — no
+                    // areas/specialties/RERA. Keeps the profile light and relevant.
+                    _section('Languages', 'Optional — helps us match you with the right people', [
+                      MultiSelectField(label: 'Languages you speak', icon: Icons.translate_outlined, options: _langs, selected: languages,
+                          onChanged: (v) => setState(() { languages..clear()..addAll(v); _dirty = true; })),
+                    ]),
+                    const SizedBox(height: AppSpacing.x16),
+                  ],
 
                   // ── Account ──────────────────────────────────────
                   Card(child: Column(children: [

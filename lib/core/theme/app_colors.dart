@@ -15,6 +15,7 @@ class AppColors {
   static const secondary = Color(0xFF114C5A);    // teal — links / secondary
   static const accentGold = Color(0xFFC8960A);   // readable gold — accent text/icons
   static const accentGoldTint = Color(0xFFFFF4CC);
+  static const goldAccent = Color(0xFFFFC801);   // bright brand gold — structural accents (bars), not text
   static const accentCream = Color(0xFFF1F6F4);  // canvas
   static const accentPlum = Color(0xFF114C5A);   // (legacy slot) → teal
 
@@ -29,22 +30,31 @@ class AppColors {
   static const danger = Color(0xFFC0392B);
   static const info = Color(0xFF114C5A);
 
-  // ── Light neutrals ──
-  static const bg = Color(0xFFF1F6F4);           // canvas
+  // ── Light neutrals ── (de-greened: white cards on a near-neutral page; pale
+  // green is now an accent only, never the dominant background)
+  static const bg = Color(0xFFF8FAFA);           // page — light cool neutral
   static const surface = Color(0xFFFFFFFF);      // cards + sidebar
-  static const surface2 = Color(0xFFE8EFEC);
-  static const border = Color(0xFFD9E8E2);       // mist
-  static const borderStrong = Color(0xFFC2D6CE);
+  static const surface2 = Color(0xFFEDF1F3);     // subtle neutral fill (chips / placeholders)
+  static const border = Color(0xFFE4E9EC);       // neutral hairline
+  static const borderStrong = Color(0xFFD2DADE);
   static const text = Color(0xFF172B36);         // ink
   static const textMuted = Color(0xFF5A6B73);
   static const textSubtle = Color(0xFF8A9BA2);
 
-  // ── Dark neutrals (ink-based) ──
-  static const dBg = Color(0xFF0C171E);
-  static const dSurface = Color(0xFF172B36);     // sidebar + app bars
-  static const dSurface2 = Color(0xFF1E343F);    // cards
-  static const dBorder = Color(0xFF2A3F49);
-  static const dBorderStrong = Color(0xFF3A4F59);
+  // ── Property status palette (consistent platform-wide — "Luxury Property OS") ──
+  static const statusAvailable = Color(0xFF10B981); // emerald
+  static const statusReserved = Color(0xFFF59E0B);  // amber
+  static const statusSold = Color(0xFF64748B);      // slate
+  static const statusNewLaunch = Color(0xFF06B6D4); // cyan
+  static const statusOffPlan = Color(0xFF8B5CF6);   // violet
+  static const statusReady = Color(0xFF14B8A6);     // teal
+
+  // ── Dark neutrals (deep-navy "Luxury Property OS") ──
+  static const dBg = Color(0xFF07111B);          // deep navy page
+  static const dSurface = Color(0xFF102536);     // sidebar + app bars
+  static const dSurface2 = Color(0xFF163042);    // cards
+  static const dBorder = Color(0xFF22414F);
+  static const dBorderStrong = Color(0xFF31505E);
   static const dText = Color(0xFFF1F6F4);
   static const dTextMuted = Color(0xFFA9BCC2);
   static const dTextSubtle = Color(0xFF7A8D94);
