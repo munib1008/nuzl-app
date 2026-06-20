@@ -38,6 +38,7 @@ import '../../features/leads/presentation/bulk_lead_import_screen.dart';
 import '../../features/deals/presentation/deals_screen.dart';
 import '../../features/customers/customers_screen.dart';
 import '../../features/contacts/contacts_screen.dart';
+import '../../features/contacts/contact_detail_screen.dart';
 import '../../features/marketplace/orders_screen.dart';
 import '../../features/team/team_screen.dart';
 import '../../features/admin/view_as_screen.dart';
@@ -215,6 +216,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/opportunities', builder: (_, __) => const OpportunitiesScreen()),
       GoRoute(path: '/invoicing', builder: (_, __) => const InvoicingScreen()),
       GoRoute(path: '/contacts', builder: (_, __) => const ContactsScreen()),
+      GoRoute(path: '/contacts/:id', builder: (_, st) => ContactDetailScreen(id: st.pathParameters['id']!)),
       // Cockpit merged into the Dashboard — keep the path as a redirect so old
       // links/bookmarks don't dead-end.
       GoRoute(path: '/owner-cockpit', redirect: (_, __) => '/dashboard'),

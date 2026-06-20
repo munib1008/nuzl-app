@@ -143,14 +143,19 @@ class ContactsScreen extends ConsumerWidget {
     if (ok != true) return;
     if (name.text.trim().isEmpty) return;
     try {
-      await ref.read(apiClientProvider).post('/contacts', body: {
+      final res = await ref.read(apiClientProvider).post('/contacts', body: {
         'full_name': name.text.trim(),
         if (email.text.trim().isNotEmpty) 'email': email.text.trim(),
         if (phone.text.trim().isNotEmpty) 'phone': phone.text.trim(),
         'lifecycle': lifecycle,
       });
       ref.invalidate(contactsProvider);
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contact added')));
+      final id = res is Map ? '${res['id'] ?? ''}' : '';
+      if (context.mounted) {
+        // Consistent post-submit workflow: confirm + land on the new contact.
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contact added successfully.')));
+        if (id.isNotEmpty) context.push('/contacts/$id');
+      }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
