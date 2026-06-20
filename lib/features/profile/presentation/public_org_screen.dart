@@ -71,6 +71,17 @@ class _Body extends StatelessWidget {
     final reviews = (org['reviews'] is List) ? org['reviews'] as List : const [];
     final rating = num.tryParse('${org['rating'] ?? ''}');
     final reviewCount = int.tryParse('${org['review_count'] ?? 0}') ?? 0;
+    // Credentials & registration (shown when the company has supplied them).
+    final credentials = <(String, String)>[
+      if ('${org['rera_orn'] ?? ''}'.trim().isNotEmpty) ('RERA ORN', '${org['rera_orn']}'),
+      if ('${org['trade_license'] ?? ''}'.trim().isNotEmpty) ('Trade licence', '${org['trade_license']}'),
+      if ('${org['legal_entity_type'] ?? ''}'.trim().isNotEmpty) ('Legal entity', '${org['legal_entity_type']}'),
+      if ('${org['year_established'] ?? ''}'.trim().isNotEmpty && '${org['year_established']}' != '0')
+        ('Established', '${org['year_established']}'),
+      if ('${org['country_of_registration'] ?? ''}'.trim().isNotEmpty) ('Registered in', '${org['country_of_registration']}'),
+      if ('${org['vat_number'] ?? ''}'.trim().isNotEmpty) ('TRN / VAT', '${org['vat_number']}'),
+      if ('${org['innovation_license'] ?? ''}'.trim().isNotEmpty) ('Innovation licence', '${org['innovation_license']}'),
+    ];
     final location = [
       '${org['city'] ?? ''}'.trim(),
       '${org['country'] ?? ''}'.trim(),
@@ -157,6 +168,37 @@ class _Body extends StatelessWidget {
                     Text('About the company', style: t.titleMedium),
                     const SizedBox(height: AppSpacing.x8),
                     Text(about, style: t.bodyMedium),
+                  ],
+
+                  // credentials & registration
+                  if (credentials.isNotEmpty) ...[
+                    const SizedBox(height: AppSpacing.x24),
+                    Row(children: [
+                      const Icon(Icons.workspace_premium_outlined, size: 18, color: AppColors.accentGold),
+                      const SizedBox(width: AppSpacing.x8),
+                      Text('Credentials & registration', style: t.titleMedium),
+                      if (verified) ...[
+                        const SizedBox(width: AppSpacing.x8),
+                        const Icon(Icons.verified, size: 16, color: AppColors.success),
+                      ],
+                    ]),
+                    const SizedBox(height: AppSpacing.x12),
+                    Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x12, children: [
+                      for (final c in credentials)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x12, vertical: AppSpacing.x8),
+                          decoration: BoxDecoration(
+                            color: AppColors.accentGold.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(AppSpacing.rCard),
+                            border: Border.all(color: AppColors.accentGold.withValues(alpha: 0.20)),
+                          ),
+                          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+                            Text(c.$1, style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                            const SizedBox(height: 2),
+                            Text(c.$2, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                          ]),
+                        ),
+                    ]),
                   ],
 
                   // listings
