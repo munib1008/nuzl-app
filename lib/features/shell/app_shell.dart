@@ -270,7 +270,9 @@ class _RoleChip extends ConsumerWidget {
     );
 
     return PopupMenuButton<String>(
-      tooltip: multi ? 'Switch role' : 'Roles',
+      // No hover tooltip — it rendered below the chip and overlapped the
+      // Dashboard nav item. The chip (role label + swap icon) is self-explanatory.
+      tooltip: '',
       offset: const Offset(0, 40),
       onSelected: (r) async {
         if (r == '__add__') {

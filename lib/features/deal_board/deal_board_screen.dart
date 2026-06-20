@@ -98,18 +98,19 @@ class _DealCard extends ConsumerWidget {
             if (money != null) Text(money, style: t.titleMedium),
           ]),
           const SizedBox(height: AppSpacing.x8),
-          Text('${d['title'] ?? ''}', style: t.titleSmall),
+          Text('${d['title'] ?? ''}', style: t.titleSmall, maxLines: 2, overflow: TextOverflow.ellipsis),
           if (propLine.isNotEmpty)
-            Text(propLine, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            Text(propLine, style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+                maxLines: 1, overflow: TextOverflow.ellipsis),
           Text([
             if (d['bedrooms'] != null) '${d['bedrooms']} BR',
             if (d['size_sqft'] != null) '${num.tryParse('${d['size_sqft']}')?.toStringAsFixed(0)} sqft',
             if ('${d['view'] ?? ''}'.isNotEmpty) '${d['view']}',
             if ('${d['commission_share'] ?? ''}'.isNotEmpty) 'comm ${d['commission_share']}',
-          ].where((s) => s.isNotEmpty).join('  ·  '), style: t.bodySmall),
+          ].where((s) => s.isNotEmpty).join('  ·  '), style: t.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
           if ('${d['note'] ?? ''}'.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x4),
-            Text('${d['note']}', style: t.bodyMedium),
+            Text('${d['note']}', style: t.bodyMedium, maxLines: 8, overflow: TextOverflow.ellipsis),
           ],
           const SizedBox(height: AppSpacing.x8),
           Row(children: [
@@ -117,7 +118,8 @@ class _DealCard extends ConsumerWidget {
               child: Text([
                 if (d['agent_name'] != null) '${d['agent_name']}',
                 if (expiry != null) 'until ${DateFormat.yMMMd().format(expiry)}',
-              ].join('  ·  '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+              ].join('  ·  '), style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
             if (mine)
               TextButton(
