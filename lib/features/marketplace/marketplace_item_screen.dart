@@ -95,6 +95,35 @@ class _Detail extends ConsumerWidget {
                 ? Image.network(img, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _thumb())
                 : _thumb(),
           ),
+          if (m['gallery'] is List && (m['gallery'] as List).length > 1)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x12, AppSpacing.x16, 0),
+              child: SizedBox(
+                height: 64,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: (m['gallery'] as List).length,
+                  separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.x8),
+                  itemBuilder: (_, i) {
+                    final url = '${(m['gallery'] as List)[i]}';
+                    return GestureDetector(
+                      onTap: () => showDialog<void>(
+                        context: context,
+                        builder: (dctx) => Dialog(
+                          insetPadding: const EdgeInsets.all(AppSpacing.x16),
+                          child: InteractiveViewer(maxScale: 5, child: Image.network(url, fit: BoxFit.contain)),
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(AppSpacing.rMd),
+                        child: Image.network(url, width: 84, height: 64, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const SizedBox(width: 84, height: 64)),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.x20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

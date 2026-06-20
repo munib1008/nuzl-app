@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../core/network/api_client.dart';
+import '../../core/network/upload_service.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -66,6 +68,8 @@ class MarketplaceScreen extends ConsumerWidget {
     final contact = TextEditingController();
     final moq = TextEditingController();
     final coverage = TextEditingController();
+    final photos = <String>[];
+    var uploadingPhoto = false;
     final ok = await AppDialog.show<bool>(
       context,
       title: 'List a service / product',
@@ -136,6 +140,45 @@ class MarketplaceScreen extends ConsumerWidget {
             else
               TextField(controller: coverage,
                   decoration: const InputDecoration(labelText: 'Coverage areas', hintText: 'e.g. Dubai, Sharjah, Abu Dhabi')),
+            const SizedBox(height: AppSpacing.x8),
+            // Photos (§1) — first uploaded image becomes the catalogue cover.
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                for (final url in photos)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(AppSpacing.rMd),
+                    child: Image.network(url, width: 56, height: 56, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox(width: 56, height: 56)),
+                  ),
+                OutlinedButton.icon(
+                  onPressed: uploadingPhoto
+                      ? null
+                      : () async {
+                          final picked = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1280, imageQuality: 72);
+                          if (picked == null) return;
+                          final bytes = await picked.readAsBytes();
+                          setS(() => uploadingPhoto = true);
+                          try {
+                            final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
+                            if (url != null) {
+                              setS(() => photos.add(url));
+                            } else if (ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Photo upload failed — try again')));
+                            }
+                          } catch (e) {
+                            if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Photo upload failed — ${friendlyError(e)}')));
+                          } finally {
+                            setS(() => uploadingPhoto = false);
+                          }
+                        },
+                  icon: uploadingPhoto
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.add_photo_alternate_outlined, size: 18),
+                  label: Text(uploadingPhoto ? 'Uploading…' : (photos.isEmpty ? 'Add photo' : 'Add another')),
+                ),
+              ]),
+            ),
           ]),
         ),
       ],
@@ -175,6 +218,8 @@ class MarketplaceScreen extends ConsumerWidget {
         'contact': contact.text.trim(),
         if (kind == 'product') 'moq': int.tryParse(moq.text.trim()),
         if (kind == 'service') 'coverage_areas': coverage.text.trim(),
+        if (photos.isNotEmpty) 'image_url': photos.first,
+        if (photos.isNotEmpty) 'gallery': photos,
       });
       ref.invalidate(marketplaceProvider(kind));
       final draft = res is Map && res['is_active'] == false;
