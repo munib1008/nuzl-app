@@ -11,6 +11,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/detail_grid.dart';
 import '../../../core/widgets/location_map.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../messages/data/messaging_repository.dart';
 import '../../saved/saved_screen.dart';
@@ -817,12 +818,7 @@ class _PropertyAgentsCard extends ConsumerWidget {
                       return ListTile(
                         dense: true,
                         contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(
-                          radius: 16,
-                          backgroundColor: AppColors.primaryTint,
-                          child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-                              style: const TextStyle(color: AppColors.primary, fontSize: 12, fontWeight: FontWeight.w700)),
-                        ),
+                        leading: UserAvatar(name: name, url: '${a['avatar_url'] ?? ''}', radius: 16),
                         title: Text(name),
                         subtitle: Text('${a['user_role'] ?? ''}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                         trailing: IconButton(

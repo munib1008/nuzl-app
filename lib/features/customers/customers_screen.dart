@@ -4,6 +4,7 @@ import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../shell/app_shell.dart';
 
 final customersProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
@@ -37,7 +38,7 @@ class CustomersScreen extends ConsumerWidget {
                   itemBuilder: (_, i) {
                     final c = Map<String, dynamic>.from(list[i]);
                     return Card(child: ListTile(
-                      leading: CircleAvatar(child: Text((c['full_name'] ?? '?').toString().characters.first.toUpperCase())),
+                      leading: UserAvatar(name: '${c['full_name'] ?? '?'}', url: '${c['avatar'] ?? ''}'),
                       title: Text(c['full_name'] ?? 'Customer'),
                       subtitle: Text([c['customer_type'], c['phone'], c['email']].where((e) => e != null && '$e'.isNotEmpty).join(' · ')),
                       trailing: Text('${c['properties'] ?? 0} props'),

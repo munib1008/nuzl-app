@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../auth/application/auth_controller.dart';
 import '../messages/data/messaging_repository.dart';
 import '../shell/app_shell.dart';
@@ -114,6 +115,8 @@ class _DealCard extends ConsumerWidget {
           ],
           const SizedBox(height: AppSpacing.x8),
           Row(children: [
+            UserAvatar(name: '${d['agent_name'] ?? ''}', url: '${d['agent_avatar'] ?? ''}', radius: 12),
+            const SizedBox(width: AppSpacing.x8),
             Expanded(
               child: Text([
                 if (d['agent_name'] != null) '${d['agent_name']}',

@@ -4,6 +4,7 @@ import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../auth/application/auth_controller.dart';
 import '../shell/app_shell.dart';
 
@@ -112,7 +113,7 @@ class TeamScreen extends ConsumerWidget {
                             onTap: (isOwner && !isMe)
                                 ? () => _assignTeam(context, ref, orgId, '${u['id']}', '${u['team_id'] ?? ''}')
                                 : null,
-                            leading: CircleAvatar(child: Text('${u['full_name'] ?? '?'}'.characters.first.toUpperCase())),
+                            leading: UserAvatar(name: '${u['full_name'] ?? '?'}', url: '${u['avatar_url'] ?? ''}'),
                             title: Text('${u['full_name'] ?? 'Member'}${isMe ? ' (you)' : ''}',
                                 maxLines: 1, overflow: TextOverflow.ellipsis),
                             subtitle: Text(

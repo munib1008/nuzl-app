@@ -8,6 +8,7 @@ import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/status_badge.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../shell/app_shell.dart';
 import 'contacts_repository.dart';
 
@@ -266,7 +267,7 @@ class _ContactCard extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.x12),
           child: Row(children: [
-            CircleAvatar(radius: 18, child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?')),
+            UserAvatar(name: name, url: '${c['avatar'] ?? ''}', radius: 18),
             const SizedBox(width: AppSpacing.x12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

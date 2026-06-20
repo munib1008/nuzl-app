@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_dialog.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../shell/app_shell.dart';
@@ -340,7 +341,7 @@ Future<Map<String, dynamic>?> _pickUser(BuildContext context, WidgetRef ref) {
                           for (final u in results)
                             ListTile(
                               dense: true,
-                              leading: const CircleAvatar(child: Icon(Icons.person, size: 18)),
+                              leading: UserAvatar(name: '${u['full_name'] ?? 'User'}', url: '${u['avatar_url'] ?? ''}', radius: 16),
                               title: Text('${u['full_name'] ?? 'User'}'),
                               subtitle: u['role'] != null ? Text('${u['role']}') : null,
                               onTap: () => Navigator.pop(ctx, {'id': u['id'], 'name': u['full_name']}),
@@ -400,10 +401,7 @@ class _PostCard extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
-              CircleAvatar(
-                backgroundColor: AppColors.primary,
-                child: Text(author.isNotEmpty ? author[0].toUpperCase() : '?', style: const TextStyle(color: Colors.white)),
-              ),
+              UserAvatar(name: author, url: '${p['author_avatar'] ?? ''}'),
               const SizedBox(width: AppSpacing.x12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -611,7 +609,7 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                           children: list.map((e) {
                             final c = Map<String, dynamic>.from(e);
                             return ListTile(
-                              leading: const Icon(Icons.account_circle_outlined),
+                              leading: UserAvatar(name: '${c['author'] ?? 'Member'}', url: '${c['author_avatar'] ?? ''}', radius: 16),
                               title: Text('${c['author'] ?? 'Member'}'),
                               subtitle: Text('${c['body'] ?? ''}'),
                             );
