@@ -52,6 +52,19 @@ class AppTheme {
       colorScheme: scheme,
       scaffoldBackgroundColor: bg,
       textTheme: tt,
+      // Consistent, subtle interaction state layers (brand-tinted) — gives the
+      // whole app a quiet, professional hover/press/focus response on web and
+      // keeps keyboard focus visible (a11y) instead of Material's default grey.
+      hoverColor: primary.withValues(alpha: 0.04),
+      focusColor: primary.withValues(alpha: 0.12),
+      splashColor: primary.withValues(alpha: 0.06),
+      highlightColor: primary.withValues(alpha: 0.04),
+      // Brand the text caret + selection so forms feel bespoke, not stock.
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: primary,
+        selectionColor: primary.withValues(alpha: 0.20),
+        selectionHandleColor: primary,
+      ),
       dividerColor: border,
       dividerTheme: DividerThemeData(color: border, thickness: 0.5, space: 0.5),
       appBarTheme: AppBarTheme(

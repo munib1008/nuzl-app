@@ -9,13 +9,19 @@ class AppTypography {
   static TextTheme textTheme(Color text, Color muted) {
     // Premium readability: body text breathes (1.5), while titles/labels stay
     // tight (≤1.3) so dense cards, chips and buttons don't overflow.
-    TextStyle s(double size, FontWeight w, {Color? c, double ls = 0, double h = 1.35}) =>
+    // `tnum`: tabular (fixed-width) figures + slashed zero — for prices, KPIs and
+    // any value that should align in columns. A hallmark of professional
+    // fintech/SaaS dashboards; this platform is dense with prices and metrics.
+    TextStyle s(double size, FontWeight w, {Color? c, double ls = 0, double h = 1.35, bool tnum = false}) =>
         GoogleFonts.inter(
           fontSize: size,
           fontWeight: w,
           color: c ?? text,
           letterSpacing: ls,
           height: h,
+          fontFeatures: tnum
+              ? const [FontFeature.tabularFigures(), FontFeature.slashedZero()]
+              : null,
         );
     // Manrope for headings — modern geometric sans, slightly tighter tracking.
     TextStyle d(double size, FontWeight w, {Color? c, double ls = -0.3, double h = 1.2}) =>
@@ -27,15 +33,17 @@ class AppTypography {
           height: h,
         );
     return TextTheme(
-      // KPI numbers — kept on Inter so figures stay clean + tabular-feeling.
-      displayLarge: s(24, FontWeight.w700, ls: -0.4, h: 1.15),
-      displaySmall: s(22, FontWeight.w700, ls: -0.3, h: 1.15),
+      // KPI numbers — Inter with true tabular figures so dashboard metrics and
+      // currency line up vertically; slashed zero reads unambiguously.
+      displayLarge: s(24, FontWeight.w700, ls: -0.4, h: 1.15, tnum: true),
+      displaySmall: s(22, FontWeight.w700, ls: -0.3, h: 1.15, tnum: true),
       // Main titles — Fraunces serif; same size (20), weight differentiates.
       headlineLarge: d(20, FontWeight.w700, h: 1.25), // page title (bold)
       headlineMedium: d(20, FontWeight.w600, h: 1.25), // page title (semibold)
       headlineSmall: d(20, FontWeight.w600, h: 1.25), // section title / app bar (semibold)
-      // Card / sub titles — one calm step down.
-      titleLarge: s(16, FontWeight.w600, h: 1.3),
+      // Card / sub titles — one calm step down. Tabular so prices/values that
+      // commonly use this tier align cleanly in cards and rows.
+      titleLarge: s(16, FontWeight.w600, h: 1.3, tnum: true),
       titleMedium: s(16, FontWeight.w600, h: 1.3), // card title
       titleSmall: s(14, FontWeight.w500, h: 1.3), // minor title (medium)
       // Body — opened up for comfortable reading.
