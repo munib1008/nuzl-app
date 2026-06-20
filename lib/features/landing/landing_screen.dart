@@ -2026,26 +2026,29 @@ class _ListingCard extends StatelessWidget {
                   Text('Listed by $agent',
                       style: t.bodySmall?.copyWith(color: _muted(context)), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: AppSpacing.x8),
-                // Two equal-width buttons (both Expanded → identical size).
+                // Compact action bar: a wide single-line primary CTA + a small
+                // icon-only Save — no oversized two-line buttons.
                 Row(children: [
                   Expanded(
                     child: FilledButton(
                       onPressed: onOpen,
-                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(40)),
-                      child: const Text('View property'),
+                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(38)),
+                      child: const Text('View property', maxLines: 1, overflow: TextOverflow.ellipsis),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.x8),
-                  Expanded(
-                    child: OutlinedButton.icon(
+                  SizedBox(
+                    height: 38,
+                    width: 42,
+                    child: OutlinedButton(
                       onPressed: () => showAuthPrompt(context, action: 'save this property'),
                       style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(40),
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(42, 38),
                         foregroundColor: _onBg(context),
                         side: BorderSide(color: _borderStrong(context)),
                       ),
-                      icon: const Icon(Icons.favorite_border, size: 16),
-                      label: const Text('Save'),
+                      child: const Icon(Icons.favorite_border, size: 18),
                     ),
                   ),
                 ]),
