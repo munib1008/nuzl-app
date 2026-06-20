@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_client.dart';
+import '../../core/network/upload_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
@@ -145,20 +148,75 @@ class TenderDetailScreen extends ConsumerWidget {
     final days = TextEditingController();
     final warranty = TextEditingController();
     final note = TextEditingController();
+    final docs = <Map<String, String>>[];
+    var uploading = false;
     final ok = await AppDialog.show<bool>(
       context,
       title: 'Submit your quote',
       maxWidth: 420,
       children: [
-        Column(mainAxisSize: MainAxisSize.min, children: [
-          TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price (AED) *')),
-          const SizedBox(height: AppSpacing.x8),
-          TextField(controller: days, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Completion time (days)')),
-          const SizedBox(height: AppSpacing.x8),
-          TextField(controller: warranty, decoration: const InputDecoration(labelText: 'Warranty', hintText: 'e.g. 1 year')),
-          const SizedBox(height: AppSpacing.x8),
-          TextField(controller: note, maxLines: 2, decoration: const InputDecoration(labelText: 'Note')),
-        ]),
+        StatefulBuilder(builder: (ctx, setS) {
+          Future<void> attach() async {
+            final result = await FilePicker.platform.pickFiles(
+              type: FileType.custom,
+              allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
+              withData: true,
+            );
+            if (result == null || result.files.isEmpty) return;
+            final f = result.files.first;
+            final bytes = f.bytes;
+            if (bytes == null) return;
+            final ext = (f.extension ?? '').toLowerCase();
+            final ct = ext == 'pdf'
+                ? 'application/pdf'
+                : ext == 'png'
+                    ? 'image/png'
+                    : ext == 'webp'
+                        ? 'image/webp'
+                        : 'image/jpeg';
+            setS(() => uploading = true);
+            try {
+              final url = await ref.read(uploadServiceProvider).upload(bytes, f.name, ct);
+              if (url != null) setS(() => docs.add({'name': f.name, 'url': url}));
+            } catch (e) {
+              if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+            } finally {
+              setS(() => uploading = false);
+            }
+          }
+
+          return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price (AED) *')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: days, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Completion time (days)')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: warranty, decoration: const InputDecoration(labelText: 'Warranty', hintText: 'e.g. 1 year')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: note, maxLines: 2, decoration: const InputDecoration(labelText: 'Note')),
+            const SizedBox(height: AppSpacing.x8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: OutlinedButton.icon(
+                onPressed: uploading ? null : attach,
+                icon: uploading
+                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.attach_file, size: 18),
+                label: Text(uploading ? 'Uploading…' : 'Attach quotation / document'),
+              ),
+            ),
+            for (final d in docs)
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.insert_drive_file_outlined, size: 18),
+                title: Text(d['name'] ?? 'Document', maxLines: 1, overflow: TextOverflow.ellipsis),
+                trailing: IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () => setS(() => docs.remove(d)),
+                ),
+              ),
+          ]);
+        }),
       ],
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
@@ -172,6 +230,7 @@ class TenderDetailScreen extends ConsumerWidget {
         'completion_days': int.tryParse(days.text.trim()),
         'warranty': warranty.text.trim(),
         'note': note.text.trim(),
+        'documents': docs,
       });
       ref.invalidate(_bidsProvider(id));
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quote submitted')));
@@ -259,6 +318,20 @@ class _BidCard extends ConsumerWidget {
           if ('${bid['note'] ?? ''}'.trim().isNotEmpty) ...[
             const SizedBox(height: 6),
             Text('${bid['note']}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+          ],
+          if (bid['documents'] is List && (bid['documents'] as List).isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Wrap(spacing: AppSpacing.x8, runSpacing: 4, children: [
+              for (final d in (bid['documents'] as List))
+                ActionChip(
+                  avatar: const Icon(Icons.attach_file, size: 14),
+                  label: Text('${(d as Map)['name'] ?? 'Document'}'),
+                  onPressed: () {
+                    final url = '${d['url'] ?? ''}';
+                    if (url.isNotEmpty) launchUrl(Uri.parse(url), webOnlyWindowName: '_blank');
+                  },
+                ),
+            ]),
           ],
           if (canAward && !accepted) ...[
             const SizedBox(height: AppSpacing.x8),
