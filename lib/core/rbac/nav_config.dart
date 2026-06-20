@@ -147,6 +147,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.domain_verification_outlined, 'Companies', '/company-verifications'),
         NavItem(Icons.badge_outlined, 'Role requests', '/role-requests'),
         NavItem(Icons.flag_outlined, 'Moderation', '/post-moderation'),
+        NavItem(Icons.support_agent_outlined, 'Support Center', '/support'),
         NavItem(Icons.badge_outlined, 'Nuzler Team', '/nuzler-team'),
         NavItem(Icons.workspace_premium_outlined, 'Founding Owners', '/founding-owners'),
         NavItem(Icons.receipt_long_outlined, 'Audit Logs', '/audit'),
