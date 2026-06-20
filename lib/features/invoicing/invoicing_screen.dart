@@ -590,6 +590,15 @@ Future<void> exportInvoicePdf(BuildContext context, Map<String, dynamic> d) asyn
   final cur = '${d['currency'] ?? 'AED'}';
   final type = '${d['doc_type'] ?? 'quote'}';
   final items = (d['line_items'] as List? ?? const []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  // Company branding for the header: the issuer org's uploaded logo + name.
+  final companyName = '${d['company_name'] ?? ''}'.trim();
+  final logoUrl = '${d['company_logo'] ?? ''}'.trim();
+  pw.ImageProvider? logo;
+  if (logoUrl.isNotEmpty) {
+    try {
+      logo = await networkImage(logoUrl);
+    } catch (_) {/* fall back to the wordmark */}
+  }
   pw.Widget tot(String label, String value, {bool bold = false}) => pw.Padding(
         padding: const pw.EdgeInsets.symmetric(vertical: 2),
         child: pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
@@ -603,7 +612,15 @@ Future<void> exportInvoicePdf(BuildContext context, Map<String, dynamic> d) asyn
     build: (ctx) => [
       pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
         pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-          pw.Text('NUZL', style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold)),
+          if (logo != null) ...[
+            pw.SizedBox(height: 46, child: pw.Image(logo, fit: pw.BoxFit.contain)),
+            if (companyName.isNotEmpty) ...[
+              pw.SizedBox(height: 4),
+              pw.Text(companyName, style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold)),
+            ],
+          ] else
+            pw.Text(companyName.isNotEmpty ? companyName : 'NUZL',
+                style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold)),
           pw.Text(_typeLabel(type).toUpperCase(), style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
         ]),
         pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
