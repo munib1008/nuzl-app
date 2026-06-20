@@ -16,7 +16,7 @@ List<NavItem> navItemsFor(Persona p) {
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
-        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
+        NavItem(Icons.dynamic_feed_outlined, 'Community', '/feed'),
         NavItem(Icons.add_circle_outline, 'Post Lead', '/leads/new'),
         NavItem(Icons.trending_up, 'My Leads', '/leads'),
         NavItem(Icons.sell_outlined, 'Lead Market', '/lead-market'),
@@ -30,7 +30,7 @@ List<NavItem> navItemsFor(Persona p) {
     case Persona.agent:
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
-        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
+        NavItem(Icons.dynamic_feed_outlined, 'Community', '/feed'),
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.trending_up, 'CRM', '/crm'),
         NavItem(Icons.event_available_outlined, 'Leasing Leads', '/viewing-leads'),
@@ -40,7 +40,7 @@ List<NavItem> navItemsFor(Persona p) {
     case Persona.broker:
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
-        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
+        NavItem(Icons.dynamic_feed_outlined, 'Community', '/feed'),
         NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
         NavItem(Icons.trending_up, 'CRM', '/crm'),
         NavItem(Icons.event_available_outlined, 'Leasing Leads', '/viewing-leads'),
@@ -58,7 +58,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.groups_outlined, 'Team', '/team'),
         NavItem(Icons.business_outlined, 'My Company', '/company-dashboard'),
         NavItem(Icons.emoji_events_outlined, 'Performance', '/kpi'),
-        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
+        NavItem(Icons.dynamic_feed_outlined, 'Community', '/feed'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];

@@ -16,6 +16,8 @@ import '../../shell/app_shell.dart';
 
 /// Feed scope: 'public' (everyone, approved) vs 'company' (internal to my org).
 final _feedScopeProvider = StateProvider.autoDispose<String>((ref) => 'public');
+// Community Board category filter ('' = All); filters the loaded posts by kind.
+final _feedCategoryProvider = StateProvider.autoDispose<String>((ref) => '');
 
 /// Professional Feed — social posts (market updates, showcases, success stories…).
 final feedPostsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
@@ -100,6 +102,36 @@ class _ScopeToggle extends ConsumerWidget {
   }
 }
 
+/// Community Board category filter — All + the role's post categories, filtering
+/// the feed by kind (client-side over the loaded posts).
+class _CategoryBar extends ConsumerWidget {
+  const _CategoryBar();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final persona = ref.watch(personaProvider);
+    final selected = ref.watch(_feedCategoryProvider);
+    final cats = <(String, String)>[('', 'All'), ..._kindsFor(persona)];
+    return SizedBox(
+      height: 46,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x12, vertical: AppSpacing.x8),
+        children: [
+          for (final c in cats)
+            Padding(
+              padding: const EdgeInsets.only(right: AppSpacing.x8),
+              child: ChoiceChip(
+                label: Text(c.$2),
+                selected: selected == c.$1,
+                onSelected: (_) => ref.read(_feedCategoryProvider.notifier).state = c.$1,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class FeedScreen extends ConsumerWidget {
   const FeedScreen({super.key});
 
@@ -109,7 +141,7 @@ class FeedScreen extends ConsumerWidget {
     final persona = ref.watch(personaProvider);
     final canPost = persona.canManageLeads || persona.canListProperty;
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Feed'),
+      appBar: const NuzlAppBar(title: 'Community'),
       drawer: const NuzlDrawer(),
       floatingActionButton: canPost
           ? FloatingActionButton.extended(
@@ -120,6 +152,7 @@ class FeedScreen extends ConsumerWidget {
           : null,
       body: Column(children: [
         if (ref.watch(authControllerProvider).user?.organizationId != null) _ScopeToggle(),
+        const _CategoryBar(),
         Expanded(
           child: RefreshIndicator(
         onRefresh: () async {
@@ -129,25 +162,37 @@ class FeedScreen extends ConsumerWidget {
         child: posts.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
           error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(friendlyError(e))))]),
-          data: (list) => list.isEmpty
-              ? ListView(children: const [
-                  EmptyState(
-                    icon: Icons.dynamic_feed_outlined,
-                    title: 'No posts yet',
-                    message: 'Share a market update or a success story to start the conversation.',
-                  ),
-                ])
-              : Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 720),
-                    child: ListView.separated(
-                      padding: const EdgeInsets.all(AppSpacing.x16),
-                      itemCount: list.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x12),
-                      itemBuilder: (_, i) => _PostCard(Map<String, dynamic>.from(list[i])),
-                    ),
-                  ),
+          data: (list) {
+            final cat = ref.watch(_feedCategoryProvider);
+            final filtered = cat.isEmpty
+                ? list
+                : list.where((p) {
+                    final m = p as Map;
+                    return '${m['kind'] ?? m['post_type'] ?? ''}' == cat;
+                  }).toList();
+            if (filtered.isEmpty) {
+              return ListView(children: [
+                EmptyState(
+                  icon: Icons.dynamic_feed_outlined,
+                  title: cat.isEmpty ? 'No posts yet' : 'Nothing in this category yet',
+                  message: cat.isEmpty
+                      ? 'Share a market update or a success story to start the conversation.'
+                      : 'Be the first to post in this category — tap “New post”.',
                 ),
+              ]);
+            }
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 720),
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(AppSpacing.x16),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x12),
+                  itemBuilder: (_, i) => _PostCard(Map<String, dynamic>.from(filtered[i])),
+                ),
+              ),
+            );
+          },
         ),
           ),
         ),
