@@ -52,6 +52,7 @@ import '../../features/mortgage/presentation/mortgage_detail_screen.dart';
 import '../../features/landing/landing_screen.dart';
 import '../../features/marketing/info_page.dart';
 import '../../features/reports/reports_screen.dart';
+import '../../features/kpi/kpi_screen.dart';
 import '../../features/financials/financials_screen.dart';
 import '../../features/documents/documents_screen.dart';
 import '../../features/inventory/inventory_screen.dart';
@@ -176,6 +177,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Phase 2 — completed sections (were /soon placeholders)
       GoRoute(path: '/reports', builder: (_, __) => const ReportsScreen()),
+      GoRoute(path: '/kpi', builder: (_, __) => const KpiScreen()),
       GoRoute(path: '/financials', builder: (_, __) => const FinancialsScreen()),
       GoRoute(path: '/documents', builder: (_, __) => const DocumentsScreen()),
       GoRoute(path: '/inventory', builder: (_, __) => const InventoryScreen()),
