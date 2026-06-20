@@ -170,6 +170,7 @@ class _PostDealSheetState extends ConsumerState<_PostDealSheet> {
   final _commission = TextEditingController();
   final _note = TextEditingController();
   String _category = 'hot_deal';
+  String _visibility = 'verified';
   bool _saving = false;
 
   @override
@@ -189,6 +190,7 @@ class _PostDealSheetState extends ConsumerState<_PostDealSheet> {
     try {
       await ref.read(dealBoardRepoProvider).create({
         'category': _category,
+        'visibility': _visibility,
         'title': _title.text.trim(),
         'building_name': _building.text.trim(),
         'unit_no': _unit.text.trim(),
@@ -221,6 +223,18 @@ class _PostDealSheetState extends ConsumerState<_PostDealSheet> {
             decoration: const InputDecoration(labelText: 'Category'),
             items: [for (final e in dealCategoryLabels.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
             onChanged: (v) => setState(() => _category = v ?? 'hot_deal'),
+          ),
+          const SizedBox(height: AppSpacing.x8),
+          DropdownButtonFormField<String>(
+            initialValue: _visibility,
+            decoration: const InputDecoration(labelText: 'Visible to'),
+            items: const [
+              DropdownMenuItem(value: 'verified', child: Text('Verified agents')),
+              DropdownMenuItem(value: 'company', child: Text('My company')),
+              DropdownMenuItem(value: 'team', child: Text('My team')),
+              DropdownMenuItem(value: 'public', child: Text('Public — incl. customers')),
+            ],
+            onChanged: (v) => setState(() => _visibility = v ?? 'verified'),
           ),
           const SizedBox(height: AppSpacing.x8),
           TextField(controller: _title, decoration: const InputDecoration(labelText: 'Title *', hintText: 'e.g. Distress 2BR Marina')),
