@@ -193,6 +193,44 @@ class _Body extends ConsumerWidget {
         const SizedBox(height: AppSpacing.x8),
         Text(desc, style: t.bodyMedium?.copyWith(height: 1.5)),
       ],
+      if ('${m['floorplan_url'] ?? ''}'.trim().isNotEmpty) ...[
+        const SizedBox(height: AppSpacing.x24),
+        Text('Floor plan', style: t.titleMedium),
+        const SizedBox(height: AppSpacing.x8),
+        GestureDetector(
+          onTap: () => showDialog<void>(
+            context: context,
+            builder: (dctx) => Dialog(
+              insetPadding: const EdgeInsets.all(AppSpacing.x16),
+              child: Stack(children: [
+                InteractiveViewer(
+                  maxScale: 5,
+                  child: Image.network('${m['floorplan_url']}', fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const Padding(
+                          padding: EdgeInsets.all(AppSpacing.x24), child: Text('Floor plan unavailable'))),
+                ),
+                Positioned(
+                  top: 4, right: 4,
+                  child: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.of(dctx).pop()),
+                ),
+              ]),
+            ),
+          ),
+          child: Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(maxHeight: 420),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppSpacing.rCard),
+              border: Border.all(color: Theme.of(context).dividerColor),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Image.network('${m['floorplan_url']}', fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text('Tap to enlarge', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+      ],
       ...(() {
         final raw = m['amenities'];
         final items = raw is List
