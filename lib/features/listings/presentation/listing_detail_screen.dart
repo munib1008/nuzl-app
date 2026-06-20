@@ -254,6 +254,10 @@ class _Detail extends ConsumerWidget {
                       LocationMap(
                         lat: double.tryParse('${l['latitude'] ?? ''}'),
                         lng: double.tryParse('${l['longitude'] ?? ''}'),
+                        query: [l['building_name'], l['community'], 'United Arab Emirates']
+                            .map((e) => '${e ?? ''}'.trim())
+                            .where((e) => e.isNotEmpty)
+                            .join(', '),
                       ),
                       const SizedBox(height: AppSpacing.x24),
                     ],

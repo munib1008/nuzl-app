@@ -377,18 +377,37 @@ String _humanize(String k) => k
     .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
     .join(' ');
 
-class _PostCard extends ConsumerWidget {
+class _PostCard extends ConsumerStatefulWidget {
   const _PostCard(this.p);
   final Map<String, dynamic> p;
+  @override
+  ConsumerState<_PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends ConsumerState<_PostCard> {
+  // Optimistic local like state — toggles instantly, reconciles with the server.
+  late bool _liked = widget.p['liked'] == true;
+  late int _likeCount = int.tryParse('${widget.p['like_count'] ?? 0}') ?? 0;
+  Map<String, dynamic> get p => widget.p;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void didUpdateWidget(covariant _PostCard old) {
+    super.didUpdateWidget(old);
+    // If this card is recycled for a different post, resync from the new data.
+    if (old.p['id'] != widget.p['id']) {
+      _liked = widget.p['liked'] == true;
+      _likeCount = int.tryParse('${widget.p['like_count'] ?? 0}') ?? 0;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final author = '${p['author'] ?? 'Member'}';
     final created = DateTime.tryParse('${p['created_at']}');
-    final liked = p['liked'] == true;
-    final likeCount = int.tryParse('${p['like_count'] ?? 0}') ?? 0;
+    final liked = _liked;
+    final likeCount = _likeCount;
     final commentCount = int.tryParse('${p['comment_count'] ?? 0}') ?? 0;
     final title = '${p['title'] ?? ''}';
     final body = '${p['body'] ?? ''}';
@@ -473,10 +492,17 @@ class _PostCard extends ConsumerWidget {
   }
 
   Future<void> _like(WidgetRef ref) async {
+    // Optimistic: flip instantly, fire the call, revert only if it fails.
+    final prevLiked = _liked, prevCount = _likeCount;
+    setState(() {
+      _liked = !_liked;
+      _likeCount = (_likeCount + (_liked ? 1 : -1)).clamp(0, 1 << 30);
+    });
     try {
       await ref.read(apiClientProvider).post('/posts/${p['id']}/like');
-      ref.invalidate(feedPostsProvider);
-    } catch (_) {/* ignore */}
+    } catch (_) {
+      if (mounted) setState(() { _liked = prevLiked; _likeCount = prevCount; });
+    }
   }
 
   Future<void> _report(BuildContext context, WidgetRef ref) async {

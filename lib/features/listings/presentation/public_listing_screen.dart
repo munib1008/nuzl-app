@@ -379,12 +379,17 @@ class _Body extends ConsumerWidget {
       ...(() {
         final lat = double.tryParse('${m['latitude'] ?? ''}');
         final lng = double.tryParse('${m['longitude'] ?? ''}');
-        if (lat == null || lng == null) return <Widget>[];
+        final query = [m['building_name'], m['community'], 'United Arab Emirates']
+            .map((e) => '${e ?? ''}'.trim())
+            .where((e) => e.isNotEmpty)
+            .join(', ');
+        // Show the location section if we can pin OR at least centre on a community.
+        if (lat == null && lng == null && query.isEmpty) return <Widget>[];
         return [
           const SizedBox(height: AppSpacing.x24),
           Text('Location', style: t.titleMedium),
           const SizedBox(height: AppSpacing.x8),
-          LocationMap(lat: lat, lng: lng),
+          LocationMap(lat: lat, lng: lng, query: query),
         ];
       })(),
       // Mortgage CTA — links to the affordability planner (sale listings only).

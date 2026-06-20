@@ -70,13 +70,22 @@ class DealBoardScreen extends ConsumerWidget {
   }
 }
 
-class _DealCard extends ConsumerWidget {
+class _DealCard extends ConsumerStatefulWidget {
   const _DealCard(this.d, {required this.mine});
   final Map<String, dynamic> d;
   final bool mine;
+  @override
+  ConsumerState<_DealCard> createState() => _DealCardState();
+}
+
+class _DealCardState extends ConsumerState<_DealCard> {
+  bool _closed = false; // optimistic: hide as soon as Close is tapped
+  Map<String, dynamic> get d => widget.d;
+  bool get mine => widget.mine;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    if (_closed) return const SizedBox.shrink();
     final t = Theme.of(context).textTheme;
     final cat = '${d['category'] ?? ''}';
     final price = num.tryParse('${d['asking_price']}') ?? 0;
@@ -127,10 +136,11 @@ class _DealCard extends ConsumerWidget {
             if (mine)
               TextButton(
                 onPressed: () async {
+                  setState(() => _closed = true); // optimistic hide
                   try {
                     await ref.read(dealBoardRepoProvider).close('${d['id']}');
-                    ref.invalidate(dealBoardProvider);
                   } catch (e) {
+                    if (mounted) setState(() => _closed = false);
                     if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
                   }
                 },
