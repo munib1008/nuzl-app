@@ -74,23 +74,40 @@ class _Kpis extends StatelessWidget {
     ];
     return LayoutBuilder(builder: (context, c) {
       final cols = c.maxWidth >= 720 ? 4 : 2;
-      return GridView.count(
-        crossAxisCount: cols,
+      // Fixed card HEIGHT (mainAxisExtent), not a width-ratio — otherwise wide
+      // desktop columns stretch the cards into tall, mostly-empty boxes.
+      return GridView(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: AppSpacing.x12,
-        crossAxisSpacing: AppSpacing.x12,
-        childAspectRatio: 1.7,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: cols,
+          mainAxisSpacing: AppSpacing.x12,
+          crossAxisSpacing: AppSpacing.x12,
+          mainAxisExtent: 104,
+        ),
         children: [
           for (final s in stats)
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.x16),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(s.icon, size: 18, color: s.color),
-                  const Spacer(),
-                  Text(s.value, style: t.titleLarge, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text(s.label, style: t.bodySmall?.copyWith(color: muted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                child: Row(children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(s.value, style: t.displaySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: AppSpacing.x4),
+                        Text(s.label, style: t.bodySmall?.copyWith(color: muted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.x8),
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.x8),
+                    decoration: BoxDecoration(color: s.color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rMd)),
+                    child: Icon(s.icon, size: 18, color: s.color),
+                  ),
                 ]),
               ),
             ),
@@ -123,13 +140,16 @@ class _SectionGrid extends StatelessWidget {
     final tiles = crmTabs.where((d) => d.tab != CrmTab.overview).toList();
     return LayoutBuilder(builder: (context, c) {
       final cols = c.maxWidth >= 900 ? 3 : (c.maxWidth >= 560 ? 2 : 1);
-      return GridView.count(
-        crossAxisCount: cols,
+      // Fixed tile HEIGHT so wide columns don't inflate the launchpad cards.
+      return GridView(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: AppSpacing.x12,
-        crossAxisSpacing: AppSpacing.x12,
-        childAspectRatio: 2.6,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: cols,
+          mainAxisSpacing: AppSpacing.x12,
+          crossAxisSpacing: AppSpacing.x12,
+          mainAxisExtent: 92,
+        ),
         children: [
           for (final d in tiles)
             Card(
