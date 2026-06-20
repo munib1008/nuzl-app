@@ -318,7 +318,20 @@ class FeedScreen extends ConsumerWidget {
       ],
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Post')),
+        FilledButton(
+          // Validate BEFORE closing so an empty post gives clear feedback instead
+          // of silently doing nothing (the old behaviour read as "can't post").
+          onPressed: () {
+            if (title.text.trim().isEmpty && body.text.trim().isEmpty) {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(const SnackBar(content: Text('Add a title or a few words to post.')));
+              return;
+            }
+            Navigator.pop(context, true);
+          },
+          child: const Text('Post'),
+        ),
       ],
     );
     if (ok != true) return;
