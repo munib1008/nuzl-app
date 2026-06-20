@@ -86,6 +86,7 @@ import '../../features/admin/nuzler_team_screen.dart';
 import '../../features/admin/audit_screen.dart';
 import '../../features/admin/limits_screen.dart';
 import '../../features/billing/plans_screen.dart';
+import '../../features/billing/my_plan_screen.dart';
 import '../../features/crm/crm_screen.dart';
 import '../../features/crm/crm_workspace_screen.dart';
 import '../../features/invoicing/invoicing_screen.dart';
@@ -246,6 +247,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/nuzler-team', builder: (_, __) => const NuzlerTeamScreen()),
       GoRoute(path: '/audit', builder: (_, __) => const AuditScreen()),
       GoRoute(path: '/plans', builder: (_, __) => const PlansScreen()),
+      GoRoute(path: '/billing', builder: (_, __) => const MyPlanScreen()),
       GoRoute(path: '/limits', builder: (_, __) => const LimitsScreen()),
 
       GoRoute(path: '/soon/:title', builder: (_, st) => StubScreen(title: st.pathParameters['title']!)),

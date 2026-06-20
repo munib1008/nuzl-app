@@ -719,6 +719,13 @@ class NuzlSidebarBody extends ConsumerWidget {
         ),
         ListTile(
           dense: true,
+          leading: const Icon(Icons.workspace_premium_outlined, size: 20, color: AppColors.primary),
+          title: Text('Plan & billing', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
+          subtitle: Text('Your plan · features · upgrade', style: TextStyle(fontSize: 11, color: muted)),
+          onTap: () => go('/billing'),
+        ),
+        ListTile(
+          dense: true,
           leading: Icon(Icons.person_outline, size: 20, color: muted),
           title: Text('Profile & settings', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
           onTap: () => go('/profile'),
