@@ -260,6 +260,7 @@ class _Detail extends ConsumerWidget {
                             .join(', '),
                       ),
                       const SizedBox(height: AppSpacing.x24),
+                      _SimilarSection(id: id),
                     ],
                   ),
                 ),
@@ -1573,4 +1574,90 @@ Widget _statCard(BuildContext context, IconData icon, String value, String label
       Text(label, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
     ]),
   );
+}
+
+// ── Similar properties (authed detail) — same community/type, like a UAE portal.
+final _detailSimilarProvider = FutureProvider.autoDispose.family<List<dynamic>, String>((ref, id) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/public/listings/$id/similar');
+    return d is List ? d : const [];
+  } catch (_) {
+    return const [];
+  }
+});
+
+class _SimilarSection extends ConsumerWidget {
+  const _SimilarSection({required this.id});
+  final String id;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items = ref.watch(_detailSimilarProvider(id)).asData?.value ?? const [];
+    if (items.isEmpty) return const SizedBox.shrink();
+    final t = Theme.of(context).textTheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('Similar properties', style: t.titleMedium),
+      const SizedBox(height: AppSpacing.x12),
+      SizedBox(
+        height: 232,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: items.length,
+          separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.x12),
+          itemBuilder: (_, i) => _SimilarTile(Map<String, dynamic>.from(items[i] as Map)),
+        ),
+      ),
+      const SizedBox(height: AppSpacing.x24),
+    ]);
+  }
+}
+
+class _SimilarTile extends StatelessWidget {
+  const _SimilarTile(this.m);
+  final Map<String, dynamic> m;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final sid = '${m['id']}';
+    final price = num.tryParse('${m['price']}') ?? 0;
+    final isRent = '${m['purpose']}' == 'rent';
+    final money = price > 0
+        ? '${NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price)}${isRent ? ' / yr' : ''}'
+        : '';
+    final cover = '${m['cover_image'] ?? ''}';
+    final community = '${m['community'] ?? ''}';
+    final beds = m['bedrooms'];
+    final baths = m['bathrooms'];
+    return SizedBox(
+      width: 230,
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => context.push('/listings/$sid'),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            cover.isNotEmpty
+                ? Image.network(cover, height: 116, width: double.infinity, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(height: 116, color: AppColors.surface2))
+                : Container(height: 116, width: double.infinity, color: AppColors.surface2,
+                    child: const Icon(Icons.apartment_outlined, color: AppColors.textMuted)),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.x12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                if (money.isNotEmpty)
+                  Text(money, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                if (community.isNotEmpty)
+                  Text(community, style: t.bodySmall?.copyWith(color: muted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 4),
+                Text([
+                  if (beds != null) '$beds BR',
+                  if (baths != null) '$baths BA',
+                ].join(' · '), style: t.bodySmall?.copyWith(color: muted)),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
 }
