@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/data/geo.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/upload_service.dart';
 import '../../core/rbac/persona.dart';
@@ -23,6 +24,11 @@ final marketplaceProvider = FutureProvider.autoDispose.family<List<dynamic>, Str
     return [];
   }
 });
+
+/// GCC countries a provider can cover (UAE-first; cities come from [kCitiesByCountry]).
+const List<String> _gccCountries = [
+  'United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Kuwait', 'Bahrain', 'Oman',
+];
 
 class MarketplaceScreen extends ConsumerWidget {
   const MarketplaceScreen({super.key});
@@ -65,11 +71,22 @@ class MarketplaceScreen extends ConsumerWidget {
     final price = TextEditingController();
     final unit = TextEditingController();
     final delivery = TextEditingController();
-    final contact = TextEditingController();
     final moq = TextEditingController();
-    final coverage = TextEditingController();
     final photos = <String>[];
     var uploadingPhoto = false;
+    // Assigned sales contact — populated from the provider's company team (the
+    // caller is always first / the default), so every inquiry has an owner.
+    var team = <Map<String, dynamic>>[];
+    try {
+      final d = await ref.read(apiClientProvider).get('/marketplace/team');
+      if (d is List) team = d.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (_) {/* solo provider → assign self */}
+    String? assignedSalesId = team.isNotEmpty ? '${team.first['id']}' : null;
+    // Structured coverage (services): country + multi-select cities + radius.
+    var coverageCountry = 'United Arab Emirates';
+    final coverageCities = <String>{};
+    String? serviceRadius = 'cities';
+    if (!context.mounted) return;
     final ok = await AppDialog.show<bool>(
       context,
       title: 'List a service / product',
@@ -130,16 +147,58 @@ class MarketplaceScreen extends ConsumerWidget {
                     decoration: const InputDecoration(labelText: 'Lead time (days)', hintText: 'e.g. 3')),
               ),
               const SizedBox(width: AppSpacing.x8),
-              Expanded(child: TextField(controller: contact, decoration: const InputDecoration(labelText: 'Contact'))),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: assignedSalesId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Sales contact *'),
+                  items: [
+                    for (final m in team)
+                      DropdownMenuItem(value: '${m['id']}', child: Text('${m['full_name'] ?? 'Member'}', overflow: TextOverflow.ellipsis)),
+                  ],
+                  onChanged: team.isEmpty ? null : (v) => setS(() => assignedSalesId = v),
+                ),
+              ),
             ]),
             const SizedBox(height: AppSpacing.x8),
             // Catalogue depth (§1): MOQ for products, coverage areas for services.
             if (kind == 'product')
               TextField(controller: moq, keyboardType: TextInputType.number,
                   decoration: const InputDecoration(labelText: 'Min. order qty (MOQ)', hintText: 'e.g. 10'))
-            else
-              TextField(controller: coverage,
-                  decoration: const InputDecoration(labelText: 'Coverage areas', hintText: 'e.g. Dubai, Sharjah, Abu Dhabi')),
+            else ...[
+              DropdownButtonFormField<String>(
+                initialValue: coverageCountry,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Country *'),
+                items: [for (final c in _gccCountries) DropdownMenuItem(value: c, child: Text(c))],
+                onChanged: (v) => setS(() { coverageCountry = v ?? coverageCountry; coverageCities.clear(); }),
+              ),
+              const SizedBox(height: AppSpacing.x8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Coverage areas', style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppColors.textMuted)),
+              ),
+              Wrap(spacing: 6, children: [
+                for (final city in (kCitiesByCountry[coverageCountry] ?? const <String>[]))
+                  FilterChip(
+                    label: Text(city),
+                    selected: coverageCities.contains(city),
+                    onSelected: (s) => setS(() => s ? coverageCities.add(city) : coverageCities.remove(city)),
+                  ),
+              ]),
+              const SizedBox(height: AppSpacing.x8),
+              DropdownButtonFormField<String>(
+                initialValue: serviceRadius,
+                decoration: const InputDecoration(labelText: 'Service radius'),
+                items: const [
+                  DropdownMenuItem(value: 'country', child: Text('Entire country')),
+                  DropdownMenuItem(value: 'cities', child: Text('Selected cities only')),
+                  DropdownMenuItem(value: '50km', child: Text('Within 50 km')),
+                  DropdownMenuItem(value: '100km', child: Text('Within 100 km')),
+                ],
+                onChanged: (v) => setS(() => serviceRadius = v),
+              ),
+            ],
             const SizedBox(height: AppSpacing.x8),
             // Photos (§1) — first uploaded image becomes the catalogue cover.
             Align(
@@ -215,9 +274,13 @@ class MarketplaceScreen extends ConsumerWidget {
         'price': num.tryParse(price.text.trim()),
         'price_unit': unit.text.trim(),
         'delivery_days': int.tryParse(delivery.text.trim()),
-        'contact': contact.text.trim(),
+        if (assignedSalesId != null) 'assigned_sales_id': assignedSalesId,
         if (kind == 'product') 'moq': int.tryParse(moq.text.trim()),
-        if (kind == 'service') 'coverage_areas': coverage.text.trim(),
+        if (kind == 'service') ...{
+          'country': coverageCountry,
+          'coverage_cities': coverageCities.toList(),
+          'service_radius': serviceRadius,
+        },
         if (photos.isNotEmpty) 'image_url': photos.first,
         if (photos.isNotEmpty) 'gallery': photos,
       });

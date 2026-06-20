@@ -82,7 +82,8 @@ class _Detail extends ConsumerWidget {
     final rating = num.tryParse('${m['rating'] ?? ''}');
     final reviewCount = int.tryParse('${m['review_count'] ?? 0}') ?? 0;
     final delivery = int.tryParse('${m['delivery_days'] ?? ''}');
-    final contact = '${m['contact'] ?? ''}'.trim();
+    // Prefer the assigned sales contact (Listing 2.0); fall back to legacy free-text.
+    final contact = '${m['assigned_sales_name'] ?? m['contact'] ?? ''}'.trim();
     final reviews = ref.watch(_reviewsProvider(id));
 
     return ResponsiveCenter(
@@ -201,9 +202,9 @@ class _Detail extends ConsumerWidget {
               if (contact.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.x16),
                 Row(children: [
-                  Icon(Icons.call_outlined, size: 16, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
+                  Icon(Icons.support_agent_outlined, size: 16, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                   const SizedBox(width: 6),
-                  Text(contact, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                  Text('Sales contact: $contact', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ],
               const SizedBox(height: AppSpacing.x24),
