@@ -258,6 +258,69 @@ Future<Map<String, dynamic>?> _searchAgent(BuildContext context, WidgetRef ref) 
   );
 }
 
+/// Marketing status (derived from listing + tenancy) + performance counters
+/// (views/leads/viewings/offers) — owner module §3.
+class _MarketingPerformanceCard extends StatelessWidget {
+  const _MarketingPerformanceCard({required this.p});
+  final Map<String, dynamic> p;
+
+  (String, Color) _status(Map? listing, Map? tenancy) {
+    if (tenancy != null && tenancy['id'] != null) return ('Leased', AppColors.statusReserved);
+    if (listing != null && listing['id'] != null) {
+      if (listing['is_visible'] != true) return ('Draft · off-market', AppColors.statusSold);
+      final rent = '${listing['purpose']}' == 'rent';
+      return (rent ? 'For rent' : 'For sale', AppColors.statusAvailable);
+    }
+    return ('Off-market', AppColors.statusSold);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final listing = p['listing'] is Map ? Map<String, dynamic>.from(p['listing'] as Map) : null;
+    final tenancy = p['tenancy'] is Map ? Map<String, dynamic>.from(p['tenancy'] as Map) : null;
+    final perf = p['performance'] is Map ? Map<String, dynamic>.from(p['performance'] as Map) : const {};
+    int n(String k) => int.tryParse('${perf[k] ?? 0}') ?? 0;
+    final (label, color) = _status(listing, tenancy);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(child: Text('Marketing & performance', style: t.titleSmall)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+              child: Text(label, style: t.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w700)),
+            ),
+          ]),
+          const SizedBox(height: AppSpacing.x12),
+          Row(children: [
+            _metric(context, muted, 'Viewings', '${n('viewings')}', Icons.event_available_outlined),
+            _metric(context, muted, 'Offers', '${n('offers')}', Icons.local_offer_outlined),
+            _metric(context, muted, 'Leads', '${n('leads')}', Icons.people_outline),
+          ]),
+        ]),
+      ),
+    );
+  }
+
+  Widget _metric(BuildContext context, Color muted, String label, String value, IconData icon) {
+    final t = Theme.of(context).textTheme;
+    return Expanded(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(icon, size: 18, color: muted),
+        const SizedBox(height: 4),
+        Text(value, style: t.titleLarge),
+        Text(label, style: t.bodySmall?.copyWith(color: muted)),
+      ]),
+    );
+  }
+}
+
 class PropertyRecordScreen extends ConsumerWidget {
   const PropertyRecordScreen({super.key, required this.propertyId});
   final String propertyId;
@@ -290,6 +353,8 @@ class PropertyRecordScreen extends ConsumerWidget {
                   _Header(p: p),
                   const SizedBox(height: AppSpacing.x16),
                   _AgentsCard(propertyId: propertyId, isOwner: p['is_owner'] == true),
+                  const SizedBox(height: AppSpacing.x12),
+                  _MarketingPerformanceCard(p: p),
                   const SizedBox(height: AppSpacing.x12),
                   _LeaseCard(p: p),
                   const SizedBox(height: AppSpacing.x12),
