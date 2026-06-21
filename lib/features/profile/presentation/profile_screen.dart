@@ -61,6 +61,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   final nationality = TextEditingController();
   final country = TextEditingController();
   final city = TextEditingController();
+  final emiratesId = TextEditingController();
+  final passportNumber = TextEditingController();
+  String _kycStatus = 'unverified';
   final areas = <String>{};
   final languages = <String>{};
   final specialties = <String>{};
@@ -72,6 +75,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   void dispose() {
     fullName.dispose(); company.dispose(); phone.dispose(); whatsapp.dispose();
     bio.dispose(); reraBrn.dispose(); nationality.dispose(); country.dispose(); city.dispose();
+    emiratesId.dispose(); passportNumber.dispose();
     super.dispose();
   }
 
@@ -168,6 +172,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         'nationality': nationality.text.trim(),
         'country': country.text.trim(),
         'city': city.text.trim(),
+        if (emiratesId.text.trim().isNotEmpty) 'emirates_id': emiratesId.text.trim(),
+        if (passportNumber.text.trim().isNotEmpty) 'passport_number': passportNumber.text.trim(),
         'areas': areas.toList(),
         'languages': languages.toList(),
         'specialties': specialties.toList(),
@@ -206,6 +212,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     nationality.text = '${m['nationality'] ?? ''}';
     country.text = '${m['country'] ?? ''}';
     city.text = '${m['city'] ?? ''}';
+    emiratesId.text = '${m['emirates_id'] ?? ''}';
+    passportNumber.text = '${m['passport_number'] ?? ''}';
+    _kycStatus = '${m['kyc_status'] ?? 'unverified'}';
     void fill(Set<String> set, dynamic v) { set.clear(); if (v is List) set.addAll(v.map((e) => '$e')); }
     fill(areas, m['areas']); fill(languages, m['languages']); fill(specialties, m['specialties']);
   }
@@ -347,8 +356,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     nationality.text = '${m['nationality'] ?? ''}';
     country.text = '${m['country'] ?? ''}';
     city.text = '${m['city'] ?? ''}';
+    emiratesId.text = '${m['emirates_id'] ?? ''}';
+    passportNumber.text = '${m['passport_number'] ?? ''}';
+    _kycStatus = '${m['kyc_status'] ?? 'unverified'}';
     void fill(Set<String> set, dynamic v) { if (v is List) set.addAll(v.map((e) => '$e')); }
     fill(areas, m['areas']); fill(languages, m['languages']); fill(specialties, m['specialties']);
+  }
+
+  /// KYC status pill (owner deed spec §1): not started / pending review / verified.
+  Widget _kycChip() {
+    final (label, color, icon) = _kycStatus == 'verified'
+        ? ('KYC verified', AppColors.success, Icons.verified)
+        : _kycStatus == 'pending'
+            ? ('KYC pending review', AppColors.warning, Icons.hourglass_top)
+            : ('KYC not started', AppColors.textMuted, Icons.shield_outlined);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(AppSpacing.rFull),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12)),
+        ]),
+      ),
+    );
   }
 
   Widget _section(String title, String? subtitle, List<Widget> children) {
@@ -566,6 +602,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         );
                       }),
                     ),
+                  ]),
+                  const SizedBox(height: AppSpacing.x16),
+
+                  // ── Identity & verification (KYC — owner deed spec §1) ──
+                  _section('Identity & verification', 'Used to verify property ownership — visible only to Nuzl staff', [
+                    _kycChip(),
+                    const SizedBox(height: AppSpacing.x12),
+                    TextField(controller: emiratesId, onChanged: (_) => _markDirty(),
+                        decoration: const InputDecoration(
+                            labelText: 'Emirates ID', hintText: '784-____-_______-_', prefixIcon: Icon(Icons.badge_outlined))),
+                    const SizedBox(height: AppSpacing.x12),
+                    TextField(controller: passportNumber, onChanged: (_) => _markDirty(),
+                        decoration: const InputDecoration(
+                            labelText: 'Passport number', prefixIcon: Icon(Icons.menu_book_outlined))),
                   ]),
                   const SizedBox(height: AppSpacing.x16),
 
