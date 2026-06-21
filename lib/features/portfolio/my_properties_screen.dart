@@ -1,8 +1,10 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
+import '../../core/network/upload_service.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/empty_state.dart';
@@ -58,11 +60,12 @@ class MyPropertiesScreen extends ConsumerWidget {
           data: (list) {
             if (list.isEmpty) {
               return EmptyState(
-                icon: Icons.home_work_outlined,
-                title: 'No portfolio yet',
-                message: 'Create a portfolio to track your owned properties and returns.',
-                actionLabel: 'Create portfolio',
-                onAction: () => _create(context, ref),
+                icon: Icons.verified_user_outlined,
+                title: 'No properties yet',
+                message: 'Verify a property you own — upload your title deed and we’ll create the '
+                    'record for you. Or use “Add property” to enter one manually.',
+                actionLabel: 'Verify property ownership',
+                onAction: () => _verifyOwnership(context, ref),
               );
             }
             final ids = list.map((e) => '${(e as Map)['id']}').toList();
@@ -70,6 +73,15 @@ class MyPropertiesScreen extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _verifyOwnership(context, ref),
+                    icon: const Icon(Icons.verified_user_outlined),
+                    label: const Text('Verify property ownership'),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.x16),
                 if (list.length > 1) ...[
                   DropdownButtonFormField<String>(
                     initialValue: active,
@@ -90,15 +102,6 @@ class MyPropertiesScreen extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  Future<void> _create(BuildContext context, WidgetRef ref) async {
-    try {
-      await ref.read(apiClientProvider).post('/portfolio', body: {'name': 'My Portfolio'});
-      ref.invalidate(_portfoliosProvider);
-    } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
-    }
   }
 
   /// Owner adds a property RECORD they own (creates the asset + links it to their
@@ -188,6 +191,213 @@ class MyPropertiesScreen extends ConsumerWidget {
       final id = res is Map ? '${res['id'] ?? ''}' : '';
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Property added to your portfolio.')));
+        if (id.isNotEmpty) context.push('/property-record/$id');
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  /// Pick a Title Deed (PDF/image) and upload it → (url, filename) or null.
+  Future<(String, String)?> _pickDeed(BuildContext context, WidgetRef ref) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom, allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp'], withData: true);
+    if (result == null || result.files.isEmpty) return null;
+    final f = result.files.first;
+    final bytes = f.bytes;
+    if (bytes == null) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not read the file')));
+      return null;
+    }
+    final ext = (f.extension ?? '').toLowerCase();
+    final ct = ext == 'pdf'
+        ? 'application/pdf'
+        : ext == 'png' ? 'image/png' : ext == 'webp' ? 'image/webp' : 'image/jpeg';
+    try {
+      final url = await ref.read(uploadServiceProvider).upload(bytes, f.name, ct);
+      if (url == null) {
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload returned no URL')));
+        return null;
+      }
+      return (url, f.name);
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: ${friendlyError(e)}')));
+      return null;
+    }
+  }
+
+  /// Verify Property Ownership wizard (owner deed spec §2/§4/§5): upload the
+  /// title deed, confirm the details (auto-extraction lights up when document AI
+  /// is enabled), then the record is created with an ownership status from a
+  /// name-match of the account holder against the name on the deed.
+  Future<void> _verifyOwnership(BuildContext context, WidgetRef ref) async {
+    final deedName = TextEditingController();
+    final deedNo = TextEditingController();
+    final building = TextEditingController();
+    final unit = TextEditingController();
+    final beds = TextEditingController();
+    final baths = TextEditingController();
+    final size = TextEditingController();
+    final price = TextEditingController();
+    final plot = TextEditingController();
+    final muni = TextEditingController();
+    var type = 'apartment';
+    double? lat, lng;
+    String? deedUrl, deedFile;
+    DateTime? purchaseDate;
+    var uploading = false;
+
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Verify property ownership',
+      children: [
+        StatefulBuilder(builder: (ctx, setS) {
+          Future<void> pick() async {
+            setS(() => uploading = true);
+            final picked = await _pickDeed(ctx, ref);
+            setS(() {
+              uploading = false;
+              if (picked != null) { deedUrl = picked.$1; deedFile = picked.$2; }
+            });
+          }
+
+          final theme = Theme.of(ctx);
+          return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.x12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(AppSpacing.rSm),
+              ),
+              child: Row(children: [
+                Icon(Icons.info_outline, size: 18, color: theme.colorScheme.primary),
+                const SizedBox(width: AppSpacing.x8),
+                Expanded(
+                  child: Text('Upload your title deed and confirm the details below. Automatic extraction '
+                      'turns on when document AI is enabled.', style: theme.textTheme.bodySmall),
+                ),
+              ]),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: uploading ? null : pick,
+                icon: uploading
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : Icon(deedUrl != null ? Icons.check_circle_outline : Icons.upload_file_outlined),
+                label: Text(deedFile ?? 'Upload title deed (PDF / JPG / PNG)', overflow: TextOverflow.ellipsis),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: deedName, decoration: const InputDecoration(
+                labelText: 'Owner name (exactly as on the deed)')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: deedNo, decoration: const InputDecoration(labelText: 'Title deed number')),
+            const Divider(height: AppSpacing.x24),
+            PlaceField(
+              controller: building,
+              label: 'Building / location',
+              onSelected: (p) { lat = p.lat; lng = p.lng; },
+              onCleared: () { lat = null; lng = null; },
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: unit, decoration: const InputDecoration(labelText: 'Unit no.')),
+            const SizedBox(height: AppSpacing.x8),
+            DropdownButtonFormField<String>(
+              initialValue: type,
+              decoration: const InputDecoration(labelText: 'Type'),
+              items: const [
+                DropdownMenuItem(value: 'apartment', child: Text('Apartment')),
+                DropdownMenuItem(value: 'villa', child: Text('Villa')),
+                DropdownMenuItem(value: 'townhouse', child: Text('Townhouse')),
+                DropdownMenuItem(value: 'office', child: Text('Office')),
+              ],
+              onChanged: (v) => setS(() => type = v ?? 'apartment'),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(child: TextField(controller: beds, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Beds'))),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(child: TextField(controller: baths, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Baths'))),
+            ]),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(child: TextField(controller: size, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Size (sqft)'))),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(child: TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Purchase price'))),
+            ]),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(child: TextField(controller: plot, decoration: const InputDecoration(labelText: 'Plot no.'))),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(child: TextField(controller: muni, decoration: const InputDecoration(labelText: 'Municipality no.'))),
+            ]),
+            const SizedBox(height: AppSpacing.x8),
+            InkWell(
+              onTap: () async {
+                final d = await showDatePicker(
+                  context: ctx,
+                  initialDate: purchaseDate ?? DateTime(2020),
+                  firstDate: DateTime(1980),
+                  lastDate: DateTime(2100),
+                );
+                if (d != null) setS(() => purchaseDate = d);
+              },
+              child: InputDecorator(
+                decoration: const InputDecoration(labelText: 'Purchase date', suffixIcon: Icon(Icons.calendar_today, size: 18)),
+                child: Text(purchaseDate == null ? 'Select date' : DateFormat('d MMM yyyy').format(purchaseDate!)),
+              ),
+            ),
+          ]);
+        }),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () {
+            if (building.text.trim().isEmpty) {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(const SnackBar(content: Text('Add a building or location.')));
+              return;
+            }
+            Navigator.pop(context, true);
+          },
+          child: const Text('Verify & add'),
+        ),
+      ],
+    );
+    if (ok != true) return;
+    try {
+      final res = await ref.read(apiClientProvider).post('/portfolio/property', body: {
+        'building_name': building.text.trim(),
+        'unit_no': unit.text.trim(),
+        'property_type': type,
+        'bedrooms': int.tryParse(beds.text.trim()),
+        'bathrooms': int.tryParse(baths.text.trim()),
+        'size_sqft': double.tryParse(size.text.trim()),
+        'purchase_price': double.tryParse(price.text.trim()),
+        if (lat != null) 'latitude': lat,
+        if (lng != null) 'longitude': lng,
+        if (deedUrl != null) 'title_deed_url': deedUrl,
+        if (deedName.text.trim().isNotEmpty) 'owner_name_on_deed': deedName.text.trim(),
+        if (deedNo.text.trim().isNotEmpty) 'title_deed_number': deedNo.text.trim(),
+        if (plot.text.trim().isNotEmpty) 'plot_number': plot.text.trim(),
+        if (muni.text.trim().isNotEmpty) 'municipality_number': muni.text.trim(),
+        if (purchaseDate != null) 'purchase_date': purchaseDate!.toIso8601String().split('T').first,
+      });
+      ref.invalidate(_portfoliosProvider);
+      ref.invalidate(_overviewProvider);
+      final id = res is Map ? '${res['id'] ?? ''}' : '';
+      final status = res is Map ? '${res['ownership_status'] ?? ''}' : '';
+      if (context.mounted) {
+        final msg = status == 'verified'
+            ? 'Ownership verified ✓ — property added.'
+            : status == 'pending'
+                ? 'Property added — ownership pending review.'
+                : 'Property added to your portfolio.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
         if (id.isNotEmpty) context.push('/property-record/$id');
       }
     } catch (e) {
