@@ -61,6 +61,203 @@ final _propDocsProvider =
   }
 });
 
+/// Agents the owner has assigned to market this property (owner module): the
+/// owner manages the asset and DELEGATES marketing/publishing to these agents;
+/// inquiries route to them. Backed by GET/POST/DELETE /properties/:id/agents.
+final _propAgentsProvider =
+    FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, id) async {
+  try {
+    return _asList(await ref.read(apiClientProvider).get('/properties/$id/agents'));
+  } catch (_) {
+    return [];
+  }
+});
+
+/// Assigned-agents card — lists agents; the owner can assign (search) and remove.
+class _AgentsCard extends ConsumerWidget {
+  const _AgentsCard({required this.propertyId, required this.isOwner});
+  final String propertyId;
+  final bool isOwner;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final agents = ref.watch(_propAgentsProvider(propertyId));
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.handshake_outlined, size: 18, color: AppColors.primary),
+            const SizedBox(width: AppSpacing.x8),
+            Expanded(child: Text('Assigned agents', style: t.titleSmall)),
+            if (isOwner)
+              TextButton.icon(
+                onPressed: () => _assign(context, ref),
+                icon: const Icon(Icons.person_add_alt, size: 18),
+                label: const Text('Assign'),
+              ),
+          ]),
+          const SizedBox(height: AppSpacing.x4),
+          agents.when(
+            loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.x8), child: LinearProgressIndicator()),
+            error: (e, _) => Text(friendlyError(e), style: t.bodySmall?.copyWith(color: muted)),
+            data: (list) => list.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                        isOwner
+                            ? 'No agents assigned yet. Assign an agent to market this property — they publish the listing and handle inquiries.'
+                            : 'No agents assigned yet.',
+                        style: t.bodySmall?.copyWith(color: muted)),
+                  )
+                : Column(
+                    children: [
+                      for (final a in list)
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          dense: true,
+                          leading: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: AppColors.primaryTint,
+                            backgroundImage:
+                                '${a['avatar_url'] ?? ''}'.isNotEmpty ? NetworkImage('${a['avatar_url']}') : null,
+                            child: '${a['avatar_url'] ?? ''}'.isEmpty
+                                ? Text(
+                                    '${a['full_name'] ?? '?'}'.isNotEmpty ? '${a['full_name']}'[0].toUpperCase() : '?',
+                                    style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w700))
+                                : null,
+                          ),
+                          title: Text('${a['full_name'] ?? 'Agent'}'),
+                          subtitle: Text('${a['role'] ?? a['user_role'] ?? 'agent'}'.replaceAll('_', ' ')),
+                          trailing: isOwner
+                              ? IconButton(
+                                  icon: const Icon(Icons.close, size: 18),
+                                  tooltip: 'Remove',
+                                  onPressed: () =>
+                                      _revoke(context, ref, '${a['agent_id']}', '${a['full_name'] ?? 'this agent'}'),
+                                )
+                              : null,
+                          onTap: a['agent_id'] != null ? () => context.push('/u/${a['agent_id']}') : null,
+                        ),
+                    ],
+                  ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _assign(BuildContext context, WidgetRef ref) async {
+    final picked = await _searchAgent(context, ref);
+    if (picked == null) return;
+    try {
+      await ref.read(apiClientProvider).post('/properties/$propertyId/agents', body: {'agent_id': picked['id']});
+      ref.invalidate(_propAgentsProvider(propertyId));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Assigned ${picked['full_name'] ?? 'agent'} — inquiries will route to them.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  Future<void> _revoke(BuildContext context, WidgetRef ref, String agentId, String name) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove agent'),
+        content: Text('Remove $name from this property? Their access and inquiry routing stop.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Remove')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(apiClientProvider).delete('/properties/$propertyId/agents/$agentId');
+      ref.invalidate(_propAgentsProvider(propertyId));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+}
+
+/// Search the user directory for an agent to assign (GET /users/search).
+Future<Map<String, dynamic>?> _searchAgent(BuildContext context, WidgetRef ref) {
+  final search = TextEditingController();
+  var results = <Map<String, dynamic>>[];
+  return showDialog<Map<String, dynamic>>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setS) {
+        Future<void> run(String q) async {
+          if (q.trim().length < 2) {
+            setS(() => results = []);
+            return;
+          }
+          try {
+            final r = await ref.read(apiClientProvider).get('/users/search', query: {'q': q.trim()});
+            setS(() => results = (r as List).map((e) => Map<String, dynamic>.from(e as Map)).toList());
+          } catch (_) {
+            setS(() => results = []);
+          }
+        }
+
+        return AlertDialog(
+          title: const Text('Assign an agent'),
+          content: SizedBox(
+            width: MediaQuery.sizeOf(ctx).width - 80 < 380 ? MediaQuery.sizeOf(ctx).width - 80 : 380,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(
+                controller: search,
+                autofocus: true,
+                decoration: const InputDecoration(hintText: 'Search agent by name…', prefixIcon: Icon(Icons.search)),
+                onChanged: run,
+              ),
+              const SizedBox(height: AppSpacing.x8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 280),
+                child: results.isEmpty
+                    ? const Padding(padding: EdgeInsets.all(16), child: Text('Type at least 2 letters to search'))
+                    : ListView(
+                        shrinkWrap: true,
+                        children: [
+                          for (final u in results)
+                            ListTile(
+                              dense: true,
+                              leading: CircleAvatar(
+                                radius: 16,
+                                backgroundColor: AppColors.primaryTint,
+                                backgroundImage:
+                                    '${u['avatar_url'] ?? ''}'.isNotEmpty ? NetworkImage('${u['avatar_url']}') : null,
+                                child: '${u['avatar_url'] ?? ''}'.isEmpty
+                                    ? Text(
+                                        '${u['full_name'] ?? '?'}'.isNotEmpty ? '${u['full_name']}'[0].toUpperCase() : '?',
+                                        style: const TextStyle(fontSize: 12, color: AppColors.primary, fontWeight: FontWeight.w700))
+                                    : null,
+                              ),
+                              title: Text('${u['full_name'] ?? 'User'}'),
+                              subtitle: u['role'] != null ? Text('${u['role']}'.replaceAll('_', ' ')) : null,
+                              onTap: () => Navigator.pop(ctx, Map<String, dynamic>.from(u)),
+                            ),
+                        ],
+                      ),
+              ),
+            ]),
+          ),
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
+        );
+      },
+    ),
+  );
+}
+
 class PropertyRecordScreen extends ConsumerWidget {
   const PropertyRecordScreen({super.key, required this.propertyId});
   final String propertyId;
@@ -84,6 +281,7 @@ class PropertyRecordScreen extends ConsumerWidget {
               ref.invalidate(_propTimelineProvider(propertyId));
               ref.invalidate(_propMaintenanceProvider(propertyId));
               ref.invalidate(_propDocsProvider(propertyId));
+              ref.invalidate(_propAgentsProvider(propertyId));
             },
             child: ResponsiveCenter(
               child: ListView(
@@ -91,6 +289,8 @@ class PropertyRecordScreen extends ConsumerWidget {
                 children: [
                   _Header(p: p),
                   const SizedBox(height: AppSpacing.x16),
+                  _AgentsCard(propertyId: propertyId, isOwner: p['is_owner'] == true),
+                  const SizedBox(height: AppSpacing.x12),
                   _LeaseCard(p: p),
                   const SizedBox(height: AppSpacing.x12),
                   _MortgageCard(propertyId: propertyId),
