@@ -211,6 +211,65 @@ class _QueueCard extends ConsumerWidget {
 Future<String?> _askReason(BuildContext context) =>
     showDialog<String>(context: context, builder: (_) => const _RejectReasonDialog());
 
+/// Directory search to pick the new owner for an ownership transfer (§19).
+Future<Map<String, dynamic>?> _pickUser(BuildContext context, WidgetRef ref) {
+  final search = TextEditingController();
+  var results = <Map<String, dynamic>>[];
+  return showDialog<Map<String, dynamic>>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setS) {
+        Future<void> run(String q) async {
+          if (q.trim().length < 2) {
+            setS(() => results = []);
+            return;
+          }
+          try {
+            final r = await ref.read(apiClientProvider).get('/users/search', query: {'q': q.trim()});
+            setS(() => results = (r as List).map((e) => Map<String, dynamic>.from(e as Map)).toList());
+          } catch (_) {
+            setS(() => results = []);
+          }
+        }
+
+        return AlertDialog(
+          title: const Text('Transfer to'),
+          content: SizedBox(
+            width: 380,
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(
+                controller: search,
+                autofocus: true,
+                decoration: const InputDecoration(hintText: 'Search a user by name…', prefixIcon: Icon(Icons.search)),
+                onChanged: run,
+              ),
+              const SizedBox(height: AppSpacing.x8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 280),
+                child: results.isEmpty
+                    ? const Padding(padding: EdgeInsets.all(16), child: Text('Type at least 2 letters to search'))
+                    : ListView(
+                        shrinkWrap: true,
+                        children: [
+                          for (final u in results)
+                            ListTile(
+                              dense: true,
+                              title: Text('${u['full_name'] ?? 'User'}'),
+                              subtitle: u['email'] != null ? Text('${u['email']}') : null,
+                              onTap: () => Navigator.pop(ctx, Map<String, dynamic>.from(u)),
+                            ),
+                        ],
+                      ),
+              ),
+            ]),
+          ),
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
+        );
+      },
+    ),
+  );
+}
+
 class _RejectReasonDialog extends StatefulWidget {
   const _RejectReasonDialog();
   @override
@@ -284,6 +343,47 @@ class _OwnerRecordCard extends ConsumerWidget {
     }
   }
 
+  Future<void> _lock(BuildContext context, WidgetRef ref, bool locked) async {
+    try {
+      await ref.read(apiClientProvider).post('/admin/ownership-records/${item['id']}/lock', body: {'locked': locked});
+      ref.invalidate(ownershipRecordsProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(locked ? 'Property locked' : 'Property unlocked')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  Future<void> _transfer(BuildContext context, WidgetRef ref) async {
+    final picked = await _pickUser(context, ref);
+    if (picked == null || !context.mounted) return;
+    final name = '${picked['full_name'] ?? 'this user'}';
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Transfer ownership'),
+        content: Text('Transfer this property to $name? Ownership resets to pending and the property moves to their portfolio.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Transfer')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(apiClientProvider)
+          .post('/admin/ownership-records/${item['id']}/transfer', body: {'owner_id': picked['id']});
+      ref.invalidate(ownershipRecordsProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ownership transferred to $name')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
@@ -298,6 +398,7 @@ class _OwnerRecordCard extends ConsumerWidget {
     final refCode = '${item['ref_code'] ?? ''}'.trim();
     final score = num.tryParse('${item['ownership_match_score'] ?? ''}');
     final deedUrl = '${item['deed_url'] ?? ''}'.trim();
+    final locked = item['locked'] == true;
 
     return Card(
       child: Padding(
@@ -310,6 +411,10 @@ class _OwnerRecordCard extends ConsumerWidget {
                 child: Text(title.isEmpty ? 'Property' : title,
                     style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
               ),
+              if (locked)
+                const Padding(
+                    padding: EdgeInsets.only(right: 6),
+                    child: Icon(Icons.lock, size: 14, color: AppColors.danger)),
               if (refCode.isNotEmpty) Text(refCode, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
             ]),
             const SizedBox(height: 2),
@@ -345,6 +450,16 @@ class _OwnerRecordCard extends ConsumerWidget {
                   onPressed: () => _approve(context, ref),
                   icon: const Icon(Icons.verified, size: 18),
                   label: const Text('Verify'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _lock(context, ref, !locked),
+                  icon: Icon(locked ? Icons.lock_open_outlined : Icons.lock_outline, size: 18),
+                  label: Text(locked ? 'Unlock' : 'Lock'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () => _transfer(context, ref),
+                  icon: const Icon(Icons.swap_horiz, size: 18),
+                  label: const Text('Transfer'),
                 ),
               ],
             ),
