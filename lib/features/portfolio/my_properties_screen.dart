@@ -49,9 +49,9 @@ class MyPropertiesScreen extends ConsumerWidget {
       appBar: const NuzlAppBar(title: 'My Properties'),
       drawer: const NuzlDrawer(),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _addProperty(context, ref),
-        icon: const Icon(Icons.add_home_outlined),
-        label: const Text('Add property'),
+        onPressed: () => _verifyOwnership(context, ref),
+        icon: const Icon(Icons.verified_user_outlined),
+        label: const Text('Verify ownership'),
       ),
       body: ResponsiveCenter(
         child: portfolios.when(
@@ -61,9 +61,10 @@ class MyPropertiesScreen extends ConsumerWidget {
             if (list.isEmpty) {
               return EmptyState(
                 icon: Icons.verified_user_outlined,
-                title: 'No properties yet',
+                title: 'Start with ownership',
                 message: 'Verify a property you own — upload your title deed and we’ll create the '
-                    'record for you. Or use “Add property” to enter one manually.',
+                    'record for you. (Off-plan, international or commercial without a deed? '
+                    'Use “Add unverified property”.)',
                 actionLabel: 'Verify property ownership',
                 onAction: () => _verifyOwnership(context, ref),
               );
@@ -73,15 +74,18 @@ class MyPropertiesScreen extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _verifyOwnership(context, ref),
-                    icon: const Icon(Icons.verified_user_outlined),
-                    label: const Text('Verify property ownership'),
+                // Primary path is the "Verify ownership" FAB. Manual entry is the
+                // exception (off-plan / international / commercial / no deed) and
+                // lands as an Unverified asset until a deed is verified.
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () => _addProperty(context, ref),
+                    icon: const Icon(Icons.add_home_outlined, size: 18),
+                    label: const Text('Add unverified property'),
                   ),
                 ),
-                const SizedBox(height: AppSpacing.x16),
+                const SizedBox(height: AppSpacing.x8),
                 if (list.length > 1) ...[
                   DropdownButtonFormField<String>(
                     initialValue: active,
@@ -118,10 +122,29 @@ class MyPropertiesScreen extends ConsumerWidget {
     double? lat, lng;
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Add a property',
+      title: 'Add unverified property',
       children: [
         StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.x12),
+              decoration: BoxDecoration(
+                color: Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(AppSpacing.rSm),
+              ),
+              child: Row(children: [
+                Icon(Icons.info_outline, size: 18, color: Theme.of(ctx).colorScheme.primary),
+                const SizedBox(width: AppSpacing.x8),
+                Expanded(
+                  child: Text(
+                    'For off-plan (Oqood), international or commercial properties without a title deed. '
+                    'It will be marked Unverified until you verify ownership.',
+                    style: Theme.of(ctx).textTheme.bodySmall,
+                  ),
+                ),
+              ]),
+            ),
+            const SizedBox(height: AppSpacing.x12),
             PlaceField(
               controller: building,
               label: 'Building / location',
@@ -492,7 +515,10 @@ class _PropCard extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: const Icon(Icons.home_outlined),
-        title: Text(title.isEmpty ? 'Property' : title),
+        title: Row(children: [
+          Expanded(child: Text(title.isEmpty ? 'Property' : title, overflow: TextOverflow.ellipsis)),
+          _ownershipChip(context, '${p['ownership_status'] ?? ''}'),
+        ]),
         subtitle: Text('Equity ${_money(p['equity'])}'),
         // Open the full property record hub (lease, mortgage, maintenance, docs, timeline).
         onTap: pid.isEmpty ? null : () => context.push('/property-record/$pid'),
@@ -504,6 +530,26 @@ class _PropCard extends StatelessWidget {
             const Padding(padding: EdgeInsets.only(left: 4), child: Icon(Icons.chevron_right, size: 18)),
         ]),
       ),
+    );
+  }
+
+  /// Ownership-status pill — leads with the verified/unverified distinction so the
+  /// asset's trust state is visible at a glance (Verify-ownership-first model).
+  Widget _ownershipChip(BuildContext context, String status) {
+    final (label, color) = switch (status) {
+      'verified' => ('Verified', Colors.green),
+      'pending' => ('Pending', Colors.orange),
+      'rejected' => ('Rejected', Colors.red),
+      _ => ('Unverified', Theme.of(context).hintColor),
+    };
+    return Container(
+      margin: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppSpacing.rFull),
+      ),
+      child: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 11)),
     );
   }
 }
