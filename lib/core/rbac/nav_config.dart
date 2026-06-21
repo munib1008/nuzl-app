@@ -154,6 +154,7 @@ List<NavItem> navItemsFor(Persona p) {
     case Persona.admin:
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
+        NavItem(Icons.query_stats_outlined, 'Platform Report', '/admin/report'),
         NavItem(Icons.business_outlined, 'Organizations', '/organizations'),
         NavItem(Icons.verified_user_outlined, 'Verification', '/verification-queue'),
         NavItem(Icons.domain_verification_outlined, 'Companies', '/company-verifications'),

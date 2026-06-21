@@ -92,6 +92,7 @@ import '../../features/admin/nuzler_team_screen.dart';
 import '../../features/admin/audit_screen.dart';
 import '../../features/admin/limits_screen.dart';
 import '../../features/admin/admin_settings_screen.dart';
+import '../../features/admin/admin_report_screen.dart';
 import '../../features/billing/plans_screen.dart';
 import '../../features/billing/my_plan_screen.dart';
 import '../../features/crm/crm_screen.dart';
@@ -277,6 +278,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/billing', builder: (_, __) => const MyPlanScreen()),
       GoRoute(path: '/limits', builder: (_, __) => const LimitsScreen()),
       GoRoute(path: '/admin/settings', builder: (_, __) => const AdminSettingsScreen()),
+      GoRoute(path: '/admin/report', builder: (_, __) => const AdminReportScreen()),
 
       GoRoute(path: '/soon/:title', builder: (_, st) => StubScreen(title: st.pathParameters['title']!)),
 
