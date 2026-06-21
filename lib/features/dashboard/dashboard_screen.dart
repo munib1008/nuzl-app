@@ -1336,6 +1336,33 @@ final _featuredMktProvider = FutureProvider.autoDispose.family<List<dynamic>, St
   }
 });
 
+/// Friendly empty state for a dashboard strip (clean/new-platform first-run) —
+/// keeps the section visible with a prompt instead of vanishing.
+Widget _stripEmpty(BuildContext context,
+    {required String title, required IconData icon, required String message, String? actionLabel, VoidCallback? onAction}) {
+  final t = Theme.of(context).textTheme;
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+  return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Row(children: [
+      Expanded(child: Text(title, style: t.titleMedium)),
+      if (actionLabel != null) TextButton(onPressed: onAction, child: Text(actionLabel)),
+    ]),
+    const SizedBox(height: AppSpacing.x8),
+    Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.x20, horizontal: AppSpacing.x16),
+      decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(16)),
+      child: Row(children: [
+        Icon(icon, size: 22, color: muted),
+        const SizedBox(width: AppSpacing.x12),
+        Expanded(child: Text(message, style: t.bodySmall?.copyWith(color: muted))),
+      ]),
+    ),
+    const SizedBox(height: AppSpacing.x24),
+  ]);
+}
+
 class _MarketplaceStrip extends ConsumerWidget {
   const _MarketplaceStrip();
 
@@ -1344,7 +1371,12 @@ class _MarketplaceStrip extends ConsumerWidget {
     final t = Theme.of(context).textTheme;
     final services = ref.watch(_featuredMktProvider('service')).asData?.value ?? const [];
     final products = ref.watch(_featuredMktProvider('product')).asData?.value ?? const [];
-    if (services.isEmpty && products.isEmpty) return const SizedBox.shrink();
+    if (services.isEmpty && products.isEmpty) {
+      return _stripEmpty(context,
+          title: 'From the marketplace', icon: Icons.storefront_outlined,
+          message: 'Services and products from verified providers will appear here.',
+          actionLabel: 'Browse all', onAction: () => context.go('/marketplace'));
+    }
     Widget group(String label, List<dynamic> items, IconData fallbackIcon) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1426,7 +1458,12 @@ class _RecommendedProperties extends ConsumerWidget {
     final recs = ref.watch(_recommendedProvider);
     return recs.maybeWhen(
       data: (list) {
-        if (list.isEmpty) return const SizedBox.shrink();
+        if (list.isEmpty) {
+          return _stripEmpty(context,
+              title: 'Recommended for you', icon: Icons.recommend_outlined,
+              message: 'Personalised picks appear here as new properties are listed.',
+              actionLabel: 'Browse properties', onAction: () => context.go('/properties'));
+        }
         final aed = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
         return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
