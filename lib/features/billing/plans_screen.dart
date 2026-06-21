@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
+import '../../core/payments/payments_service.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -40,6 +41,7 @@ class PlansScreen extends ConsumerWidget {
     final orgId = ref.watch(authControllerProvider).user?.organizationId;
     final sub = (orgId == null) ? null : ref.watch(_subscriptionProvider(orgId)).asData?.value;
     final currentName = (sub == null) ? null : '${sub['plan_name'] ?? ''}';
+    final paymentsLive = ref.watch(paymentsConfigProvider).asData?.value ?? false;
 
     return Scaffold(
       appBar: const NuzlAppBar(title: 'Plans'),
@@ -85,11 +87,13 @@ class PlansScreen extends ConsumerWidget {
                   );
                 }),
               const SizedBox(height: AppSpacing.x8),
-              const Card(
+              Card(
                 child: ListTile(
-                  leading: Icon(Icons.lock_outline),
-                  title: Text('Checkout & payment'),
-                  subtitle: Text('Online card checkout is coming soon. Subscribing here activates the plan now.'),
+                  leading: Icon(paymentsLive ? Icons.lock_outline : Icons.lock_clock_outlined),
+                  title: Text(paymentsLive ? 'Secure card checkout' : 'Checkout & payment'),
+                  subtitle: Text(paymentsLive
+                      ? 'Subscribing opens a secure Stripe checkout to pay by card.'
+                      : 'Online card checkout is coming soon. Subscribing here activates the plan now.'),
                 ),
               ),
             ],
@@ -123,6 +127,11 @@ class PlansScreen extends ConsumerWidget {
   }
 
   Future<void> _subscribe(BuildContext context, WidgetRef ref, String orgId, String planKey) async {
+    // Prefer live Stripe checkout; fall back to direct activation while dormant.
+    final outcome = await startSubscriptionCheckout(context, ref, plan: planKey);
+    if (outcome == SubscribeOutcome.redirected) return; // leaves the app for Stripe-hosted page
+    if (outcome == SubscribeOutcome.error) return; // message already surfaced by the helper
+    // Dormant (payments not enabled yet) → activate immediately, pre-billing behaviour.
     try {
       await ref.read(apiClientProvider).post('/organizations/$orgId/subscription', body: {'plan': planKey});
       ref.invalidate(_subscriptionProvider(orgId));

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/payments/payments_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/async_view.dart';
@@ -123,17 +124,31 @@ class _PlanCard extends StatelessWidget {
             ),
           if (!current) ...[
             const SizedBox(height: AppSpacing.x12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => _enquire(context),
-                child: Text(p.key == 'enterprise' ? 'Contact sales' : 'Upgrade to ${p.name}'),
+            Consumer(
+              builder: (ctx, ref, _) => SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => _upgrade(ctx, ref),
+                  child: Text(p.key == 'enterprise' ? 'Contact sales' : 'Upgrade to ${p.name}'),
+                ),
               ),
             ),
           ],
         ]),
       ),
     );
+  }
+
+  /// Enterprise → sales enquiry; paid plans → live Stripe subscription checkout.
+  /// While Stripe is still dormant the helper returns [SubscribeOutcome.dormant]
+  /// and we fall back to the manual "we'll set you up" path (no dead button).
+  Future<void> _upgrade(BuildContext context, WidgetRef ref) async {
+    if (p.key == 'enterprise') {
+      _enquire(context);
+      return;
+    }
+    final outcome = await startSubscriptionCheckout(context, ref, plan: p.key);
+    if (outcome == SubscribeOutcome.dormant && context.mounted) _enquire(context);
   }
 
   void _enquire(BuildContext context) {
