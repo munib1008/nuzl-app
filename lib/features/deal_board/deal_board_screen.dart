@@ -204,6 +204,63 @@ class _PostDealSheetState extends ConsumerState<_PostDealSheet> {
     super.dispose();
   }
 
+  /// Paste a WhatsApp-style property message → fill the deal fields via the
+  /// shared /deal-assistant/parse extractor (only fills empty fields).
+  Future<void> _autoFill() async {
+    final ctrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Auto-fill from a message'),
+        content: SizedBox(
+          width: MediaQuery.sizeOf(ctx).width - 80 < 420 ? MediaQuery.sizeOf(ctx).width - 80 : 420,
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Paste a WhatsApp-style property message — we’ll extract the details.',
+                style: TextStyle(fontSize: 13)),
+            const SizedBox(height: AppSpacing.x12),
+            TextField(
+              controller: ctrl, autofocus: true, maxLines: 5,
+              decoration: const InputDecoration(
+                  hintText: 'e.g. Burj Crown 2BR 1066 sqft Canal View AED 3.1M', border: OutlineInputBorder()),
+            ),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Extract')),
+        ],
+      ),
+    );
+    if (ok != true || ctrl.text.trim().isEmpty || !mounted) return;
+    try {
+      final res = await ref.read(apiClientProvider).post('/deal-assistant/parse', body: {'text': ctrl.text.trim()});
+      final d = (res is Map && res['draft'] is Map) ? Map<String, dynamic>.from(res['draft']) : <String, dynamic>{};
+      setState(() {
+        if (d['building_name'] != null && _building.text.isEmpty) _building.text = '${d['building_name']}';
+        if (d['unit_no'] != null && _unit.text.isEmpty) _unit.text = '${d['unit_no']}';
+        if (d['community'] != null && _community.text.isEmpty) _community.text = '${d['community']}';
+        if (d['bedrooms'] != null && _beds.text.isEmpty) _beds.text = '${d['bedrooms']}';
+        if (d['price'] is num && _price.text.isEmpty) _price.text = (d['price'] as num).toStringAsFixed(0);
+        if (_title.text.trim().isEmpty) {
+          final br = d['bedrooms'] != null ? '${d['bedrooms']}BR ' : '';
+          final t = '$br${d['building_name'] ?? d['community'] ?? ''}'.trim();
+          if (t.isNotEmpty) _title.text = t;
+        }
+        final extra = [
+          if ('${d['view'] ?? ''}'.trim().isNotEmpty) '${d['view']}',
+          if (d['size_sqft'] is num) '${(d['size_sqft'] as num).toStringAsFixed(0)} sqft',
+        ].join(' · ');
+        if (extra.isNotEmpty && _note.text.trim().isEmpty) _note.text = extra;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Filled from your message — review and adjust.')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
   Future<void> _save() async {
     if (_title.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add a title')));
@@ -240,6 +297,14 @@ class _PostDealSheetState extends ConsumerState<_PostDealSheet> {
       child: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Post a deal', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: AppSpacing.x8),
+          // Paste a WhatsApp-style blurb → pre-fill the deal (same extractor the
+          // listing form uses).
+          OutlinedButton.icon(
+            onPressed: _saving ? null : _autoFill,
+            icon: const Icon(Icons.auto_fix_high_outlined, size: 18),
+            label: const Text('Auto-fill from a message'),
+          ),
           const SizedBox(height: AppSpacing.x12),
           DropdownButtonFormField<String>(
             initialValue: _category,
