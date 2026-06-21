@@ -269,6 +269,7 @@ class MyPropertiesScreen extends ConsumerWidget {
     String? deedUrl, deedFile;
     DateTime? purchaseDate;
     var uploading = false;
+    var extracted = false;
 
     final ok = await AppDialog.show<bool>(
       context,
@@ -278,10 +279,35 @@ class MyPropertiesScreen extends ConsumerWidget {
           Future<void> pick() async {
             setS(() => uploading = true);
             final picked = await _pickDeed(ctx, ref);
-            setS(() {
-              uploading = false;
-              if (picked != null) { deedUrl = picked.$1; deedFile = picked.$2; }
-            });
+            if (picked != null) {
+              deedUrl = picked.$1;
+              deedFile = picked.$2;
+              // OCR auto-extract (config-gated; manual fallback if AI key not set).
+              try {
+                final res = await ref.read(apiClientProvider)
+                    .post('/deal-assistant/extract-deed', body: {'url': picked.$1});
+                if (res is Map && res['available'] == true && res['fields'] is Map) {
+                  final f = Map<String, dynamic>.from(res['fields'] as Map);
+                  void setIf(TextEditingController c, dynamic vv) {
+                    final s = '${vv ?? ''}'.trim();
+                    if (s.isNotEmpty && c.text.trim().isEmpty) c.text = s;
+                  }
+                  setIf(deedName, f['owner_name_on_deed']);
+                  setIf(deedNo, f['title_deed_number']);
+                  setIf(building, f['building_name'] ?? f['community']);
+                  setIf(unit, f['unit_no']);
+                  setIf(plot, f['plot_number']);
+                  setIf(muni, f['municipality_number']);
+                  setIf(size, f['size_sqft']);
+                  final ptype = '${f['property_type'] ?? ''}';
+                  if (const ['apartment', 'villa', 'townhouse', 'office'].contains(ptype)) type = ptype;
+                  final d = DateTime.tryParse('${f['purchase_date'] ?? ''}');
+                  if (d != null) purchaseDate = d;
+                  extracted = true;
+                }
+              } catch (_) {/* manual fallback */}
+            }
+            setS(() => uploading = false);
           }
 
           final theme = Theme.of(ctx);
@@ -289,15 +315,19 @@ class MyPropertiesScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(AppSpacing.x12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.06),
+                color: (extracted ? Colors.green : theme.colorScheme.primary).withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(AppSpacing.rSm),
               ),
               child: Row(children: [
-                Icon(Icons.info_outline, size: 18, color: theme.colorScheme.primary),
+                Icon(extracted ? Icons.auto_awesome : Icons.info_outline, size: 18,
+                    color: extracted ? Colors.green : theme.colorScheme.primary),
                 const SizedBox(width: AppSpacing.x8),
                 Expanded(
-                  child: Text('Upload your title deed and confirm the details below. Automatic extraction '
-                      'turns on when document AI is enabled.', style: theme.textTheme.bodySmall),
+                  child: Text(
+                    extracted
+                        ? 'Auto-filled from your title deed — please review and confirm before saving.'
+                        : 'Upload your title deed and confirm the details below. Fields auto-fill when document AI is enabled.',
+                    style: theme.textTheme.bodySmall),
                 ),
               ]),
             ),
