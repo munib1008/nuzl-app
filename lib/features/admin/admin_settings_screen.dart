@@ -25,6 +25,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
   final _bools = <String, bool>{};
   bool _loaded = false;
   bool _saving = false;
+  bool _purging = false;
 
   @override
   void dispose() {
@@ -109,6 +110,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
                   _group(context, entry.key, entry.value, defs),
                   const SizedBox(height: AppSpacing.x12),
                 ],
+                _dangerZone(context),
                 const SizedBox(height: 72),
               ],
             );
@@ -116,6 +118,80 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
         ),
       ),
     );
+  }
+
+  Widget _dangerZone(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final muted = Theme.of(context).hintColor;
+    return Card(
+      color: Colors.red.withValues(alpha: 0.06),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.warning_amber_rounded, size: 18, color: Colors.red),
+            const SizedBox(width: AppSpacing.x8),
+            Text('Danger zone', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: Colors.red)),
+          ]),
+          const SizedBox(height: AppSpacing.x8),
+          Text(
+            'Permanently delete all seed/demo data: test accounts (@nuzl.test, @demo.nuzl.ae), demo '
+            'listings, properties, marketplace items and posts. Real accounts and admin@nuzl.ae are kept. '
+            'Reversible only by re-seeding. Also set SEED_TEST_ACCOUNTS=false in the API env so it does not '
+            'recreate test accounts on the next deploy.',
+            style: t.bodySmall?.copyWith(color: muted),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          OutlinedButton.icon(
+            onPressed: _purging ? null : _purgeDemo,
+            style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red)),
+            icon: _purging
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red))
+                : const Icon(Icons.delete_sweep_outlined, size: 18),
+            label: const Text('Purge demo / test data'),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _purgeDemo() async {
+    final confirm = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Purge demo / test data'),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('This permanently deletes all seed/demo records. Real users and admin@nuzl.ae are kept. '
+              'Type PURGE to confirm.'),
+          const SizedBox(height: AppSpacing.x12),
+          TextField(controller: confirm, autofocus: true, decoration: const InputDecoration(hintText: 'PURGE')),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, confirm.text.trim().toUpperCase() == 'PURGE'),
+            child: const Text('Purge'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _purging = true);
+    try {
+      final res = await ref.read(apiClientProvider).post('/admin/purge-demo-data');
+      final del = (res is Map && res['deleted'] is Map) ? Map<String, dynamic>.from(res['deleted'] as Map) : {};
+      final total = del.values.fold<int>(0, (s, v) => s + (int.tryParse('$v') ?? 0));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Demo data purged — $total records removed. Hard-refresh to see the clean state.')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    } finally {
+      if (mounted) setState(() => _purging = false);
+    }
   }
 
   Widget _group(BuildContext context, String group, List<String> keys, Map<String, dynamic> defs) {
