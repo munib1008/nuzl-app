@@ -87,6 +87,11 @@ class MarketplaceScreen extends ConsumerWidget {
     var coverageCountry = 'United Arab Emirates';
     final coverageCities = <String>{};
     String? serviceRadius = 'cities';
+    // Service availability — working days/hours so customer bookings stay within them.
+    final workDays = <int>{1, 2, 3, 4, 5, 6}; // Mon–Sat by default
+    var workStart = const TimeOfDay(hour: 9, minute: 0);
+    var workEnd = const TimeOfDay(hour: 18, minute: 0);
+    var slotMinutes = 60;
     if (!context.mounted) return;
     final ok = await AppDialog.show<bool>(
       context,
@@ -199,6 +204,55 @@ class MarketplaceScreen extends ConsumerWidget {
                 ],
                 onChanged: (v) => setS(() => serviceRadius = v),
               ),
+              const SizedBox(height: AppSpacing.x12),
+              // Working hours — customer bookings are constrained to these.
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text('Working days', style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppColors.textMuted)),
+              ),
+              const SizedBox(height: 4),
+              Wrap(spacing: 6, children: [
+                for (var i = 1; i <= 7; i++)
+                  FilterChip(
+                    label: Text(const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i - 1]),
+                    selected: workDays.contains(i),
+                    onSelected: (s) => setS(() => s ? workDays.add(i) : workDays.remove(i)),
+                  ),
+              ]),
+              const SizedBox(height: AppSpacing.x8),
+              Row(children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      final picked = await showTimePicker(context: ctx, initialTime: workStart, helpText: 'Opening time');
+                      if (picked != null) setS(() => workStart = picked);
+                    },
+                    child: Text('Opens ${workStart.format(ctx)}'),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.x8),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      final picked = await showTimePicker(context: ctx, initialTime: workEnd, helpText: 'Closing time');
+                      if (picked != null) setS(() => workEnd = picked);
+                    },
+                    child: Text('Closes ${workEnd.format(ctx)}'),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: AppSpacing.x8),
+              DropdownButtonFormField<int>(
+                initialValue: slotMinutes,
+                decoration: const InputDecoration(labelText: 'Booking slot length'),
+                items: const [
+                  DropdownMenuItem(value: 30, child: Text('30 minutes')),
+                  DropdownMenuItem(value: 60, child: Text('1 hour')),
+                  DropdownMenuItem(value: 90, child: Text('1.5 hours')),
+                  DropdownMenuItem(value: 120, child: Text('2 hours')),
+                ],
+                onChanged: (v) => setS(() => slotMinutes = v ?? 60),
+              ),
             ],
             const SizedBox(height: AppSpacing.x8),
             // Photos (§1) — first uploaded image becomes the catalogue cover.
@@ -281,6 +335,10 @@ class MarketplaceScreen extends ConsumerWidget {
           'country': coverageCountry,
           'coverage_cities': coverageCities.toList(),
           'service_radius': serviceRadius,
+          'work_days': (workDays.toList()..sort()).join(','),
+          'work_start': '${workStart.hour.toString().padLeft(2, '0')}:${workStart.minute.toString().padLeft(2, '0')}',
+          'work_end': '${workEnd.hour.toString().padLeft(2, '0')}:${workEnd.minute.toString().padLeft(2, '0')}',
+          'slot_minutes': slotMinutes,
         },
         if (photos.isNotEmpty) 'image_url': photos.first,
         if (photos.isNotEmpty) 'gallery': photos,
@@ -537,16 +595,19 @@ class _ItemCard extends ConsumerWidget {
   Future<void> _order(BuildContext context, WidgetRef ref, {bool quote = false}) async {
     final isProduct = '${m['kind'] ?? 'service'}' == 'product';
     String? scheduledAt;
+    String? bookingNote;
     if (!quote && !isProduct) {
-      final when = await pickServiceSchedule(context);
-      if (when == null) return; // customer cancelled the date/time picker
-      scheduledAt = when.toIso8601String();
+      final booking = await pickServiceBooking(context, m); // constrained to working hours
+      if (booking == null) return; // customer cancelled
+      scheduledAt = booking.when.toIso8601String();
+      bookingNote = booking.note;
     }
     try {
       await ref.read(apiClientProvider).post('/marketplace/orders', body: {
         'item_id': m['id'],
         if (quote) 'quote': true,
         if (scheduledAt != null) 'scheduled_at': scheduledAt,
+        if (bookingNote != null) 'note': bookingNote,
       });
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(

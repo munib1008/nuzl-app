@@ -272,16 +272,19 @@ class _Detail extends ConsumerWidget {
     // Booking a service → capture the preferred date & time so the provider
     // knows when to perform it. (Products & quote requests aren't scheduled.)
     String? scheduledAt;
+    String? bookingNote;
     if (!quote && !isProduct) {
-      final when = await pickServiceSchedule(context);
-      if (when == null) return; // customer cancelled the date/time picker
-      scheduledAt = when.toIso8601String();
+      final booking = await pickServiceBooking(context, m); // constrained to working hours
+      if (booking == null) return; // customer cancelled
+      scheduledAt = booking.when.toIso8601String();
+      bookingNote = booking.note;
     }
     try {
       await ref.read(apiClientProvider).post('/marketplace/orders', body: {
         'item_id': id,
         if (quote) 'quote': true,
         if (scheduledAt != null) 'scheduled_at': scheduledAt,
+        if (bookingNote != null) 'note': bookingNote,
       });
       ref.invalidate(marketplaceProvider('${m['kind'] ?? 'service'}'));
       if (context.mounted) {
