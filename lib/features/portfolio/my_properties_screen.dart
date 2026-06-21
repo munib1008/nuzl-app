@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/place_field.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
@@ -44,6 +46,11 @@ class MyPropertiesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: const NuzlAppBar(title: 'My Properties'),
       drawer: const NuzlDrawer(),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _addProperty(context, ref),
+        icon: const Icon(Icons.add_home_outlined),
+        label: const Text('Add property'),
+      ),
       body: ResponsiveCenter(
         child: portfolios.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
@@ -89,6 +96,100 @@ class MyPropertiesScreen extends ConsumerWidget {
     try {
       await ref.read(apiClientProvider).post('/portfolio', body: {'name': 'My Portfolio'});
       ref.invalidate(_portfoliosProvider);
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  /// Owner adds a property RECORD they own (creates the asset + links it to their
+  /// portfolio). No public listing is created — they assign an agent on the
+  /// property workspace, and the agent publishes it.
+  Future<void> _addProperty(BuildContext context, WidgetRef ref) async {
+    final building = TextEditingController();
+    final unit = TextEditingController();
+    final beds = TextEditingController();
+    final baths = TextEditingController();
+    final size = TextEditingController();
+    final price = TextEditingController();
+    var type = 'apartment';
+    double? lat, lng;
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Add a property',
+      children: [
+        StatefulBuilder(
+          builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
+            PlaceField(
+              controller: building,
+              label: 'Building / location',
+              onSelected: (p) { lat = p.lat; lng = p.lng; },
+              onCleared: () { lat = null; lng = null; },
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: unit, decoration: const InputDecoration(labelText: 'Unit no.')),
+            const SizedBox(height: AppSpacing.x8),
+            DropdownButtonFormField<String>(
+              initialValue: type,
+              decoration: const InputDecoration(labelText: 'Type'),
+              items: const [
+                DropdownMenuItem(value: 'apartment', child: Text('Apartment')),
+                DropdownMenuItem(value: 'villa', child: Text('Villa')),
+                DropdownMenuItem(value: 'townhouse', child: Text('Townhouse')),
+                DropdownMenuItem(value: 'office', child: Text('Office')),
+              ],
+              onChanged: (v) => setS(() => type = v ?? 'apartment'),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(child: TextField(controller: beds, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Beds'))),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(child: TextField(controller: baths, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Baths'))),
+            ]),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(child: TextField(controller: size, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Size (sqft)'))),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(child: TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Purchase price'))),
+            ]),
+          ]),
+        ),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () {
+            if (building.text.trim().isEmpty) {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(const SnackBar(content: Text('Add a building or location.')));
+              return;
+            }
+            Navigator.pop(context, true);
+          },
+          child: const Text('Add'),
+        ),
+      ],
+    );
+    if (ok != true) return;
+    try {
+      final res = await ref.read(apiClientProvider).post('/portfolio/property', body: {
+        'building_name': building.text.trim(),
+        'unit_no': unit.text.trim(),
+        'property_type': type,
+        'bedrooms': int.tryParse(beds.text.trim()),
+        'bathrooms': int.tryParse(baths.text.trim()),
+        'size_sqft': double.tryParse(size.text.trim()),
+        'purchase_price': double.tryParse(price.text.trim()),
+        if (lat != null) 'latitude': lat,
+        if (lng != null) 'longitude': lng,
+      });
+      ref.invalidate(_portfoliosProvider);
+      ref.invalidate(_overviewProvider);
+      final id = res is Map ? '${res['id'] ?? ''}' : '';
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Property added to your portfolio.')));
+        if (id.isNotEmpty) context.push('/property/$id');
+      }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
