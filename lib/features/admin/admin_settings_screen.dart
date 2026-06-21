@@ -23,6 +23,7 @@ class AdminSettingsScreen extends ConsumerStatefulWidget {
 class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
   final _controllers = <String, TextEditingController>{};
   final _bools = <String, bool>{};
+  Map<String, bool> _secretSet = {}; // which secret keys currently have a stored value
   bool _loaded = false;
   bool _saving = false;
   bool _purging = false;
@@ -58,6 +59,8 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
         body[k] = _bools[k];
       } else {
         final txt = _controllers[k]?.text.trim() ?? '';
+        // Secret keys: a blank field means "leave unchanged" — don't send it.
+        if (def['secret'] == true && txt.isEmpty) return;
         body[k] = def['default'] is num ? (num.tryParse(txt) ?? def['default']) : txt;
       }
     });
@@ -94,6 +97,9 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
           data: (d) {
             final settings = Map<String, dynamic>.from(d['settings'] as Map? ?? const {});
             final defs = Map<String, dynamic>.from(d['defs'] as Map? ?? const {});
+            _secretSet = {
+              for (final e in (d['secretSet'] as Map? ?? const {}).entries) '${e.key}': e.value == true,
+            };
             if (defs.isEmpty) {
               return const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('No settings available.')));
             }
@@ -218,12 +224,29 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
         onChanged: (v) => setState(() => _bools[k] = v),
       );
     }
+    final isSecret = def['secret'] == true;
+    final configured = _secretSet[k] == true;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
       child: TextField(
         controller: _controllers[k],
         keyboardType: def['default'] is num ? TextInputType.number : TextInputType.text,
-        decoration: InputDecoration(labelText: label),
+        obscureText: isSecret,
+        autocorrect: !isSecret,
+        enableSuggestions: !isSecret,
+        decoration: InputDecoration(
+          labelText: label,
+          // Stored secrets are never sent back; a blank field keeps the current value.
+          hintText: isSecret && configured ? '•••••••• (configured)' : null,
+          helperText: isSecret
+              ? (configured ? 'Configured — leave blank to keep, or type a new value to replace' : 'Not set')
+              : null,
+          helperMaxLines: 2,
+          suffixIcon: isSecret
+              ? Icon(configured ? Icons.check_circle_outline : Icons.lock_outline,
+                  size: 18, color: configured ? Colors.green : Theme.of(context).hintColor)
+              : null,
+        ),
       ),
     );
   }
