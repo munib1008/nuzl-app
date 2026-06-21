@@ -14,6 +14,7 @@ import '../../core/widgets/hover_lift.dart';
 import '../../core/widgets/skeleton_loader.dart';
 import '../../core/widgets/status_badge.dart';
 import '../shell/app_shell.dart';
+import 'booking_schedule.dart';
 import 'marketplace_taxonomy.dart';
 
 final marketplaceProvider = FutureProvider.autoDispose.family<List<dynamic>, String>((ref, kind) async {
@@ -532,15 +533,26 @@ class _ItemCard extends ConsumerWidget {
       );
 
   /// Place an order (product) or book a service. `quote` records a quotation request.
+  /// Service bookings capture a preferred date & time so the provider can schedule.
   Future<void> _order(BuildContext context, WidgetRef ref, {bool quote = false}) async {
+    final isProduct = '${m['kind'] ?? 'service'}' == 'product';
+    String? scheduledAt;
+    if (!quote && !isProduct) {
+      final when = await pickServiceSchedule(context);
+      if (when == null) return; // customer cancelled the date/time picker
+      scheduledAt = when.toIso8601String();
+    }
     try {
       await ref.read(apiClientProvider).post('/marketplace/orders', body: {
         'item_id': m['id'],
         if (quote) 'quote': true,
+        if (scheduledAt != null) 'scheduled_at': scheduledAt,
       });
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(quote ? 'Quotation requested — track it in Orders.' : 'Order placed — track it in Orders.'),
+          content: Text(quote
+              ? 'Quotation requested — track it in Orders.'
+              : (scheduledAt != null ? 'Service booked — track it in Orders.' : 'Order placed — track it in Orders.')),
           action: SnackBarAction(label: 'View', onPressed: () => context.go('/orders')),
         ));
       }

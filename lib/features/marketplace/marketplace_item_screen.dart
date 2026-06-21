@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
+import 'booking_schedule.dart';
 import 'marketplace_screen.dart' show marketplaceProvider;
 
 final _itemProvider = FutureProvider.autoDispose.family<Map<String, dynamic>?, String>((ref, id) async {
@@ -267,15 +268,27 @@ class _Detail extends ConsumerWidget {
       );
 
   Future<void> _order(BuildContext context, WidgetRef ref, {bool quote = false}) async {
+    final isProduct = '${m['kind'] ?? 'service'}' == 'product';
+    // Booking a service → capture the preferred date & time so the provider
+    // knows when to perform it. (Products & quote requests aren't scheduled.)
+    String? scheduledAt;
+    if (!quote && !isProduct) {
+      final when = await pickServiceSchedule(context);
+      if (when == null) return; // customer cancelled the date/time picker
+      scheduledAt = when.toIso8601String();
+    }
     try {
       await ref.read(apiClientProvider).post('/marketplace/orders', body: {
         'item_id': id,
         if (quote) 'quote': true,
+        if (scheduledAt != null) 'scheduled_at': scheduledAt,
       });
       ref.invalidate(marketplaceProvider('${m['kind'] ?? 'service'}'));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(quote ? 'Quotation requested — track it in Orders.' : 'Order placed — track it in Orders.'),
+          content: Text(quote
+              ? 'Quotation requested — track it in Orders.'
+              : (scheduledAt != null ? 'Service booked — track it in Orders.' : 'Order placed — track it in Orders.')),
           action: SnackBarAction(label: 'View', onPressed: () => context.go('/orders')),
         ));
       }

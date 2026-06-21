@@ -267,6 +267,7 @@ class _OrderCard extends ConsumerWidget {
     final price = num.tryParse('${o['quoted_price'] ?? ''}');
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
     final created = DateTime.tryParse('${o['created_at']}');
+    final scheduledAt = DateTime.tryParse('${o['scheduled_at'] ?? ''}');
     final flow = flowFor(kind);
     final curIdx = flow.indexOf(status);
     final next = nextStatus(kind, status);
@@ -306,6 +307,20 @@ class _OrderCard extends ConsumerWidget {
               if (price != null) aed.format(price),
               if (created != null) DateFormat('d MMM').format(created),
             ].join('  ·  '), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+          ],
+          // Booked service slot — the key info for the provider to plan the job.
+          if (scheduledAt != null) ...[
+            const SizedBox(height: 4),
+            Row(children: [
+              Icon(Icons.event_available_outlined, size: 14, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  '${mine ? 'Scheduled' : 'Requested'}: ${DateFormat('EEE d MMM · h:mm a').format(scheduledAt)}',
+                  style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ]),
           ],
           // Status progress (the flow, current step highlighted). Hidden when
           // cancelled or still pre-order (quote_requested / quoted → curIdx < 0).
