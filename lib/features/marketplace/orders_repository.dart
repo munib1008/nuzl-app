@@ -49,6 +49,16 @@ final incomingOrdersProvider = FutureProvider.autoDispose<List<Map<String, dynam
   return d is List ? d.map((e) => Map<String, dynamic>.from(e as Map)).toList() : <Map<String, dynamic>>[];
 });
 
+/// Provider/supplier scorecard for the incoming-orders dashboard (§8).
+final marketplaceStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/marketplace/orders/stats');
+    return d is Map ? Map<String, dynamic>.from(d) : <String, dynamic>{};
+  } catch (_) {
+    return <String, dynamic>{};
+  }
+});
+
 /// The caller's properties (flat) — for the service-booking "assigned property" picker.
 final bookablePropertiesProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
   try {

@@ -53,7 +53,7 @@ class _OrdersList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final provider = mine ? myOrdersProvider : incomingOrdersProvider;
     final orders = ref.watch(provider);
-    return RefreshIndicator(
+    final body = RefreshIndicator(
       onRefresh: () async => ref.invalidate(provider),
       child: AsyncView<List<Map<String, dynamic>>>(
         value: orders,
@@ -80,6 +80,52 @@ class _OrdersList extends ConsumerWidget {
             itemBuilder: (_, i) => _OrderCard(o: list[i], mine: mine, listProvider: provider),
           );
         },
+      ),
+    );
+    // Provider/supplier view leads with a KPI scorecard (§8).
+    if (mine) return body;
+    return Column(children: [const _ProviderStatsCard(), Expanded(child: body)]);
+  }
+}
+
+/// Compact provider scorecard shown above the incoming-orders queue (§8).
+class _ProviderStatsCard extends ConsumerWidget {
+  const _ProviderStatsCard();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final muted = Theme.of(context).hintColor;
+    final aed = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
+    final s = ref.watch(marketplaceStatsProvider).asData?.value ?? const {};
+    if (s.isEmpty) return const SizedBox.shrink();
+    num n(String k) => num.tryParse('${s[k] ?? 0}') ?? 0;
+    final rating = s['avg_rating'];
+    final resp = s['avg_response_hours'];
+    final completion = s['completion_rate'];
+    final tiles = <(String, String)>[
+      ('Received', '${n('received')}'),
+      ('Active', '${n('active')}'),
+      ('Completed', '${n('completed')}'),
+      ('Revenue', aed.format(n('revenue'))),
+      ('Avg rating', rating == null ? '—' : '$rating★'),
+      ('Completion', completion == null ? '—' : '$completion%'),
+      if (resp != null) ('Avg response', '${resp}h'),
+    ];
+    return Card(
+      margin: const EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x12, AppSpacing.x16, 0),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Your orders', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: AppSpacing.x8),
+          Wrap(spacing: AppSpacing.x20, runSpacing: AppSpacing.x8, children: [
+            for (final tile in tiles)
+              Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(tile.$2, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.primary)),
+                Text(tile.$1, style: t.bodySmall?.copyWith(color: muted)),
+              ]),
+          ]),
+        ]),
       ),
     );
   }
