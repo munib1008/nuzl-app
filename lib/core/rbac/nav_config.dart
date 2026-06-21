@@ -129,14 +129,16 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
     case Persona.owner:
-      // Slimmed: the Cockpit merged into the Dashboard, and Financials /
-      // Mortgages / Requests are surfaced via dashboard widgets + quick actions
-      // (routes still live) — so the top nav stays an operational shortlist.
+      // Owner = asset manager, NOT a listing agent. Their home is My Properties
+      // (own portfolio) + Finance & ROI — not the agent marketplace. Public
+      // listing publication is delegated to assigned agents (Owner module
+      // redesign). Marketplace stays for buying services; Feed is the public feed.
       return const [
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
-        NavItem(Icons.apartment_outlined, 'Properties', '/properties'),
+        NavItem(Icons.home_work_outlined, 'My Properties', '/my-properties'),
         NavItem(Icons.vpn_key_outlined, 'Rentals', '/rentals'),
         NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
+        NavItem(Icons.account_balance_wallet_outlined, 'Finance & ROI', '/financials'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
         NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.folder_outlined, 'Documents', '/documents'),
