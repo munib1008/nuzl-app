@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
@@ -46,9 +47,10 @@ class NotificationsScreen extends ConsumerWidget {
             ]),
             data: (list) => list.isEmpty
                 ? ListView(children: const [
-                    Padding(
-                      padding: EdgeInsets.all(60),
-                      child: Center(child: Text('You’re all caught up — no notifications.')),
+                    EmptyState(
+                      icon: Icons.notifications_none,
+                      title: 'You’re all caught up',
+                      message: 'New alerts about your leads, deals and properties will show up here.',
                     ),
                   ])
                 : ListView.separated(

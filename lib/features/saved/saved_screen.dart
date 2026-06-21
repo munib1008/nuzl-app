@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
@@ -80,10 +81,13 @@ class SavedScreen extends ConsumerWidget {
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
             error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(friendlyError(e))))]),
             data: (list) => list.isEmpty
-                ? ListView(children: const [
-                    Padding(
-                      padding: EdgeInsets.all(48),
-                      child: Center(child: Text('No saved properties yet.\nTap the bookmark on a listing to save it.', textAlign: TextAlign.center)),
+                ? ListView(children: [
+                    EmptyState(
+                      icon: Icons.bookmark_border,
+                      title: 'No saved properties yet',
+                      message: 'Tap the bookmark on any listing to save it here for quick access.',
+                      actionLabel: 'Browse properties',
+                      onAction: () => context.go('/properties'),
                     ),
                   ])
                 : ListView.separated(

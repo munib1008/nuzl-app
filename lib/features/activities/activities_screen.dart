@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive.dart';
 import '../crm/crm_scaffold.dart';
 
@@ -35,7 +36,13 @@ class ActivitiesScreen extends ConsumerWidget {
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
           error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) => list.isEmpty
-              ? const Center(child: Padding(padding: EdgeInsets.all(40), child: Text('No activity yet. Log your first one.')))
+              ? EmptyState(
+                  icon: Icons.timeline_outlined,
+                  title: 'No activity yet',
+                  message: 'Log calls, meetings and notes to keep a timeline of your work.',
+                  actionLabel: 'Log activity',
+                  onAction: () => _addDialog(context, ref),
+                )
               : ListView.separated(
                   padding: const EdgeInsets.all(AppSpacing.x16),
                   itemCount: list.length,

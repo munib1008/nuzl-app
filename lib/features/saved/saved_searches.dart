@@ -7,6 +7,7 @@ import '../../core/network/api_endpoints.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
@@ -195,14 +196,12 @@ class _SavedSearchesScreenState extends ConsumerState<SavedSearchesScreen> {
                     padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
                 error: (e, _) => Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e))),
                 data: (list) => list.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 32),
-                        child: Center(
-                          child: Text(
-                            'No saved searches yet.\nUse “Save search” on the Properties screen to get alerts on new matches.',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
+                    ? EmptyState(
+                        icon: Icons.saved_search,
+                        title: 'No saved searches yet',
+                        message: 'Use “Save search” on the Properties screen to get alerts on new matches.',
+                        actionLabel: 'Browse properties',
+                        onAction: () => context.go('/properties'),
                       )
                     : Column(
                         children: list

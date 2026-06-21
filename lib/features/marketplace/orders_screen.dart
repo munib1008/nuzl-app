@@ -8,6 +8,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/async_view.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/status_badge.dart';
 import '../shell/app_shell.dart';
 import 'orders_repository.dart';
@@ -48,7 +49,6 @@ class _OrdersList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final provider = mine ? myOrdersProvider : incomingOrdersProvider;
     final orders = ref.watch(provider);
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(provider),
       child: AsyncView<List<Map<String, dynamic>>>(
@@ -57,12 +57,14 @@ class _OrdersList extends ConsumerWidget {
         data: (list) {
           if (list.isEmpty) {
             return ListView(children: [
-              Padding(
-                padding: const EdgeInsets.all(48),
-                child: Center(
-                  child: Text(mine ? 'You have no orders yet.' : 'No incoming orders.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
-                ),
+              EmptyState(
+                icon: Icons.receipt_long_outlined,
+                title: mine ? 'No orders yet' : 'No incoming orders',
+                message: mine
+                    ? 'Orders you place in the marketplace will appear here.'
+                    : 'Orders from buyers will appear here once they purchase.',
+                actionLabel: mine ? 'Browse marketplace' : null,
+                onAction: mine ? () => context.go('/marketplace') : null,
               ),
             ]);
           }

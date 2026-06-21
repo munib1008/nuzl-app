@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive.dart';
 import '../../core/widgets/status_badge.dart';
 import '../auth/application/auth_controller.dart';
@@ -48,9 +49,10 @@ class ViewingsScreen extends ConsumerWidget {
             error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(friendlyError(e))))]),
             data: (list) => list.isEmpty
                 ? ListView(children: const [
-                    Padding(
-                      padding: EdgeInsets.all(48),
-                      child: Center(child: Text('No viewing requests yet.', textAlign: TextAlign.center)),
+                    EmptyState(
+                      icon: Icons.event_available_outlined,
+                      title: 'No viewing requests yet',
+                      message: 'Viewing requests from buyers and tenants will appear here.',
                     ),
                   ])
                 : ListView.separated(

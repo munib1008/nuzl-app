@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/empty_state.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../crm/crm_scaffold.dart';
 
@@ -32,16 +33,13 @@ class DealsScreen extends ConsumerWidget {
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
             error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (list) => list.isEmpty
-                ? ListView(children: [Padding(
-                    padding: const EdgeInsets.all(40),
-                    child: Column(children: [
-                      Icon(Icons.handshake_outlined, size: 44, color: Theme.of(context).hintColor),
-                      const SizedBox(height: 12),
-                      const Text('No deals yet', textAlign: TextAlign.center),
-                      const SizedBox(height: 4),
-                      Text('Deals appear here when an offer is accepted.',
-                          textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).hintColor)),
-                    ]))])
+                ? ListView(children: const [
+                    EmptyState(
+                      icon: Icons.handshake_outlined,
+                      title: 'No deals yet',
+                      message: 'Deals appear here when an offer is accepted.',
+                    ),
+                  ])
                 : ListView.separated(
                     padding: const EdgeInsets.all(AppSpacing.x16),
                     itemCount: list.length,

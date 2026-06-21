@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/async_view.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/status_badge.dart';
 import '../crm/crm_scaffold.dart';
 import 'opportunities_repository.dart';
@@ -36,11 +37,11 @@ class OpportunitiesScreen extends ConsumerWidget {
           onRetry: () => ref.invalidate(opportunitiesProvider),
           data: (list) {
             if (list.isEmpty) {
-              return ListView(children: [
-                Padding(
-                  padding: const EdgeInsets.all(48),
-                  child: Center(child: Text('No opportunities yet.',
-                      style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
+              return ListView(children: const [
+                EmptyState(
+                  icon: Icons.trending_up,
+                  title: 'No opportunities yet',
+                  message: 'Opportunities appear here as you qualify and progress your leads.',
                 ),
               ]);
             }
