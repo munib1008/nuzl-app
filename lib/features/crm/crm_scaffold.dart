@@ -69,7 +69,10 @@ class CrmScaffold extends StatelessWidget {
       appBar: NuzlAppBar(title: inCrm ? 'CRM' : title, actions: actions),
       drawer: const NuzlDrawer(),
       floatingActionButton: floatingActionButton,
-      body: inCrm
+      // On the CRM overview the Workspace launchpad cards already list every
+      // section, so the tab strip there is a duplicate — show it only on the
+      // sub-pages (where it's the primary in-workspace navigation).
+      body: (inCrm && tab != CrmTab.overview)
           ? Column(children: [CrmTabStrip(active: tab), Expanded(child: body)])
           : body,
     );

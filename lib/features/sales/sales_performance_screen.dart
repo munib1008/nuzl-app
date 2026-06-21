@@ -87,13 +87,15 @@ class _MyScorecard extends StatelessWidget {
     ];
     return LayoutBuilder(builder: (context, c) {
       final cols = c.maxWidth >= 720 ? 3 : 2;
-      return GridView.count(
-        crossAxisCount: cols,
+      return GridView(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: AppSpacing.x12,
-        crossAxisSpacing: AppSpacing.x12,
-        childAspectRatio: 1.7,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: cols,
+          mainAxisSpacing: AppSpacing.x12,
+          crossAxisSpacing: AppSpacing.x12,
+          mainAxisExtent: 104,
+        ),
         children: [
           for (final s in stats)
             Card(

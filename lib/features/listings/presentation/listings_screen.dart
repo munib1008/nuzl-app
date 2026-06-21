@@ -82,6 +82,9 @@ class ListingsScreen extends ConsumerWidget {
             icon: const Icon(Icons.upload_file_outlined),
             onPressed: () => context.push('/properties/import'),
           ),
+        // One saved-search icon only — "save this search". The saved-searches
+        // LIST (with alerts) is reached from Saved (bookmark) → Saved searches,
+        // so the extra alerts bell here was a duplicate.
         SaveSearchAction(filters: {
           if (purpose != 'all') 'purpose': purpose,
           if (type != 'all') 'property_type': type,
@@ -90,7 +93,6 @@ class ListingsScreen extends ConsumerWidget {
           if (priceMax != null) 'max_price': priceMax,
           if (query.isNotEmpty) 'q': query,
         }),
-        const SavedSearchAlertsBell(),
       ]),
       drawer: const NuzlDrawer(),
       floatingActionButton: canList

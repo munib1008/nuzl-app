@@ -111,13 +111,15 @@ class _Overview extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            GridView.count(
-              crossAxisCount: 2,
+            GridView(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: AppSpacing.x12,
-              crossAxisSpacing: AppSpacing.x12,
-              childAspectRatio: 1.6,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: AppSpacing.x12,
+                crossAxisSpacing: AppSpacing.x12,
+                mainAxisExtent: 104,
+              ),
               children: [
                 _Stat('Market value', _money(totals['market_value'])),
                 _Stat('Equity', _money(totals['equity'])),

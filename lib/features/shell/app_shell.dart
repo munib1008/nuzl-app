@@ -51,11 +51,12 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
               builder: (ctx) {
                 final canBack = ctx.canPop();
                 final loc = GoRouterState.of(ctx).matchedLocation;
-                // Primary tabs = the bottom-nav destinations (+ dashboard); those
-                // keep the drawer button. Everything else (Performance, Reports,
-                // detail pages, …) gets a back arrow so you can always return.
+                // Any nav DESTINATION (any drawer/sidebar item, + dashboard) keeps
+                // the menu button so the drawer is always reachable — including
+                // drawer-only pages like Performance & Reports. Only detail/pushed
+                // pages (not in the menu) get a back arrow.
                 final primary = loc == '/dashboard' ||
-                    navItemsFor(ref.watch(personaProvider)).take(5).any((it) => isActiveRoute(loc, it.route));
+                    navItemsFor(ref.watch(personaProvider)).any((it) => isActiveRoute(loc, it.route));
                 final showBack = canBack || !primary;
                 return IconButton(
                   tooltip: showBack ? 'Back' : 'Menu',
@@ -85,48 +86,63 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
         // Role switching lives in ONE place — the role chip under the logo in the
         // sidebar/drawer (_RoleChip). No duplicate switcher in the app bar.
         ...?actions,
-        IconButton(
-          tooltip: 'Report an issue / feedback',
-          icon: const Icon(Icons.bug_report_outlined),
-          onPressed: () => showFeedbackDialog(context, ref, title),
-        ),
-        IconButton(
-          tooltip: 'Toggle light / dark',
-          icon: Icon(Theme.of(context).brightness == Brightness.dark
-              ? Icons.light_mode_outlined
-              : Icons.dark_mode_outlined),
-          onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
-        ),
         ref.watch(unreadCountProvider).maybeWhen(
               data: (n) => _Bell(count: n, onTap: () => context.go('/notifications')),
               orElse: () => IconButton(
                   icon: const Icon(Icons.notifications_none),
                   onPressed: () => context.go('/notifications')),
             ),
+        // One profile menu holds Profile/settings, Rewards & referrals, Plan &
+        // billing, Report an issue and the light/dark toggle — keeping the app
+        // bar and the left menu uncluttered.
         PopupMenuButton<String>(
           offset: const Offset(0, 48),
           onSelected: (v) async {
-            if (v == 'profile') context.go('/profile');
-            if (v == 'logout') {
-              await ref.read(authControllerProvider.notifier).logout();
-              if (context.mounted) context.go('/');
+            switch (v) {
+              case 'profile':
+                context.go('/profile');
+              case 'rewards':
+                context.go('/rewards-hub');
+              case 'billing':
+                context.go('/billing');
+              case 'feedback':
+                showFeedbackDialog(context, ref, title);
+              case 'theme':
+                ref.read(themeModeProvider.notifier).toggle();
+              case 'logout':
+                await ref.read(authControllerProvider.notifier).logout();
+                if (context.mounted) context.go('/');
             }
           },
-          itemBuilder: (_) => [
-            PopupMenuItem(
-              enabled: false,
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(user?.fullName ?? 'Account', style: Theme.of(context).textTheme.titleSmall),
-                Text(user?.email ?? '', style: Theme.of(context).textTheme.bodySmall),
-              ]),
-            ),
-            const PopupMenuDivider(),
-            const PopupMenuItem(value: 'profile', child: ListTile(
-                leading: Icon(Icons.settings_outlined), title: Text('Settings'), dense: true)),
-            const PopupMenuItem(value: 'logout', child: ListTile(
-                leading: Icon(Icons.logout, color: AppColors.danger),
-                title: Text('Logout'), dense: true)),
-          ],
+          itemBuilder: (_) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            return [
+              PopupMenuItem(
+                enabled: false,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(user?.fullName ?? 'Account', style: Theme.of(context).textTheme.titleSmall),
+                  Text(user?.email ?? '', style: Theme.of(context).textTheme.bodySmall),
+                ]),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(value: 'profile', child: ListTile(
+                  leading: Icon(Icons.person_outline), title: Text('Profile & settings'), dense: true)),
+              const PopupMenuItem(value: 'rewards', child: ListTile(
+                  leading: Icon(Icons.card_giftcard, color: AppColors.accentGold),
+                  title: Text('Rewards & referrals'), dense: true)),
+              const PopupMenuItem(value: 'billing', child: ListTile(
+                  leading: Icon(Icons.workspace_premium_outlined), title: Text('Plan & billing'), dense: true)),
+              const PopupMenuItem(value: 'feedback', child: ListTile(
+                  leading: Icon(Icons.bug_report_outlined), title: Text('Report an issue'), dense: true)),
+              PopupMenuItem(value: 'theme', child: ListTile(
+                  leading: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
+                  title: Text(isDark ? 'Light mode' : 'Dark mode'), dense: true)),
+              const PopupMenuDivider(),
+              const PopupMenuItem(value: 'logout', child: ListTile(
+                  leading: Icon(Icons.logout, color: AppColors.danger),
+                  title: Text('Logout'), dense: true)),
+            ];
+          },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x12),
             child: Builder(builder: (_) {
@@ -746,30 +762,8 @@ class NuzlSidebarBody extends ConsumerWidget {
             }).toList(),
           ),
         ),
-        const Divider(height: 1),
-        // Footer tiles share one type scale with the nav items above (dense,
-        // 14px / w500, theme onSurface) so 'Profile & settings' no longer
-        // renders larger than its neighbours.
-        ListTile(
-          dense: true,
-          leading: const Icon(Icons.card_giftcard, size: 20, color: AppColors.accentGold),
-          title: Text('Rewards & referrals', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
-          subtitle: Text('Refer & earn · offers · leaderboard', style: TextStyle(fontSize: 11, color: muted)),
-          onTap: () => go('/rewards-hub'),
-        ),
-        ListTile(
-          dense: true,
-          leading: const Icon(Icons.workspace_premium_outlined, size: 20, color: AppColors.primary),
-          title: Text('Plan & billing', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
-          subtitle: Text('Your plan · features · upgrade', style: TextStyle(fontSize: 11, color: muted)),
-          onTap: () => go('/billing'),
-        ),
-        ListTile(
-          dense: true,
-          leading: Icon(Icons.person_outline, size: 20, color: muted),
-          title: Text('Profile & settings', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: onSurface)),
-          onTap: () => go('/profile'),
-        ),
+        // Profile & settings, Rewards & referrals and Plan & billing now live in
+        // the app-bar profile menu (avatar dropdown) — keeping the left menu lean.
       ]),
     );
   }

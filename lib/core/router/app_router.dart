@@ -134,6 +134,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (loc == '/leads' || loc.startsWith('/leads/')) {
         if (!ref.read(personaProvider).canManageLeads) return '/dashboard';
       }
+      // Community is the agents-only professional hub (deal sharing + discussion).
+      // Non-agents (buyers/owners/tenants/…) use the public Feed instead — bounce
+      // them so they can't deep-link into it.
+      if (loc == '/community') {
+        final p = ref.read(personaProvider);
+        if (p != Persona.agent && p != Persona.broker && p != Persona.developer) {
+          return '/dashboard';
+        }
+      }
       return null;
     },
     routes: [

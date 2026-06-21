@@ -11,11 +11,24 @@ import 'data/messaging_repository.dart';
 import 'domain/conversation.dart';
 
 /// Inbox — the list of the user's conversations. Tapping one opens the thread.
-class MessagesScreen extends ConsumerWidget {
+class MessagesScreen extends ConsumerStatefulWidget {
   const MessagesScreen({super.key});
+  @override
+  ConsumerState<MessagesScreen> createState() => _MessagesScreenState();
+}
+
+class _MessagesScreenState extends ConsumerState<MessagesScreen> {
+  final _search = TextEditingController();
+  String _q = '';
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final inbox = ref.watch(inboxProvider);
     return Scaffold(
       appBar: const NuzlAppBar(title: 'Messages'),
@@ -25,14 +38,55 @@ class MessagesScreen extends ConsumerWidget {
           loading: () => const Center(
               child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
           error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
-          data: (list) => list.isEmpty
-              ? const _EmptyInbox()
-              : ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
-                  itemCount: list.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1, indent: 76),
-                  itemBuilder: (_, i) => _ConversationTile(c: list[i]),
+          data: (list) {
+            if (list.isEmpty) return const _EmptyInbox();
+            final q = _q.trim().toLowerCase();
+            final filtered = q.isEmpty
+                ? list
+                : list
+                    .where((c) =>
+                        c.title.toLowerCase().contains(q) ||
+                        (c.lastPreview ?? '').toLowerCase().contains(q))
+                    .toList();
+            return Column(children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x12, AppSpacing.x16, AppSpacing.x8),
+                child: TextField(
+                  controller: _search,
+                  onChanged: (v) => setState(() => _q = v),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: 'Search conversations…',
+                    prefixIcon: const Icon(Icons.search, size: 20),
+                    suffixIcon: _q.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.close, size: 18),
+                            onPressed: () {
+                              _search.clear();
+                              setState(() => _q = '');
+                            },
+                          )
+                        : null,
+                  ),
                 ),
+              ),
+              Expanded(
+                child: filtered.isEmpty
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Text('No conversations match “${_search.text.trim()}”.'),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, __) => const Divider(height: 1, indent: 76),
+                        itemBuilder: (_, i) => _ConversationTile(c: filtered[i]),
+                      ),
+              ),
+            ]);
+          },
         ),
       ),
     );

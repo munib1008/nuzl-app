@@ -74,13 +74,15 @@ class ReportsScreen extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
-                GridView.count(
-                  crossAxisCount: 2,
+                GridView(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: AppSpacing.x12,
-                  crossAxisSpacing: AppSpacing.x12,
-                  childAspectRatio: 1.7,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    mainAxisSpacing: AppSpacing.x12,
+                    crossAxisSpacing: AppSpacing.x12,
+                    mainAxisExtent: 104,
+                  ),
                   children: entries.map((e) => _StatCard(label: e.key, value: e.value)).toList(),
                 ),
                 const SizedBox(height: AppSpacing.x24),
