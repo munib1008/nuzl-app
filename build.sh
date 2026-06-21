@@ -20,4 +20,5 @@ flutter config --enable-web --no-analytics
 # generate only the missing web runner files; never overwrites our lib/
 flutter create . --platforms=web --project-name nuzl_app
 flutter pub get
-flutter build web --release --dart-define=API_BASE_URL=/api
+# SENTRY_DSN is optional — empty define keeps crash reporting dormant.
+flutter build web --release --dart-define=API_BASE_URL=/api --dart-define=SENTRY_DSN="${SENTRY_DSN:-}" --dart-define=SENTRY_ENV="${VERCEL_ENV:-production}"
