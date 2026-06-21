@@ -12,6 +12,7 @@ import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/skeleton_loader.dart';
 import '../../core/widgets/status_badge.dart';
 import '../shell/app_shell.dart';
+import 'booking_schedule.dart';
 import 'orders_repository.dart';
 
 BadgeTone _statusTone(String s) {
@@ -93,6 +94,24 @@ class _OrderCard extends ConsumerWidget {
       await ref.read(apiClientProvider).patch('/marketplace/orders/${o['id']}/status', body: {'status': status});
       ref.invalidate(myOrdersProvider);
       ref.invalidate(incomingOrdersProvider);
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  /// Provider confirms / reschedules the service slot → notifies the customer.
+  Future<void> _schedule(BuildContext context, WidgetRef ref) async {
+    final when = await pickServiceSchedule(context);
+    if (when == null) return;
+    try {
+      await ref.read(apiClientProvider).patch('/marketplace/orders/${o['id']}/schedule',
+          body: {'scheduled_at': when.toIso8601String()});
+      ref.invalidate(myOrdersProvider);
+      ref.invalidate(incomingOrdersProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Slot confirmed — the customer has been notified.')));
+      }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
@@ -373,6 +392,14 @@ class _OrderCard extends ConsumerWidget {
               FilledButton(onPressed: () => _respondQuote(context, ref, true), child: const Text('Accept quote')),
               OutlinedButton(onPressed: () => _respondQuote(context, ref, false), child: const Text('Decline')),
             ],
+            // Provider: confirm / reschedule the service slot (notifies the customer).
+            if (!mine && kind == 'service' && !orderIsTerminal(status) &&
+                status != 'quote_requested' && status != 'quoted')
+              OutlinedButton.icon(
+                onPressed: () => _schedule(context, ref),
+                icon: const Icon(Icons.event_outlined, size: 16),
+                label: Text(scheduledAt == null ? 'Set time' : 'Reschedule'),
+              ),
             if (!mine && next != null && status != 'quote_requested' && status != 'quoted')
               FilledButton(
                 onPressed: () => _patch(context, ref, next),
