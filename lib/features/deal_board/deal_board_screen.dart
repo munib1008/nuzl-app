@@ -6,6 +6,7 @@ import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/async_view.dart';
+import '../../core/widgets/place_field.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../auth/application/auth_controller.dart';
@@ -195,6 +196,8 @@ class _PostDealSheetState extends ConsumerState<_PostDealSheet> {
   String _category = 'hot_deal';
   String _visibility = 'verified';
   bool _saving = false;
+  double? _lat; // map pin from the place autocomplete
+  double? _lng;
 
   @override
   void dispose() {
@@ -275,6 +278,8 @@ class _PostDealSheetState extends ConsumerState<_PostDealSheet> {
         'building_name': _building.text.trim(),
         'unit_no': _unit.text.trim(),
         'community': _community.text.trim(),
+        if (_lat != null) 'latitude': _lat,
+        if (_lng != null) 'longitude': _lng,
         'bedrooms': int.tryParse(_beds.text.trim()),
         'asking_price': double.tryParse(_price.text.trim()),
         'commission_share': _commission.text.trim(),
@@ -333,7 +338,13 @@ class _PostDealSheetState extends ConsumerState<_PostDealSheet> {
             Expanded(child: TextField(controller: _unit, decoration: const InputDecoration(labelText: 'Unit'))),
           ]),
           const SizedBox(height: AppSpacing.x8),
-          TextField(controller: _community, decoration: const InputDecoration(labelText: 'Community')),
+          PlaceField(
+            controller: _community,
+            label: 'Location / community',
+            hint: 'Search a building, community or address…',
+            onSelected: (p) => setState(() { _lat = p.lat; _lng = p.lng; }),
+            onCleared: () => setState(() { _lat = null; _lng = null; }),
+          ),
           const SizedBox(height: AppSpacing.x8),
           Row(children: [
             Expanded(child: TextField(controller: _beds, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Bedrooms'))),
