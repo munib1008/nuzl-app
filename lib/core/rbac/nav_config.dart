@@ -117,18 +117,11 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.folder_outlined, 'Documents', '/documents'),
         NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
       ];
+    // Investor is NOT a separate role — it's a VIEW/MODE within Property Owner
+    // (the Finance & ROI portfolio dashboard, auto-surfaced at 2+ properties).
+    // So an investor account shares the exact owner experience. Legacy 'investor'
+    // accounts keep working; new signups pick Property Owner.
     case Persona.investor:
-      return const [
-        NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
-        NavItem(Icons.home_work_outlined, 'My Properties', '/my-properties'),
-        NavItem(Icons.account_balance_wallet_outlined, 'Financials', '/financials'),
-        // Mortgage is property-centric — tracked inside each property workspace
-        // (My Properties → property → Mortgage), not as a standalone module.
-        NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
-        NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
-        NavItem(Icons.folder_outlined, 'Documents', '/documents'),
-        NavItem(Icons.chat_bubble_outline, 'Messages', '/messages'),
-      ];
     case Persona.owner:
       // Owner = asset manager, NOT a listing agent. Their home is My Properties
       // (own portfolio) + Finance & ROI — not the agent marketplace. Public

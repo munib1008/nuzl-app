@@ -388,9 +388,10 @@ bool isActiveRoute(String location, String route) => route == '/dashboard'
 typedef _RoleOption = ({String key, String title, String desc, String req, bool verified, List<String> docs});
 
 const _addableRoles = <_RoleOption>[
-  (key: 'owner', title: 'Property Owner', desc: 'Manage owned properties, leases and service requests.', req: 'Title Deed verified at listing time', verified: false, docs: []),
+  // Property Owner is the single asset-owner account. "Investor" is NOT a
+  // separate role — the portfolio/Investor View auto-unlocks at 2+ properties.
+  (key: 'owner', title: 'Property Owner', desc: 'Manage owned properties, leases and finances. Portfolio (Investor) view unlocks with 2+ properties.', req: 'Title Deed verified at listing time', verified: false, docs: []),
   (key: 'tenant', title: 'Tenant', desc: 'Track your tenancy, rent payments and maintenance.', req: 'Tenancy contract (Ejari)', verified: false, docs: []),
-  (key: 'investor', title: 'Investor', desc: 'Yield analysis, portfolio tracking and opportunities.', req: 'No documents required', verified: false, docs: []),
   (key: 'agent', title: 'Agent', desc: 'List and sell properties, manage CRM, leads and viewings.', req: 'RERA licence + Emirates ID', verified: true, docs: ['RERA licence', 'Emirates ID']),
   (key: 'developer', title: 'Developer', desc: 'Manage projects, inventory and unit releases.', req: 'Trade + developer licence', verified: true, docs: ['Trade licence', 'Developer licence']),
   (key: 'provider', title: 'Service Provider', desc: 'Offer services, bid on tenders and send quotes.', req: 'Trade licence', verified: true, docs: ['Trade licence']),

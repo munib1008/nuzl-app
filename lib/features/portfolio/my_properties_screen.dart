@@ -461,6 +461,21 @@ class _Overview extends ConsumerWidget {
                 _Stat('Outstanding debt', _money(totals['outstanding_debt'])),
               ],
             ),
+            // Investor View — a portfolio mode that auto-surfaces once the owner
+            // holds 2+ properties (not a separate role). Links to the full ROI /
+            // yield / cash-flow / capital-growth dashboard.
+            if (properties.length >= 2) ...[
+              const SizedBox(height: AppSpacing.x16),
+              Card(
+                child: ListTile(
+                  leading: Icon(Icons.insights_outlined, color: Theme.of(context).colorScheme.primary),
+                  title: const Text('Investor View'),
+                  subtitle: const Text('Portfolio ROI, yield, cash flow & capital growth'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/finance'),
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.x24),
             Text('Properties', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: AppSpacing.x8),
