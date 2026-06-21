@@ -9,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/skeleton_loader.dart';
 import '../../core/widgets/status_badge.dart';
 import '../shell/app_shell.dart';
 import 'orders_repository.dart';
@@ -54,6 +55,7 @@ class _OrdersList extends ConsumerWidget {
       child: AsyncView<List<Map<String, dynamic>>>(
         value: orders,
         onRetry: () => ref.invalidate(provider),
+        loading: const SkeletonList(),
         data: (list) {
           if (list.isEmpty) {
             return ListView(children: [

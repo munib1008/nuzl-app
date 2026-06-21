@@ -5,6 +5,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../crm/crm_scaffold.dart';
 
@@ -30,7 +31,7 @@ class DealsScreen extends ConsumerWidget {
         child: RefreshIndicator(
           onRefresh: () async => ref.refresh(dealsProvider.future),
           child: deals.when(
-            loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
+            loading: () => const SkeletonList(),
             error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (list) => list.isEmpty
                 ? ListView(children: const [

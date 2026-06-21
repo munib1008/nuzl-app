@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/skeleton_loader.dart';
 import '../../core/widgets/status_badge.dart';
 import '../crm/crm_scaffold.dart';
 import 'opportunities_repository.dart';
@@ -35,6 +36,7 @@ class OpportunitiesScreen extends ConsumerWidget {
         child: AsyncView<List<Map<String, dynamic>>>(
           value: opps,
           onRetry: () => ref.invalidate(opportunitiesProvider),
+          loading: const SkeletonList(),
           data: (list) {
             if (list.isEmpty) {
               return ListView(children: const [

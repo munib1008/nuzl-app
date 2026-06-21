@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 import '../data/mortgage_repository.dart';
 import '../domain/mortgage.dart';
 import '../domain/finance_type.dart';
@@ -36,6 +37,7 @@ class MortgageListScreen extends ConsumerWidget {
         child: AsyncView<List<Mortgage>>(
           value: mortgages,
           onRetry: () => ref.refresh(mortgagesProvider),
+          loading: const SkeletonList(),
           data: (items) {
             if (items.isEmpty) {
               return EmptyState(

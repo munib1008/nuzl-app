@@ -8,6 +8,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/place_field.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/skeleton_loader.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../auth/application/auth_controller.dart';
 import '../billing/plan_gate.dart';
@@ -41,6 +42,7 @@ class DealBoardScreen extends ConsumerWidget {
       child: AsyncView<List<Map<String, dynamic>>>(
         value: deals,
         onRetry: () => ref.invalidate(dealBoardProvider),
+        loading: const SkeletonList(),
         data: (list) => list.isEmpty
             ? ListView(children: const [
                 EmptyState(

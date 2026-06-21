@@ -9,6 +9,7 @@ import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/contact_actions.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/widgets/status_badge.dart';
 import '../data/leads_repository.dart';
 import '../domain/lead.dart';
@@ -50,6 +51,7 @@ class LeadsScreen extends ConsumerWidget {
             ref.invalidate(leadsProvider);
             ref.invalidate(leadOffersProvider);
           },
+          loading: const SkeletonList(),
           data: (items) {
             final offers = ref.watch(leadOffersProvider).asData?.value ?? const <Lead>[];
             if (items.isEmpty && offers.isEmpty) {

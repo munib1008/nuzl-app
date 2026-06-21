@@ -7,6 +7,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/skeleton_loader.dart';
 import '../../core/widgets/status_badge.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../crm/crm_scaffold.dart';
@@ -43,6 +44,7 @@ class ContactsScreen extends ConsumerWidget {
         child: AsyncView<List<Map<String, dynamic>>>(
           value: contacts,
           onRetry: () => ref.invalidate(contactsProvider),
+          loading: const SkeletonList(),
           data: (list) {
             if (list.isEmpty) {
               return ListView(children: const [

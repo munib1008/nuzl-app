@@ -71,6 +71,43 @@ class SkeletonListingCard extends StatelessWidget {
   }
 }
 
+/// A skeleton list of card-shaped rows — the generic loading placeholder for
+/// list screens, so the page keeps its shape instead of flashing a spinner.
+/// Scrollable (a ListView) so it slots straight into a RefreshIndicator body.
+class SkeletonList extends StatelessWidget {
+  const SkeletonList({super.key, this.count = 6});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.all(AppSpacing.x16),
+      itemCount: count,
+      physics: const NeverScrollableScrollPhysics(),
+      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x12),
+      itemBuilder: (_, __) => Container(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(AppSpacing.rCard),
+          border: Border.all(color: Theme.of(context).dividerColor),
+        ),
+        child: const Row(children: [
+          SkeletonBox(width: 44, height: 44, radius: 10),
+          SizedBox(width: AppSpacing.x12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              SkeletonBox(width: 160, height: 14),
+              SizedBox(height: AppSpacing.x8),
+              SkeletonBox(width: 220, height: 12),
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
 /// Responsive grid of card skeletons that mirrors a listing/result grid.
 class SkeletonListingGrid extends StatelessWidget {
   const SkeletonListingGrid({super.key, this.count = 6, this.maxWidth = 1100});

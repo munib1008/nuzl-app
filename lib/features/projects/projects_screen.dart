@@ -6,6 +6,7 @@ import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/skeleton_loader.dart';
 import '../../core/widgets/responsive.dart';
 import '../../core/widgets/status_badge.dart';
 import '../auth/application/auth_controller.dart';
@@ -45,7 +46,7 @@ class ProjectsScreen extends ConsumerWidget {
       ),
       body: ResponsiveCenter(
         child: projects.when(
-          loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
+          loading: () => const SkeletonList(),
           error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) => list.isEmpty
               ? EmptyState(
