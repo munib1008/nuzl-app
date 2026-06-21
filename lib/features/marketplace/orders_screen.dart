@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
+import '../../core/network/upload_service.dart';
 import '../messages/data/messaging_repository.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -251,24 +253,72 @@ class _OrderCard extends ConsumerWidget {
 
   Future<void> _rate(BuildContext context, WidgetRef ref) async {
     var stars = 5;
+    bool? recommend = true;
+    final photos = <String>[];
+    var uploading = false;
     final review = TextEditingController();
     final ok = await AppDialog.show<bool>(
       context,
       title: 'Rate this ${o['kind'] == 'product' ? 'order' : 'service'}',
       children: [
         StatefulBuilder(
-          builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+          builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
                 for (var i = 1; i <= 5; i++)
                   IconButton(
                     onPressed: () => setS(() => stars = i),
                     icon: Icon(i <= stars ? Icons.star : Icons.star_border, color: AppColors.accentGold),
                   ),
-              ],
+              ]),
             ),
             TextField(controller: review, maxLines: 2, decoration: const InputDecoration(labelText: 'Review (optional)')),
+            const SizedBox(height: AppSpacing.x12),
+            Text('Would you recommend?', style: Theme.of(ctx).textTheme.bodySmall),
+            const SizedBox(height: AppSpacing.x4),
+            Row(children: [
+              ChoiceChip(
+                label: const Text('👍 Yes'),
+                selected: recommend == true,
+                onSelected: (_) => setS(() => recommend = true),
+              ),
+              const SizedBox(width: AppSpacing.x8),
+              ChoiceChip(
+                label: const Text('👎 No'),
+                selected: recommend == false,
+                onSelected: (_) => setS(() => recommend = false),
+              ),
+            ]),
+            const SizedBox(height: AppSpacing.x12),
+            Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+              for (final url in photos)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppSpacing.rMd),
+                  child: Image.network(url, width: 52, height: 52, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox(width: 52, height: 52)),
+                ),
+              OutlinedButton.icon(
+                onPressed: uploading
+                    ? null
+                    : () async {
+                        final picked = await ImagePicker()
+                            .pickImage(source: ImageSource.gallery, maxWidth: 1280, imageQuality: 72);
+                        if (picked == null) return;
+                        final bytes = await picked.readAsBytes();
+                        setS(() => uploading = true);
+                        try {
+                          final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
+                          if (url != null) setS(() => photos.add(url));
+                        } catch (_) {/* ignore — photos are optional */} finally {
+                          setS(() => uploading = false);
+                        }
+                      },
+                icon: uploading
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Icon(Icons.add_photo_alternate_outlined, size: 18),
+                label: Text(uploading ? 'Uploading…' : (photos.isEmpty ? 'Add photo' : 'Add another')),
+              ),
+            ]),
           ]),
         ),
       ],
@@ -279,10 +329,39 @@ class _OrderCard extends ConsumerWidget {
     );
     if (ok != true) return;
     try {
-      await ref.read(apiClientProvider).post('/marketplace/orders/${o['id']}/rate',
-          body: {'rating': stars, 'review': review.text.trim()});
+      await ref.read(apiClientProvider).post('/marketplace/orders/${o['id']}/rate', body: {
+        'rating': stars,
+        'review': review.text.trim(),
+        'recommend': recommend,
+        if (photos.isNotEmpty) 'photos': photos,
+      });
       ref.invalidate(myOrdersProvider);
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Thanks for the rating!')));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  /// Provider replies to a customer's review (§6).
+  Future<void> _reviewReply(BuildContext context, WidgetRef ref) async {
+    final reply = TextEditingController();
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Reply to review',
+      children: [
+        TextField(controller: reply, maxLines: 3, decoration: const InputDecoration(labelText: 'Your reply')),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Send')),
+      ],
+    );
+    if (ok != true || reply.text.trim().isEmpty) return;
+    try {
+      await ref.read(apiClientProvider)
+          .patch('/marketplace/orders/${o['id']}/review-reply', body: {'reply': reply.text.trim()});
+      ref.invalidate(incomingOrdersProvider);
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reply posted.')));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
@@ -384,6 +463,11 @@ class _OrderCard extends ConsumerWidget {
               for (var i = 1; i <= 5; i++)
                 Icon(i <= rating ? Icons.star : Icons.star_border, size: 14, color: AppColors.accentGold),
             ]),
+            if ('${o['provider_reply'] ?? ''}'.trim().isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text('Provider replied: ${o['provider_reply']}',
+                  style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+            ],
           ],
           if (disputed && disputeReason.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x8),
@@ -451,6 +535,9 @@ class _OrderCard extends ConsumerWidget {
                 icon: const Icon(Icons.chat_bubble_outline, size: 16),
                 label: const Text('Message'),
               ),
+            // Provider: reply to a customer review (once).
+            if (!mine && rating != null && '${o['provider_reply'] ?? ''}'.trim().isEmpty)
+              OutlinedButton(onPressed: () => _reviewReply(context, ref), child: const Text('Reply to review')),
             if (mine && orderIsRateable(status) && rating == null)
               OutlinedButton.icon(
                 onPressed: () => _rate(context, ref),

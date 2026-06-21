@@ -319,6 +319,11 @@ class _ReviewRow extends StatelessWidget {
     final review = '${r['review'] ?? ''}'.trim();
     final created = DateTime.tryParse('${r['created_at']}');
     final when = created != null ? DateFormat('d MMM y').format(created) : '';
+    final recommend = r['review_recommend'];
+    final photos = (r['review_photos'] is List)
+        ? (r['review_photos'] as List).map((e) => '$e').where((s) => s.isNotEmpty).toList()
+        : <String>[];
+    final providerReply = '${r['provider_reply'] ?? ''}'.trim();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -335,6 +340,39 @@ class _ReviewRow extends StatelessWidget {
         if (review.isNotEmpty) ...[
           const SizedBox(height: 2),
           Text(review, style: t.bodyMedium),
+        ],
+        if (recommend == true || recommend == false) ...[
+          const SizedBox(height: 4),
+          Text(recommend == true ? '👍 Recommends' : '👎 Doesn’t recommend',
+              style: t.bodySmall?.copyWith(
+                  color: recommend == true ? AppColors.success : (dark ? AppColors.dTextMuted : AppColors.textMuted),
+                  fontWeight: FontWeight.w600)),
+        ],
+        if (photos.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final url in photos)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppSpacing.rMd),
+                child: Image.network(url, width: 56, height: 56, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox(width: 56, height: 56)),
+              ),
+          ]),
+        ],
+        if (providerReply.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.x8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(AppSpacing.rMd),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('Provider response', style: t.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 2),
+              Text(providerReply, style: t.bodySmall),
+            ]),
+          ),
         ],
       ]),
     );
