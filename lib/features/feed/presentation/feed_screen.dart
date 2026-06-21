@@ -174,13 +174,17 @@ class _FeedBody extends ConsumerWidget {
                       return '${m['kind'] ?? m['post_type'] ?? ''}' == cat;
                     }).toList();
               if (filtered.isEmpty) {
+                final persona = ref.watch(personaProvider);
+                final canPost = persona.canManageLeads || persona.canListProperty;
                 return ListView(children: [
                   EmptyState(
                     icon: Icons.dynamic_feed_outlined,
                     title: cat.isEmpty ? 'No posts yet' : 'Nothing in this category yet',
                     message: cat.isEmpty
                         ? 'Share a market update or a success story to start the conversation.'
-                        : 'Be the first to post in this category — tap “New post”.',
+                        : 'Be the first to post in this category.',
+                    actionLabel: canPost ? 'New post' : null,
+                    onAction: canPost ? () => openFeedComposer(context, ref, audience: scope) : null,
                   ),
                 ]);
               }
