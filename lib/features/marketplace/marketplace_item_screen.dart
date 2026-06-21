@@ -9,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 import 'booking_schedule.dart';
+import 'cart_repository.dart';
 import 'orders_repository.dart' show bookablePropertiesProvider;
 import 'marketplace_screen.dart' show marketplaceProvider;
 
@@ -251,8 +252,8 @@ class _Detail extends ConsumerWidget {
                 const SizedBox(width: AppSpacing.x12),
                 Expanded(
                   child: FilledButton(
-                    onPressed: () => _order(context, ref),
-                    child: Text(isProduct ? 'Buy now' : 'Book'),
+                    onPressed: () => isProduct ? addToCart(context, ref, id) : _order(context, ref),
+                    child: Text(isProduct ? 'Add to cart' : 'Book'),
                   ),
                 ),
               ]),

@@ -79,6 +79,7 @@ import '../../features/saved/saved_screen.dart';
 import '../../features/saved/saved_searches.dart';
 import '../../features/marketplace/marketplace_screen.dart';
 import '../../features/marketplace/marketplace_item_screen.dart';
+import '../../features/marketplace/cart_screen.dart';
 import '../../features/marketing/pricing_screen.dart';
 import '../../features/network/network_screen.dart';
 import '../../features/admin/organizations_screen.dart';
@@ -263,6 +264,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/saved-searches', builder: (_, __) => const SavedSearchesScreen()),
       GoRoute(path: '/marketplace', builder: (_, __) => const MarketplaceScreen()),
       GoRoute(path: '/marketplace/:id', builder: (_, st) => MarketplaceItemScreen(id: st.pathParameters['id']!)),
+      GoRoute(path: '/cart', builder: (_, __) => const CartScreen()),
       GoRoute(path: '/orders', builder: (_, __) => const OrdersScreen()),
       GoRoute(path: '/tenders', builder: (_, __) => const TendersScreen()),
       GoRoute(path: '/tenders/:id', builder: (_, st) => TenderDetailScreen(id: st.pathParameters['id']!)),

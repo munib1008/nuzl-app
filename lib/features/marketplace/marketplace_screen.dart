@@ -15,6 +15,7 @@ import '../../core/widgets/skeleton_loader.dart';
 import '../../core/widgets/status_badge.dart';
 import '../shell/app_shell.dart';
 import 'booking_schedule.dart';
+import 'cart_repository.dart';
 import 'orders_repository.dart' show bookablePropertiesProvider;
 import 'marketplace_taxonomy.dart';
 
@@ -42,7 +43,7 @@ class MarketplaceScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: const NuzlAppBar(title: 'Marketplace'),
+        appBar: const NuzlAppBar(title: 'Marketplace', actions: [CartButton()]),
         drawer: const NuzlDrawer(),
         floatingActionButton: canAdd
             ? FloatingActionButton.extended(
@@ -572,9 +573,9 @@ class _ItemCard extends ConsumerWidget {
                 const SizedBox(width: AppSpacing.x8),
                 Expanded(
                   child: FilledButton(
-                    onPressed: () => _order(context, ref),
+                    onPressed: () => isProduct ? addToCart(context, ref, '${m['id']}') : _order(context, ref),
                     style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(36), padding: EdgeInsets.zero),
-                    child: Text(isProduct ? 'Buy' : 'Book'),
+                    child: Text(isProduct ? 'Add' : 'Book'),
                   ),
                 ),
               ]),
