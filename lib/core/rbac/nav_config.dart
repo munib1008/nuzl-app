@@ -138,7 +138,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.home_work_outlined, 'My Properties', '/my-properties'),
         NavItem(Icons.vpn_key_outlined, 'Rentals', '/rentals'),
         NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
-        NavItem(Icons.account_balance_wallet_outlined, 'Finance & ROI', '/financials'),
+        NavItem(Icons.account_balance_wallet_outlined, 'Finance & ROI', '/finance'),
         NavItem(Icons.storefront_outlined, 'Marketplace', '/marketplace'),
         NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.folder_outlined, 'Documents', '/documents'),

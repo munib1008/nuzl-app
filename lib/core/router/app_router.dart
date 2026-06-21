@@ -60,6 +60,7 @@ import '../../features/reports/reports_screen.dart';
 import '../../features/kpi/kpi_screen.dart';
 import '../../features/support/support_center_screen.dart';
 import '../../features/financials/financials_screen.dart';
+import '../../features/financials/finance_roi_screen.dart';
 import '../../features/documents/documents_screen.dart';
 import '../../features/inventory/inventory_screen.dart';
 import '../../features/projects/projects_screen.dart';
@@ -201,6 +202,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/kpi', builder: (_, __) => const KpiScreen()),
       GoRoute(path: '/support', builder: (_, __) => const SupportCenterScreen()),
       GoRoute(path: '/financials', builder: (_, __) => const FinancialsScreen()),
+      GoRoute(path: '/finance', builder: (_, __) => const FinanceRoiScreen()),
       GoRoute(path: '/documents', builder: (_, __) => const DocumentsScreen()),
       GoRoute(path: '/inventory', builder: (_, __) => const InventoryScreen()),
       GoRoute(path: '/projects', builder: (_, __) => const ProjectsScreen()),
