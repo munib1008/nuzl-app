@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
 
 /// The property record + linked lease / listing / participants. The hub for one
@@ -321,6 +322,147 @@ class _MarketingPerformanceCard extends StatelessWidget {
   }
 }
 
+/// One-click publish (owner spec §10): the owner turns the property RECORD into a
+/// public listing handed to one of its assigned agents — no duplicate data entry.
+/// The agent then adds a permit + photos and takes it live.
+class _PublishCard extends ConsumerWidget {
+  const _PublishCard({required this.propertyId, required this.p});
+  final String propertyId;
+  final Map<String, dynamic> p;
+
+  Future<void> _publish(BuildContext context, WidgetRef ref, List<Map<String, dynamic>> agents) async {
+    final price = TextEditingController();
+    var purpose = 'sale';
+    var agentId = '${agents.first['agent_id']}';
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Publish property',
+      children: [
+        StatefulBuilder(
+          builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            DropdownButtonFormField<String>(
+              initialValue: purpose,
+              decoration: const InputDecoration(labelText: 'Publish for'),
+              items: const [
+                DropdownMenuItem(value: 'sale', child: Text('Sale')),
+                DropdownMenuItem(value: 'rent', child: Text('Rent')),
+              ],
+              onChanged: (v) => setS(() => purpose = v ?? 'sale'),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(
+              controller: price,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Asking price (AED)'),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            DropdownButtonFormField<String>(
+              initialValue: agentId,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Marketing agent'),
+              items: [
+                for (final a in agents)
+                  DropdownMenuItem(value: '${a['agent_id']}', child: Text('${a['full_name'] ?? 'Agent'}')),
+              ],
+              onChanged: (v) => setS(() => agentId = v ?? agentId),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            Text(
+              'A draft listing is created from this property and handed to your agent, who adds the '
+              'permit + photos and takes it live. No re-entering details.',
+              style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(ctx).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted),
+            ),
+          ]),
+        ),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () {
+            if ((double.tryParse(price.text.trim()) ?? 0) <= 0) {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(const SnackBar(content: Text('Enter an asking price.')));
+              return;
+            }
+            Navigator.pop(context, true);
+          },
+          child: const Text('Create listing'),
+        ),
+      ],
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(apiClientProvider).post('/listings/from-property/$propertyId', body: {
+        'purpose': purpose,
+        'price': double.tryParse(price.text.trim()),
+        'agent_id': agentId,
+      });
+      ref.invalidate(propertyRecordProvider(propertyId));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Listing created — sent to your agent to publish.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (p['is_owner'] != true) return const SizedBox.shrink();
+    final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final listing = p['listing'] is Map ? Map<String, dynamic>.from(p['listing'] as Map) : null;
+    final live = listing != null && listing['is_visible'] == true;
+    final agents = ref.watch(_propAgentsProvider(propertyId));
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.campaign_outlined, size: 18, color: AppColors.primary),
+            const SizedBox(width: AppSpacing.x8),
+            Expanded(child: Text('Publish to the marketplace', style: t.titleSmall)),
+          ]),
+          const SizedBox(height: AppSpacing.x8),
+          if (live)
+            Text('This property is published. Manage it from “View public listing” below.',
+                style: t.bodySmall?.copyWith(color: muted))
+          else
+            agents.when(
+              loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.x8), child: LinearProgressIndicator()),
+              error: (e, _) => Text(friendlyError(e), style: t.bodySmall?.copyWith(color: muted)),
+              data: (list) => list.isEmpty
+                  ? Text('Assign an agent above first — they market and publish this property for you.',
+                      style: t.bodySmall?.copyWith(color: muted))
+                  : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(
+                        listing != null
+                            ? 'A draft listing exists. Publish for sale or rent — your agent finishes and takes it live.'
+                            : 'Create a listing from this property and hand it to your assigned agent.',
+                        style: t.bodySmall?.copyWith(color: muted),
+                      ),
+                      const SizedBox(height: AppSpacing.x12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () => _publish(context, ref, list),
+                          icon: const Icon(Icons.publish_outlined, size: 18),
+                          label: const Text('Publish property'),
+                        ),
+                      ),
+                    ]),
+            ),
+        ]),
+      ),
+    );
+  }
+}
+
 /// Property Verification Score (owner spec §18) — 0-100 trust score with an
 /// itemised checklist; >=70 shows the Verified badge. The server computes the
 /// score from signals that already exist (deed, owner, mortgage, photos, agent,
@@ -435,6 +577,10 @@ class PropertyRecordScreen extends ConsumerWidget {
                   _AgentsCard(propertyId: propertyId, isOwner: p['is_owner'] == true),
                   const SizedBox(height: AppSpacing.x12),
                   _MarketingPerformanceCard(p: p),
+                  if (p['is_owner'] == true) ...[
+                    const SizedBox(height: AppSpacing.x12),
+                    _PublishCard(propertyId: propertyId, p: p),
+                  ],
                   const SizedBox(height: AppSpacing.x12),
                   _LeaseCard(p: p),
                   const SizedBox(height: AppSpacing.x12),
