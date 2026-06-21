@@ -117,6 +117,19 @@ class _OrderCard extends ConsumerWidget {
     }
   }
 
+  /// Customer confirms the finished service → closes it, then offers to review.
+  Future<void> _confirmComplete(BuildContext context, WidgetRef ref) async {
+    try {
+      await ref.read(apiClientProvider).post('/marketplace/orders/${o['id']}/confirm-complete');
+      ref.invalidate(myOrdersProvider);
+      ref.invalidate(incomingOrdersProvider);
+      if (!context.mounted) return;
+      await _rate(context, ref); // "review requested" right after confirmation
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
   Future<void> _message(BuildContext context, WidgetRef ref, String providerId) async {
     try {
       final convId = await ref
@@ -288,6 +301,10 @@ class _OrderCard extends ConsumerWidget {
     final created = DateTime.tryParse('${o['created_at']}');
     final scheduledAt = DateTime.tryParse('${o['scheduled_at'] ?? ''}');
     final propertyLabel = '${o['property_label'] ?? ''}'.trim();
+    final code = '${o['code'] ?? ''}'.trim();
+    // §7 completion confirmation — once the provider marks a service 'completed',
+    // the customer confirms (→ closes) or reports an issue (→ dispute).
+    final canConfirm = mine && kind == 'service' && status == 'completed' && o['completed_confirmed_at'] == null;
     final flow = flowFor(kind);
     final curIdx = flow.indexOf(status);
     final next = nextStatus(kind, status);
@@ -323,6 +340,7 @@ class _OrderCard extends ConsumerWidget {
           if (counterpart.isNotEmpty || price != null || created != null) ...[
             const SizedBox(height: 4),
             Text([
+              if (code.isNotEmpty) code,
               if (counterpart.isNotEmpty) (mine ? 'Provider: $counterpart' : counterpart),
               if (price != null) aed.format(price),
               if (created != null) DateFormat('d MMM').format(created),
@@ -374,6 +392,26 @@ class _OrderCard extends ConsumerWidget {
           if (!disputed && resolution.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x8),
             Text('Resolved: $resolution', style: t.bodySmall?.copyWith(color: AppColors.success)),
+          ],
+          // §7 — customer confirms the finished service (or reports an issue).
+          if (canConfirm) ...[
+            const SizedBox(height: AppSpacing.x8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.x12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppSpacing.rMd),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Was this service completed?', style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: AppSpacing.x8),
+                Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x4, children: [
+                  FilledButton(onPressed: () => _confirmComplete(context, ref), child: const Text('Yes, completed')),
+                  OutlinedButton(onPressed: () => _dispute(context, ref), child: const Text('Report an issue')),
+                ]),
+              ]),
+            ),
           ],
           // Actions (role-aware)
           const SizedBox(height: AppSpacing.x8),
