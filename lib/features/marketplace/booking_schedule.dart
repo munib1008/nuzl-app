@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_spacing.dart';
 
-/// Result of the booking sheet: the chosen slot + optional notes.
+/// Result of the booking sheet: the chosen slot + optional notes + property.
 class BookingResult {
-  BookingResult(this.when, this.note);
+  BookingResult(this.when, this.note, {this.propertyId});
   final DateTime when;
   final String? note;
+  final String? propertyId;
 }
 
 /// Simple date→time picker (no availability constraint). Used by the provider's
@@ -32,17 +33,22 @@ Future<DateTime?> pickServiceSchedule(BuildContext context) async {
 /// Customer booking sheet constrained to the provider's working days & hours
 /// (from the service [item]: work_days "1,2,..", work_start/work_end "HH:mm",
 /// slot_minutes). Returns the picked slot + notes, or null if cancelled.
-Future<BookingResult?> pickServiceBooking(BuildContext context, Map<String, dynamic> item) {
+Future<BookingResult?> pickServiceBooking(
+  BuildContext context,
+  Map<String, dynamic> item, {
+  List<Map<String, dynamic>> properties = const [],
+}) {
   return showModalBottomSheet<BookingResult>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => _BookingSheet(item: item),
+    builder: (_) => _BookingSheet(item: item, properties: properties),
   );
 }
 
 class _BookingSheet extends StatefulWidget {
-  const _BookingSheet({required this.item});
+  const _BookingSheet({required this.item, this.properties = const []});
   final Map<String, dynamic> item;
+  final List<Map<String, dynamic>> properties;
   @override
   State<_BookingSheet> createState() => _BookingSheetState();
 }
@@ -55,6 +61,7 @@ class _BookingSheetState extends State<_BookingSheet> {
   final _note = TextEditingController();
   DateTime? _date;
   int? _slotMin;
+  String? _propertyId;
 
   @override
   void initState() {
@@ -116,6 +123,15 @@ class _BookingSheetState extends State<_BookingSheet> {
   String _fmtSlot(int m) {
     final t = TimeOfDay(hour: m ~/ 60, minute: m % 60);
     return t.format(context);
+  }
+
+  String _propLabel(Map<String, dynamic> p) {
+    final label = '${p['label'] ?? ''}'.trim();
+    if (label.isNotEmpty) return label;
+    final community = '${p['community'] ?? ''}'.trim();
+    final type = '${p['property_type'] ?? ''}'.trim();
+    final joined = [type, community].where((s) => s.isNotEmpty).join(' · ');
+    return joined.isEmpty ? 'Property' : joined;
   }
 
   Future<void> _pickDate() async {
@@ -182,6 +198,23 @@ class _BookingSheetState extends State<_BookingSheet> {
             Text('No slots left on this day — pick another date.',
                 style: t.bodySmall?.copyWith(color: muted)),
           ],
+          if (widget.properties.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.x12),
+            DropdownButtonFormField<String?>(
+              initialValue: _propertyId,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'For property (optional)'),
+              items: [
+                const DropdownMenuItem<String?>(value: null, child: Text('No specific property')),
+                for (final p in widget.properties)
+                  DropdownMenuItem<String?>(
+                    value: '${p['id']}',
+                    child: Text(_propLabel(p), overflow: TextOverflow.ellipsis),
+                  ),
+              ],
+              onChanged: (v) => setState(() => _propertyId = v),
+            ),
+          ],
           const SizedBox(height: AppSpacing.x12),
           TextField(
             controller: _note,
@@ -196,7 +229,10 @@ class _BookingSheetState extends State<_BookingSheet> {
                   ? () {
                       final dd = _date!;
                       final when = DateTime(dd.year, dd.month, dd.day, _slotMin! ~/ 60, _slotMin! % 60);
-                      Navigator.pop(context, BookingResult(when, _note.text.trim().isEmpty ? null : _note.text.trim()));
+                      Navigator.pop(
+                          context,
+                          BookingResult(when, _note.text.trim().isEmpty ? null : _note.text.trim(),
+                              propertyId: _propertyId));
                     }
                   : null,
               child: const Text('Confirm booking'),

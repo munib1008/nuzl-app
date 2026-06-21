@@ -48,3 +48,24 @@ final incomingOrdersProvider = FutureProvider.autoDispose<List<Map<String, dynam
   final d = await ref.read(apiClientProvider).get('/marketplace/orders/incoming');
   return d is List ? d.map((e) => Map<String, dynamic>.from(e as Map)).toList() : <Map<String, dynamic>>[];
 });
+
+/// The caller's properties (flat) — for the service-booking "assigned property" picker.
+final bookablePropertiesProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>((ref) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/portfolio/properties/mine');
+    return d is List ? d.map((e) => Map<String, dynamic>.from(e as Map)).toList() : <Map<String, dynamic>>[];
+  } catch (_) {
+    return <Map<String, dynamic>>[];
+  }
+});
+
+/// Service history (the caller's bookings) for one property.
+final propertyServicesProvider =
+    FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, propertyId) async {
+  try {
+    final d = await ref.read(apiClientProvider).get('/marketplace/orders/property/$propertyId');
+    return d is List ? d.map((e) => Map<String, dynamic>.from(e as Map)).toList() : <Map<String, dynamic>>[];
+  } catch (_) {
+    return <Map<String, dynamic>>[];
+  }
+});

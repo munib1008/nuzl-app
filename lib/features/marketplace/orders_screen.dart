@@ -287,6 +287,7 @@ class _OrderCard extends ConsumerWidget {
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
     final created = DateTime.tryParse('${o['created_at']}');
     final scheduledAt = DateTime.tryParse('${o['scheduled_at'] ?? ''}');
+    final propertyLabel = '${o['property_label'] ?? ''}'.trim();
     final flow = flowFor(kind);
     final curIdx = flow.indexOf(status);
     final next = nextStatus(kind, status);
@@ -325,6 +326,7 @@ class _OrderCard extends ConsumerWidget {
               if (counterpart.isNotEmpty) (mine ? 'Provider: $counterpart' : counterpart),
               if (price != null) aed.format(price),
               if (created != null) DateFormat('d MMM').format(created),
+              if (propertyLabel.isNotEmpty) '🏠 $propertyLabel',
             ].join('  ·  '), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ],
           // Booked service slot — the key info for the provider to plan the job.

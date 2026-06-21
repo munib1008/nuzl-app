@@ -11,6 +11,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
+import '../marketplace/orders_repository.dart' show propertyServicesProvider, orderStatusLabels;
 
 /// The property record + linked lease / listing / participants. The hub for one
 /// property — everything (lease, mortgage, maintenance, docs, timeline) hangs off
@@ -885,6 +886,8 @@ class PropertyRecordScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.x12),
                   _MaintenanceCard(propertyId: propertyId),
                   const SizedBox(height: AppSpacing.x12),
+                  _ServiceHistoryCard(propertyId: propertyId),
+                  const SizedBox(height: AppSpacing.x12),
                   _DocumentsCard(propertyId: propertyId),
                   const SizedBox(height: AppSpacing.x12),
                   _TimelineCard(propertyId: propertyId),
@@ -1459,3 +1462,72 @@ class _TimelineCard extends ConsumerWidget {
 }
 
 String _cap(String s) => s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
+
+/// Marketplace services booked against this property (§9 service history).
+class _ServiceHistoryCard extends ConsumerWidget {
+  const _ServiceHistoryCard({required this.propertyId});
+  final String propertyId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final muted = Theme.of(context).hintColor;
+    final async = ref.watch(propertyServicesProvider(propertyId));
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.home_repair_service_outlined, size: 18),
+            const SizedBox(width: AppSpacing.x8),
+            Expanded(child: Text('Service history', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700))),
+            TextButton.icon(
+              onPressed: () => context.push('/marketplace'),
+              icon: const Icon(Icons.add, size: 16),
+              label: const Text('Book'),
+            ),
+          ]),
+          const SizedBox(height: AppSpacing.x4),
+          async.when(
+            loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8), child: LinearProgressIndicator()),
+            error: (e, _) => Text(friendlyError(e), style: t.bodySmall?.copyWith(color: muted)),
+            data: (list) => list.isEmpty
+                ? Text('No services booked for this property yet. Book one from the marketplace.',
+                    style: t.bodySmall?.copyWith(color: muted))
+                : Column(children: [for (final raw in list) _row(context, raw)]),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _row(BuildContext context, Map<String, dynamic> o) {
+    final t = Theme.of(context).textTheme;
+    final muted = Theme.of(context).hintColor;
+    final title = '${o['title'] ?? 'Service'}';
+    final status = '${o['status'] ?? ''}';
+    final provider = '${o['provider_name'] ?? ''}'.trim();
+    final sched = DateTime.tryParse('${o['scheduled_at'] ?? ''}');
+    final sub = [
+      if (provider.isNotEmpty) provider,
+      if (sched != null) DateFormat('d MMM yyyy · h:mm a').format(sched),
+    ].join('  ·  ');
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                maxLines: 1, overflow: TextOverflow.ellipsis),
+            if (sub.isNotEmpty)
+              Text(sub, style: t.bodySmall?.copyWith(color: muted), maxLines: 1, overflow: TextOverflow.ellipsis),
+          ]),
+        ),
+        const SizedBox(width: AppSpacing.x8),
+        Text(orderStatusLabels[status] ?? status,
+            style: t.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+      ]),
+    );
+  }
+}

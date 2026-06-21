@@ -9,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 import 'booking_schedule.dart';
+import 'orders_repository.dart' show bookablePropertiesProvider;
 import 'marketplace_screen.dart' show marketplaceProvider;
 
 final _itemProvider = FutureProvider.autoDispose.family<Map<String, dynamic>?, String>((ref, id) async {
@@ -273,11 +274,15 @@ class _Detail extends ConsumerWidget {
     // knows when to perform it. (Products & quote requests aren't scheduled.)
     String? scheduledAt;
     String? bookingNote;
+    String? bookingProperty;
     if (!quote && !isProduct) {
-      final booking = await pickServiceBooking(context, m); // constrained to working hours
+      final props = await ref.read(bookablePropertiesProvider.future);
+      if (!context.mounted) return;
+      final booking = await pickServiceBooking(context, m, properties: props); // constrained to working hours
       if (booking == null) return; // customer cancelled
       scheduledAt = booking.when.toIso8601String();
       bookingNote = booking.note;
+      bookingProperty = booking.propertyId;
     }
     try {
       await ref.read(apiClientProvider).post('/marketplace/orders', body: {
@@ -285,6 +290,7 @@ class _Detail extends ConsumerWidget {
         if (quote) 'quote': true,
         if (scheduledAt != null) 'scheduled_at': scheduledAt,
         if (bookingNote != null) 'note': bookingNote,
+        if (bookingProperty != null) 'property_id': bookingProperty,
       });
       ref.invalidate(marketplaceProvider('${m['kind'] ?? 'service'}'));
       if (context.mounted) {

@@ -15,6 +15,7 @@ import '../../core/widgets/skeleton_loader.dart';
 import '../../core/widgets/status_badge.dart';
 import '../shell/app_shell.dart';
 import 'booking_schedule.dart';
+import 'orders_repository.dart' show bookablePropertiesProvider;
 import 'marketplace_taxonomy.dart';
 
 final marketplaceProvider = FutureProvider.autoDispose.family<List<dynamic>, String>((ref, kind) async {
@@ -596,11 +597,15 @@ class _ItemCard extends ConsumerWidget {
     final isProduct = '${m['kind'] ?? 'service'}' == 'product';
     String? scheduledAt;
     String? bookingNote;
+    String? bookingProperty;
     if (!quote && !isProduct) {
-      final booking = await pickServiceBooking(context, m); // constrained to working hours
+      final props = await ref.read(bookablePropertiesProvider.future);
+      if (!context.mounted) return;
+      final booking = await pickServiceBooking(context, m, properties: props); // constrained to working hours
       if (booking == null) return; // customer cancelled
       scheduledAt = booking.when.toIso8601String();
       bookingNote = booking.note;
+      bookingProperty = booking.propertyId;
     }
     try {
       await ref.read(apiClientProvider).post('/marketplace/orders', body: {
@@ -608,6 +613,7 @@ class _ItemCard extends ConsumerWidget {
         if (quote) 'quote': true,
         if (scheduledAt != null) 'scheduled_at': scheduledAt,
         if (bookingNote != null) 'note': bookingNote,
+        if (bookingProperty != null) 'property_id': bookingProperty,
       });
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
