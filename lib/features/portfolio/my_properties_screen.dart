@@ -188,7 +188,7 @@ class MyPropertiesScreen extends ConsumerWidget {
       final id = res is Map ? '${res['id'] ?? ''}' : '';
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Property added to your portfolio.')));
-        if (id.isNotEmpty) context.push('/property/$id');
+        if (id.isNotEmpty) context.push('/property-record/$id');
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -274,15 +274,18 @@ class _PropCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final yield_ = p['net_yield_pct'];
     final pid = '${p['property_id'] ?? ''}'.trim();
+    final title = [
+      p['building_name'] ?? p['community'],
+      p['property_type'],
+      if ('${p['unit_no'] ?? ''}'.trim().isNotEmpty) 'Unit ${p['unit_no']}',
+    ].where((x) => x != null && '$x'.trim().isNotEmpty).join('  ·  ');
     return Card(
       child: ListTile(
         leading: const Icon(Icons.home_outlined),
-        title: Text([p['community'], p['property_type']]
-            .where((x) => x != null && '$x'.isNotEmpty)
-            .join('  ·  ')),
+        title: Text(title.isEmpty ? 'Property' : title),
         subtitle: Text('Equity ${_money(p['equity'])}'),
         // Open the full property record hub (lease, mortgage, maintenance, docs, timeline).
-        onTap: pid.isEmpty ? null : () => context.push('/property/$pid'),
+        onTap: pid.isEmpty ? null : () => context.push('/property-record/$pid'),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           if (yield_ != null)
             Text('${(num.tryParse('$yield_') ?? 0).toStringAsFixed(1)}%',

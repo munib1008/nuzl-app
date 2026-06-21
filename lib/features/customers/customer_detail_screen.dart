@@ -79,7 +79,7 @@ class CustomerDetailScreen extends ConsumerWidget {
                   subtitle: Text([p['relationship'], p['property_type'], p['inventory_status']]
                       .where((e) => e != null && '$e'.isNotEmpty)
                       .join(' · ')),
-                  onTap: p['id'] != null ? () => context.push('/property/${p['id']}') : null,
+                  onTap: p['id'] != null ? () => context.push('/property-record/${p['id']}') : null,
                 ),
               )),
       ],

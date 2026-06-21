@@ -209,7 +209,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/projects/:id', builder: (_, s) => ProjectDetailScreen(projectId: s.pathParameters['id']!)),
       GoRoute(path: '/partners', builder: (_, __) => const PartnersScreen()),
       GoRoute(path: '/my-properties', builder: (_, __) => const MyPropertiesScreen()),
-      GoRoute(path: '/property/:id', builder: (_, s) => PropertyRecordScreen(propertyId: s.pathParameters['id']!)),
+      // Authed property WORKSPACE — distinct path so it isn't shadowed by the
+      // public '/property/:id' listing page (declared above, outside the shell).
+      GoRoute(path: '/property-record/:id', builder: (_, s) => PropertyRecordScreen(propertyId: s.pathParameters['id']!)),
       GoRoute(path: '/lead-matches', builder: (_, __) => const LeadMatchesScreen()),
       // CRM single workspace — /crm is the overview dashboard; every section is
       // a nested /crm/* route so "CRM" stays highlighted across the whole area.
