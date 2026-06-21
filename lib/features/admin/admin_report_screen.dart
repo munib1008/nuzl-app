@@ -13,6 +13,13 @@ final _adminReportProvider = FutureProvider.autoDispose<Map<String, dynamic>>((r
   return d is Map ? Map<String, dynamic>.from(d) : <String, dynamic>{};
 });
 
+/// GET /admin/integrations → [{key,label,env,active,powers}] — which keys are
+/// configured (no secrets), so the admin sees what's live vs dormant.
+final _integrationsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final d = await ref.read(apiClientProvider).get('/admin/integrations');
+  return d is List ? d : [];
+});
+
 String _money(num? n) =>
     n == null ? '—' : NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: n >= 1000 ? 1 : 0).format(n);
 
@@ -70,6 +77,8 @@ class AdminReportScreen extends ConsumerWidget {
         _FunnelCard(funnel: funnel),
         const SizedBox(height: AppSpacing.x12),
         _RevenueCard(revenue: revenue),
+        const SizedBox(height: AppSpacing.x12),
+        const _IntegrationsCard(),
         const SizedBox(height: AppSpacing.x24),
       ],
     );
@@ -139,6 +148,69 @@ class _FunnelCard extends StatelessWidget {
           ),
         ]),
       ),
+    );
+  }
+}
+
+/// Integration readiness — which API keys are configured (Active) vs Dormant,
+/// and what each unlocks. Add the env var in Vercel → it flips to Active.
+class _IntegrationsCard extends ConsumerWidget {
+  const _IntegrationsCard();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final muted = Theme.of(context).hintColor;
+    final async = ref.watch(_integrationsProvider);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Expanded(child: Text('Integrations', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700))),
+            IconButton(
+              tooltip: 'Refresh',
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.refresh, size: 18),
+              onPressed: () => ref.invalidate(_integrationsProvider),
+            ),
+          ]),
+          async.when(
+            loading: () => const Padding(padding: EdgeInsets.symmetric(vertical: 8), child: LinearProgressIndicator()),
+            error: (e, _) => Text(friendlyError(e), style: t.bodySmall?.copyWith(color: muted)),
+            data: (list) => Column(
+              children: [
+                for (final raw in list) _row(context, Map<String, dynamic>.from(raw as Map)),
+              ],
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _row(BuildContext context, Map<String, dynamic> m) {
+    final t = Theme.of(context).textTheme;
+    final muted = Theme.of(context).hintColor;
+    final active = m['active'] == true;
+    final color = active ? Colors.green : muted;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('${m['label'] ?? m['key']}', style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+            Text('${m['powers'] ?? ''}', style: t.bodySmall?.copyWith(color: muted)),
+            Text('env: ${m['env'] ?? ''}', style: t.bodySmall?.copyWith(color: muted, fontStyle: FontStyle.italic)),
+          ]),
+        ),
+        const SizedBox(width: AppSpacing.x8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+          child: Text(active ? 'Active' : 'Dormant',
+              style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 11)),
+        ),
+      ]),
     );
   }
 }
