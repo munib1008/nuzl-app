@@ -10,6 +10,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/async_view.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/status_badge.dart';
+import '../billing/plan_gate.dart';
 import '../crm/crm_scaffold.dart';
 import 'invoicing_repository.dart';
 
@@ -306,7 +307,10 @@ Future<void> _convert(BuildContext context, WidgetRef ref, String id) async {
 
 // ── Create / edit form ───────────────────────────────────────────────────────
 
-void _openForm(BuildContext context, WidgetRef ref, {Map<String, dynamic>? existing}) {
+Future<void> _openForm(BuildContext context, WidgetRef ref, {Map<String, dynamic>? existing}) async {
+  // Only NEW documents are gated (server gates invoicing.create); editing stays open.
+  if (existing == null && !await ensureEntitled(context, ref, 'invoicing')) return;
+  if (!context.mounted) return;
   Navigator.of(context).push(MaterialPageRoute(
     builder: (_) => _DocFormPage(existing: existing),
     fullscreenDialog: true,

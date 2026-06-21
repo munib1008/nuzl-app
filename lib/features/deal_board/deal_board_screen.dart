@@ -10,6 +10,7 @@ import '../../core/widgets/place_field.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/user_avatar.dart';
 import '../auth/application/auth_controller.dart';
+import '../billing/plan_gate.dart';
 import '../messages/data/messaging_repository.dart';
 import '../crm/crm_scaffold.dart';
 import 'deal_board_repository.dart';
@@ -71,6 +72,8 @@ class DealBoardScreen extends ConsumerWidget {
 /// Opens the "Post a deal" sheet and refreshes the board on save. Top-level so
 /// both the standalone Deal Board and the Community "Deals" tab can trigger it.
 Future<void> openDealComposer(BuildContext context, WidgetRef ref) async {
+  if (!await ensureEntitled(context, ref, 'deal_board')) return;
+  if (!context.mounted) return;
   final saved = await showModalBottomSheet<bool>(
     context: context,
     isScrollControlled: true,
