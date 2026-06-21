@@ -333,7 +333,8 @@ class _PublishCard extends ConsumerWidget {
   final Map<String, dynamic> p;
 
   Future<void> _publish(BuildContext context, WidgetRef ref, List<Map<String, dynamic>> agents) async {
-    final price = TextEditingController();
+    final salePrice = TextEditingController();
+    final rentPrice = TextEditingController();
     var purpose = 'sale';
     var agentId = '${agents.first['agent_id']}';
     final ok = await AppDialog.show<bool>(
@@ -348,15 +349,26 @@ class _PublishCard extends ConsumerWidget {
               items: const [
                 DropdownMenuItem(value: 'sale', child: Text('Sale')),
                 DropdownMenuItem(value: 'rent', child: Text('Rent')),
+                DropdownMenuItem(value: 'both', child: Text('Sale & Rent')),
               ],
               onChanged: (v) => setS(() => purpose = v ?? 'sale'),
             ),
-            const SizedBox(height: AppSpacing.x8),
-            TextField(
-              controller: price,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Asking price (AED)'),
-            ),
+            if (purpose == 'sale' || purpose == 'both') ...[
+              const SizedBox(height: AppSpacing.x8),
+              TextField(
+                controller: salePrice,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Sale price (AED)'),
+              ),
+            ],
+            if (purpose == 'rent' || purpose == 'both') ...[
+              const SizedBox(height: AppSpacing.x8),
+              TextField(
+                controller: rentPrice,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Annual rent (AED)'),
+              ),
+            ],
             const SizedBox(height: AppSpacing.x8),
             DropdownButtonFormField<String>(
               initialValue: agentId,
@@ -382,10 +394,14 @@ class _PublishCard extends ConsumerWidget {
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
         FilledButton(
           onPressed: () {
-            if ((double.tryParse(price.text.trim()) ?? 0) <= 0) {
+            final needSale = purpose == 'sale' || purpose == 'both';
+            final needRent = purpose == 'rent' || purpose == 'both';
+            final saleOk = !needSale || (double.tryParse(salePrice.text.trim()) ?? 0) > 0;
+            final rentOk = !needRent || (double.tryParse(rentPrice.text.trim()) ?? 0) > 0;
+            if (!saleOk || !rentOk) {
               ScaffoldMessenger.of(context)
                 ..hideCurrentSnackBar()
-                ..showSnackBar(const SnackBar(content: Text('Enter an asking price.')));
+                ..showSnackBar(const SnackBar(content: Text('Enter a valid price for each selected type.')));
               return;
             }
             Navigator.pop(context, true);
@@ -398,13 +414,16 @@ class _PublishCard extends ConsumerWidget {
     try {
       await ref.read(apiClientProvider).post('/listings/from-property/$propertyId', body: {
         'purpose': purpose,
-        'price': double.tryParse(price.text.trim()),
+        if (purpose == 'sale' || purpose == 'both') 'sale_price': double.tryParse(salePrice.text.trim()),
+        if (purpose == 'rent' || purpose == 'both') 'rent_price': double.tryParse(rentPrice.text.trim()),
         'agent_id': agentId,
       });
       ref.invalidate(propertyRecordProvider(propertyId));
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Listing created — sent to your agent to publish.')));
+        final msg = purpose == 'both'
+            ? 'Sale + rent listings created — sent to your agent to publish.'
+            : 'Listing created — sent to your agent to publish.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -961,6 +980,29 @@ class _Header extends StatelessWidget {
             ]),
           const SizedBox(height: 4),
           Text(title, style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+          // Asset lifecycle (owner deed model Step 5): Draft until a listing goes
+          // live; then Live / Leased. Derived from the listing + tenancy state.
+          Builder(builder: (_) {
+            final (lc, lcColor) = tenancy != null && tenancy['id'] != null
+                ? ('Leased', AppColors.statusReserved)
+                : (listing != null && listing['is_visible'] == true)
+                    ? ('Live', AppColors.success)
+                    : (listing != null)
+                        ? ('Draft listing', AppColors.warning)
+                        : ('Draft', muted);
+            return Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  decoration: BoxDecoration(
+                      color: lcColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                  child: Text(lc, style: t.labelSmall?.copyWith(color: lcColor, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            );
+          }),
           if (community.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 2),
