@@ -321,6 +321,84 @@ class _MarketingPerformanceCard extends StatelessWidget {
   }
 }
 
+/// Property Verification Score (owner spec §18) — 0-100 trust score with an
+/// itemised checklist; >=70 shows the Verified badge. The server computes the
+/// score from signals that already exist (deed, owner, mortgage, photos, agent,
+/// listing, lease, documents) so it stays a single source of truth.
+class _VerificationCard extends StatelessWidget {
+  const _VerificationCard({required this.p});
+  final Map<String, dynamic> p;
+
+  static const _labels = <String, String>{
+    'title_deed': 'Title deed',
+    'owner_verified': 'Owner verified',
+    'mortgage': 'Mortgage',
+    'photos': 'Photos',
+    'agent': 'Agent assigned',
+    'listing_published': 'Listing published',
+    'lease': 'Lease',
+    'documents': 'Documents',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final v = p['verification'] is Map ? Map<String, dynamic>.from(p['verification'] as Map) : null;
+    if (v == null) return const SizedBox.shrink();
+    final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final score = int.tryParse('${v['score'] ?? 0}') ?? 0;
+    final verified = v['verified'] == true;
+    final items = v['items'] is Map ? Map<String, dynamic>.from(v['items'] as Map) : const {};
+    final color = verified ? AppColors.success : (score >= 40 ? AppColors.warning : muted);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.verified_user_outlined, size: 18, color: AppColors.primary),
+            const SizedBox(width: AppSpacing.x8),
+            Expanded(child: Text('Verification', style: t.titleSmall)),
+            if (verified)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.verified, size: 14, color: AppColors.success),
+                  SizedBox(width: 4),
+                  Text('Verified', style: TextStyle(color: AppColors.success, fontWeight: FontWeight.w700, fontSize: 12)),
+                ]),
+              ),
+          ]),
+          const SizedBox(height: AppSpacing.x8),
+          Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
+            Text('$score', style: t.headlineMedium?.copyWith(color: color, fontWeight: FontWeight.w800)),
+            Text(' / 100', style: t.bodyMedium?.copyWith(color: muted)),
+          ]),
+          const SizedBox(height: AppSpacing.x4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppSpacing.rFull),
+            child: LinearProgressIndicator(
+                value: (score / 100).clamp(0, 1), minHeight: 6, color: color, backgroundColor: muted.withValues(alpha: 0.15)),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x8, children: [
+            for (final e in _labels.entries)
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(items[e.key] == true ? Icons.check_circle : Icons.radio_button_unchecked,
+                    size: 16, color: items[e.key] == true ? AppColors.success : muted),
+                const SizedBox(width: 4),
+                Text(e.value, style: t.bodySmall?.copyWith(color: items[e.key] == true ? null : muted)),
+              ]),
+          ]),
+        ]),
+      ),
+    );
+  }
+}
+
 class PropertyRecordScreen extends ConsumerWidget {
   const PropertyRecordScreen({super.key, required this.propertyId});
   final String propertyId;
@@ -352,6 +430,8 @@ class PropertyRecordScreen extends ConsumerWidget {
                 children: [
                   _Header(p: p),
                   const SizedBox(height: AppSpacing.x16),
+                  _VerificationCard(p: p),
+                  const SizedBox(height: AppSpacing.x12),
                   _AgentsCard(propertyId: propertyId, isOwner: p['is_owner'] == true),
                   const SizedBox(height: AppSpacing.x12),
                   _MarketingPerformanceCard(p: p),
