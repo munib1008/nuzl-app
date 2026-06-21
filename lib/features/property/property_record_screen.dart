@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_client.dart';
+import '../../core/network/upload_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
@@ -541,6 +543,278 @@ class _VerificationCard extends StatelessWidget {
   }
 }
 
+/// Property photo gallery on the ASSET (owner deed model Step 6) — persists
+/// across listings. Owner can add (upload), delete and set a cover (first photo).
+class _GalleryCard extends ConsumerWidget {
+  const _GalleryCard({required this.propertyId, required this.p, required this.isOwner});
+  final String propertyId;
+  final Map<String, dynamic> p;
+  final bool isOwner;
+
+  List<String> get _photos =>
+      (p['photos'] is List) ? (p['photos'] as List).map((e) => '$e').where((e) => e.isNotEmpty).toList() : [];
+
+  Future<void> _save(BuildContext context, WidgetRef ref, List<String> photos) async {
+    try {
+      await ref.read(apiClientProvider).patch('/properties/$propertyId', body: {'photos': photos});
+      ref.invalidate(propertyRecordProvider(propertyId));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  Future<void> _add(BuildContext context, WidgetRef ref) async {
+    final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom, allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'], withData: true);
+    if (result == null || result.files.isEmpty) return;
+    final f = result.files.first;
+    final bytes = f.bytes;
+    if (bytes == null) return;
+    final ext = (f.extension ?? '').toLowerCase();
+    final ct = ext == 'png' ? 'image/png' : ext == 'webp' ? 'image/webp' : 'image/jpeg';
+    try {
+      final url = await ref.read(uploadServiceProvider).upload(bytes, f.name, ct);
+      if (url == null) return;
+      if (context.mounted) await _save(context, ref, [..._photos, url]);
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: ${friendlyError(e)}')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final photos = _photos;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.photo_library_outlined, size: 18, color: AppColors.primary),
+            const SizedBox(width: AppSpacing.x8),
+            Expanded(child: Text('Photos', style: t.titleSmall)),
+            if (photos.isNotEmpty) Text('${photos.length}', style: t.bodySmall?.copyWith(color: muted)),
+            if (isOwner)
+              TextButton.icon(onPressed: () => _add(context, ref), icon: const Icon(Icons.add_a_photo_outlined, size: 18), label: const Text('Add')),
+          ]),
+          const SizedBox(height: AppSpacing.x8),
+          if (photos.isEmpty)
+            Text(isOwner ? 'No photos yet. Add photos of this property — they stay on the asset across listings.' : 'No photos yet.',
+                style: t.bodySmall?.copyWith(color: muted))
+          else
+            Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
+              for (var i = 0; i < photos.length; i++)
+                _Thumb(
+                  url: photos[i],
+                  isCover: i == 0,
+                  isOwner: isOwner,
+                  onCover: i == 0 ? null : () => _save(context, ref, [photos[i], ...photos.where((u) => u != photos[i])]),
+                  onDelete: () => _save(context, ref, photos.where((u) => u != photos[i]).toList()),
+                ),
+            ]),
+        ]),
+      ),
+    );
+  }
+}
+
+class _Thumb extends StatelessWidget {
+  const _Thumb({required this.url, required this.isCover, required this.isOwner, this.onCover, this.onDelete});
+  final String url;
+  final bool isCover, isOwner;
+  final VoidCallback? onCover, onDelete;
+  @override
+  Widget build(BuildContext context) {
+    return Stack(children: [
+      ClipRRect(
+        borderRadius: BorderRadius.circular(AppSpacing.rSm),
+        child: Image.network(url, width: 96, height: 96, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(width: 96, height: 96, color: AppColors.surface2, child: const Icon(Icons.broken_image_outlined))),
+      ),
+      if (isCover)
+        Positioned(
+          left: 4, top: 4,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+            child: const Text('Cover', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+          ),
+        ),
+      if (isOwner)
+        Positioned(
+          right: 0, top: 0,
+          child: InkWell(
+            onTap: onDelete,
+            child: Container(
+              margin: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+              child: const Icon(Icons.close, size: 16, color: Colors.white),
+            ),
+          ),
+        ),
+      if (isOwner && onCover != null)
+        Positioned(
+          right: 2, bottom: 2,
+          child: InkWell(
+            onTap: onCover,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+              child: const Text('Set cover', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ),
+    ]);
+  }
+}
+
+/// "Complete your property" details card (owner deed model Step 6) — description,
+/// market value, service charge, furnishing, amenities, with an owner editor.
+class _DetailsCard extends ConsumerWidget {
+  const _DetailsCard({required this.propertyId, required this.p, required this.isOwner});
+  final String propertyId;
+  final Map<String, dynamic> p;
+  final bool isOwner;
+
+  Future<void> _edit(BuildContext context, WidgetRef ref) async {
+    final desc = TextEditingController(text: '${p['description'] ?? ''}');
+    final beds = TextEditingController(text: '${p['bedrooms'] ?? ''}');
+    final baths = TextEditingController(text: '${p['bathrooms'] ?? ''}');
+    final size = TextEditingController(text: '${p['size_sqft'] ?? ''}');
+    final svc = TextEditingController(text: '${p['service_charge'] ?? ''}');
+    final price = TextEditingController(text: '${p['purchase_price'] ?? ''}');
+    final value = TextEditingController(text: '${p['current_value'] ?? ''}');
+    final amen = TextEditingController(
+        text: (p['amenities'] is List) ? (p['amenities'] as List).join(', ') : '');
+    var furn = '${p['furnishing'] ?? ''}'.isEmpty ? 'unfurnished' : '${p['furnishing']}';
+    const furnOpts = ['unfurnished', 'semi_furnished', 'furnished'];
+    if (!furnOpts.contains(furn)) furn = 'unfurnished';
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Edit property details',
+      children: [
+        StatefulBuilder(
+          builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: desc, minLines: 2, maxLines: 4, decoration: const InputDecoration(labelText: 'Description')),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(child: TextField(controller: beds, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Beds'))),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(child: TextField(controller: baths, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Baths'))),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(child: TextField(controller: size, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Size (sqft)'))),
+            ]),
+            const SizedBox(height: AppSpacing.x8),
+            DropdownButtonFormField<String>(
+              initialValue: furn,
+              decoration: const InputDecoration(labelText: 'Furnishing'),
+              items: const [
+                DropdownMenuItem(value: 'unfurnished', child: Text('Unfurnished')),
+                DropdownMenuItem(value: 'semi_furnished', child: Text('Semi-furnished')),
+                DropdownMenuItem(value: 'furnished', child: Text('Furnished')),
+              ],
+              onChanged: (v) => setS(() => furn = v ?? 'unfurnished'),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: svc, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Service charge (AED / sqft / yr)')),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(child: TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Purchase price'))),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(child: TextField(controller: value, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Current value'))),
+            ]),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: amen, decoration: const InputDecoration(labelText: 'Amenities', hintText: 'Pool, Gym, Parking …')),
+          ]),
+        ),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+      ],
+    );
+    if (ok != true) return;
+    final amenList = amen.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    try {
+      await ref.read(apiClientProvider).patch('/properties/$propertyId', body: {
+        'description': desc.text.trim(),
+        'bedrooms': int.tryParse(beds.text.trim()),
+        'bathrooms': int.tryParse(baths.text.trim()),
+        'size_sqft': double.tryParse(size.text.trim()),
+        'furnishing': furn,
+        'service_charge': double.tryParse(svc.text.trim()),
+        'purchase_price': double.tryParse(price.text.trim()),
+        'current_value': double.tryParse(value.text.trim()),
+        'amenities': amenList,
+      });
+      ref.invalidate(propertyRecordProvider(propertyId));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Property details saved.')));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
+    final aed = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
+    final desc = '${p['description'] ?? ''}'.trim();
+    final value = num.tryParse('${p['current_value'] ?? ''}');
+    final svc = num.tryParse('${p['service_charge'] ?? ''}');
+    final furn = '${p['furnishing'] ?? ''}'.replaceAll('_', ' ').trim();
+    final amenities = (p['amenities'] is List) ? (p['amenities'] as List).map((e) => '$e').toList() : <String>[];
+    final incomplete = desc.isEmpty && value == null && amenities.isEmpty;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            const Icon(Icons.tune, size: 18, color: AppColors.primary),
+            const SizedBox(width: AppSpacing.x8),
+            Expanded(child: Text('Details', style: t.titleSmall)),
+            if (isOwner)
+              TextButton.icon(
+                onPressed: () => _edit(context, ref),
+                icon: const Icon(Icons.edit_outlined, size: 18),
+                label: Text(incomplete ? 'Complete' : 'Edit'),
+              ),
+          ]),
+          const SizedBox(height: AppSpacing.x4),
+          if (desc.isNotEmpty) ...[
+            Text(desc, style: t.bodyMedium),
+            const SizedBox(height: AppSpacing.x12),
+          ],
+          Wrap(spacing: AppSpacing.x16, runSpacing: AppSpacing.x8, children: [
+            if (value != null) _fact(context, muted, 'Market value', aed.format(value)),
+            if (svc != null) _fact(context, muted, 'Service charge', '${aed.format(svc)}/sqft'),
+            if (furn.isNotEmpty) _fact(context, muted, 'Furnishing', furn[0].toUpperCase() + furn.substring(1)),
+          ]),
+          if (amenities.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.x12),
+            Wrap(spacing: 6, runSpacing: 6, children: [
+              for (final a in amenities)
+                Chip(label: Text(a), visualDensity: VisualDensity.compact, materialTapTargetSize: MaterialTapTargetSize.shrinkWrap),
+            ]),
+          ],
+          if (incomplete && !isOwner) Text('No details added yet.', style: t.bodySmall?.copyWith(color: muted)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _fact(BuildContext context, Color muted, String label, String value) {
+    final t = Theme.of(context).textTheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      Text(label, style: t.bodySmall?.copyWith(color: muted)),
+      Text(value, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+    ]);
+  }
+}
+
 class PropertyRecordScreen extends ConsumerWidget {
   const PropertyRecordScreen({super.key, required this.propertyId});
   final String propertyId;
@@ -573,6 +847,10 @@ class PropertyRecordScreen extends ConsumerWidget {
                   _Header(p: p),
                   const SizedBox(height: AppSpacing.x16),
                   _VerificationCard(p: p),
+                  const SizedBox(height: AppSpacing.x12),
+                  _GalleryCard(propertyId: propertyId, p: p, isOwner: p['is_owner'] == true),
+                  const SizedBox(height: AppSpacing.x12),
+                  _DetailsCard(propertyId: propertyId, p: p, isOwner: p['is_owner'] == true),
                   const SizedBox(height: AppSpacing.x12),
                   _AgentsCard(propertyId: propertyId, isOwner: p['is_owner'] == true),
                   const SizedBox(height: AppSpacing.x12),
