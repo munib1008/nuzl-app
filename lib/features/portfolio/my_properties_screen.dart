@@ -270,6 +270,7 @@ class MyPropertiesScreen extends ConsumerWidget {
     DateTime? purchaseDate;
     var uploading = false;
     var extracted = false;
+    Map<String, dynamic>? extractedMortgage;
 
     final ok = await AppDialog.show<bool>(
       context,
@@ -303,6 +304,7 @@ class MyPropertiesScreen extends ConsumerWidget {
                   if (const ['apartment', 'villa', 'townhouse', 'office'].contains(ptype)) type = ptype;
                   final d = DateTime.tryParse('${f['purchase_date'] ?? ''}');
                   if (d != null) purchaseDate = d;
+                  if (f['mortgage'] is Map) extractedMortgage = Map<String, dynamic>.from(f['mortgage'] as Map);
                   extracted = true;
                 }
               } catch (_) {/* manual fallback */}
@@ -444,6 +446,29 @@ class MyPropertiesScreen extends ConsumerWidget {
       ref.invalidate(_overviewProvider);
       final id = res is Map ? '${res['id'] ?? ''}' : '';
       final status = res is Map ? '${res['ownership_status'] ?? ''}' : '';
+      // Auto-create the mortgage from OCR-detected financing (best-effort; the
+      // owner refines rate/term on the workspace). Rate unknown from a deed → 0.
+      final mort = extractedMortgage;
+      if (id.isNotEmpty && mort != null &&
+          ((double.tryParse('${mort['principal'] ?? ''}') ?? 0) > 0 || '${mort['lender'] ?? ''}'.trim().isNotEmpty)) {
+        int? term;
+        final sd = DateTime.tryParse('${mort['start_date'] ?? ''}');
+        final ed = DateTime.tryParse('${mort['end_date'] ?? ''}');
+        if (sd != null && ed != null) {
+          final m = (ed.year - sd.year) * 12 + (ed.month - sd.month);
+          if (m > 0) term = m;
+        }
+        try {
+          await ref.read(apiClientProvider).post('/mortgages', body: {
+            'property_id': id,
+            'lender': '${mort['lender'] ?? ''}'.trim(),
+            'principal': double.tryParse('${mort['principal'] ?? ''}'),
+            'interest_rate': 0,
+            'term_months': term ?? 300,
+            if (mort['start_date'] != null) 'start_date': '${mort['start_date']}',
+          });
+        } catch (_) {/* best-effort — owner can add the mortgage manually */}
+      }
       if (context.mounted) {
         final msg = status == 'verified'
             ? 'Ownership verified ✓ — property added.'
