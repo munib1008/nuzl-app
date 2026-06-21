@@ -10,6 +10,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/date_field.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
@@ -66,27 +67,17 @@ class RentalsScreen extends ConsumerWidget {
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
             error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (list) => list.isEmpty
-                ? ListView(children: [Padding(padding: const EdgeInsets.all(40), child: Column(children: [
-                    Icon(Icons.vpn_key_outlined, size: 44, color: Theme.of(context).hintColor),
-                    const SizedBox(height: 12),
-                    Text(canManage ? 'No tenancies yet' : 'No active tenancy'),
-                    const SizedBox(height: 6),
-                    Text(
-                      canManage
+                ? ListView(children: [
+                    EmptyState(
+                      icon: Icons.vpn_key_outlined,
+                      title: canManage ? 'No tenancies yet' : 'No active tenancy',
+                      message: canManage
                           ? 'Add a tenancy to track rent, cheques and the lease.'
                           : 'When your landlord adds you to a tenancy, it will appear here.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Theme.of(context).hintColor),
+                      actionLabel: canManage ? 'Add tenancy' : null,
+                      onAction: canManage ? () => _addTenancy(context, ref) : null,
                     ),
-                    if (canManage) ...[
-                      const SizedBox(height: AppSpacing.x16),
-                      FilledButton.icon(
-                        onPressed: () => _addTenancy(context, ref),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add tenancy'),
-                      ),
-                    ],
-                  ]))])
+                  ])
                 : ListView(
                     padding: const EdgeInsets.all(AppSpacing.x16),
                     children: list.map((m) {

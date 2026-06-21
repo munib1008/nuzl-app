@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive.dart';
 import '../../core/widgets/status_badge.dart';
 import '../shell/app_shell.dart';
@@ -25,7 +26,6 @@ class QuotationsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final quotes = ref.watch(myQuotesProvider);
-    final dark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: const NuzlAppBar(title: 'Quotations'),
       drawer: const NuzlDrawer(),
@@ -37,22 +37,13 @@ class QuotationsScreen extends ConsumerWidget {
             error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (list) => list.isEmpty
                 ? ListView(children: [
-                    const SizedBox(height: 80),
-                    Icon(Icons.request_quote_outlined, size: 48, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
-                    const SizedBox(height: 12),
-                    const Center(child: Text('No quotations yet', style: TextStyle(fontWeight: FontWeight.w700))),
-                    const SizedBox(height: 4),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: Text('Quotes you submit on open requests appear here. Browse open requests to start bidding.',
-                          textAlign: TextAlign.center, style: TextStyle(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                    EmptyState(
+                      icon: Icons.request_quote_outlined,
+                      title: 'No quotations yet',
+                      message: 'Quotes you submit on open requests appear here. Browse open requests to start bidding.',
+                      actionLabel: 'Browse requests',
+                      onAction: () => context.push('/tenders'),
                     ),
-                    const SizedBox(height: AppSpacing.x16),
-                    Center(child: FilledButton.icon(
-                      onPressed: () => context.push('/tenders'),
-                      icon: const Icon(Icons.assignment_outlined, size: 18),
-                      label: const Text('Browse requests'),
-                    )),
                   ])
                 : ListView.separated(
                     padding: const EdgeInsets.all(AppSpacing.x16),

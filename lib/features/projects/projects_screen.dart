@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive.dart';
 import '../../core/widgets/status_badge.dart';
 import '../auth/application/auth_controller.dart';
@@ -47,7 +48,13 @@ class ProjectsScreen extends ConsumerWidget {
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
           error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) => list.isEmpty
-              ? const Center(child: Padding(padding: EdgeInsets.all(40), child: Text('No projects yet. Create one.')))
+              ? EmptyState(
+                  icon: Icons.apartment_outlined,
+                  title: 'No projects yet',
+                  message: 'Create a project, then add units to it to manage your inventory.',
+                  actionLabel: 'New project',
+                  onAction: () => _createProject(context, ref),
+                )
               : ListView.separated(
                   padding: const EdgeInsets.all(AppSpacing.x16),
                   itemCount: list.length,

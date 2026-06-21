@@ -5,6 +5,7 @@ import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/responsive.dart';
 import '../auth/application/auth_controller.dart';
 import '../shell/app_shell.dart';
@@ -81,9 +82,10 @@ class InventoryScreen extends ConsumerWidget {
               data: (list) {
                 if (list.isEmpty) {
                   return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(40),
-                      child: Text('No units yet. Create a project, then add units to it.', textAlign: TextAlign.center),
+                    child: EmptyState(
+                      icon: Icons.meeting_room_outlined,
+                      title: 'No units yet',
+                      message: 'Create a project, then add units to it to build your inventory.',
                     ),
                   );
                 }
