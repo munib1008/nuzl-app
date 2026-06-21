@@ -584,7 +584,7 @@ class PropertyRecordScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.x12),
                   _LeaseCard(p: p),
                   const SizedBox(height: AppSpacing.x12),
-                  _MortgageCard(propertyId: propertyId),
+                  _MortgageCard(propertyId: propertyId, isOwner: p['is_owner'] == true),
                   const SizedBox(height: AppSpacing.x12),
                   _MaintenanceCard(propertyId: propertyId),
                   const SizedBox(height: AppSpacing.x12),
@@ -788,37 +788,247 @@ class _LeaseCard extends StatelessWidget {
   }
 }
 
+/// Property-centric mortgage dashboard (mortgage redesign): mortgage is a
+/// sub-module OF this property — the workspace header carries the property ref.
+/// Shows status + summary (bank · outstanding · monthly · rate · maturity ·
+/// progress); the owner adds a property-bound mortgage or marks it complete.
+/// No navigation to a standalone mortgage list.
 class _MortgageCard extends ConsumerWidget {
-  const _MortgageCard({required this.propertyId});
+  const _MortgageCard({required this.propertyId, required this.isOwner});
   final String propertyId;
+  final bool isOwner;
+
+  (String, Color) _status(String s, bool has) {
+    if (!has) return ('No mortgage', AppColors.textMuted);
+    switch (s) {
+      case 'settled': return ('Fully paid', AppColors.success);
+      case 'refinanced': return ('Refinanced', AppColors.warning);
+      default: return ('Active', AppColors.primary);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
-    final m = ref.watch(_propMortgagesProvider(propertyId));
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
-    return _Section(
-      icon: Icons.account_balance_outlined,
-      title: 'Mortgage',
-      onOpen: () => context.push('/mortgages'),
-      openLabel: 'Track',
-      child: m.when(
-        loading: () => _emptyLine(context, 'Loading…'),
-        error: (_, __) => _emptyLine(context, 'No mortgage tracked.'),
-        data: (list) {
-          if (list.isEmpty) return _emptyLine(context, 'No mortgage tracked on this property.');
-          final first = list.first;
-          final monthly = num.tryParse('${first['monthly_payment'] ?? ''}');
-          final outstanding = num.tryParse('${first['outstanding'] ?? first['balance'] ?? ''}');
-          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (outstanding != null)
-              Text('${aed.format(outstanding)} outstanding',
-                  style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary)),
-            if (monthly != null) _emptyLine(context, '${aed.format(monthly)} / mo'),
-            if (list.length > 1) _emptyLine(context, '${list.length} finance records'),
-          ]);
-        },
+    final df = DateFormat('d MMM yyyy');
+    final m = ref.watch(_propMortgagesProvider(propertyId));
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.x16),
+        child: m.when(
+          loading: () => const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.x8), child: LinearProgressIndicator()),
+          error: (e, _) => Row(children: [
+            const Icon(Icons.account_balance_outlined, size: 18, color: AppColors.primary),
+            const SizedBox(width: AppSpacing.x8),
+            Expanded(child: Text('Mortgage', style: t.titleSmall)),
+          ]),
+          data: (list) {
+            final has = list.isNotEmpty;
+            final first = has ? Map<String, dynamic>.from(list.first) : const <String, dynamic>{};
+            final status = '${first['status'] ?? 'active'}';
+            final (label, color) = _status(status, has);
+            final lender = '${first['lender'] ?? ''}'.trim();
+            final outstanding = num.tryParse('${first['outstanding'] ?? ''}');
+            final monthly = num.tryParse('${first['monthly_payment'] ?? ''}');
+            final rate = num.tryParse('${first['interest_rate'] ?? ''}');
+            final progress = num.tryParse('${first['progress_pct'] ?? ''}') ?? 0;
+            final term = int.tryParse('${first['term_months'] ?? ''}');
+            final mortgageId = '${first['id'] ?? ''}';
+            final active = has && status != 'settled';
+            DateTime? start;
+            if (first['start_date'] != null) start = DateTime.tryParse('${first['start_date']}');
+            final maturity = (start != null && term != null && term > 0)
+                ? DateTime(start.year, start.month + term, start.day)
+                : null;
+
+            return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                const Icon(Icons.account_balance_outlined, size: 18, color: AppColors.primary),
+                const SizedBox(width: AppSpacing.x8),
+                Expanded(child: Text('Mortgage', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700))),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
+                  child: Text(label, style: t.labelMedium?.copyWith(color: color, fontWeight: FontWeight.w700)),
+                ),
+              ]),
+              const SizedBox(height: AppSpacing.x8),
+              if (!has)
+                Text(
+                    isOwner
+                        ? 'No mortgage on this property. Add one to track payments, payoff and equity.'
+                        : 'No mortgage tracked on this property.',
+                    style: t.bodySmall?.copyWith(color: muted))
+              else ...[
+                if (outstanding != null)
+                  Text('${aed.format(outstanding)} outstanding',
+                      style: t.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary)),
+                const SizedBox(height: AppSpacing.x8),
+                Wrap(spacing: AppSpacing.x16, runSpacing: AppSpacing.x8, children: [
+                  if (lender.isNotEmpty) _fact(context, muted, 'Bank', lender),
+                  if (monthly != null) _fact(context, muted, 'Monthly', aed.format(monthly)),
+                  if (rate != null) _fact(context, muted, 'Rate', '${rate.toStringAsFixed(2)}%'),
+                  if (maturity != null) _fact(context, muted, 'Maturity', df.format(maturity)),
+                ]),
+                const SizedBox(height: AppSpacing.x12),
+                Row(children: [
+                  Text('Paid off', style: t.bodySmall?.copyWith(color: muted)),
+                  const Spacer(),
+                  Text('${progress.toStringAsFixed(0)}%', style: t.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+                ]),
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppSpacing.rFull),
+                  child: LinearProgressIndicator(
+                      value: (progress / 100).clamp(0, 1).toDouble(),
+                      minHeight: 6, color: color, backgroundColor: muted.withValues(alpha: 0.15)),
+                ),
+              ],
+              const SizedBox(height: AppSpacing.x12),
+              if (!has && isOwner)
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: () => _add(context, ref),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add mortgage'),
+                  ),
+                )
+              else if (has)
+                Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
+                  OutlinedButton.icon(
+                    onPressed: mortgageId.isEmpty ? null : () => context.push('/mortgages/$mortgageId'),
+                    icon: const Icon(Icons.timeline_outlined, size: 18),
+                    label: const Text('Payments & schedule'),
+                  ),
+                  if (active && isOwner)
+                    FilledButton.icon(
+                      onPressed: () => _complete(context, ref, mortgageId),
+                      icon: const Icon(Icons.task_alt, size: 18),
+                      label: const Text('Mark complete'),
+                    ),
+                ]),
+            ]);
+          },
+        ),
       ),
     );
+  }
+
+  Widget _fact(BuildContext context, Color muted, String label, String value) {
+    final t = Theme.of(context).textTheme;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      Text(label, style: t.bodySmall?.copyWith(color: muted)),
+      Text(value, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+    ]);
+  }
+
+  Future<void> _add(BuildContext context, WidgetRef ref) async {
+    final lender = TextEditingController();
+    final principal = TextEditingController();
+    final rate = TextEditingController();
+    final term = TextEditingController();
+    DateTime? start;
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Add mortgage',
+      children: [
+        StatefulBuilder(
+          builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(controller: lender, decoration: const InputDecoration(labelText: 'Bank / lender')),
+            const SizedBox(height: AppSpacing.x8),
+            TextField(controller: principal, keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Original amount (AED)')),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(child: TextField(controller: rate, keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Interest rate %'))),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(child: TextField(controller: term, keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Term (months)'))),
+            ]),
+            const SizedBox(height: AppSpacing.x8),
+            InkWell(
+              onTap: () async {
+                final d = await showDatePicker(
+                    context: ctx, initialDate: start ?? DateTime(2022),
+                    firstDate: DateTime(1990), lastDate: DateTime(2100));
+                if (d != null) setS(() => start = d);
+              },
+              child: InputDecorator(
+                decoration: const InputDecoration(labelText: 'Start date', suffixIcon: Icon(Icons.calendar_today, size: 18)),
+                child: Text(start == null ? 'Select date' : DateFormat('d MMM yyyy').format(start!)),
+              ),
+            ),
+          ]),
+        ),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: () {
+            if ((double.tryParse(principal.text.trim()) ?? 0) <= 0) {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(const SnackBar(content: Text('Enter the original mortgage amount.')));
+              return;
+            }
+            Navigator.pop(context, true);
+          },
+          child: const Text('Add'),
+        ),
+      ],
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(apiClientProvider).post('/mortgages', body: {
+        'property_id': propertyId,
+        'lender': lender.text.trim(),
+        'principal': double.tryParse(principal.text.trim()),
+        'interest_rate': double.tryParse(rate.text.trim()) ?? 0,
+        'term_months': int.tryParse(term.text.trim()) ?? 300,
+        if (start != null) 'start_date': start!.toIso8601String().split('T').first,
+      });
+      ref.invalidate(_propMortgagesProvider(propertyId));
+      ref.invalidate(propertyRecordProvider(propertyId));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mortgage added to this property.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  Future<void> _complete(BuildContext context, WidgetRef ref, String mortgageId) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mark mortgage complete'),
+        content: const Text(
+            'This records the settlement, zeroes the outstanding balance and marks the property mortgage-free. Continue?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Mark complete')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(apiClientProvider).post('/mortgages/$mortgageId/complete', body: {'status': 'settled'});
+      ref.invalidate(_propMortgagesProvider(propertyId));
+      ref.invalidate(propertyRecordProvider(propertyId));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mortgage settled — property is mortgage-free.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
   }
 }
 

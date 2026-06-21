@@ -122,7 +122,8 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.dashboard_outlined, 'Dashboard', '/dashboard'),
         NavItem(Icons.home_work_outlined, 'My Properties', '/my-properties'),
         NavItem(Icons.account_balance_wallet_outlined, 'Financials', '/financials'),
-        NavItem(Icons.account_balance_outlined, 'Mortgages', '/mortgages'),
+        // Mortgage is property-centric — tracked inside each property workspace
+        // (My Properties → property → Mortgage), not as a standalone module.
         NavItem(Icons.build_outlined, 'Maintenance', '/maintenance'),
         NavItem(Icons.dynamic_feed_outlined, 'Feed', '/feed'),
         NavItem(Icons.folder_outlined, 'Documents', '/documents'),
