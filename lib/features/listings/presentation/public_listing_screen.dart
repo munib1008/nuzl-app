@@ -132,6 +132,7 @@ class PublicListingScreen extends ConsumerWidget {
     final async = ref.watch(_publicListingProvider(id));
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false, // no auto back-arrow (it overlapped the logo/Sign in)
         titleSpacing: AppSpacing.x16,
         title: InkWell(onTap: () => context.go('/'), child: const NuzlLogo(size: 26)),
         actions: [
@@ -160,7 +161,9 @@ class PublicListingScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.x12),
             const Text('This listing is no longer available.'),
             const SizedBox(height: AppSpacing.x16),
-            FilledButton(onPressed: () => context.go('/'), child: const Text('Back to NUZL')),
+            // Width-capped — the global filled-button theme is full-width (good for
+            // form CTAs), which made this centred button a giant bar.
+            SizedBox(width: 220, child: FilledButton(onPressed: () => context.go('/'), child: const Text('Back to NUZL'))),
           ]),
         ),
       );

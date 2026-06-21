@@ -18,6 +18,37 @@ import '../../saved/saved_screen.dart';
 import '../../collaboration/collaboration_repository.dart';
 import 'listing_ribbons.dart';
 
+/// Owner/agency-admin: delete a listing (confirm → DELETE /listings/:id). The
+/// property record is kept; only the public listing is removed.
+Future<void> _deleteListing(BuildContext context, WidgetRef ref, String id) async {
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Delete listing'),
+      content: const Text(
+          'Permanently delete this listing? It is removed from the marketplace. Your property record is kept.'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Delete'),
+        ),
+      ],
+    ),
+  );
+  if (ok != true) return;
+  try {
+    await ref.read(apiClientProvider).delete('/listings/$id');
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing deleted.')));
+      if (context.canPop()) context.pop();
+    }
+  } catch (e) {
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+  }
+}
+
 final _detailProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, id) async {
   final d = await ref.read(apiClientProvider).get('/listings/$id');
   return d is Map ? Map<String, dynamic>.from(d) : <String, dynamic>{};
@@ -173,11 +204,19 @@ class _Detail extends ConsumerWidget {
                         const SizedBox(height: AppSpacing.x12),
                         Align(
                           alignment: Alignment.centerLeft,
-                          child: OutlinedButton.icon(
-                            onPressed: () => context.push('/properties/$id/edit', extra: l),
-                            icon: const Icon(Icons.edit_outlined, size: 18),
-                            label: const Text('Edit listing'),
-                          ),
+                          child: Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
+                            OutlinedButton.icon(
+                              onPressed: () => context.push('/properties/$id/edit', extra: l),
+                              icon: const Icon(Icons.edit_outlined, size: 18),
+                              label: const Text('Edit listing'),
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: () => _deleteListing(context, ref, id),
+                              icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.danger),
+                              label: const Text('Delete', style: TextStyle(color: AppColors.danger)),
+                              style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.danger)),
+                            ),
+                          ]),
                         ),
                         const SizedBox(height: AppSpacing.x12),
                         _OwnershipCard(listingId: id, listing: l),
