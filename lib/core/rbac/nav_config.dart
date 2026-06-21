@@ -172,6 +172,7 @@ List<NavItem> navItemsFor(Persona p) {
         NavItem(Icons.receipt_long_outlined, 'Audit Logs', '/audit'),
         NavItem(Icons.workspace_premium_outlined, 'Plans', '/plans'),
         NavItem(Icons.speed_outlined, 'Usage Limits', '/limits'),
+        NavItem(Icons.settings_outlined, 'Settings', '/admin/settings'),
         NavItem(Icons.insights_outlined, 'Reports', '/reports'),
       ];
   }
