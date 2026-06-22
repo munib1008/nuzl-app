@@ -430,6 +430,9 @@ class _OrderCard extends ConsumerWidget {
     // §7 completion confirmation — once the provider marks a service 'completed',
     // the customer confirms (→ closes) or reports an issue (→ dispute).
     final canConfirm = mine && kind == 'service' && status == 'completed' && o['completed_confirmed_at'] == null;
+    final statusHistory = (o['status_history'] is List)
+        ? (o['status_history'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList()
+        : <Map<String, dynamic>>[];
     final flow = flowFor(kind);
     final curIdx = flow.indexOf(status);
     final next = nextStatus(kind, status);
@@ -502,6 +505,22 @@ class _OrderCard extends ConsumerWidget {
                   ),
                 ),
             ]),
+          ],
+          // Tracking timeline — each status change with its timestamp.
+          if (statusHistory.length > 1) ...[
+            const SizedBox(height: AppSpacing.x8),
+            for (final h in statusHistory)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Icon(Icons.circle, size: 6, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(_trackLine(h),
+                        style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                  ),
+                ]),
+              ),
           ],
           if (rating != null) ...[
             const SizedBox(height: AppSpacing.x8),
@@ -600,4 +619,12 @@ class _OrderCard extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// One tracking-timeline line: "Status · 3 Jun, 2:00 PM".
+String _trackLine(Map<String, dynamic> h) {
+  final s = '${h['status'] ?? ''}';
+  final at = DateTime.tryParse('${h['at'] ?? ''}');
+  final label = orderStatusLabels[s] ?? s;
+  return at != null ? '$label · ${DateFormat('d MMM, h:mm a').format(at)}' : label;
 }

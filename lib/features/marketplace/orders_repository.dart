@@ -3,7 +3,7 @@ import '../../core/network/api_client.dart';
 
 /// Per-kind status flows (mirror the API). 'cancelled' is terminal, reachable from any.
 const productFlow = ['received', 'processing', 'dispatched', 'out_for_delivery', 'delivered', 'returned'];
-const serviceFlow = ['requested', 'assigned', 'scheduled', 'in_progress', 'completed', 'closed'];
+const serviceFlow = ['requested', 'assigned', 'scheduled', 'on_route', 'in_progress', 'completed', 'closed'];
 
 const orderStatusLabels = <String, String>{
   'received': 'Received',
@@ -15,6 +15,7 @@ const orderStatusLabels = <String, String>{
   'requested': 'Requested',
   'assigned': 'Assigned',
   'scheduled': 'Scheduled',
+  'on_route': 'On route',
   'in_progress': 'In progress',
   'completed': 'Completed',
   'closed': 'Closed',
