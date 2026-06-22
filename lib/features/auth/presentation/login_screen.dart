@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/i18n/app_localizations.dart';
+import '../../../core/i18n/locale_provider.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../application/auth_controller.dart';
 import '../../../core/auth/google_sign_in_service.dart';
@@ -61,22 +63,30 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Align(
+                    alignment: AlignmentDirectional.topEnd,
+                    child: TextButton.icon(
+                      onPressed: () => ref.read(localeProvider.notifier).toggle(),
+                      icon: const Icon(Icons.language, size: 18),
+                      label: Text(ref.watch(localeProvider)?.languageCode == 'ar' ? 'English' : 'العربية'),
+                    ),
+                  ),
                   const Center(child: NuzlLogo(size: 56)),
                   const SizedBox(height: AppSpacing.x16),
-                  Center(child: Text('Sign in to your workspace', style: t.bodyLarge)),
+                  Center(child: Text(context.tr('Sign in to your workspace'), style: t.bodyLarge)),
                   const SizedBox(height: AppSpacing.x32),
                   TextFormField(
                     controller: _email,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(hintText: 'Email'),
-                    validator: (v) => (v == null || !v.contains('@')) ? 'Enter a valid email' : null,
+                    decoration: InputDecoration(hintText: context.tr('Email')),
+                    validator: (v) => (v == null || !v.contains('@')) ? context.tr('Enter a valid email') : null,
                   ),
                   const SizedBox(height: AppSpacing.x16),
                   TextFormField(
                     controller: _password,
                     obscureText: true,
-                    decoration: const InputDecoration(hintText: 'Password'),
-                    validator: (v) => (v == null || v.length < 8) ? 'Min 8 characters' : null,
+                    decoration: InputDecoration(hintText: context.tr('Password')),
+                    validator: (v) => (v == null || v.length < 8) ? context.tr('Min 8 characters') : null,
                     onFieldSubmitted: (_) => _submit(),
                   ),
                   if (state.error != null) ...[
@@ -88,28 +98,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: state.loading ? null : _submit,
                     child: state.loading
                         ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Text('Sign in'),
+                        : Text(context.tr('Sign in')),
                   ),
                   const SizedBox(height: AppSpacing.x16),
                   Row(children: [
                     const Expanded(child: Divider()),
-                    Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: Text('or', style: t.bodySmall)),
+                    Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: Text(context.tr('or'), style: t.bodySmall)),
                     const Expanded(child: Divider()),
                   ]),
                   const SizedBox(height: AppSpacing.x16),
                   OutlinedButton.icon(
                     onPressed: state.loading ? null : _google,
                     icon: const Icon(Icons.account_circle_outlined),
-                    label: const Text('Continue with Google'),
+                    label: Text(context.tr('Continue with Google')),
                   ),
                   const SizedBox(height: AppSpacing.x16),
                   TextButton(
                     onPressed: () => context.go('/forgot'),
-                    child: const Text('Forgot password?'),
+                    child: Text(context.tr('Forgot password?')),
                   ),
                   TextButton(
                     onPressed: () => context.go('/register'),
-                    child: const Text("Don't have an account? Register"),
+                    child: Text(context.tr("Don't have an account? Register")),
                   ),
                 ],
               ),
