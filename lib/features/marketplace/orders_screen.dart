@@ -178,6 +178,47 @@ class _OrderCard extends ConsumerWidget {
     }
   }
 
+  /// §7 "Issue found" — flag the order (provider notified, stays open) AND open a
+  /// support ticket so it lands in the Support Center.
+  Future<void> _reportIssue(BuildContext context, WidgetRef ref) async {
+    final reason = TextEditingController();
+    final ok = await AppDialog.show<bool>(
+      context,
+      title: 'Report an issue',
+      children: [
+        TextField(controller: reason, maxLines: 3, decoration: const InputDecoration(labelText: 'What went wrong?')),
+      ],
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Submit')),
+      ],
+    );
+    if (ok != true) return;
+    final text = reason.text.trim();
+    final api = ref.read(apiClientProvider);
+    try {
+      await api.post('/marketplace/orders/${o['id']}/dispute', body: {'reason': text});
+      // Best-effort support ticket — keeps going even if it fails.
+      try {
+        await api.post('/feedback', body: {
+          'category': 'other',
+          'subject': 'Order issue — ${o['title'] ?? o['code'] ?? 'order'}',
+          'description': text.isEmpty ? 'Issue reported on a completed order.' : text,
+          'page': '/orders',
+          'meta': {'order_id': o['id'], 'order_code': o['code']},
+        });
+      } catch (_) {/* ticket is best-effort */}
+      ref.invalidate(myOrdersProvider);
+      ref.invalidate(incomingOrdersProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Issue reported — our support team will follow up.')));
+      }
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
   Future<void> _message(BuildContext context, WidgetRef ref, String providerId) async {
     try {
       final convId = await ref
@@ -557,7 +598,7 @@ class _OrderCard extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.x8),
                 Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x4, children: [
                   FilledButton(onPressed: () => _confirmComplete(context, ref), child: const Text('Yes, completed')),
-                  OutlinedButton(onPressed: () => _dispute(context, ref), child: const Text('Report an issue')),
+                  OutlinedButton(onPressed: () => _reportIssue(context, ref), child: const Text('Report an issue')),
                 ]),
               ]),
             ),
