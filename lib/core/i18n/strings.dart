@@ -840,4 +840,13 @@ const Map<String, String> kAr = {
   'Sign out': 'تسجيل الخروج',
   'Delete account': 'حذف الحساب',
   'Deactivate your account and sign out': 'إلغاء تفعيل حسابك وتسجيل الخروج',
+  // ── Messages / chat ──
+  'Search conversations…': 'البحث في المحادثات…',
+  'No conversations match': 'لا توجد محادثات تطابق',
+  'No messages yet': 'لا توجد رسائل بعد',
+  'No conversations yet': 'لا توجد محادثات بعد',
+  'Start a chat from a member’s profile or a listing’s agent card.': 'ابدأ محادثة من ملف أحد الأعضاء أو بطاقة وكيل القائمة.',
+  'Conversation': 'محادثة',
+  'Say hello 👋': 'ابدأ بالترحيب 👋',
+  'Message…': 'رسالة…',
 };

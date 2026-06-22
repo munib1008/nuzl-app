@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -31,7 +32,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
   Widget build(BuildContext context) {
     final inbox = ref.watch(inboxProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Messages'),
+      appBar: NuzlAppBar(title: context.tr('Messages')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: inbox.when(
@@ -56,7 +57,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                   onChanged: (v) => setState(() => _q = v),
                   decoration: InputDecoration(
                     isDense: true,
-                    hintText: 'Search conversations…',
+                    hintText: context.tr('Search conversations…'),
                     prefixIcon: const Icon(Icons.search, size: 20),
                     suffixIcon: _q.isNotEmpty
                         ? IconButton(
@@ -75,7 +76,7 @@ class _MessagesScreenState extends ConsumerState<MessagesScreen> {
                     ? Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24),
-                          child: Text('No conversations match “${_search.text.trim()}”.'),
+                          child: Text('${context.tr('No conversations match')} “${_search.text.trim()}”.'),
                         ),
                       )
                     : ListView.separated(
@@ -118,7 +119,7 @@ class _ConversationTile extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: t.titleSmall?.copyWith(fontWeight: unread ? FontWeight.w700 : FontWeight.w600)),
-      subtitle: Text(c.lastPreview ?? 'No messages yet',
+      subtitle: Text(c.lastPreview ?? context.tr('No messages yet'),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: t.bodySmall?.copyWith(
@@ -169,9 +170,9 @@ class _EmptyInbox extends StatelessWidget {
           children: [
             Icon(Icons.forum_outlined, size: 56, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
             const SizedBox(height: AppSpacing.x16),
-            Text('No conversations yet', style: t.titleMedium),
+            Text(context.tr('No conversations yet'), style: t.titleMedium),
             const SizedBox(height: AppSpacing.x8),
-            Text('Start a chat from a member’s profile or a listing’s agent card.',
+            Text(context.tr('Start a chat from a member’s profile or a listing’s agent card.'),
                 textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ],
         ),

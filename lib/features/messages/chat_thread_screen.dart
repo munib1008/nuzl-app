@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -73,7 +74,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       ref.read(messagingRepositoryProvider).markRead(widget.id);
     });
 
-    final title = header.asData?.value.title ?? 'Conversation';
+    final title = header.asData?.value.title ?? context.tr('Conversation');
     return Scaffold(
       appBar: AppBar(
         // This route lives outside the shell, so on a deep-link / web refresh the
@@ -92,7 +93,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                   Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
               data: (list) => list.isEmpty
                   ? Center(
-                      child: Text('Say hello 👋',
+                      child: Text(context.tr('Say hello 👋'),
                           style: Theme.of(context)
                               .textTheme
                               .bodyMedium
@@ -175,10 +176,10 @@ class _Composer extends StatelessWidget {
                 minLines: 1,
                 maxLines: 5,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  hintText: 'Message…',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(24))),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: InputDecoration(
+                  hintText: context.tr('Message…'),
+                  border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(24))),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   isDense: true,
                 ),
               ),
