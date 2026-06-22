@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
 import '../../core/i18n/app_localizations.dart';
+import '../../core/i18n/locale_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -301,6 +302,15 @@ class _StickyTopBar extends ConsumerWidget {
                               PopupMenuItem<String>(value: l.$2, child: Text(context.tr(l.$1))),
                           ],
                         ),
+                      // Public language switch (English ⇄ العربية) — visitors can
+                      // read the site in Arabic without signing in. Persisted + RTL.
+                      IconButton(
+                        tooltip: ref.watch(localeProvider)?.languageCode == 'ar'
+                            ? 'English'
+                            : 'العربية',
+                        icon: Icon(Icons.language, color: _onBg(context)),
+                        onPressed: () => ref.read(localeProvider.notifier).toggle(),
+                      ),
                       IconButton(
                         tooltip: context.tr('Toggle light / dark'),
                         icon: Icon(_isDark(context) ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
