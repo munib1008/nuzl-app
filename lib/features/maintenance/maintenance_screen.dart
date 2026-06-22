@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/upload_service.dart';
 import '../../core/rbac/persona.dart';
@@ -30,12 +31,12 @@ class MaintenanceScreen extends ConsumerWidget {
     final jobs = ref.watch(jobsProvider);
     final providers = ref.watch(providersProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Maintenance'),
+      appBar: NuzlAppBar(title: context.tr('Maintenance')),
       drawer: const NuzlDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openRequest(context),
         icon: const Icon(Icons.build_outlined),
-        label: const Text('Request job'),
+        label: Text(context.tr('Request job')),
       ),
       body: ResponsiveCenter(
         child: RefreshIndicator(
@@ -59,7 +60,7 @@ class MaintenanceScreen extends ConsumerWidget {
                   Widget metric(String label, String value) => Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [Text(value, style: tt.titleLarge),
-                          Text(label, style: tt.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))],
+                          Text(context.tr(label), style: tt.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))],
                       );
                   return Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.x16),
@@ -75,29 +76,29 @@ class MaintenanceScreen extends ConsumerWidget {
                 },
                 orElse: () => const SizedBox.shrink(),
               ),
-              Text('Requests', style: Theme.of(context).textTheme.titleMedium),
+              Text(context.tr('Requests'), style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: AppSpacing.x8),
               jobs.when(
                 loading: () => const LinearProgressIndicator(),
                 error: (e, _) => Text(friendlyError(e)),
                 data: (list) => list.isEmpty
-                    ? const Text('No requests yet — raise one with the button below.')
+                    ? Text(context.tr('No requests yet — raise one with the button below.'))
                     : Column(children: list.map((m) => _JobCard(j: Map<String, dynamic>.from(m))).toList()),
               ),
               const SizedBox(height: AppSpacing.x24),
-              Text('Service providers', style: Theme.of(context).textTheme.titleMedium),
+              Text(context.tr('Service providers'), style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: AppSpacing.x8),
               providers.when(
                 loading: () => const LinearProgressIndicator(),
                 error: (e, _) => Text(friendlyError(e)),
                 data: (list) => list.isEmpty
-                    ? const Text('No providers listed yet.')
+                    ? Text(context.tr('No providers listed yet.'))
                     : Column(children: list.map((m) {
                         final p = Map<String, dynamic>.from(m);
                         final cats = (p['categories'] is List) ? (p['categories'] as List).join(', ') : '';
                         return Card(child: ListTile(
                           leading: const CircleAvatar(child: Icon(Icons.handyman_outlined)),
-                          title: Text(p['name'] ?? 'Provider'),
+                          title: Text(p['name'] ?? context.tr('Provider')),
                           subtitle: Text(cats),
                           trailing: Text('★ ${p['rating'] ?? 0}'),
                         ));
@@ -133,7 +134,7 @@ class _JobCard extends ConsumerWidget {
       context: context,
       builder: (ctx) => SafeArea(
         child: ListView(shrinkWrap: true, children: flow.map((s) => ListTile(
-          title: Text(s),
+          title: Text(context.tr(s)),
           trailing: s == current ? Icon(Icons.check, color: Theme.of(ctx).colorScheme.primary) : null,
           onTap: () => Navigator.pop(ctx, s),
         )).toList()),
@@ -159,12 +160,12 @@ class _JobCard extends ConsumerWidget {
           if (canAssign)
             ListTile(
                 leading: const Icon(Icons.handyman_outlined),
-                title: const Text('Assign provider'),
+                title: Text(context.tr('Assign provider')),
                 onTap: () => Navigator.pop(ctx, 'assign')),
           if (canUpdate)
             ListTile(
                 leading: const Icon(Icons.flag_outlined),
-                title: const Text('Update status'),
+                title: Text(context.tr('Update status')),
                 onTap: () => Navigator.pop(ctx, 'status')),
         ]),
       ),
@@ -186,7 +187,7 @@ class _JobCard extends ConsumerWidget {
     if (!context.mounted) return;
     if (providers.isEmpty) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('No service providers available yet.')));
+          .showSnackBar(SnackBar(content: Text(context.tr('No service providers available yet.'))));
       return;
     }
     final picked = await showModalBottomSheet<String>(
@@ -199,7 +200,7 @@ class _JobCard extends ConsumerWidget {
             final cats = (p['categories'] is List) ? (p['categories'] as List).join(', ') : '';
             return ListTile(
               leading: const Icon(Icons.handyman_outlined),
-              title: Text('${p['name'] ?? 'Provider'}'),
+              title: Text('${p['name'] ?? context.tr('Provider')}'),
               subtitle: cats.isNotEmpty ? Text(cats) : null,
               trailing: Text('★ ${p['rating'] ?? 0}'),
               onTap: () => Navigator.pop(ctx, '${p['id']}'),
@@ -214,7 +215,7 @@ class _JobCard extends ConsumerWidget {
           .patch('/maintenance/jobs/${j['id']}/assign', body: {'provider_id': picked});
       ref.invalidate(jobsProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Provider assigned.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Provider assigned.'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -234,7 +235,7 @@ class _JobCard extends ConsumerWidget {
     final images = (j['images'] is List) ? (j['images'] as List).map((e) => '$e').where((s) => s.isNotEmpty).toList() : <String>[];
     final where = [
       if ('${j['community'] ?? ''}'.isNotEmpty) '${j['community']}',
-      if ('${j['unit_no'] ?? ''}'.isNotEmpty) 'Unit ${j['unit_no']}',
+      if ('${j['unit_no'] ?? ''}'.isNotEmpty) '${context.tr('Unit')} ${j['unit_no']}',
     ].join(' · ');
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -268,7 +269,7 @@ class _JobCard extends ConsumerWidget {
                       Text('${j['description']}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                           maxLines: 2, overflow: TextOverflow.ellipsis),
                     if ('${j['provider_name'] ?? ''}'.isNotEmpty)
-                      Text('Assigned: ${j['provider_name']}', style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                      Text('${context.tr('Assigned')}: ${j['provider_name']}', style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                   ],
                 ),
               ),
@@ -313,7 +314,7 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
       final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
       setState(() => _imageUrl = url);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Photo not added — ${friendlyError(e)}')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('Photo not added')} — ${friendlyError(e)}')));
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
@@ -321,7 +322,7 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
 
   Future<void> _submit() async {
     if (_propertyId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Pick a property first.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Pick a property first.'))));
       return;
     }
     setState(() => _submitting = true);
@@ -351,27 +352,27 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Request maintenance', style: Theme.of(context).textTheme.titleLarge),
+          Text(context.tr('Request maintenance'), style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: AppSpacing.x16),
           props.when(
             loading: () => const Padding(padding: EdgeInsets.all(8), child: LinearProgressIndicator()),
             error: (e, _) => Text(friendlyError(e)),
             data: (list) => list.isEmpty
-                ? const Text('No properties found. You can raise maintenance once you own a property or have an active tenancy.')
+                ? Text(context.tr('No properties found. You can raise maintenance once you own a property or have an active tenancy.'))
                 : DropdownButtonFormField<String>(
                     initialValue: _propertyId,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Property', prefixIcon: Icon(Icons.home_outlined)),
+                    decoration: InputDecoration(labelText: context.tr('Property'), prefixIcon: const Icon(Icons.home_outlined)),
                     items: list.map((m) {
                       final p = Map<String, dynamic>.from(m);
                       final label = [
                         if ('${p['community'] ?? ''}'.isNotEmpty) '${p['community']}',
-                        if ('${p['unit_no'] ?? ''}'.isNotEmpty) 'Unit ${p['unit_no']}',
+                        if ('${p['unit_no'] ?? ''}'.isNotEmpty) '${context.tr('Unit')} ${p['unit_no']}',
                         if ('${p['community'] ?? ''}'.isEmpty && '${p['unit_no'] ?? ''}'.isEmpty) _cap('${p['property_type'] ?? 'Property'}'),
                       ].join(' · ');
                       return DropdownMenuItem(
                         value: '${p['id']}',
-                        child: Text('$label${p['is_owner'] == true ? '' : ' (tenancy)'}',
+                        child: Text('$label${p['is_owner'] == true ? '' : ' (${context.tr('tenancy')})'}',
                             maxLines: 1, overflow: TextOverflow.ellipsis),
                       );
                     }).toList(),
@@ -381,7 +382,7 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
           const SizedBox(height: AppSpacing.x12),
           DropdownButtonFormField<String>(
             initialValue: _category,
-            decoration: const InputDecoration(labelText: 'Category', prefixIcon: Icon(Icons.category_outlined)),
+            decoration: InputDecoration(labelText: context.tr('Category'), prefixIcon: const Icon(Icons.category_outlined)),
             items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(_cap(c)))).toList(),
             onChanged: (v) => setState(() => _category = v ?? 'general'),
           ),
@@ -389,7 +390,7 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
           TextField(
             controller: _desc,
             minLines: 2, maxLines: 4,
-            decoration: const InputDecoration(labelText: 'Describe the issue', alignLabelWithHint: true),
+            decoration: InputDecoration(labelText: context.tr('Describe the issue'), alignLabelWithHint: true),
           ),
           const SizedBox(height: AppSpacing.x12),
           Row(children: [
@@ -398,7 +399,7 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
               icon: _uploading
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.add_a_photo_outlined, size: 18),
-              label: Text(_imageUrl == null ? 'Add photo' : 'Photo added'),
+              label: Text(context.tr(_imageUrl == null ? 'Add photo' : 'Photo added')),
             ),
             const SizedBox(width: AppSpacing.x12),
             if (_imageUrl != null)
@@ -412,7 +413,7 @@ class _RequestSheetState extends ConsumerState<_RequestSheet> {
             onPressed: _submitting ? null : _submit,
             child: _submitting
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('Submit request'),
+                : Text(context.tr('Submit request')),
           ),
         ],
       ),
@@ -431,7 +432,7 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-      child: Text(status, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
+      child: Text(context.tr(status), style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
     );
   }
 }
