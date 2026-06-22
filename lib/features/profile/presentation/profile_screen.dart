@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import 'profile_completion_banner.dart';
@@ -85,12 +86,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _onLeave() async {
     final action = await AppDialog.show<String>(
       context,
-      title: 'Unsaved changes',
-      children: const [Text('You have unsaved changes. Save them before leaving?')],
+      title: context.tr('Unsaved changes'),
+      children: [Text(context.tr('You have unsaved changes. Save them before leaving?'))],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, 'cancel'), child: const Text('Keep editing')),
-        TextButton(onPressed: () => Navigator.pop(context, 'discard'), child: const Text('Discard')),
-        FilledButton(onPressed: () => Navigator.pop(context, 'save'), child: const Text('Save')),
+        TextButton(onPressed: () => Navigator.pop(context, 'cancel'), child: Text(context.tr('Keep editing'))),
+        TextButton(onPressed: () => Navigator.pop(context, 'discard'), child: Text(context.tr('Discard'))),
+        FilledButton(onPressed: () => Navigator.pop(context, 'save'), child: Text(context.tr('Save'))),
       ],
     );
     if (!mounted) return;
@@ -115,31 +116,31 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => AlertDialog(
-          title: const Text('Create an organization'),
+          title: Text(context.tr('Create an organization')),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              TextField(controller: name, decoration: const InputDecoration(labelText: 'Organization name')),
+              TextField(controller: name, decoration: InputDecoration(labelText: context.tr('Organization name'))),
               const SizedBox(height: AppSpacing.x8),
               DropdownButtonFormField<String>(
                 initialValue: type,
-                decoration: const InputDecoration(labelText: 'Type'),
-                items: const [
-                  DropdownMenuItem(value: 'agency', child: Text('Agency')),
-                  DropdownMenuItem(value: 'developer', child: Text('Developer')),
-                  DropdownMenuItem(value: 'bank', child: Text('Bank')),
-                  DropdownMenuItem(value: 'service', child: Text('Service')),
+                decoration: InputDecoration(labelText: context.tr('Type')),
+                items: [
+                  DropdownMenuItem(value: 'agency', child: Text(context.tr('Agency'))),
+                  DropdownMenuItem(value: 'developer', child: Text(context.tr('Developer'))),
+                  DropdownMenuItem(value: 'bank', child: Text(context.tr('Bank'))),
+                  DropdownMenuItem(value: 'service', child: Text(context.tr('Service'))),
                 ],
                 onChanged: (v) => setS(() => type = v ?? 'agency'),
               ),
               const SizedBox(height: AppSpacing.x8),
-              TextField(controller: email, decoration: const InputDecoration(labelText: 'Official email')),
+              TextField(controller: email, decoration: InputDecoration(labelText: context.tr('Official email'))),
               const SizedBox(height: AppSpacing.x8),
-              TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone')),
+              TextField(controller: phone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.tr('Phone'))),
             ]),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Create')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Create'))),
           ],
         ),
       ),
@@ -152,7 +153,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ref.invalidate(_meProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Organization created — pending verification. Reload to manage it.')));
+            SnackBar(content: Text(context.tr('Organization created — pending verification. Reload to manage it.'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -187,7 +188,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _dirty = false;
       if (mounted) {
         setState(() {});
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile saved')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Profile saved'))));
       }
     } catch (e) {
       // Never surface a raw "Internal server error" — show a friendly message,
@@ -195,7 +196,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final code = e is ApiException ? (e.statusCode ?? 0) : 0;
       final msg = (e is ApiException && code >= 400 && code < 500 && e.message.trim().isNotEmpty)
           ? e.message
-          : 'Unable to save profile. Please try again, or contact support if it persists.';
+          : (mounted ? context.tr('Unable to save profile. Please try again, or contact support if it persists.') : 'Unable to save profile. Please try again, or contact support if it persists.');
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -227,15 +228,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Upload photo'),
+              title: Text(context.tr('Upload photo')),
               onTap: () { Navigator.pop(ctx); _pickAndUpload(); }),
           ListTile(
               leading: const Icon(Icons.link),
-              title: const Text('Paste image URL'),
+              title: Text(context.tr('Paste image URL')),
               onTap: () { Navigator.pop(ctx); _pasteUrlDialog(); }),
           ListTile(
               leading: const Icon(Icons.delete_outline),
-              title: const Text('Remove photo'),
+              title: Text(context.tr('Remove photo')),
               onTap: () { Navigator.pop(ctx); _setAvatar(''); }),
         ]),
       ),
@@ -260,7 +261,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Upload unavailable ($e). Try “Paste image URL”.')));
+            SnackBar(content: Text('${context.tr('Upload unavailable')} ($e). ${context.tr('Try “Paste image URL”.')}')));
       }
     }
   }
@@ -269,11 +270,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final c = TextEditingController();
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Profile photo URL',
+      title: context.tr('Profile photo URL'),
       children: [TextField(controller: c, decoration: const InputDecoration(hintText: 'https://…'))],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Save'))),
       ],
     );
     if (ok == true) await _setAvatar(c.text.trim());
@@ -288,7 +289,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await ref.read(authControllerProvider.notifier).bootstrap();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(url.isEmpty ? 'Photo removed' : 'Photo updated')));
+            SnackBar(content: Text(context.tr(url.isEmpty ? 'Photo removed' : 'Photo updated'))));
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -304,13 +305,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final canDelete = ValueNotifier<bool>(false);
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Delete account?',
+      title: context.tr('Delete account?'),
       children: [
-        const Text(
+        Text(context.tr(
           'Your account will be deactivated and you will be signed out. You have 14 days '
-          'to sign back in and reactivate — after that it is permanently deleted.'),
+          'to sign back in and reactivate — after that it is permanently deleted.')),
         const SizedBox(height: AppSpacing.x12),
-        const Text('Type DELETE to confirm.', style: TextStyle(fontWeight: FontWeight.w600)),
+        Text(context.tr('Type DELETE to confirm.'), style: const TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: AppSpacing.x8),
         TextField(
           controller: confirm,
@@ -321,13 +322,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
         ValueListenableBuilder<bool>(
           valueListenable: canDelete,
           builder: (ctx, enabled, _) => FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
             onPressed: enabled ? () => Navigator.pop(ctx, true) : null,
-            child: const Text('Delete'),
+            child: Text(context.tr('Delete')),
           ),
         ),
       ],
@@ -366,10 +367,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   /// KYC status pill (owner deed spec §1): not started / pending review / verified.
   Widget _kycChip() {
     final (label, color, icon) = _kycStatus == 'verified'
-        ? ('KYC verified', AppColors.success, Icons.verified)
+        ? (context.tr('KYC verified'), AppColors.success, Icons.verified)
         : _kycStatus == 'pending'
-            ? ('KYC pending review', AppColors.warning, Icons.hourglass_top)
-            : ('KYC not started', AppColors.textMuted, Icons.shield_outlined);
+            ? (context.tr('KYC pending review'), AppColors.warning, Icons.hourglass_top)
+            : (context.tr('KYC not started'), AppColors.textMuted, Icons.shield_outlined);
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
@@ -394,10 +395,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: t.titleMedium),
+          Text(context.tr(title), style: t.titleMedium),
           if (subtitle != null) ...[
             const SizedBox(height: 2),
-            Text(subtitle, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+            Text(context.tr(subtitle), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ],
           const SizedBox(height: AppSpacing.x16),
           ...children,
@@ -437,10 +438,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _onLeave();
       },
       child: Scaffold(
-        appBar: const NuzlAppBar(title: 'Profile & settings'),
+        appBar: NuzlAppBar(title: context.tr('Profile & settings')),
         drawer: const NuzlDrawer(),
         bottomNavigationBar: _dirty
-            ? StickySaveBar(saving: _saving, label: 'Save changes', onPressed: _save)
+            ? StickySaveBar(saving: _saving, label: context.tr('Save changes'), onPressed: _save)
             : null,
         body: ListView(
           padding: const EdgeInsets.all(AppSpacing.x16),
@@ -475,7 +476,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       ),
                     ]),
                     const SizedBox(height: AppSpacing.x12),
-                    Text(user?.fullName ?? 'Account', style: t.titleLarge),
+                    Text(user?.fullName ?? context.tr('Account'), style: t.titleLarge),
                     Text(user?.email ?? '', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                     // RERA verification badge is only meaningful for professionals.
                     if (pro) ...[
@@ -489,7 +490,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           Icon(verified ? Icons.verified : Icons.verified_outlined, size: 14,
                               color: verified ? AppColors.accentGold : AppColors.textMuted),
                           const SizedBox(width: 4),
-                          Text(verified ? 'RERA verified' : 'Unverified',
+                          Text(context.tr(verified ? 'RERA verified' : 'Unverified'),
                               style: t.bodySmall?.copyWith(color: verified ? AppColors.accentGold : AppColors.textMuted)),
                         ]),
                       ),
@@ -500,22 +501,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   // ── About you ────────────────────────────────────
                   _section('About you', 'How you appear to clients and other members', [
                     TextField(controller: fullName, onChanged: (_) => _markDirty(),
-                        decoration: const InputDecoration(labelText: 'Full name', prefixIcon: Icon(Icons.person_outline))),
+                        decoration: InputDecoration(labelText: context.tr('Full name'), prefixIcon: const Icon(Icons.person_outline))),
                     const SizedBox(height: AppSpacing.x12),
                     InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Role',
-                        prefixIcon: Icon(Icons.badge_outlined),
-                        helperText: 'Switch roles from the top bar; add roles via support.',
+                      decoration: InputDecoration(
+                        labelText: context.tr('Role'),
+                        prefixIcon: const Icon(Icons.badge_outlined),
+                        helperText: context.tr('Switch roles from the top bar; add roles via support.'),
                       ),
                       child: Text(personaFromRole(user?.activeRole ?? user?.role).label),
                     ),
                     if ((user?.designation ?? '').trim().isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.x12),
                       InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Nuzler designation',
-                          prefixIcon: Icon(Icons.workspace_premium_outlined),
+                        decoration: InputDecoration(
+                          labelText: context.tr('Nuzler designation'),
+                          prefixIcon: const Icon(Icons.workspace_premium_outlined),
                         ),
                         child: Text(_designationLabel('${user!.designation}')),
                       ),
@@ -526,39 +527,39 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       // name, licence, website and address live in My Company, not on
                       // the personal profile (company ≠ user).
                       InputDecorator(
-                        decoration: const InputDecoration(
-                          labelText: 'Company',
-                          prefixIcon: Icon(Icons.business_outlined),
-                          helperText: 'Company name, licence, website and address are managed in My Company.',
+                        decoration: InputDecoration(
+                          labelText: context.tr('Company'),
+                          prefixIcon: const Icon(Icons.business_outlined),
+                          helperText: context.tr('Company name, licence, website and address are managed in My Company.'),
                         ),
                         child: Text(
-                          user?.organizationId == null ? 'Not set up yet — open My Company' : 'Managed in My Company',
+                          context.tr(user?.organizationId == null ? 'Not set up yet — open My Company' : 'Managed in My Company'),
                           style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                         ),
                       ),
                     ] else if (agentLike) ...[
                       const SizedBox(height: AppSpacing.x12),
                       TextField(controller: company, onChanged: (_) => _markDirty(),
-                          decoration: const InputDecoration(labelText: 'Company / brokerage', hintText: 'Your brokerage or firm', prefixIcon: Icon(Icons.business_outlined))),
+                          decoration: InputDecoration(labelText: context.tr('Company / brokerage'), hintText: context.tr('Your brokerage or firm'), prefixIcon: const Icon(Icons.business_outlined))),
                     ],
                     const SizedBox(height: AppSpacing.x12),
                     TextField(controller: bio, onChanged: (_) => _markDirty(), maxLines: 3,
                         decoration: InputDecoration(
-                            labelText: 'Bio',
-                            hintText: pro ? 'Tell clients about yourself and your experience…' : 'Tell others a little about yourself…')),
+                            labelText: context.tr('Bio'),
+                            hintText: context.tr(pro ? 'Tell clients about yourself and your experience…' : 'Tell others a little about yourself…'))),
                   ]),
                   const SizedBox(height: AppSpacing.x16),
 
                   // ── Contact ──────────────────────────────────────
                   _section('Contact', null, [
                     TextField(controller: phone, onChanged: (_) => _markDirty(), keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(labelText: 'Phone number', hintText: '+971 …', prefixIcon: Icon(Icons.call_outlined))),
+                        decoration: InputDecoration(labelText: context.tr('Phone number'), hintText: '+971 …', prefixIcon: const Icon(Icons.call_outlined))),
                     const SizedBox(height: AppSpacing.x12),
                     TextField(controller: whatsapp, onChanged: (_) => _markDirty(), keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(labelText: 'WhatsApp', hintText: '+971 …', prefixIcon: Icon(Icons.chat_outlined))),
+                        decoration: InputDecoration(labelText: context.tr('WhatsApp'), hintText: '+971 …', prefixIcon: const Icon(Icons.chat_outlined))),
                     const SizedBox(height: AppSpacing.x12),
                     PickerField(
-                      label: 'Nationality *',
+                      label: context.tr('Nationality *'),
                       icon: Icons.flag_outlined,
                       value: nationality.text,
                       options: kNationalities,
@@ -570,7 +571,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const SizedBox(height: AppSpacing.x12),
                     FieldPair(
                       PickerField(
-                        label: 'Country *',
+                        label: context.tr('Country *'),
                         value: country.text,
                         options: kCountries,
                         onChanged: (v) => setState(() {
@@ -586,7 +587,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         final cities = kCitiesByCountry[country.text];
                         if (cities != null) {
                           return PickerField(
-                            label: 'City *',
+                            label: context.tr('City *'),
                             value: city.text,
                             options: cities,
                             onChanged: (v) => setState(() {
@@ -598,7 +599,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         return TextField(
                           controller: city,
                           onChanged: (_) => _markDirty(),
-                          decoration: const InputDecoration(labelText: 'City *'),
+                          decoration: InputDecoration(labelText: context.tr('City *')),
                         );
                       }),
                     ),
@@ -610,24 +611,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     _kycChip(),
                     const SizedBox(height: AppSpacing.x12),
                     TextField(controller: emiratesId, onChanged: (_) => _markDirty(),
-                        decoration: const InputDecoration(
-                            labelText: 'Emirates ID', hintText: '784-____-_______-_', prefixIcon: Icon(Icons.badge_outlined))),
+                        decoration: InputDecoration(
+                            labelText: context.tr('Emirates ID'), hintText: '784-____-_______-_', prefixIcon: const Icon(Icons.badge_outlined))),
                     const SizedBox(height: AppSpacing.x12),
                     TextField(controller: passportNumber, onChanged: (_) => _markDirty(),
-                        decoration: const InputDecoration(
-                            labelText: 'Passport number', prefixIcon: Icon(Icons.menu_book_outlined))),
+                        decoration: InputDecoration(
+                            labelText: context.tr('Passport number'), prefixIcon: const Icon(Icons.menu_book_outlined))),
                   ]),
                   const SizedBox(height: AppSpacing.x16),
 
                   if (pro && user?.organizationId == null) ...[
                     _section('Organization', null, [
-                      Text('You are not part of an organization yet.',
+                      Text(context.tr('You are not part of an organization yet.'),
                           style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       const SizedBox(height: AppSpacing.x8),
                       OutlinedButton.icon(
                         onPressed: () => _createOrg(context),
                         icon: const Icon(Icons.business_outlined, size: 18),
-                        label: const Text('Create an organization'),
+                        label: Text(context.tr('Create an organization')),
                       ),
                     ]),
                     const SizedBox(height: AppSpacing.x16),
@@ -638,24 +639,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   // personal RERA BRN — those are brokerage concepts.
                   if (agentLike) ...[
                     _section('Expertise', 'Helps buyers find the right match', [
-                      MultiSelectField(label: 'Areas you cover', icon: Icons.map_outlined, options: _emirates, selected: areas,
+                      MultiSelectField(label: context.tr('Areas you cover'), icon: Icons.map_outlined, options: _emirates, selected: areas,
                           onChanged: (v) => setState(() { areas..clear()..addAll(v); _dirty = true; })),
-                      MultiSelectField(label: 'Languages', icon: Icons.translate_outlined, options: _langs, selected: languages,
+                      MultiSelectField(label: context.tr('Languages'), icon: Icons.translate_outlined, options: _langs, selected: languages,
                           onChanged: (v) => setState(() { languages..clear()..addAll(v); _dirty = true; })),
-                      MultiSelectField(label: 'Property specialties', icon: Icons.star_outline, options: _specs, selected: specialties,
+                      MultiSelectField(label: context.tr('Property specialties'), icon: Icons.star_outline, options: _specs, selected: specialties,
                           onChanged: (v) => setState(() { specialties..clear()..addAll(v); _dirty = true; })),
                     ]),
                     const SizedBox(height: AppSpacing.x16),
                     _section('Credentials', 'A RERA BRN turns on the verified badge', [
                       TextField(controller: reraBrn, onChanged: (_) => setState(() => _dirty = true),
-                          decoration: const InputDecoration(labelText: 'RERA BRN', hintText: 'Broker registration number', prefixIcon: Icon(Icons.verified_outlined))),
+                          decoration: InputDecoration(labelText: context.tr('RERA BRN'), hintText: context.tr('Broker registration number'), prefixIcon: const Icon(Icons.verified_outlined))),
                     ]),
                     const SizedBox(height: AppSpacing.x16),
                   ] else ...[
                     // Consumers get a single, optional "languages" preference — no
                     // areas/specialties/RERA. Keeps the profile light and relevant.
                     _section('Languages', 'Optional — helps us match you with the right people', [
-                      MultiSelectField(label: 'Languages you speak', icon: Icons.translate_outlined, options: _langs, selected: languages,
+                      MultiSelectField(label: context.tr('Languages you speak'), icon: Icons.translate_outlined, options: _langs, selected: languages,
                           onChanged: (v) => setState(() { languages..clear()..addAll(v); _dirty = true; })),
                     ]),
                     const SizedBox(height: AppSpacing.x16),
@@ -666,13 +667,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     if (isAdmin)
                       ListTile(
                         leading: const Icon(Icons.science_outlined),
-                        title: const Text('View as role'),
-                        subtitle: const Text('Preview any role (test mode)'),
+                        title: Text(context.tr('View as role')),
+                        subtitle: Text(context.tr('Preview any role (test mode)')),
                         onTap: () => context.go('/view-as')),
                     if (isAdmin) const Divider(height: 1),
                     ListTile(
                       leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
-                      title: Text('Sign out', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                      title: Text(context.tr('Sign out'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
                       onTap: () async {
                         await ref.read(authControllerProvider.notifier).logout();
                         if (context.mounted) context.go('/');
@@ -684,8 +685,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   // ── Danger zone ──────────────────────────────────
                   Card(child: ListTile(
                     leading: Icon(Icons.delete_forever_outlined, color: Theme.of(context).colorScheme.error),
-                    title: Text('Delete account', style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                    subtitle: const Text('Deactivate your account and sign out'),
+                    title: Text(context.tr('Delete account'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                    subtitle: Text(context.tr('Deactivate your account and sign out')),
                     onTap: _deleteAccount,
                   )),
                   const SizedBox(height: AppSpacing.x24),
