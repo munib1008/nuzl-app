@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/upload_service.dart';
 import '../../../core/rbac/persona.dart';
@@ -24,15 +25,15 @@ Future<void> _deleteListing(BuildContext context, WidgetRef ref, String id) asyn
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => AlertDialog(
-      title: const Text('Delete listing'),
-      content: const Text(
-          'Permanently delete this listing? It is removed from the marketplace. Your property record is kept.'),
+      title: Text(context.tr('Delete listing')),
+      content: Text(context.tr(
+          'Permanently delete this listing? It is removed from the marketplace. Your property record is kept.')),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
         FilledButton(
           style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
           onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Delete'),
+          child: Text(context.tr('Delete')),
         ),
       ],
     ),
@@ -41,7 +42,7 @@ Future<void> _deleteListing(BuildContext context, WidgetRef ref, String id) asyn
   try {
     await ref.read(apiClientProvider).delete('/listings/$id');
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing deleted.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Listing deleted.'))));
       if (context.canPop()) context.pop();
     }
   } catch (e) {
@@ -101,7 +102,7 @@ class ListingDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(_detailProvider(id));
     return Scaffold(
-      appBar: AppBar(title: const Text('Listing'), actions: [SaveListingButton(listingId: id)]),
+      appBar: AppBar(title: Text(context.tr('Listing')), actions: [SaveListingButton(listingId: id)]),
       body: detail.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
@@ -178,7 +179,7 @@ class _Detail extends ConsumerWidget {
                             decoration: BoxDecoration(
                                 color: (isRent ? AppColors.info : AppColors.primary).withValues(alpha: 0.12),
                                 borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                            child: Text(isRent ? 'For rent' : 'For sale',
+                            child: Text(context.tr(isRent ? 'For rent' : 'For sale'),
                                 style: t.bodySmall?.copyWith(
                                     color: isRent ? AppColors.info : AppColors.primary, fontWeight: FontWeight.w700)),
                           ),
@@ -190,7 +191,7 @@ class _Detail extends ConsumerWidget {
                       ],
                       if ('${l['ref_code'] ?? ''}'.trim().isNotEmpty) ...[
                         const SizedBox(height: 2),
-                        Text('Ref ${l['ref_code']}',
+                        Text('${context.tr('Ref')} ${l['ref_code']}',
                             style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w600)),
                       ],
                       const SizedBox(height: AppSpacing.x8),
@@ -208,12 +209,12 @@ class _Detail extends ConsumerWidget {
                             OutlinedButton.icon(
                               onPressed: () => context.push('/properties/$id/edit', extra: l),
                               icon: const Icon(Icons.edit_outlined, size: 18),
-                              label: const Text('Edit listing'),
+                              label: Text(context.tr('Edit listing')),
                             ),
                             OutlinedButton.icon(
                               onPressed: () => _deleteListing(context, ref, id),
                               icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.danger),
-                              label: const Text('Delete', style: TextStyle(color: AppColors.danger)),
+                              label: Text(context.tr('Delete'), style: const TextStyle(color: AppColors.danger)),
                               style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.danger)),
                             ),
                           ]),
@@ -236,21 +237,21 @@ class _Detail extends ConsumerWidget {
                           child: OutlinedButton.icon(
                             onPressed: () => context.push('/properties/${l['property_id']}/documents'),
                             icon: const Icon(Icons.folder_open_outlined, size: 18),
-                            label: const Text('Documents'),
+                            label: Text(context.tr('Documents')),
                           ),
                         ),
                       ],
                       const SizedBox(height: AppSpacing.x16),
-                      Text('Key facts', style: t.titleMedium),
+                      Text(context.tr('Key facts'), style: t.titleMedium),
                       const SizedBox(height: AppSpacing.x12),
                       // Headline facts as scannable stat cards (the full table
                       // below still carries every detail).
                       Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x12, children: [
-                        if (l['bedrooms'] != null) _statCard(context, Icons.bed_outlined, '${l['bedrooms']}', 'Bedrooms'),
-                        if (l['bathrooms'] != null) _statCard(context, Icons.bathtub_outlined, '${l['bathrooms']}', 'Bathrooms'),
+                        if (l['bedrooms'] != null) _statCard(context, Icons.bed_outlined, '${l['bedrooms']}', context.tr('Bedrooms')),
+                        if (l['bathrooms'] != null) _statCard(context, Icons.bathtub_outlined, '${l['bathrooms']}', context.tr('Bathrooms')),
                         if (l['size_sqft'] != null)
-                          _statCard(context, Icons.straighten, (num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0), 'Sq ft'),
-                        if (l['property_type'] != null) _statCard(context, Icons.home_work_outlined, _cap('${l['property_type']}'), 'Type'),
+                          _statCard(context, Icons.straighten, (num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0), context.tr('Sq ft')),
+                        if (l['property_type'] != null) _statCard(context, Icons.home_work_outlined, _cap('${l['property_type']}'), context.tr('Type')),
                       ]),
                       const SizedBox(height: AppSpacing.x16),
                       // Remaining facts as a balanced, distributed grid (the
@@ -258,12 +259,12 @@ class _Detail extends ConsumerWidget {
                       DetailGrid(
                         items: facts
                             .where((f) => !const {'Type', 'Bedrooms', 'Bathrooms', 'Size'}.contains(f.$1))
-                            .map((f) => (detailIcon(f.$1), f.$1, f.$2))
+                            .map((f) => (detailIcon(f.$1), context.tr(f.$1), f.$2))
                             .toList(),
                       ),
                       if ('${l['description'] ?? ''}'.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.x16),
-                        Text('Description', style: t.titleMedium),
+                        Text(context.tr('Description'), style: t.titleMedium),
                         const SizedBox(height: AppSpacing.x4),
                         Text('${l['description']}', style: t.bodyMedium),
                       ],
@@ -288,7 +289,7 @@ class _Detail extends ConsumerWidget {
                       const SizedBox(height: AppSpacing.x20),
                       if (brokerId.isNotEmpty) _AgentCard(brokerId: brokerId, listingId: id),
                       const SizedBox(height: AppSpacing.x20),
-                      Text('Location', style: t.titleMedium),
+                      Text(context.tr('Location'), style: t.titleMedium),
                       const SizedBox(height: AppSpacing.x8),
                       LocationMap(
                         lat: double.tryParse('${l['latitude'] ?? ''}'),
@@ -417,13 +418,13 @@ class _AgentCard extends ConsumerWidget {
       initialDate: now.add(const Duration(days: 1)),
       firstDate: now,
       lastDate: now.add(const Duration(days: 90)),
-      helpText: 'Preferred viewing date',
+      helpText: context.tr('Preferred viewing date'),
     );
     if (date == null || !context.mounted) return null;
     final time = await showTimePicker(
       context: context,
       initialTime: const TimeOfDay(hour: 11, minute: 0),
-      helpText: 'Preferred time',
+      helpText: context.tr('Preferred time'),
     );
     if (time == null) return null;
     return DateTime(date.year, date.month, date.day, time.hour, time.minute);
@@ -435,18 +436,18 @@ class _AgentCard extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Request collaboration'),
+        title: Text(context.tr('Request collaboration')),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Text('Propose a commission split to co-broke this listing.', style: TextStyle(fontSize: 13)),
+          Text(context.tr('Propose a commission split to co-broke this listing.'), style: const TextStyle(fontSize: 13)),
           const SizedBox(height: AppSpacing.x12),
           TextField(controller: split, keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Your split (%)')),
+              decoration: InputDecoration(labelText: context.tr('Your split (%)'))),
           const SizedBox(height: AppSpacing.x8),
-          TextField(controller: msg, maxLines: 2, decoration: const InputDecoration(labelText: 'Message (optional)')),
+          TextField(controller: msg, maxLines: 2, decoration: InputDecoration(labelText: context.tr('Message (optional)'))),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Send'))),
         ],
       ),
     );
@@ -454,7 +455,7 @@ class _AgentCard extends ConsumerWidget {
     try {
       await ref.read(collabRepoProvider).request(listingId, double.tryParse(split.text.trim()), msg.text.trim());
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request sent to the listing agent')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Request sent to the listing agent'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -472,7 +473,7 @@ class _AgentCard extends ConsumerWidget {
       ref.invalidate(_myViewingProvider(listingId));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Viewing requested — the agent will confirm your slot.')));
+            SnackBar(content: Text(context.tr('Viewing requested — the agent will confirm your slot.'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -489,7 +490,7 @@ class _AgentCard extends ConsumerWidget {
       ref.invalidate(_myViewingProvider(listingId));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('New time proposed — the agent will confirm.')));
+            SnackBar(content: Text(context.tr('New time proposed — the agent will confirm.'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -501,7 +502,7 @@ class _AgentCard extends ConsumerWidget {
     final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final agent = ref.watch(_agentProvider(brokerId));
-    final name = agent.maybeWhen(data: (m) => '${m['full_name'] ?? 'Listing agent'}', orElse: () => 'Listing agent');
+    final name = agent.maybeWhen(data: (m) => '${m['full_name'] ?? context.tr('Listing agent')}', orElse: () => context.tr('Listing agent'));
     final role = agent.maybeWhen(data: (m) => personaFromRole('${m['role'] ?? ''}').label, orElse: () => '');
     return Card(
       child: Padding(
@@ -525,7 +526,7 @@ class _AgentCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                TextButton(onPressed: () => context.push('/u/$brokerId'), child: const Text('Profile')),
+                TextButton(onPressed: () => context.push('/u/$brokerId'), child: Text(context.tr('Profile'))),
               ],
             ),
             if (ref.watch(authControllerProvider).user?.id != null &&
@@ -547,7 +548,7 @@ class _AgentCard extends ConsumerWidget {
                     }
                   },
                   icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                  label: const Text('Message agent'),
+                  label: Text(context.tr('Message agent')),
                 ),
               ),
               if (ref.watch(personaProvider).canListProperty) ...[
@@ -557,7 +558,7 @@ class _AgentCard extends ConsumerWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => _requestCollab(context, ref),
                     icon: const Icon(Icons.diversity_3_outlined, size: 18),
-                    label: const Text('Request collaboration'),
+                    label: Text(context.tr('Request collaboration')),
                   ),
                 ),
               ],
@@ -581,7 +582,7 @@ class _AgentCard extends ConsumerWidget {
                   // or errored — scheduling doesn't depend on that data.
                   onPressed: () => _requestViewing(context, ref),
                   icon: const Icon(Icons.event_available_outlined),
-                  label: const Text('Schedule viewing'),
+                  label: Text(context.tr('Schedule viewing')),
                 ),
               ),
             ),
@@ -604,7 +605,7 @@ class _BookingBox extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final sched = DateTime.tryParse('${v['scheduled_at']}');
     final status = '${v['status']}';
-    final when = sched != null ? DateFormat('EEE d MMM · HH:mm').format(sched) : 'time to be confirmed';
+    final when = sched != null ? DateFormat('EEE d MMM · HH:mm').format(sched) : context.tr('time to be confirmed');
     final label = switch (status) {
       'scheduled' => 'confirmed',
       'approved' => 'approved',
@@ -618,7 +619,7 @@ class _BookingBox extends StatelessWidget {
         Row(children: [
           const Icon(Icons.event_available_outlined, size: 18, color: AppColors.primary),
           const SizedBox(width: AppSpacing.x8),
-          Expanded(child: Text('Viewing $label', style: t.titleSmall?.copyWith(color: AppColors.primaryDark))),
+          Expanded(child: Text('${context.tr('Viewing')} ${context.tr(label)}', style: t.titleSmall?.copyWith(color: AppColors.primaryDark))),
         ]),
         const SizedBox(height: 2),
         Text(when, style: t.bodyMedium?.copyWith(color: AppColors.primaryDark, fontWeight: FontWeight.w600)),
@@ -629,7 +630,7 @@ class _BookingBox extends StatelessWidget {
             child: OutlinedButton.icon(
               onPressed: onChange,
               icon: const Icon(Icons.edit_calendar_outlined, size: 16),
-              label: const Text('Change date / time'),
+              label: Text(context.tr('Change date / time')),
             ),
           ),
         ],
@@ -680,7 +681,7 @@ class _OwnershipCardState extends ConsumerState<_OwnershipCard> {
       ref.invalidate(_detailProvider(widget.listingId));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Title deed submitted — a Nuzler will review it.')));
+            SnackBar(content: Text(context.tr('Title deed submitted — a Nuzler will review it.'))));
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -731,10 +732,10 @@ class _OwnershipCardState extends ConsumerState<_OwnershipCard> {
             Row(children: [
               Icon(icon, color: color, size: 20),
               const SizedBox(width: 8),
-              Text(label, style: t.titleSmall?.copyWith(color: color)),
+              Text(context.tr(label), style: t.titleSmall?.copyWith(color: color)),
             ]),
             const SizedBox(height: 4),
-            Text(sub, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+            Text(context.tr(sub), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             if (canSubmit) ...[
               const SizedBox(height: AppSpacing.x12),
               SizedBox(
@@ -746,7 +747,7 @@ class _OwnershipCardState extends ConsumerState<_OwnershipCard> {
                           width: 18, height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.upload_file_outlined),
-                  label: Text(status == 'rejected' ? 'Resubmit title deed' : 'Submit title deed'),
+                  label: Text(context.tr(status == 'rejected' ? 'Resubmit title deed' : 'Submit title deed')),
                 ),
               ),
             ],
@@ -770,7 +771,7 @@ class _PublishRow extends ConsumerWidget {
       ref.invalidate(_detailProvider(listingId));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(action == 'publish' ? 'Listing published.' : 'Listing taken offline.')));
+            content: Text(context.tr(action == 'publish' ? 'Listing published.' : 'Listing taken offline.'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -788,12 +789,12 @@ class _PublishRow extends ConsumerWidget {
             ? OutlinedButton.icon(
                 onPressed: () => _act(context, ref, 'unpublish'),
                 icon: const Icon(Icons.visibility_off_outlined, size: 18),
-                label: const Text('Take offline'),
+                label: Text(context.tr('Take offline')),
               )
             : FilledButton.icon(
                 onPressed: () => _act(context, ref, 'publish'),
                 icon: const Icon(Icons.publish_outlined, size: 18),
-                label: const Text('Publish (go live)'),
+                label: Text(context.tr('Publish (go live)')),
               ),
       ),
     );
@@ -836,7 +837,7 @@ class _PropertyAgentsCard extends ConsumerWidget {
           Row(children: [
             Icon(Icons.support_agent_outlined, size: 20, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
-            Expanded(child: Text('Assigned agents', style: t.titleSmall)),
+            Expanded(child: Text(context.tr('Assigned agents'), style: t.titleSmall)),
             TextButton.icon(
               onPressed: () async {
                 final ok = await showDialog<bool>(
@@ -844,21 +845,21 @@ class _PropertyAgentsCard extends ConsumerWidget {
                 if (ok == true) ref.invalidate(_propertyAgentsProvider(propertyId));
               },
               icon: const Icon(Icons.add, size: 18),
-              label: const Text('Add'),
+              label: Text(context.tr('Add')),
             ),
           ]),
-          Text('Agents you assign can see this property’s rental requests and viewings.',
+          Text(context.tr('Agents you assign can see this property’s rental requests and viewings.'),
               style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           const SizedBox(height: AppSpacing.x8),
           agents.when(
             loading: () => const Padding(padding: EdgeInsets.all(8), child: LinearProgressIndicator()),
             error: (e, _) => Text('$e', style: t.bodySmall),
             data: (list) => list.isEmpty
-                ? Text('No agents assigned.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
+                ? Text(context.tr('No agents assigned.'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                 : Column(
                     children: list.map((m) {
                       final a = Map<String, dynamic>.from(m);
-                      final name = '${a['full_name'] ?? 'Agent'}';
+                      final name = '${a['full_name'] ?? context.tr('Agent')}';
                       return ListTile(
                         dense: true,
                         contentPadding: EdgeInsets.zero,
@@ -867,7 +868,7 @@ class _PropertyAgentsCard extends ConsumerWidget {
                         subtitle: Text('${a['user_role'] ?? ''}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                         trailing: IconButton(
                             icon: const Icon(Icons.close, size: 18),
-                            tooltip: 'Revoke',
+                            tooltip: context.tr('Revoke'),
                             onPressed: () => _revoke(context, ref, '${a['agent_id']}')),
                       );
                     }).toList(),
@@ -934,21 +935,21 @@ class _AssignAgentDialogState extends ConsumerState<_AssignAgentDialog> {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     return AlertDialog(
-      title: const Text('Assign an agent'),
+      title: Text(context.tr('Assign an agent')),
       content: SizedBox(
         width: MediaQuery.sizeOf(context).width - 80 < 360 ? MediaQuery.sizeOf(context).width - 80 : 360,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(
             controller: _q,
             autofocus: true,
-            decoration: const InputDecoration(hintText: 'Search by name', prefixIcon: Icon(Icons.search)),
+            decoration: InputDecoration(hintText: context.tr('Search by name'), prefixIcon: const Icon(Icons.search)),
             onChanged: _search,
           ),
           const SizedBox(height: AppSpacing.x12),
           if (_loading)
             const LinearProgressIndicator()
           else if (_results.isEmpty)
-            Padding(padding: const EdgeInsets.all(12), child: Text('Type a name to search.', style: t.bodySmall))
+            Padding(padding: const EdgeInsets.all(12), child: Text(context.tr('Type a name to search.'), style: t.bodySmall))
           else
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 280),
@@ -959,7 +960,7 @@ class _AssignAgentDialogState extends ConsumerState<_AssignAgentDialog> {
                   return ListTile(
                     dense: true,
                     leading: const Icon(Icons.person_outline),
-                    title: Text('${u['full_name'] ?? 'User'}'),
+                    title: Text('${u['full_name'] ?? context.tr('User')}'),
                     subtitle: Text('${u['role'] ?? ''}'),
                     onTap: () => _assign('${u['id']}'),
                   );
@@ -968,7 +969,7 @@ class _AssignAgentDialogState extends ConsumerState<_AssignAgentDialog> {
             ),
         ]),
       ),
-      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Close'))],
+      actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Close')))],
     );
   }
 }
@@ -993,7 +994,7 @@ class _AmenitiesBlock extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: AppSpacing.x16),
-        Text('Amenities', style: t.titleMedium),
+        Text(context.tr('Amenities'), style: t.titleMedium),
         const SizedBox(height: AppSpacing.x8),
         Wrap(
           spacing: AppSpacing.x8,
@@ -1029,7 +1030,7 @@ class _VerificationBlock extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: AppSpacing.x16),
-        Text('Verification & compliance', style: t.titleMedium),
+        Text(context.tr('Verification & compliance'), style: t.titleMedium),
         const SizedBox(height: AppSpacing.x8),
         Container(
           padding: const EdgeInsets.all(AppSpacing.x12),
@@ -1045,7 +1046,7 @@ class _VerificationBlock extends StatelessWidget {
                 Row(children: [
                   const Icon(Icons.verified_user, size: 18, color: AppColors.accentGold),
                   const SizedBox(width: 6),
-                  Text('Ownership verified',
+                  Text(context.tr('Ownership verified'),
                       style: t.bodyMedium?.copyWith(color: AppColors.accentGold, fontWeight: FontWeight.w600)),
                 ]),
                 const SizedBox(height: AppSpacing.x8),
@@ -1054,17 +1055,17 @@ class _VerificationBlock extends StatelessWidget {
                 Row(children: [
                   const Icon(Icons.verified, size: 18, color: AppColors.success),
                   const SizedBox(width: 6),
-                  Text('Verified listing',
+                  Text(context.tr('Verified listing'),
                       style: t.bodyMedium?.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
                 ]),
                 const SizedBox(height: AppSpacing.x8),
               ],
-              if (permit.isNotEmpty) _kv(context, 'Permit no.', permit),
-              if (rera.isNotEmpty) _kv(context, 'RERA no.', rera),
+              if (permit.isNotEmpty) _kv(context, context.tr('Permit no.'), permit),
+              if (rera.isNotEmpty) _kv(context, context.tr('RERA no.'), rera),
               if (quality > 0) ...[
                 const SizedBox(height: AppSpacing.x8),
                 Row(children: [
-                  Text('Listing quality', style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                  Text(context.tr('Listing quality'), style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
                   const Spacer(),
                   Text('$quality/100', style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
                 ]),
@@ -1124,7 +1125,7 @@ class _IncentivesBlock extends StatelessWidget {
       Row(children: [
         const Icon(Icons.card_giftcard, size: 18, color: AppColors.accentGold),
         const SizedBox(width: AppSpacing.x8),
-        Text('Incentives & offers', style: t.titleMedium),
+        Text(context.tr('Incentives & offers'), style: t.titleMedium),
       ]),
       const SizedBox(height: AppSpacing.x8),
       Container(
@@ -1146,13 +1147,13 @@ class _IncentivesBlock extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final meta = _incentiveMeta('${it['type'] ?? 'other'}');
     final label = '${it['label'] ?? ''}'.trim().isNotEmpty ? '${it['label']}' : meta.$2;
-    final value = _formatIncentiveValue(it['value'], '${it['unit'] ?? ''}');
+    final value = _formatIncentiveValue(context, it['value'], '${it['unit'] ?? ''}');
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(children: [
         Icon(meta.$1, size: 18, color: AppColors.accentGold),
         const SizedBox(width: AppSpacing.x8),
-        Expanded(child: Text(label, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600))),
+        Expanded(child: Text(context.tr(label), style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600))),
         if (value.isNotEmpty)
           Text(value, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.success)),
       ]),
@@ -1181,7 +1182,7 @@ class _IncentivesBlock extends StatelessWidget {
   }
 }
 
-String _formatIncentiveValue(dynamic value, String unit) {
+String _formatIncentiveValue(BuildContext context, dynamic value, String unit) {
   final v = num.tryParse('${value ?? ''}');
   if (v == null) return '';
   switch (unit) {
@@ -1190,7 +1191,7 @@ String _formatIncentiveValue(dynamic value, String unit) {
     case 'aed':
       return NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(v);
     case 'months':
-      return '${v.toInt()} ${v.toInt() == 1 ? 'month' : 'months'}';
+      return '${v.toInt()} ${context.tr(v.toInt() == 1 ? 'month' : 'months')}';
     default:
       return '$v';
   }
@@ -1210,7 +1211,7 @@ class _FloorPlanBlock extends StatelessWidget {
       Row(children: [
         const Icon(Icons.architecture_outlined, size: 18, color: AppColors.primary),
         const SizedBox(width: AppSpacing.x8),
-        Text('Floor plan', style: t.titleMedium),
+        Text(context.tr('Floor plan'), style: t.titleMedium),
       ]),
       const SizedBox(height: AppSpacing.x8),
       GestureDetector(
@@ -1222,8 +1223,8 @@ class _FloorPlanBlock extends StatelessWidget {
               InteractiveViewer(
                 maxScale: 5,
                 child: Image.network(url, fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const Padding(
-                        padding: EdgeInsets.all(AppSpacing.x24), child: Text('Floor plan unavailable'))),
+                    errorBuilder: (_, __, ___) => Padding(
+                        padding: const EdgeInsets.all(AppSpacing.x24), child: Text(context.tr('Floor plan unavailable')))),
               ),
               Positioned(
                 top: 4, right: 4,
@@ -1245,7 +1246,7 @@ class _FloorPlanBlock extends StatelessWidget {
         ),
       ),
       const SizedBox(height: 4),
-      Text('Tap to enlarge', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+      Text(context.tr('Tap to enlarge'), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
     ]);
   }
 }
@@ -1275,14 +1276,13 @@ class _RoiEstimate extends ConsumerWidget {
         final gross = num.tryParse('${m['grossYieldPct'] ?? 0}') ?? 0;
         final net = num.tryParse('${m['netYieldPct'] ?? 0}') ?? 0;
         final rent = num.tryParse('${m['estAnnualRent'] ?? 0}') ?? 0;
-        final n = m['sampleSize'] ?? 0;
         final money = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
         return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const SizedBox(height: AppSpacing.x16),
           Row(children: [
             const Icon(Icons.trending_up, size: 18, color: AppColors.success),
             const SizedBox(width: AppSpacing.x8),
-            Text('Investor view — rental ROI', style: t.titleMedium),
+            Text(context.tr('Investor view — rental ROI'), style: t.titleMedium),
           ]),
           const SizedBox(height: AppSpacing.x8),
           Container(
@@ -1295,14 +1295,14 @@ class _RoiEstimate extends ConsumerWidget {
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Expanded(child: _metric(context, '${gross.toStringAsFixed(1)}%', 'Gross yield')),
-                Expanded(child: _metric(context, '${net.toStringAsFixed(1)}%', 'Net yield')),
-                Expanded(child: _metric(context, money.format(rent), 'Est. annual rent')),
+                Expanded(child: _metric(context, '${gross.toStringAsFixed(1)}%', context.tr('Gross yield'))),
+                Expanded(child: _metric(context, '${net.toStringAsFixed(1)}%', context.tr('Net yield'))),
+                Expanded(child: _metric(context, money.format(rent), context.tr('Est. annual rent'))),
               ]),
               const SizedBox(height: AppSpacing.x8),
               Text(
-                'Indicative, based on $n comparable ${m['basis'] ?? 'rentals'}. '
-                'Net yield deducts the service charge and a 10% management / vacancy allowance.',
+                '${context.tr('Indicative estimate from comparable rentals.')} '
+                '${context.tr('Net yield deducts the service charge and a 10% management / vacancy allowance.')}',
                 style: t.bodySmall?.copyWith(color: AppColors.textMuted),
               ),
             ]),
@@ -1361,14 +1361,14 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
   String get _incentiveSummary {
     final parts = <String>[];
     if (widget.dldWaiverPct >= 100) {
-      parts.add('DLD waived');
+      parts.add(context.tr('DLD waived'));
     } else if (widget.dldWaiverPct > 0) {
-      parts.add('${widget.dldWaiverPct.round()}% DLD covered');
+      parts.add('${widget.dldWaiverPct.round()}% ${context.tr('DLD covered')}');
     }
     if (widget.processingWaiverPct >= 100) {
-      parts.add('processing fee waived');
+      parts.add(context.tr('processing fee waived'));
     } else if (widget.processingWaiverPct > 0) {
-      parts.add('${widget.processingWaiverPct.round()}% processing covered');
+      parts.add('${widget.processingWaiverPct.round()}% ${context.tr('processing covered')}');
     }
     if (widget.incentiveNote.trim().isNotEmpty) parts.add(widget.incentiveNote.trim());
     return parts.join('  ·  ');
@@ -1406,11 +1406,11 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
       final waived = waiverPct > 0;
       final suffix = !waived
           ? ''
-          : (waiverPct >= 100 ? '  ·  waived' : '  ·  ${waiverPct.round()}% covered');
+          : (waiverPct >= 100 ? '  ·  ${context.tr('waived')}' : '  ·  ${waiverPct.round()}% ${context.tr('covered')}');
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 3),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Expanded(child: Text('$label$suffix', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
+          Expanded(child: Text('${context.tr(label)}$suffix', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
           if (waived) ...[
             Text(aed.format(full),
                 style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, decoration: TextDecoration.lineThrough)),
@@ -1450,7 +1450,7 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
                     const SizedBox(width: AppSpacing.x8),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Developer incentive',
+                        Text(context.tr('Developer incentive'),
                             style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: AppColors.accentGold)),
                         if (_incentiveSummary.isNotEmpty)
                           Text(_incentiveSummary, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
@@ -1460,14 +1460,14 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
                 ),
                 const SizedBox(height: AppSpacing.x12),
               ],
-              control('Down payment', '${_downPct.round()}%  ·  ${aed.format(_downPayment)}',
+              control(context.tr('Down payment'), '${_downPct.round()}%  ·  ${aed.format(_downPayment)}',
                   _downPct, 10, 50, 8, (v) => setState(() => _downPct = v)),
-              control('Interest rate', '${_ratePct.toStringAsFixed(2)}%',
+              control(context.tr('Interest rate'), '${_ratePct.toStringAsFixed(2)}%',
                   _ratePct, 2, 8, 24, (v) => setState(() => _ratePct = v)),
-              control('Loan term', '$_years years',
+              control(context.tr('Loan term'), '$_years ${context.tr('years')}',
                   _years.toDouble(), 5, 30, 25, (v) => setState(() => _years = v.round())),
               const Divider(height: AppSpacing.x16),
-              Text('Estimated monthly payment', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+              Text(context.tr('Estimated monthly payment'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               Text(aed.format(_monthly),
                   style: t.headlineSmall?.copyWith(
                       // Brighter teal in dark mode — the colorScheme primary is too
@@ -1477,14 +1477,14 @@ class _MortgageEstimateState extends State<_MortgageEstimate> {
                           : Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.w700)),
               const SizedBox(height: AppSpacing.x8),
-              row('Loan amount', aed.format(_loan)),
-              row('Down payment', aed.format(_downPayment)),
+              row(context.tr('Loan amount'), aed.format(_loan)),
+              row(context.tr('Down payment'), aed.format(_downPayment)),
               feeRow('DLD fee (4%)', _dldFull, _dld, widget.dldWaiverPct),
               feeRow('Processing fee (~1%)', _processingFull, _processing, widget.processingWaiverPct),
               const Divider(height: AppSpacing.x16),
-              row('Total acquisition cost', aed.format(_acquisition), strong: true),
+              row(context.tr('Total acquisition cost'), aed.format(_acquisition), strong: true),
               const SizedBox(height: AppSpacing.x8),
-              Text('Estimate only — final terms depend on the lender.',
+              Text(context.tr('Estimate only — final terms depend on the lender.'),
                   style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ]),
           ),
@@ -1511,7 +1511,7 @@ class _TimelineBlock extends ConsumerWidget {
           Row(children: [
             Icon(Icons.history_outlined, size: 18, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: AppSpacing.x8),
-            Text('Property timeline', style: t.titleMedium),
+            Text(context.tr('Property timeline'), style: t.titleMedium),
           ]),
           const SizedBox(height: AppSpacing.x8),
           for (var i = 0; i < events.length; i++) _TimelineRow(e: events[i], isLast: i == events.length - 1),
@@ -1573,7 +1573,7 @@ class _TimelineRow extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.x12),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(label, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              Text(context.tr(label), style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
               if (detail != null) Text(detail, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               Text([
                 if (when != null) DateFormat('d MMM yyyy').format(when),
@@ -1634,7 +1634,7 @@ class _SimilarSection extends ConsumerWidget {
     if (items.isEmpty) return const SizedBox.shrink();
     final t = Theme.of(context).textTheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Similar properties', style: t.titleMedium),
+      Text(context.tr('Similar properties'), style: t.titleMedium),
       const SizedBox(height: AppSpacing.x12),
       SizedBox(
         height: 232,
@@ -1662,7 +1662,7 @@ class _SimilarTile extends StatelessWidget {
     final price = num.tryParse('${m['price']}') ?? 0;
     final isRent = '${m['purpose']}' == 'rent';
     final money = price > 0
-        ? '${NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price)}${isRent ? ' / yr' : ''}'
+        ? '${NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price)}${isRent ? ' / ${context.tr('yr')}' : ''}'
         : '';
     final cover = '${m['cover_image'] ?? ''}';
     final community = '${m['community'] ?? ''}';
@@ -1689,8 +1689,8 @@ class _SimilarTile extends StatelessWidget {
                   Text(community, style: t.bodySmall?.copyWith(color: muted), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 4),
                 Text([
-                  if (beds != null) '$beds BR',
-                  if (baths != null) '$baths BA',
+                  if (beds != null) '$beds ${context.tr('BR')}',
+                  if (baths != null) '$baths ${context.tr('BA')}',
                 ].join(' · '), style: t.bodySmall?.copyWith(color: muted)),
               ]),
             ),
