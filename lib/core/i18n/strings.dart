@@ -891,4 +891,9 @@ const Map<String, String> kAr = {
   'yrs': 'سنة',
   'paid': 'مدفوع',
   'left': 'متبقٍ',
+  // ── Projects ──
+  'No projects yet': 'لا توجد مشاريع بعد',
+  'Create a project, then add units to it to manage your inventory.': 'أنشئ مشروعًا، ثم أضف إليه وحدات لإدارة مخزونك.',
+  'handover': 'التسليم',
+  'Project name': 'اسم المشروع',
 };
