@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/util/mortgage_math.dart';
@@ -72,16 +73,16 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
   bool get _isDev => isDeveloperPlan(_financeType);
 
   // ── Statement-aware lexicon ────────────────────────────────────────────
-  String get _financeLabel => _isl ? 'Finance amount (AED) *' : 'Loan amount (AED) *';
-  String get _rateLabel => _isl ? 'Profit rate (% / yr) *' : 'Interest rate (% / yr) *';
-  String get _termLabel => _isl ? 'Ijarah period (years) *' : 'Term (years) *';
-  String get _monthlyLabel => _isl ? 'Estimated monthly rental' : 'Estimated monthly payment';
-  String get _propInsLabel => _isl ? 'Property Takaful *' : 'Property insurance *';
-  String get _lifeInsLabel => _isl ? 'Life Takaful *' : 'Life insurance *';
-  String get _insFreqLabel => _isl ? 'Takaful frequency *' : 'Insurance frequency *';
-  String get _startLabel => _isl ? 'Disbursal date *' : 'Loan start date *';
-  String get _firstLabel => _isl ? 'First rental date *' : 'First installment *';
-  String get _rateValidLabel => _isl ? 'Profit rate valid until' : 'Rate review date';
+  String get _financeLabel => context.tr(_isl ? 'Finance amount (AED) *' : 'Loan amount (AED) *');
+  String get _rateLabel => context.tr(_isl ? 'Profit rate (% / yr) *' : 'Interest rate (% / yr) *');
+  String get _termLabel => context.tr(_isl ? 'Ijarah period (years) *' : 'Term (years) *');
+  String get _monthlyLabel => context.tr(_isl ? 'Estimated monthly rental' : 'Estimated monthly payment');
+  String get _propInsLabel => context.tr(_isl ? 'Property Takaful *' : 'Property insurance *');
+  String get _lifeInsLabel => context.tr(_isl ? 'Life Takaful *' : 'Life insurance *');
+  String get _insFreqLabel => context.tr(_isl ? 'Takaful frequency *' : 'Insurance frequency *');
+  String get _startLabel => context.tr(_isl ? 'Disbursal date *' : 'Loan start date *');
+  String get _firstLabel => context.tr(_isl ? 'First rental date *' : 'First installment *');
+  String get _rateValidLabel => context.tr(_isl ? 'Profit rate valid until' : 'Rate review date');
 
   @override
   void dispose() {
@@ -144,42 +145,42 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
   /// First validation problem on [step] (0 Property · 1 Costs · 2 Finance), or
   /// null when the step is complete. The Schedule step has no inputs.
   String? _validateStep(int step) {
-    final fin = _isl ? 'finance amount' : 'loan amount';
-    final rate = _isl ? 'profit rate' : 'interest rate';
-    final period = _isl ? 'Ijarah period' : 'term';
-    final propIns = _isl ? 'property Takaful' : 'property insurance';
-    final lifeIns = _isl ? 'life Takaful' : 'life insurance';
+    final fin = context.tr(_isl ? 'finance amount' : 'loan amount');
+    final rate = context.tr(_isl ? 'profit rate' : 'interest rate');
+    final period = context.tr(_isl ? 'Ijarah period' : 'term');
+    final propIns = context.tr(_isl ? 'property Takaful' : 'property insurance');
+    final lifeIns = context.tr(_isl ? 'life Takaful' : 'life insurance');
     switch (step) {
       case 0: // Property
-        if (_label.text.trim().isEmpty) return 'Name this finance.';
+        if (_label.text.trim().isEmpty) return context.tr('Name this finance.');
         if (_lender.text.trim().isEmpty) {
-          return 'Enter the ${_isDev ? 'developer / provider' : _isCash ? 'seller / source' : 'bank / lender'}.';
+          return '${context.tr('Enter the')} ${context.tr(_isDev ? 'developer / provider' : _isCash ? 'seller / source' : 'bank / lender')}.';
         }
-        if (_pos(_projectValue) == null) return 'Total property value is required.';
+        if (_pos(_projectValue) == null) return context.tr('Total property value is required.');
         return null;
       case 1: // Costs
-        if (_pos(_dld) == null) return 'DLD charges are required.';
-        if (_pos(_processing) == null) return 'Processing fees are required.';
-        if (_pos(_downPayment) == null) return 'Down payment is required.';
+        if (_pos(_dld) == null) return context.tr('DLD charges are required.');
+        if (_pos(_processing) == null) return context.tr('Processing fees are required.');
+        if (_pos(_downPayment) == null) return context.tr('Down payment is required.');
         if (!_isCash && !_isDev) {
-          if (_pos(_propInsurance) == null) return 'The $propIns is required.';
-          if (_pos(_lifeInsurance) == null) return 'The $lifeIns is required.';
+          if (_pos(_propInsurance) == null) return '${context.tr('The')} $propIns ${context.tr('is required.')}';
+          if (_pos(_lifeInsurance) == null) return '${context.tr('The')} $lifeIns ${context.tr('is required.')}';
         }
         if (_splits.isNotEmpty && _splitTotal > 0) {
           final dp = double.tryParse(_downPayment.text.trim()) ?? 0;
           if ((_splitTotal - dp).abs() > 1) {
-            return 'Down-payment splits (AED ${_splitTotal.toStringAsFixed(0)}) must add up to the '
-                'down payment (AED ${dp.toStringAsFixed(0)}).';
+            return '${context.tr('Down-payment splits')} (AED ${_splitTotal.toStringAsFixed(0)}) ${context.tr('must add up to the down payment')} '
+                '(AED ${dp.toStringAsFixed(0)}).';
           }
         }
         return null;
       case 2: // Finance (skipped for an outright cash purchase)
         if (_isCash) return null;
-        if (_pos(_principal) == null) return 'The $fin is required.';
-        if ((double.tryParse(_rate.text.trim()) ?? -1) < 0) return 'Enter a valid $rate.';
-        if ((int.tryParse(_years.text.trim()) ?? 0) <= 0) return 'Enter the $period in years.';
-        if (_loanStart == null) return 'Pick the ${_isl ? 'disbursal' : 'loan start'} date.';
-        if (_firstInstallment == null) return 'Pick the first ${_isl ? 'rental' : 'installment'} date.';
+        if (_pos(_principal) == null) return '${context.tr('The')} $fin ${context.tr('is required.')}';
+        if ((double.tryParse(_rate.text.trim()) ?? -1) < 0) return '${context.tr('Enter a valid')} $rate.';
+        if ((int.tryParse(_years.text.trim()) ?? 0) <= 0) return '${context.tr('Enter the')} $period ${context.tr('in years.')}';
+        if (_loanStart == null) return '${context.tr('Pick the')} ${context.tr(_isl ? 'disbursal' : 'loan start')} ${context.tr('date.')}';
+        if (_firstInstallment == null) return '${context.tr('Pick the first')} ${context.tr(_isl ? 'rental' : 'installment')} ${context.tr('date.')}';
         return null;
       default:
         return null;
@@ -282,7 +283,7 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
         child: InputDecorator(
           decoration: InputDecoration(
               labelText: label, suffixIcon: const Icon(Icons.calendar_today_outlined, size: 18)),
-          child: Text(value == null ? 'Select date' : DateFormat.yMMMd().format(value),
+          child: Text(value == null ? context.tr('Select date') : DateFormat.yMMMd().format(value),
               style: TextStyle(color: value == null ? Theme.of(context).hintColor : null)),
         ),
       );
@@ -300,7 +301,7 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Track a home finance')),
+      appBar: AppBar(title: Text(context.tr('Track a home finance'))),
       body: Column(children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x16, AppSpacing.x16, AppSpacing.x8),
@@ -331,7 +332,7 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: _saving ? null : () => setState(() { _step--; _error = null; }),
-                    child: const Text('Back'),
+                    child: Text(context.tr('Back')),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.x12),
@@ -342,7 +343,7 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
                   onPressed: _saving ? null : _onPrimary,
                   child: _saving
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : Text(_step < 3 ? 'Continue' : 'Save finance'),
+                      : Text(context.tr(_step < 3 ? 'Continue' : 'Save finance')),
                 ),
               ),
             ]),
@@ -377,7 +378,7 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
                   style: t.labelSmall?.copyWith(color: active ? Colors.white : muted, fontWeight: FontWeight.w700)),
         ),
         const SizedBox(height: 4),
-        Text(_stepLabels[i],
+        Text(context.tr(_stepLabels[i]),
             style: t.labelSmall?.copyWith(
                 color: (done || active) ? onSurface : muted,
                 fontWeight: active ? FontWeight.w700 : FontWeight.w500)),
@@ -406,19 +407,19 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
 
   // ── Step 1 — Property ──────────────────────────────────────────────────
   List<Widget> _stepProperty(TextTheme t) => [
-        _stepIntro(t, 'Which property?', 'Choose the finance type and tell us what you’re buying.'),
+        _stepIntro(t, context.tr('Which property?'), context.tr('Choose the finance type and tell us what you’re buying.')),
         DropdownButtonFormField<String>(
           initialValue: _financeType,
           isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Finance type'),
-          items: [for (final f in kFinanceTypes) DropdownMenuItem(value: f.$1, child: Text(f.$2))],
+          decoration: InputDecoration(labelText: context.tr('Finance type')),
+          items: [for (final f in kFinanceTypes) DropdownMenuItem(value: f.$1, child: Text(context.tr(f.$2)))],
           onChanged: (v) => setState(() => _financeType = v ?? 'conventional'),
         ),
         const SizedBox(height: AppSpacing.x12),
         ref.watch(_ownerPropsProvider).maybeWhen(
               data: (list) {
                 final items = <DropdownMenuItem<String?>>[
-                  const DropdownMenuItem(value: null, child: Text('Not linked to a property')),
+                  DropdownMenuItem(value: null, child: Text(context.tr('Not linked to a property'))),
                 ];
                 final seen = <String>{};
                 for (final e in list) {
@@ -430,13 +431,13 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
                   final comm = '${mp['community'] ?? ''}'.trim();
                   final label = bn.isNotEmpty
                       ? (un.isNotEmpty ? '$bn - $un' : bn)
-                      : (un.isNotEmpty ? 'Unit $un' : (comm.isNotEmpty ? comm : 'Property'));
+                      : (un.isNotEmpty ? '${context.tr('Unit')} $un' : (comm.isNotEmpty ? comm : context.tr('Property')));
                   items.add(DropdownMenuItem(value: pid, child: Text(label, overflow: TextOverflow.ellipsis)));
                 }
                 return DropdownButtonFormField<String?>(
                   initialValue: _propertyId,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Link to a property (optional)'),
+                  decoration: InputDecoration(labelText: context.tr('Link to a property (optional)')),
                   items: items,
                   onChanged: (v) => setState(() => _propertyId = v),
                 );
@@ -446,32 +447,33 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
         const SizedBox(height: AppSpacing.x12),
         TextField(
             controller: _label,
-            decoration: const InputDecoration(labelText: 'Name this finance *', hintText: 'e.g. Star by Azizi 619')),
+            decoration: InputDecoration(labelText: context.tr('Name this finance *'), hintText: context.tr('e.g. Star by Azizi 619'))),
         const SizedBox(height: AppSpacing.x12),
         TextField(
             controller: _lender,
             decoration: InputDecoration(
-                labelText: _isDev ? 'Developer / provider *' : _isCash ? 'Seller / source *' : 'Bank / lender *',
-                hintText: _isDev
+                labelText: context.tr(_isDev ? 'Developer / provider *' : _isCash ? 'Seller / source *' : 'Bank / lender *'),
+                hintText: context.tr(_isDev
                     ? 'e.g. Emaar, DAMAC'
                     : _isCash
                         ? 'e.g. private seller'
-                        : (_isl ? 'e.g. Mashreq Al Islami' : 'e.g. Emirates NBD'))),
+                        : (_isl ? 'e.g. Mashreq Al Islami' : 'e.g. Emirates NBD')))),
         const SizedBox(height: AppSpacing.x12),
-        _money(_projectValue, 'Total property value *', live: true),
+        _money(_projectValue, context.tr('Total property value *'), live: true),
       ];
 
   // ── Step 2 — Costs ─────────────────────────────────────────────────────
   List<Widget> _stepCosts(TextTheme t) => [
-        _stepIntro(t, 'Purchase costs', 'Upfront cash${_isCash ? '' : _isl ? ' and Takaful' : ' and insurance'}.'),
+        _stepIntro(t, context.tr('Purchase costs'),
+            '${context.tr('Upfront cash')}${_isCash ? '' : ' ${_isl ? context.tr('and Takaful') : context.tr('and insurance')}'}.'),
         FieldPair(
-          _money(_dld, 'DLD charges *', helper: 'e.g. 4% of value'),
-          _money(_processing, 'Processing fees *'),
+          _money(_dld, context.tr('DLD charges *'), helper: context.tr('e.g. 4% of value')),
+          _money(_processing, context.tr('Processing fees *')),
         ),
         const SizedBox(height: AppSpacing.x12),
-        _money(_registration, 'Registration fees'),
+        _money(_registration, context.tr('Registration fees')),
         const SizedBox(height: AppSpacing.x12),
-        _money(_downPayment, 'Down payment *', live: true),
+        _money(_downPayment, context.tr('Down payment *'), live: true),
         const SizedBox(height: AppSpacing.x8),
         for (var i = 0; i < _splits.length; i++)
           Padding(
@@ -481,7 +483,7 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
                 flex: 3,
                 child: TextField(
                     controller: _splits[i].label,
-                    decoration: const InputDecoration(labelText: 'Split', hintText: 'e.g. Booking', isDense: true)),
+                    decoration: InputDecoration(labelText: context.tr('Split'), hintText: context.tr('e.g. Booking'), isDense: true)),
               ),
               const SizedBox(width: AppSpacing.x8),
               Expanded(
@@ -490,10 +492,10 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
                     controller: _splits[i].amount,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     onChanged: (_) => setState(() {}),
-                    decoration: const InputDecoration(labelText: 'Amount', prefixText: 'AED ', isDense: true)),
+                    decoration: InputDecoration(labelText: context.tr('Amount'), prefixText: 'AED ', isDense: true)),
               ),
               IconButton(
-                  tooltip: 'Remove',
+                  tooltip: context.tr('Remove'),
                   onPressed: () => setState(() => _splits.removeAt(i).dispose()),
                   icon: const Icon(Icons.close, size: 18)),
             ]),
@@ -503,15 +505,15 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
           child: TextButton.icon(
             onPressed: () => setState(() => _splits.add(_SplitRow())),
             icon: const Icon(Icons.add, size: 18),
-            label: const Text('Add down-payment split'),
+            label: Text(context.tr('Add down-payment split')),
           ),
         ),
         if (_splits.isNotEmpty)
-          Text('Splits total: AED ${_splitTotal.toStringAsFixed(0)}',
+          Text('${context.tr('Splits total')}: AED ${_splitTotal.toStringAsFixed(0)}',
               style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
         // Insurance / Takaful — only for financed products.
         if (!_isCash) ...[
-          _sectionTitle(_isl ? 'Takaful' : 'Insurance', t),
+          _sectionTitle(context.tr(_isl ? 'Takaful' : 'Insurance'), t),
           FieldPair(
             _money(_propInsurance, _propInsLabel),
             _money(_lifeInsurance, _lifeInsLabel),
@@ -520,16 +522,16 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
           DropdownButtonFormField<String>(
             initialValue: _insuranceFreq,
             decoration: InputDecoration(labelText: _insFreqLabel),
-            items: const [
-              DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
-              DropdownMenuItem(value: 'yearly', child: Text('Yearly')),
+            items: [
+              DropdownMenuItem(value: 'monthly', child: Text(context.tr('Monthly'))),
+              DropdownMenuItem(value: 'yearly', child: Text(context.tr('Yearly'))),
             ],
             onChanged: (v) => setState(() => _insuranceFreq = v ?? 'yearly'),
           ),
           const SizedBox(height: AppSpacing.x12),
           FieldPair(
-            _dateField(_isl ? 'Takaful start' : 'Insurance start', _insStart, () => _pickDate(3)),
-            _dateField('Renewal date', _insRenewal, () => _pickDate(4)),
+            _dateField(context.tr(_isl ? 'Takaful start' : 'Insurance start'), _insStart, () => _pickDate(3)),
+            _dateField(context.tr('Renewal date'), _insRenewal, () => _pickDate(4)),
           ),
         ],
       ];
@@ -538,7 +540,7 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
   List<Widget> _stepFinance(TextTheme t) {
     if (_isCash) {
       return [
-        _stepIntro(t, 'Financing', 'Cash purchase — nothing to finance.'),
+        _stepIntro(t, context.tr('Financing'), context.tr('Cash purchase — nothing to finance.')),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.x16),
@@ -546,8 +548,7 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
               Icon(Icons.payments_outlined, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: AppSpacing.x12),
               Expanded(
-                child: Text('This is an outright cash purchase, so there is no loan or rental schedule. '
-                    'Continue to review your upfront costs.',
+                child: Text(context.tr('This is an outright cash purchase, so there is no loan or rental schedule. Continue to review your upfront costs.'),
                     style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
               ),
             ]),
@@ -556,9 +557,9 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
       ];
     }
     return [
-      _stepIntro(t, 'Financing', _isl ? 'Enter the numbers from your statement.' : 'Enter your loan terms.'),
+      _stepIntro(t, context.tr('Financing'), context.tr(_isl ? 'Enter the numbers from your statement.' : 'Enter your loan terms.')),
       _money(_principal, _financeLabel, live: true,
-          helper: _isl ? "Statement: 'Ijarah Finance Amount Disbursed'" : null),
+          helper: _isl ? context.tr("Statement: 'Ijarah Finance Amount Disbursed'") : null),
       const SizedBox(height: AppSpacing.x12),
       FieldPair(
         TextField(
@@ -566,7 +567,7 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: (_) => setState(() {}),
             decoration: InputDecoration(
-                labelText: _rateLabel, helperText: _isl ? "Statement: 'Rental Rate' (variable)" : null)),
+                labelText: _rateLabel, helperText: _isl ? context.tr("Statement: 'Rental Rate' (variable)") : null)),
         _dateField(_rateValidLabel, _rateValidUntil, () => _pickDate(2)),
       ),
       const SizedBox(height: AppSpacing.x12),
@@ -591,24 +592,24 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
             ]),
             const SizedBox(height: 4),
             Text(
-              _isl
+              context.tr(_isl
                   ? 'Estimated at the current rate. Log each actual rental (fixed + variable) under Payments.'
-                  : 'Estimated at the current rate. Log each actual installment under Payments.',
+                  : 'Estimated at the current rate. Log each actual installment under Payments.'),
               style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor),
             ),
           ]),
         ),
       ),
-      _sectionTitle('Fixed intro period (optional)', t),
+      _sectionTitle(context.tr('Fixed intro period (optional)'), t),
       FieldPair(
         TextField(
             controller: _fixedMonths,
             keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'Fixed for (months)')),
+            decoration: InputDecoration(labelText: context.tr('Fixed for (months)'))),
         TextField(
             controller: _rateAfter,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(labelText: _isl ? 'Profit rate after (%)' : 'Rate after (%)')),
+            decoration: InputDecoration(labelText: context.tr(_isl ? 'Profit rate after (%)' : 'Rate after (%)'))),
       ),
     ];
   }
@@ -622,19 +623,19 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
     final upfront = n(_downPayment) + n(_dld) + n(_processing) + n(_registration);
 
     final widgets = <Widget>[
-      _stepIntro(t, 'Review & schedule', 'Confirm the numbers, then save to start tracking payments.'),
+      _stepIntro(t, context.tr('Review & schedule'), context.tr('Confirm the numbers, then save to start tracking payments.')),
       Card(
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.x16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Upfront cash', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            Text(context.tr('Upfront cash'), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: AppSpacing.x8),
-            _kv('Down payment', aed0.format(n(_downPayment))),
-            _kv('DLD charges', aed0.format(n(_dld))),
-            _kv('Processing fees', aed0.format(n(_processing))),
-            if (n(_registration) > 0) _kv('Registration fees', aed0.format(n(_registration))),
+            _kv(context.tr('Down payment'), aed0.format(n(_downPayment))),
+            _kv(context.tr('DLD charges'), aed0.format(n(_dld))),
+            _kv(context.tr('Processing fees'), aed0.format(n(_processing))),
+            if (n(_registration) > 0) _kv(context.tr('Registration fees'), aed0.format(n(_registration))),
             const Divider(height: AppSpacing.x16),
-            _kv('Total upfront', aed0.format(upfront), bold: true),
+            _kv(context.tr('Total upfront'), aed0.format(upfront), bold: true),
           ]),
         ),
       ),
@@ -661,29 +662,29 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
                       style: t.titleLarge?.copyWith(color: primary, fontWeight: FontWeight.w700)),
                 ]),
                 const Divider(height: AppSpacing.x16),
-                _kv(_isl ? 'Finance amount' : 'Loan amount', aed0.format(p)),
-                _kv(_isl ? 'Profit rate' : 'Interest rate', '${rate.toStringAsFixed(2)} %'),
-                _kv('Term', '$years years'),
-                _kv(_isl ? 'Total profit' : 'Total interest', aed0.format(totalInterest)),
-                _kv('Total repayment', aed0.format(totalPaid), bold: true),
+                _kv(context.tr(_isl ? 'Finance amount' : 'Loan amount'), aed0.format(p)),
+                _kv(context.tr(_isl ? 'Profit rate' : 'Interest rate'), '${rate.toStringAsFixed(2)} %'),
+                _kv(context.tr('Term'), '$years ${context.tr('years')}'),
+                _kv(context.tr(_isl ? 'Total profit' : 'Total interest'), aed0.format(totalInterest)),
+                _kv(context.tr('Total repayment'), aed0.format(totalPaid), bold: true),
               ]),
             ),
           ),
           const SizedBox(height: AppSpacing.x16),
-          Text(_isl ? 'Yearly rental schedule' : 'Yearly amortization',
+          Text(context.tr(_isl ? 'Yearly rental schedule' : 'Yearly amortization'),
               style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: AppSpacing.x8),
           _amortTable(t, p, rate, months, monthly, aed0),
           const SizedBox(height: AppSpacing.x8),
           Text(
-            'Estimated at the current rate. Actual ${_isl ? 'rentals' : 'installments'} are logged under Payments.',
+            '${context.tr('Estimated at the current rate. Actual')} ${context.tr(_isl ? 'rentals' : 'installments')} ${context.tr('are logged under Payments.')}',
             style: t.bodySmall?.copyWith(color: hint),
           ),
         ]);
       } else {
         widgets.add(Padding(
           padding: const EdgeInsets.only(top: AppSpacing.x12),
-          child: Text('Add the finance amount and term to preview the schedule.',
+          child: Text(context.tr('Add the finance amount and term to preview the schedule.'),
               style: t.bodySmall?.copyWith(color: hint)),
         ));
       }
@@ -717,10 +718,10 @@ class _MortgageFormScreenState extends ConsumerState<MortgageFormScreen> {
         );
     final rows = <Widget>[
       Row(children: [
-        cell('Year', header: true, align: TextAlign.left),
-        cell(_isl ? 'Profit' : 'Interest', header: true),
-        cell('Principal', header: true),
-        cell('Balance', header: true),
+        cell(context.tr('Year'), header: true, align: TextAlign.left),
+        cell(context.tr(_isl ? 'Profit' : 'Interest'), header: true),
+        cell(context.tr('Principal'), header: true),
+        cell(context.tr('Balance'), header: true),
       ]),
       const SizedBox(height: 6),
     ];

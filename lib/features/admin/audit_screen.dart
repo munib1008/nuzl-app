@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
@@ -27,7 +28,7 @@ class AuditScreen extends ConsumerWidget {
     final logs = ref.watch(auditProvider);
     final search = ref.watch(_auditSearchProvider).toLowerCase();
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Audit Logs'),
+      appBar: NuzlAppBar(title: context.tr('Audit Logs')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: logs.when(
@@ -44,14 +45,15 @@ class AuditScreen extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.all(AppSpacing.x16),
                   child: TextField(
-                    decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.search), hintText: 'Filter by action, entity or user'),
+                    decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search),
+                        hintText: context.tr('Filter by action, entity or user')),
                     onChanged: (v) => ref.read(_auditSearchProvider.notifier).state = v,
                   ),
                 ),
                 Expanded(
                   child: filtered.isEmpty
-                      ? const Center(child: Text('No audit entries.'))
+                      ? Center(child: Text(context.tr('No audit entries.')))
                       : ListView.separated(
                           padding: const EdgeInsets.all(AppSpacing.x16),
                           itemCount: filtered.length,
@@ -65,12 +67,12 @@ class AuditScreen extends ConsumerWidget {
                             return Card(
                               child: ListTile(
                                 leading: const Icon(Icons.receipt_long_outlined),
-                                title: Text('${m['action'] ?? 'action'} · ${m['entity_table'] ?? ''}'),
+                                title: Text('${m['action'] ?? context.tr('action')} · ${m['entity_table'] ?? ''}'),
                                 subtitle: Text([m['actor_name'], when]
                                     .where((x) => x != null && '$x'.isNotEmpty)
                                     .join('  ·  ')),
                                 trailing: m['is_test'] == true
-                                    ? const StatusBadge('test', tone: BadgeTone.warning)
+                                    ? StatusBadge(context.tr('test'), tone: BadgeTone.warning)
                                     : null,
                               ),
                             );

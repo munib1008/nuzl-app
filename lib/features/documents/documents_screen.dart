@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/empty_state.dart';
@@ -37,22 +38,22 @@ class DocumentsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final docs = ref.watch(documentsProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Documents'),
+      appBar: NuzlAppBar(title: context.tr('Documents')),
       drawer: const NuzlDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _upload(context, ref),
         icon: const Icon(Icons.upload_file),
-        label: const Text('Upload'),
+        label: Text(context.tr('Upload')),
       ),
       body: ResponsiveCenter(
         child: docs.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
           error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) => list.isEmpty
-              ? const EmptyState(
+              ? EmptyState(
                   icon: Icons.folder_open_outlined,
-                  title: 'No documents yet',
-                  message: 'Upload a document to keep everything for this property in one place.',
+                  title: context.tr('No documents yet'),
+                  message: context.tr('Upload a document to keep everything for this property in one place.'),
                 )
               : ListView.separated(
                   padding: const EdgeInsets.all(AppSpacing.x16),
@@ -89,18 +90,18 @@ class DocumentsScreen extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Document type'),
+        title: Text(context.tr('Document type')),
         content: StatefulBuilder(
           builder: (ctx, setS) => DropdownButtonFormField<String>(
             initialValue: type,
-            decoration: const InputDecoration(labelText: 'Type'),
+            decoration: InputDecoration(labelText: context.tr('Type')),
             items: _docTypes.map((d) => DropdownMenuItem(value: d, child: Text(_humanize(d)))).toList(),
             onChanged: (v) => setS(() => type = v ?? 'other'),
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Upload')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Upload'))),
         ],
       ),
     );
@@ -112,7 +113,7 @@ class DocumentsScreen extends ConsumerWidget {
         'dataBase64': base64Encode(bytes),
       });
       final key = (up is Map) ? (up['path'] ?? up['url']) : null;
-      if (key == null) throw Exception('Upload failed — storage not configured');
+      if (key == null) throw Exception(context.tr('Upload failed — storage not configured'));
       await ref.read(apiClientProvider).post('/documents', body: {
         'owner_table': 'users',
         'owner_id': me.id,

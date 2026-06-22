@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -31,20 +32,20 @@ class ViewAsScreen extends ConsumerWidget {
 
     // Test mode is restricted to real administrators only.
     if (actual != Persona.admin) {
-      return const Scaffold(
-        appBar: NuzlAppBar(title: 'View as role'),
-        drawer: NuzlDrawer(),
+      return Scaffold(
+        appBar: NuzlAppBar(title: context.tr('View as role')),
+        drawer: const NuzlDrawer(),
         body: Center(
           child: Padding(
-            padding: EdgeInsets.all(AppSpacing.x24),
-            child: Text('Test mode is restricted to administrators.', textAlign: TextAlign.center),
+            padding: const EdgeInsets.all(AppSpacing.x24),
+            child: Text(context.tr('Test mode is restricted to administrators.'), textAlign: TextAlign.center),
           ),
         ),
       );
     }
 
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'View as role · Test mode'),
+      appBar: NuzlAppBar(title: context.tr('View as role · Test mode')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: ListView(
@@ -60,8 +61,8 @@ class ViewAsScreen extends ConsumerWidget {
                 const Icon(Icons.science_outlined, color: AppColors.secondary),
                 const SizedBox(width: AppSpacing.x12),
                 Expanded(child: Text(
-                  'Preview any role\'s interface without logging out. Your real role stays ${actual.label}. '
-                  'Actions in test mode are clearly flagged; in production this is restricted to super-admins.',
+                  '${context.tr('Preview any role\'s interface without logging out. Your real role stays')} ${actual.label}. '
+                  '${context.tr('Actions in test mode are clearly flagged; in production this is restricted to super-admins.')}',
                   style: t.bodySmall?.copyWith(color: AppColors.secondary, height: 1.4))),
               ]),
             ),
@@ -71,8 +72,8 @@ class ViewAsScreen extends ConsumerWidget {
               return Card(
                 child: ListTile(
                   leading: Icon(r.$2, color: AppColors.primary),
-                  title: Text(r.$3),
-                  subtitle: Text(r.$4),
+                  title: Text(context.tr(r.$3)),
+                  subtitle: Text(context.tr(r.$4)),
                   trailing: selected ? const Icon(Icons.check_circle, color: AppColors.primary) : const Icon(Icons.chevron_right),
                   onTap: () {
                     ref.read(personaPreviewProvider.notifier).state = r.$1;
@@ -86,7 +87,7 @@ class ViewAsScreen extends ConsumerWidget {
               OutlinedButton.icon(
                 onPressed: () => ref.read(personaPreviewProvider.notifier).state = null,
                 icon: const Icon(Icons.logout),
-                label: const Text('Exit test mode'),
+                label: Text(context.tr('Exit test mode')),
               ),
             const SizedBox(height: AppSpacing.x24),
           ],

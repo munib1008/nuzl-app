@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/upload_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -83,10 +84,10 @@ class _CompanyEditScreenState extends ConsumerState<CompanyEditScreen> {
       if (url != null && url.isNotEmpty) {
         setState(() => _coverUrl = url);
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Cover upload failed — try again.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Cover upload failed — try again.'))));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cover upload failed — ${friendlyError(e)}')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('Cover upload failed —')} ${friendlyError(e)}')));
     } finally {
       if (mounted) setState(() => _uploadingCover = false);
     }
@@ -114,7 +115,7 @@ class _CompanyEditScreenState extends ConsumerState<CompanyEditScreen> {
       });
       ref.invalidate(myCompanyProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Public page updated.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Public page updated.'))));
         if (context.canPop()) context.pop();
       }
     } catch (e) {
@@ -128,15 +129,15 @@ class _CompanyEditScreenState extends ConsumerState<CompanyEditScreen> {
   Widget build(BuildContext context) {
     final company = ref.watch(myCompanyProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Edit public page'),
+      appBar: NuzlAppBar(title: context.tr('Edit public page')),
       drawer: const NuzlDrawer(),
       body: AsyncView<Map<String, dynamic>?>(
         value: company,
         onRetry: () => ref.invalidate(myCompanyProvider),
         data: (c) {
           if (c == null) {
-            return const Center(
-              child: Padding(padding: EdgeInsets.all(24), child: Text('Create or join a company first.')),
+            return Center(
+              child: Padding(padding: const EdgeInsets.all(24), child: Text(context.tr('Create or join a company first.'))),
             );
           }
           if (!_loaded) _prefill(c);
@@ -149,46 +150,46 @@ class _CompanyEditScreenState extends ConsumerState<CompanyEditScreen> {
                 children: [
                   _cover(context, slug),
                   const SizedBox(height: AppSpacing.x20),
-                  _section(context, 'Basics'),
-                  _field(_tagline, 'Tagline', hint: 'e.g. Dubai’s off-plan specialists'),
-                  _field(_about, 'About the company', maxLines: 5, hint: 'What you do, who you serve, what sets you apart.'),
+                  _section(context, context.tr('Basics')),
+                  _field(_tagline, context.tr('Tagline'), hint: context.tr('e.g. Dubai’s off-plan specialists')),
+                  _field(_about, context.tr('About the company'), maxLines: 5, hint: context.tr('What you do, who you serve, what sets you apart.')),
                   const SizedBox(height: AppSpacing.x20),
-                  _section(context, 'Contact & links'),
-                  _field(_website, 'Website', keyboard: TextInputType.url),
-                  _field(_phone, 'Phone', keyboard: TextInputType.phone),
-                  _field(_email, 'Email', keyboard: TextInputType.emailAddress),
+                  _section(context, context.tr('Contact & links')),
+                  _field(_website, context.tr('Website'), keyboard: TextInputType.url),
+                  _field(_phone, context.tr('Phone'), keyboard: TextInputType.phone),
+                  _field(_email, context.tr('Email'), keyboard: TextInputType.emailAddress),
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Expanded(child: _field(_city, 'City')),
+                    Expanded(child: _field(_city, context.tr('City'))),
                     const SizedBox(width: AppSpacing.x12),
-                    Expanded(child: _field(_country, 'Country')),
+                    Expanded(child: _field(_country, context.tr('Country'))),
                   ]),
                   const SizedBox(height: AppSpacing.x20),
-                  _section(context, 'Credentials & registration'),
-                  _field(_reraOrn, 'RERA ORN'),
-                  _field(_tradeLicense, 'Trade licence'),
-                  _field(_legalEntity, 'Legal entity type', hint: 'e.g. LLC, Free Zone, Sole Establishment'),
+                  _section(context, context.tr('Credentials & registration')),
+                  _field(_reraOrn, context.tr('RERA ORN')),
+                  _field(_tradeLicense, context.tr('Trade licence')),
+                  _field(_legalEntity, context.tr('Legal entity type'), hint: context.tr('e.g. LLC, Free Zone, Sole Establishment')),
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Expanded(child: _field(_yearEstablished, 'Year established', keyboard: TextInputType.number,
+                    Expanded(child: _field(_yearEstablished, context.tr('Year established'), keyboard: TextInputType.number,
                         formatters: [FilteringTextInputFormatter.digitsOnly])),
                     const SizedBox(width: AppSpacing.x12),
-                    Expanded(child: _field(_countryOfReg, 'Country of registration')),
+                    Expanded(child: _field(_countryOfReg, context.tr('Country of registration'))),
                   ]),
-                  _field(_vat, 'TRN / VAT number'),
-                  _field(_innovation, 'Innovation licence'),
+                  _field(_vat, context.tr('TRN / VAT number')),
+                  _field(_innovation, context.tr('Innovation licence')),
                   const SizedBox(height: AppSpacing.x24),
                   FilledButton.icon(
                     onPressed: _saving ? null : _save,
                     icon: _saving
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                         : const Icon(Icons.save_outlined, size: 18),
-                    label: Text(_saving ? 'Saving…' : 'Save changes'),
+                    label: Text(_saving ? context.tr('Saving…') : context.tr('Save changes')),
                   ),
                   if (slug.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.x8),
                     OutlinedButton.icon(
                       onPressed: () => context.push('/org/$slug'),
                       icon: const Icon(Icons.open_in_new, size: 18),
-                      label: const Text('Preview public page'),
+                      label: Text(context.tr('Preview public page')),
                     ),
                   ],
                   const SizedBox(height: AppSpacing.x32),
@@ -224,15 +225,15 @@ class _CompanyEditScreenState extends ConsumerState<CompanyEditScreen> {
   Widget _cover(BuildContext context, String slug) {
     final t = Theme.of(context).textTheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _section(context, 'Cover image'),
+      _section(context, context.tr('Cover image')),
       ClipRRect(
         borderRadius: BorderRadius.circular(AppSpacing.rCard),
         child: AspectRatio(
           aspectRatio: 3.4,
           child: _coverUrl.isNotEmpty
               ? Image.network(_coverUrl, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _coverPlaceholder(t))
-              : _coverPlaceholder(t),
+                  errorBuilder: (_, __, ___) => _coverPlaceholder(context, t))
+              : _coverPlaceholder(context, t),
         ),
       ),
       const SizedBox(height: AppSpacing.x8),
@@ -242,22 +243,22 @@ class _CompanyEditScreenState extends ConsumerState<CompanyEditScreen> {
           icon: _uploadingCover
               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.add_photo_alternate_outlined, size: 18),
-          label: Text(_uploadingCover ? 'Uploading…' : (_coverUrl.isEmpty ? 'Upload cover' : 'Replace cover')),
+          label: Text(_uploadingCover ? context.tr('Uploading…') : (_coverUrl.isEmpty ? context.tr('Upload cover') : context.tr('Replace cover'))),
         ),
         if (_coverUrl.isNotEmpty) ...[
           const SizedBox(width: AppSpacing.x8),
-          TextButton(onPressed: _uploadingCover ? null : () => setState(() => _coverUrl = ''), child: const Text('Remove')),
+          TextButton(onPressed: _uploadingCover ? null : () => setState(() => _coverUrl = ''), child: Text(context.tr('Remove'))),
         ],
       ]),
     ]);
   }
 
-  Widget _coverPlaceholder(TextTheme t) => DecoratedBox(
+  Widget _coverPlaceholder(BuildContext context, TextTheme t) => DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(colors: [AppColors.primary, AppColors.secondary]),
         ),
         child: Center(
-          child: Text('No cover yet', style: t.bodySmall?.copyWith(color: Colors.white70)),
+          child: Text(context.tr('No cover yet'), style: t.bodySmall?.copyWith(color: Colors.white70)),
         ),
       );
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/network/api_client.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/rbac/persona.dart';
 import '../auth/application/auth_controller.dart';
 import '../../core/theme/app_colors.dart';
@@ -166,9 +167,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 const SizedBox(height: AppSpacing.x16),
                 const Center(child: NuzlLogo(size: 44, showWordmark: false)),
                 const SizedBox(height: AppSpacing.x12),
-                Center(child: Text('Welcome to nuzl', style: GoogleFonts.manrope(fontSize: 22, fontWeight: FontWeight.w700))),
+                Center(child: Text(context.tr('Welcome to nuzl'), style: GoogleFonts.manrope(fontSize: 22, fontWeight: FontWeight.w700))),
                 Center(
-                    child: Text("Let's set up your profile to get started",
+                    child: Text(context.tr("Let's set up your profile to get started"),
                         style: t.bodyMedium?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted))),
                 const SizedBox(height: AppSpacing.x20),
                 _Stepper(step: step, count: _stepBuilders.length),
@@ -218,10 +219,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
             Icon(meta?.$1 ?? Icons.badge_outlined, size: 22, color: selected ? accent : (dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const SizedBox(height: AppSpacing.x8),
-            Text(label,
+            Text(context.tr(label),
                 style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: selected ? accent : null)),
             const SizedBox(height: 2),
-            Text(meta?.$2 ?? '',
+            Text(meta?.$2 == null ? '' : context.tr(meta!.$2),
                 style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted), maxLines: 2, overflow: TextOverflow.ellipsis),
           ]),
         ),
@@ -233,8 +234,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('What brings you to NUZL?', style: t.titleLarge),
-        Text('Pick your main goal — you stay a Customer and can add more roles later.',
+        Text(context.tr('What brings you to NUZL?'), style: t.titleLarge),
+        Text(context.tr('Pick your main goal — you stay a Customer and can add more roles later.'),
             style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
         const SizedBox(height: AppSpacing.x16),
         Wrap(
@@ -254,7 +255,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               const Icon(Icons.info_outline, size: 18, color: AppColors.primary),
               const SizedBox(width: AppSpacing.x8),
               Expanded(
-                child: Text("Next, set up your company — that's all it takes to start as a ${_roleOptions.firstWhere((r) => r.$1 == role).$2.toLowerCase()}.",
+                child: Text("${context.tr("Next, set up your company — that's all it takes to start as a")} ${context.tr(_roleOptions.firstWhere((r) => r.$1 == role).$2).toLowerCase()}.",
                     style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
               ),
             ]),
@@ -264,25 +265,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           const SizedBox(height: AppSpacing.x12),
           DropdownButtonFormField<String>(
             initialValue: agentType,
-            decoration: const InputDecoration(labelText: 'Agent type'),
-            items: const [
-              DropdownMenuItem(value: 'freelancer', child: Text('Freelancer')),
-              DropdownMenuItem(value: 'agency_agent', child: Text('Agency Agent')),
+            decoration: InputDecoration(labelText: context.tr('Agent type')),
+            items: [
+              DropdownMenuItem(value: 'freelancer', child: Text(context.tr('Freelancer'))),
+              DropdownMenuItem(value: 'agency_agent', child: Text(context.tr('Agency Agent'))),
             ],
             onChanged: (v) => setState(() => agentType = v ?? 'freelancer'),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('RERA registered?'),
+            title: Text(context.tr('RERA registered?')),
             value: reraRegistered,
             activeThumbColor: AppColors.primary,
             onChanged: (v) => setState(() => reraRegistered = v),
           ),
           if (reraRegistered)
-            TextField(controller: reraBrn, decoration: const InputDecoration(labelText: 'RERA BRN')),
+            TextField(controller: reraBrn, decoration: InputDecoration(labelText: context.tr('RERA BRN'))),
           if (agentType == 'agency_agent') ...[
             const SizedBox(height: AppSpacing.x12),
-            TextField(controller: company, decoration: const InputDecoration(labelText: 'Agency name')),
+            TextField(controller: company, decoration: InputDecoration(labelText: context.tr('Agency name'))),
           ],
         ],
         const SizedBox(height: AppSpacing.x20),
@@ -294,20 +295,20 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   // ── Company association step (join an existing company or create a new one) ──
   Widget _companyStep(TextTheme t) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Your company', style: t.titleLarge),
-      Text('Do you belong to a company?', style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
+      Text(context.tr('Your company'), style: t.titleLarge),
+      Text(context.tr('Do you belong to a company?'), style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
       const SizedBox(height: AppSpacing.x12),
       Row(children: [
-        Expanded(child: _choiceTile('join', Icons.search, 'Join existing')),
+        Expanded(child: _choiceTile('join', Icons.search, context.tr('Join existing'))),
         const SizedBox(width: AppSpacing.x8),
-        Expanded(child: _choiceTile('create', Icons.add_business_outlined, 'Create new')),
+        Expanded(child: _choiceTile('create', Icons.add_business_outlined, context.tr('Create new'))),
       ]),
       if (_companyChoice == 'join') ...[const SizedBox(height: AppSpacing.x16), _joinUi(t)],
       if (_companyChoice == 'create') ...[const SizedBox(height: AppSpacing.x16), _createUi(t)],
       const SizedBox(height: AppSpacing.x20),
       _nav(
         onBack: () => setState(() => step = 0),
-        nextLabel: _companyChoice == '' ? 'Skip for now' : 'Continue',
+        nextLabel: _companyChoice == '' ? context.tr('Skip for now') : context.tr('Continue'),
         onNext: _companyNext,
       ),
     ]);
@@ -341,7 +342,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         Expanded(
           child: TextField(
             controller: _companySearch,
-            decoration: const InputDecoration(labelText: 'Company name or trade license'),
+            decoration: InputDecoration(labelText: context.tr('Company name or trade license')),
             onSubmitted: (_) => _searchCompanies(),
           ),
         ),
@@ -350,13 +351,13 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           onPressed: _searching ? null : _searchCompanies,
           child: _searching
               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('Search'),
+              : Text(context.tr('Search')),
         ),
       ]),
       if (_joinedOrgName != null)
         Padding(
           padding: const EdgeInsets.only(top: AppSpacing.x8),
-          child: Text('Request sent to $_joinedOrgName — pending the owner’s approval. You can continue.',
+          child: Text('${context.tr('Request sent to')} $_joinedOrgName — ${context.tr('pending the owner’s approval. You can continue.')}',
               style: const TextStyle(color: AppColors.success)),
         ),
       for (final o in _companyResults)
@@ -365,55 +366,55 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           title: Text('${o['name']}'),
           subtitle: Text([
             if ('${o['org_type'] ?? ''}'.isNotEmpty) _cap('${o['org_type']}'),
-            if (o['verification_status'] == 'verified') 'Verified',
+            if (o['verification_status'] == 'verified') context.tr('Verified'),
           ].join(' · ')),
-          trailing: TextButton(onPressed: () => _requestJoin(o), child: const Text('Request')),
+          trailing: TextButton(onPressed: () => _requestJoin(o), child: Text(context.tr('Request'))),
         ),
     ]);
   }
 
   Widget _createUi(TextTheme t) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      TextField(controller: company, decoration: const InputDecoration(labelText: 'Company name *')),
+      TextField(controller: company, decoration: InputDecoration(labelText: context.tr('Company name *'))),
       const SizedBox(height: AppSpacing.x8),
       DropdownButtonFormField<String>(
         initialValue: _bizType,
-        decoration: const InputDecoration(labelText: 'Business type *'),
-        items: const [
-          DropdownMenuItem(value: 'agency', child: Text('Real estate agency')),
-          DropdownMenuItem(value: 'developer', child: Text('Developer')),
-          DropdownMenuItem(value: 'maintenance', child: Text('Service provider')),
-          DropdownMenuItem(value: 'supplier', child: Text('Product supplier')),
+        decoration: InputDecoration(labelText: context.tr('Business type *')),
+        items: [
+          DropdownMenuItem(value: 'agency', child: Text(context.tr('Real estate agency'))),
+          DropdownMenuItem(value: 'developer', child: Text(context.tr('Developer'))),
+          DropdownMenuItem(value: 'maintenance', child: Text(context.tr('Service provider'))),
+          DropdownMenuItem(value: 'supplier', child: Text(context.tr('Product supplier'))),
         ],
         onChanged: (v) => setState(() => _bizType = v ?? 'agency'),
       ),
       const SizedBox(height: AppSpacing.x8),
-      TextField(controller: orn, decoration: const InputDecoration(labelText: 'Trade license')),
+      TextField(controller: orn, decoration: InputDecoration(labelText: context.tr('Trade license'))),
       const SizedBox(height: AppSpacing.x8),
       Row(children: [
-        Expanded(child: TextField(controller: _coCity, decoration: const InputDecoration(labelText: 'City'))),
+        Expanded(child: TextField(controller: _coCity, decoration: InputDecoration(labelText: context.tr('City')))),
         const SizedBox(width: AppSpacing.x8),
-        Expanded(child: TextField(controller: _coCountry, decoration: const InputDecoration(labelText: 'Country'))),
+        Expanded(child: TextField(controller: _coCountry, decoration: InputDecoration(labelText: context.tr('Country')))),
       ]),
       const SizedBox(height: AppSpacing.x8),
       Row(children: [
-        Expanded(child: TextField(controller: _coPhone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Contact phone'))),
+        Expanded(child: TextField(controller: _coPhone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.tr('Contact phone')))),
         const SizedBox(width: AppSpacing.x8),
-        Expanded(child: TextField(controller: _coEmail, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Contact email'))),
+        Expanded(child: TextField(controller: _coEmail, keyboardType: TextInputType.emailAddress, decoration: InputDecoration(labelText: context.tr('Contact email')))),
       ]),
       const SizedBox(height: AppSpacing.x8),
-      TextField(controller: _coWebsite, decoration: const InputDecoration(labelText: 'Website')),
+      TextField(controller: _coWebsite, decoration: InputDecoration(labelText: context.tr('Website'))),
       const SizedBox(height: AppSpacing.x8),
-      TextField(controller: _coDesc, maxLines: 2, decoration: const InputDecoration(labelText: 'Company description')),
+      TextField(controller: _coDesc, maxLines: 2, decoration: InputDecoration(labelText: context.tr('Company description'))),
       const SizedBox(height: AppSpacing.x12),
       if (_companyCreated)
-        const Text('Company created ✓ Submit it for verification later to publish publicly.',
-            style: TextStyle(color: AppColors.success))
+        Text(context.tr('Company created ✓ Submit it for verification later to publish publicly.'),
+            style: const TextStyle(color: AppColors.success))
       else
         FilledButton.icon(
           onPressed: _createCompany,
           icon: const Icon(Icons.add_business_outlined, size: 18),
-          label: const Text('Create company'),
+          label: Text(context.tr('Create company')),
         ),
     ]);
   }
@@ -446,7 +447,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   Future<void> _createCompany() async {
     if (company.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Company name is required.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Company name is required.'))));
       return;
     }
     try {
@@ -483,16 +484,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Contact & expertise', style: t.titleLarge),
-        Text('Help others find and connect with you',
+        Text(context.tr('Contact & expertise'), style: t.titleLarge),
+        Text(context.tr('Help others find and connect with you'),
             style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
         const SizedBox(height: AppSpacing.x16),
-        TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone number', hintText: '+971 …')),
+        TextField(controller: phone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.tr('Phone number'), hintText: '+971 …')),
         const SizedBox(height: AppSpacing.x12),
-        TextField(controller: whatsapp, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'WhatsApp number', hintText: '+971 …')),
+        TextField(controller: whatsapp, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.tr('WhatsApp number'), hintText: '+971 …')),
         const SizedBox(height: AppSpacing.x8),
         MultiSelectField(
-          label: 'Languages you speak',
+          label: context.tr('Languages you speak'),
           icon: Icons.translate_outlined,
           options: _langs,
           selected: languages,
@@ -502,7 +503,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         ),
         if (_isPro) ...[
           MultiSelectField(
-            label: 'Areas you cover',
+            label: context.tr('Areas you cover'),
             icon: Icons.map_outlined,
             options: _emirates,
             selected: areas,
@@ -511,7 +512,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ..addAll(v)),
           ),
           MultiSelectField(
-            label: 'Property specialties',
+            label: context.tr('Property specialties'),
             icon: Icons.star_outline,
             options: _specs,
             selected: specialties,
@@ -523,7 +524,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         const SizedBox(height: AppSpacing.x12),
         _nav(
           onBack: () => setState(() => step -= 1),
-          nextLabel: 'Complete setup',
+          nextLabel: context.tr('Complete setup'),
           onNext: _finish,
         ),
       ],
@@ -535,11 +536,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return x.isEmpty ? x : '${x[0].toUpperCase()}${x.substring(1)}';
   }
 
-  Widget _nav({VoidCallback? onBack, VoidCallback? onNext, String nextLabel = 'Continue'}) {
+  Widget _nav({VoidCallback? onBack, VoidCallback? onNext, String? nextLabel}) {
     final next = FilledButton(
       onPressed: onNext,
       style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-      child: Text(nextLabel),
+      child: Text(nextLabel ?? context.tr('Continue')),
     );
     // Full-width primary action so "Continue" / "Complete setup" is unmissable.
     if (onBack == null) return SizedBox(width: double.infinity, child: next);
@@ -548,7 +549,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         child: OutlinedButton(
           onPressed: onBack,
           style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-          child: const Text('Back'),
+          child: Text(context.tr('Back')),
         ),
       ),
       const SizedBox(width: AppSpacing.x12),

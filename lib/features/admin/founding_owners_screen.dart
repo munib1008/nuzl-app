@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -25,12 +26,12 @@ class FoundingOwnersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final owners = ref.watch(foundingOwnersProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Founding Owners'),
+      appBar: NuzlAppBar(title: context.tr('Founding Owners')),
       drawer: const NuzlDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _grant(context, ref),
         icon: const Icon(Icons.workspace_premium_outlined),
-        label: const Text('Grant founding'),
+        label: Text(context.tr('Grant founding')),
       ),
       body: ResponsiveCenter(
         child: owners.when(
@@ -39,14 +40,14 @@ class FoundingOwnersScreen extends ConsumerWidget {
           data: (list) => ListView(
             padding: const EdgeInsets.all(AppSpacing.x16),
             children: [
-              Text('Founding owners manage more properties free (standard 1, founding 5). '
-                  'Grant by name, then adjust the free limit per owner.',
+              Text(context.tr('Founding owners manage more properties free (standard 1, founding 5). '
+                  'Grant by name, then adjust the free limit per owner.'),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted)),
               const SizedBox(height: AppSpacing.x12),
               if (list.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(40),
-                  child: Center(child: Text('No founding owners yet. Tap "Grant founding" to add one.')),
+                Padding(
+                  padding: const EdgeInsets.all(40),
+                  child: Center(child: Text(context.tr('No founding owners yet. Tap "Grant founding" to add one.'))),
                 )
               else
                 ...list.map((e) => _OwnerTile(Map<String, dynamic>.from(e))),
@@ -67,7 +68,7 @@ class FoundingOwnersScreen extends ConsumerWidget {
       ref.invalidate(foundingOwnersProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${picked['full_name'] ?? 'User'} is now a founding owner')));
+            SnackBar(content: Text('${picked['full_name'] ?? context.tr('User')} ${context.tr('is now a founding owner')}')));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -86,10 +87,10 @@ class _OwnerTile extends ConsumerWidget {
     return Card(
       child: ListTile(
         leading: const Icon(Icons.workspace_premium_outlined, color: AppColors.accentGold),
-        title: Text('${m['full_name'] ?? 'User'}'),
+        title: Text('${m['full_name'] ?? context.tr('User')}'),
         subtitle: Text([
           if ('${m['email'] ?? ''}'.isNotEmpty) '${m['email']}',
-          '$props / ${limit == 0 ? '∞' : limit} properties used',
+          '$props / ${limit == 0 ? '∞' : limit} ${context.tr('properties used')}',
         ].join('\n')),
         isThreeLine: true,
         trailing: PopupMenuButton<String>(
@@ -97,9 +98,9 @@ class _OwnerTile extends ConsumerWidget {
             if (v == 'adjust') _adjust(context, ref);
             if (v == 'revoke') _revoke(context, ref);
           },
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'adjust', child: Text('Adjust free limit')),
-            PopupMenuItem(value: 'revoke', child: Text('Revoke founding')),
+          itemBuilder: (_) => [
+            PopupMenuItem(value: 'adjust', child: Text(context.tr('Adjust free limit'))),
+            PopupMenuItem(value: 'revoke', child: Text(context.tr('Revoke founding'))),
           ],
         ),
       ),
@@ -110,17 +111,17 @@ class _OwnerTile extends ConsumerWidget {
     final ctl = TextEditingController(text: '${m['free_property_limit'] ?? 5}');
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Free property limit',
+      title: context.tr('Free property limit'),
       children: [
         TextField(
           controller: ctl,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Free properties (0 = unlimited)'),
+          decoration: InputDecoration(labelText: context.tr('Free properties (0 = unlimited)')),
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Save'))),
       ],
     );
     if (ok != true) return;
@@ -166,21 +167,21 @@ Future<Map<String, dynamic>?> _pickUser(BuildContext context, WidgetRef ref) {
         }
 
         return AlertDialog(
-          title: const Text('Grant founding owner'),
+          title: Text(ctx.tr('Grant founding owner')),
           content: SizedBox(
             width: 360,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               TextField(
                 controller: search,
                 autofocus: true,
-                decoration: const InputDecoration(hintText: 'Search by name…', prefixIcon: Icon(Icons.search)),
+                decoration: InputDecoration(hintText: ctx.tr('Search by name…'), prefixIcon: const Icon(Icons.search)),
                 onChanged: run,
               ),
               const SizedBox(height: AppSpacing.x8),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 280),
                 child: results.isEmpty
-                    ? const Padding(padding: EdgeInsets.all(16), child: Text('Type at least 2 letters to search'))
+                    ? Padding(padding: const EdgeInsets.all(16), child: Text(ctx.tr('Type at least 2 letters to search')))
                     : ListView(
                         shrinkWrap: true,
                         children: [
@@ -188,7 +189,7 @@ Future<Map<String, dynamic>?> _pickUser(BuildContext context, WidgetRef ref) {
                             ListTile(
                               dense: true,
                               leading: const CircleAvatar(child: Icon(Icons.person, size: 18)),
-                              title: Text('${u['full_name'] ?? 'User'}'),
+                              title: Text('${u['full_name'] ?? ctx.tr('User')}'),
                               subtitle: u['role'] != null ? Text('${u['role']}') : null,
                               onTap: () => Navigator.pop(ctx, {'id': u['id'], 'full_name': u['full_name']}),
                             ),
@@ -197,7 +198,7 @@ Future<Map<String, dynamic>?> _pickUser(BuildContext context, WidgetRef ref) {
               ),
             ]),
           ),
-          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(ctx.tr('Close')))],
         );
       },
     ),

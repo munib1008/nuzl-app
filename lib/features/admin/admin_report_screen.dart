@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
@@ -30,7 +31,7 @@ class AdminReportScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(_adminReportProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Platform Report'),
+      appBar: NuzlAppBar(title: context.tr('Platform Report')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: RefreshIndicator(
@@ -53,14 +54,14 @@ class AdminReportScreen extends ConsumerWidget {
     final funnel = sec('funnel'), revenue = sec('revenue');
 
     final kpis = <(String, String, String)>[
-      ('Users', '${nv(users, 'total')}', '+${nv(users, 'new_7d')} / 7d · +${nv(users, 'new_30d')} / 30d'),
-      ('Organizations', '${nv(orgs, 'total')}', '${nv(orgs, 'verified')} verified'),
-      ('Properties', '${nv(props, 'total')}', '${nv(props, 'verified')} verified'),
-      ('Listings', '${nv(listings, 'total')}', '${nv(listings, 'live')} live'),
-      ('Deal GMV', _money(nv(deals, 'gmv')), '${nv(deals, 'won')} won · ${nv(deals, 'active')} active'),
-      ('Commission', _money(nv(deals, 'commission')), 'on won deals'),
-      ('Marketplace GMV', _money(nv(market, 'gmv')), '${nv(market, 'orders')} orders'),
-      ('MRR', _money(nv(revenue, 'mrr')), '${nv(revenue, 'active_subscriptions')} active subs'),
+      (context.tr('Users'), '${nv(users, 'total')}', '+${nv(users, 'new_7d')} / 7d · +${nv(users, 'new_30d')} / 30d'),
+      (context.tr('Organizations'), '${nv(orgs, 'total')}', '${nv(orgs, 'verified')} ${context.tr('verified')}'),
+      (context.tr('Properties'), '${nv(props, 'total')}', '${nv(props, 'verified')} ${context.tr('verified')}'),
+      (context.tr('Listings'), '${nv(listings, 'total')}', '${nv(listings, 'live')} ${context.tr('live')}'),
+      (context.tr('Deal GMV'), _money(nv(deals, 'gmv')), '${nv(deals, 'won')} ${context.tr('won')} · ${nv(deals, 'active')} ${context.tr('active')}'),
+      (context.tr('Commission'), _money(nv(deals, 'commission')), context.tr('on won deals')),
+      (context.tr('Marketplace GMV'), _money(nv(market, 'gmv')), '${nv(market, 'orders')} ${context.tr('orders')}'),
+      (context.tr('MRR'), _money(nv(revenue, 'mrr')), '${nv(revenue, 'active_subscriptions')} ${context.tr('active subs')}'),
     ];
 
     return ListView(
@@ -115,13 +116,13 @@ class _FunnelCard extends StatelessWidget {
     final muted = Theme.of(context).hintColor;
     final primary = Theme.of(context).colorScheme.primary;
     int g(String k) => int.tryParse('${funnel[k] ?? 0}') ?? 0;
-    final steps = <(String, int)>[('Leads', g('leads')), ('Viewings', g('viewings')), ('Offers', g('offers')), ('Won', g('won'))];
+    final steps = <(String, int)>[(context.tr('Leads'), g('leads')), (context.tr('Viewings'), g('viewings')), (context.tr('Offers'), g('offers')), (context.tr('Won'), g('won'))];
     final max = steps.map((s) => s.$2).fold<int>(0, (a, b) => b > a ? b : a);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Conversion funnel', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          Text(context.tr('Conversion funnel'), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: AppSpacing.x12),
           for (final s in steps) ...[
             Row(children: [
@@ -143,7 +144,7 @@ class _FunnelCard extends StatelessWidget {
             const SizedBox(height: AppSpacing.x8),
           ],
           Text(
-            steps.first.$2 == 0 ? 'No leads yet.' : 'Lead → won: ${(g('won') / steps.first.$2 * 100).toStringAsFixed(1)}%',
+            steps.first.$2 == 0 ? context.tr('No leads yet.') : '${context.tr('Lead → won')}: ${(g('won') / steps.first.$2 * 100).toStringAsFixed(1)}%',
             style: t.bodySmall?.copyWith(color: muted),
           ),
         ]),
@@ -166,9 +167,9 @@ class _IntegrationsCard extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Expanded(child: Text('Integrations', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700))),
+            Expanded(child: Text(context.tr('Integrations'), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700))),
             IconButton(
-              tooltip: 'Refresh',
+              tooltip: context.tr('Refresh'),
               visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.refresh, size: 18),
               onPressed: () => ref.invalidate(_integrationsProvider),
@@ -207,7 +208,7 @@ class _IntegrationsCard extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
           decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-          child: Text(active ? 'Active' : 'Dormant',
+          child: Text(context.tr(active ? 'Active' : 'Dormant'),
               style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 11)),
         ),
       ]),
@@ -227,9 +228,9 @@ class _RevenueCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Subscriptions', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          Text(context.tr('Subscriptions'), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: AppSpacing.x8),
-          Text('${_money(num.tryParse('${revenue['mrr'] ?? 0}'))} MRR · ${revenue['active_subscriptions'] ?? 0} active',
+          Text('${_money(num.tryParse('${revenue['mrr'] ?? 0}'))} ${context.tr('MRR')} · ${revenue['active_subscriptions'] ?? 0} ${context.tr('active')}',
               style: t.bodyMedium),
           if (plans.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x12),
@@ -244,7 +245,7 @@ class _RevenueCard extends StatelessWidget {
           ] else
             Padding(
               padding: const EdgeInsets.only(top: 6),
-              child: Text('No active subscriptions yet.', style: t.bodySmall?.copyWith(color: muted)),
+              child: Text(context.tr('No active subscriptions yet.'), style: t.bodySmall?.copyWith(color: muted)),
             ),
         ]),
       ),

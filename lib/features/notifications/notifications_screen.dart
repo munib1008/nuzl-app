@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -28,10 +29,10 @@ class NotificationsScreen extends ConsumerWidget {
     final hasUnread = (items.asData?.value ?? const []).any((e) => (e as Map)['is_read'] != true);
     return Scaffold(
       appBar: NuzlAppBar(
-        title: 'Notifications',
+        title: context.tr('Notifications'),
         actions: [
           if (hasUnread)
-            TextButton(onPressed: () => _markAll(context, ref), child: const Text('Mark all read')),
+            TextButton(onPressed: () => _markAll(context, ref), child: Text(context.tr('Mark all read'))),
         ],
       ),
       drawer: const NuzlDrawer(),
@@ -47,11 +48,11 @@ class NotificationsScreen extends ConsumerWidget {
               Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(friendlyError(e)))),
             ]),
             data: (list) => list.isEmpty
-                ? ListView(children: const [
+                ? ListView(children: [
                     EmptyState(
                       icon: Icons.notifications_none,
-                      title: 'You’re all caught up',
-                      message: 'New alerts about your leads, deals and properties will show up here.',
+                      title: context.tr('You’re all caught up'),
+                      message: context.tr('New alerts about your leads, deals and properties will show up here.'),
                     ),
                   ])
                 : ListView.separated(
@@ -76,7 +77,7 @@ class NotificationsScreen extends ConsumerWidget {
       ref.invalidate(notificationsProvider);
       ref.invalidate(unreadCountProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('All notifications marked read')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('All notifications marked read'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -147,7 +148,7 @@ class _NotifCard extends ConsumerWidget {
           child: Icon(urgent ? Icons.priority_high : Icons.notifications_none,
               color: urgent ? Colors.white : AppColors.primary),
         ),
-        title: Text('${n['title'] ?? _humanize('${n['type'] ?? 'Notification'}')}',
+        title: Text('${n['title'] ?? _humanize('${n['type'] ?? context.tr('Notification')}')}',
             style: TextStyle(fontWeight: read ? FontWeight.w400 : FontWeight.w700)),
         subtitle: Text([
           if (body.isNotEmpty) body,

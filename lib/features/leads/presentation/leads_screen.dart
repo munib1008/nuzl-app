@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
@@ -23,10 +24,10 @@ class LeadsScreen extends ConsumerWidget {
     final leads = ref.watch(leadsProvider);
     final canManage = ref.watch(personaProvider).canManageLeads;
     return Scaffold(
-      appBar: NuzlAppBar(title: 'Leads', actions: canManage
+      appBar: NuzlAppBar(title: context.tr('Leads'), actions: canManage
           ? [
               IconButton(
-                tooltip: 'Import leads',
+                tooltip: context.tr('Import leads'),
                 icon: const Icon(Icons.upload_file_outlined),
                 onPressed: () => context.push('/leads/import'),
               ),
@@ -37,7 +38,7 @@ class LeadsScreen extends ConsumerWidget {
           ? FloatingActionButton.extended(
               onPressed: () => context.push('/leads/new'),
               icon: const Icon(Icons.person_add_alt),
-              label: const Text('New lead'),
+              label: Text(context.tr('New lead')),
             )
           : null,
       body: RefreshIndicator(
@@ -57,9 +58,9 @@ class LeadsScreen extends ConsumerWidget {
             if (items.isEmpty && offers.isEmpty) {
               return EmptyState(
                 icon: Icons.people_outline,
-                title: 'No leads yet',
-                message: 'Capture a buyer requirement to start qualifying and matching.',
-                actionLabel: canManage ? 'Add lead' : null,
+                title: context.tr('No leads yet'),
+                message: context.tr('Capture a buyer requirement to start qualifying and matching.'),
+                actionLabel: canManage ? context.tr('Add lead') : null,
                 onAction: canManage ? () => context.push('/leads/new') : null,
               );
             }
@@ -68,7 +69,7 @@ class LeadsScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
                 if (offers.isNotEmpty) ...[
-                  Text('Offered to you — first to accept gets it',
+                  Text(context.tr('Offered to you — first to accept gets it'),
                       style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
                   const SizedBox(height: AppSpacing.x8),
                   for (final o in offers)
@@ -76,7 +77,7 @@ class LeadsScreen extends ConsumerWidget {
                   const SizedBox(height: AppSpacing.x4),
                   const Divider(),
                   const SizedBox(height: AppSpacing.x12),
-                  Text('My leads', style: t.titleSmall),
+                  Text(context.tr('My leads'), style: t.titleSmall),
                   const SizedBox(height: AppSpacing.x8),
                 ],
                 for (final l in items)
@@ -117,13 +118,13 @@ class _LeadCard extends StatelessWidget {
 
   static String _label(String s) => s.replaceAll('_', ' ');
 
-  static String _ago(DateTime? d) {
+  static String _ago(BuildContext context, DateTime? d) {
     if (d == null) return '—';
     final diff = DateTime.now().difference(d);
-    if (diff.inDays >= 1) return '${diff.inDays}d ago';
-    if (diff.inHours >= 1) return '${diff.inHours}h ago';
-    if (diff.inMinutes >= 1) return '${diff.inMinutes}m ago';
-    return 'just now';
+    if (diff.inDays >= 1) return '${diff.inDays}${context.tr('d ago')}';
+    if (diff.inHours >= 1) return '${diff.inHours}${context.tr('h ago')}';
+    if (diff.inMinutes >= 1) return '${diff.inMinutes}${context.tr('m ago')}';
+    return context.tr('just now');
   }
 
   @override
@@ -163,13 +164,13 @@ class _LeadCard extends StatelessWidget {
               const SizedBox(width: AppSpacing.x12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(lead.buyerName ?? 'Unnamed buyer', style: t.titleMedium),
+                  Text(lead.buyerName ?? context.tr('Unnamed buyer'), style: t.titleMedium),
                   if (lead.phone != null && lead.phone!.isNotEmpty)
                     Text(lead.phone!, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ),
               Tooltip(
-                message: 'Lead score',
+                message: context.tr('Lead score'),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
@@ -225,12 +226,12 @@ class _LeadCard extends StatelessWidget {
             Row(children: [
               Icon(Icons.schedule, size: 14, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
               const SizedBox(width: 4),
-              Text(created != null ? 'Created $created' : 'Created —',
+              Text(created != null ? '${context.tr('Created')} $created' : '${context.tr('Created')} —',
                   style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               const Spacer(),
               Icon(Icons.history, size: 14, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
               const SizedBox(width: 4),
-              Text('Active ${_ago(lead.lastActivityAt)}',
+              Text('${context.tr('Active')} ${_ago(context, lead.lastActivityAt)}',
                   style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ]),
           ],
@@ -259,7 +260,7 @@ class _OfferCardState extends ConsumerState<_OfferCard> {
       ref.invalidate(leadOffersProvider);
       ref.invalidate(leadsProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lead accepted — it is yours')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Lead accepted — it is yours'))));
       context.push('/leads/${widget.lead.id}');
     } catch (e) {
       if (!mounted) return;
@@ -289,7 +290,7 @@ class _OfferCardState extends ConsumerState<_OfferCard> {
         child: Row(children: [
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(lead.buyerName ?? 'New lead', style: t.titleMedium),
+              Text(lead.buyerName ?? context.tr('New lead'), style: t.titleMedium),
               if (details.isNotEmpty) ...[
                 const SizedBox(height: 2),
                 Text(details, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
@@ -301,7 +302,7 @@ class _OfferCardState extends ConsumerState<_OfferCard> {
             onPressed: _busy ? null : _accept,
             child: _busy
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('Accept'),
+                : Text(context.tr('Accept')),
           ),
         ]),
       ),

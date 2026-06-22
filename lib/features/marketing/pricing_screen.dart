@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/nuzl_logo.dart';
+import '../../core/i18n/app_localizations.dart';
 
 class _Plan {
   const _Plan(this.name, this.price, this.period, this.features, {this.highlighted = false, this.cta = 'Get started'});
@@ -93,10 +94,10 @@ class _PricingScreenState extends State<PricingScreen> {
         titleSpacing: AppSpacing.x16,
         title: InkWell(onTap: () => context.go('/'), child: const NuzlLogo(size: 26)),
         actions: [
-          TextButton(onPressed: () => context.go('/login'), child: const Text('Sign in')),
+          TextButton(onPressed: () => context.go('/login'), child: Text(context.tr('Sign in'))),
           Padding(
             padding: const EdgeInsets.only(right: AppSpacing.x12, left: AppSpacing.x8),
-            child: FilledButton(onPressed: () => context.go('/register'), child: const Text('Join free')),
+            child: FilledButton(onPressed: () => context.go('/register'), child: Text(context.tr('Join free'))),
           ),
         ],
       ),
@@ -122,7 +123,7 @@ class _PricingScreenState extends State<PricingScreen> {
                       const SizedBox(width: AppSpacing.x12),
                       Expanded(
                         child: Text(
-                          'NUZL Early Access — join today and receive founding-member benefits before public launch.',
+                          context.tr('NUZL Early Access — join today and receive founding-member benefits before public launch.'),
                           style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
                         ),
                       ),
@@ -131,21 +132,20 @@ class _PricingScreenState extends State<PricingScreen> {
                   const SizedBox(height: AppSpacing.x24),
 
                   // Hero
-                  Text('Simple pricing. Scale as you grow.', style: t.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
+                  Text(context.tr('Simple pricing. Scale as you grow.'), style: t.headlineMedium?.copyWith(fontWeight: FontWeight.w800)),
                   const SizedBox(height: AppSpacing.x8),
-                  Text('Start free. Upgrade only when you need more — built for owners, agents, tenants, '
-                      'service providers and suppliers.',
+                  Text(context.tr('Start free. Upgrade only when you need more — built for owners, agents, tenants, service providers and suppliers.'),
                       style: t.bodyLarge?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                   const SizedBox(height: AppSpacing.x24),
 
                   // Role selector
-                  Text('CHOOSE YOUR ROLE',
+                  Text(context.tr('CHOOSE YOUR ROLE'),
                       style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                   const SizedBox(height: AppSpacing.x8),
                   Wrap(spacing: 8, runSpacing: 8, children: [
                     for (final r in _roles)
                       ChoiceChip(
-                        label: Text(r),
+                        label: Text(context.tr(r)),
                         selected: _role == r,
                         onSelected: (_) => setState(() => _role = r),
                       ),
@@ -164,7 +164,7 @@ class _PricingScreenState extends State<PricingScreen> {
 
                   if (_role == 'Customer') ...[
                     const SizedBox(height: AppSpacing.x12),
-                    Text('Customers never pay — your access stays free for life.',
+                    Text(context.tr('Customers never pay — your access stays free for life.'),
                         style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                   ],
 
@@ -173,25 +173,25 @@ class _PricingScreenState extends State<PricingScreen> {
                     const SizedBox(height: AppSpacing.x24),
                     const _FounderCard(),
                     const SizedBox(height: AppSpacing.x24),
-                    Text('Compare owner plans', style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(context.tr('Compare owner plans'), style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: AppSpacing.x12),
                     _comparison(context),
                   ],
 
                   // FAQ
                   const SizedBox(height: AppSpacing.x32),
-                  Text('Frequently asked questions', style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(context.tr('Frequently asked questions'), style: t.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: AppSpacing.x8),
                   for (final f in _faqs)
                     Card(
                       margin: const EdgeInsets.only(bottom: AppSpacing.x8),
                       child: ExpansionTile(
-                        title: Text(f.$1, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                        title: Text(context.tr(f.$1), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
                         childrenPadding: const EdgeInsets.fromLTRB(AppSpacing.x16, 0, AppSpacing.x16, AppSpacing.x16),
                         children: [
                           Align(
                             alignment: Alignment.centerLeft,
-                            child: Text(f.$2, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, height: 1.5)),
+                            child: Text(context.tr(f.$2), style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, height: 1.5)),
                           ),
                         ],
                       ),
@@ -207,17 +207,17 @@ class _PricingScreenState extends State<PricingScreen> {
                       borderRadius: BorderRadius.circular(AppSpacing.rCard),
                     ),
                     child: Column(children: [
-                      Text('Start free during Early Access',
+                      Text(context.tr('Start free during Early Access'),
                           textAlign: TextAlign.center,
                           style: t.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
                       const SizedBox(height: AppSpacing.x4),
-                      Text('Customer access free forever · 1 property free for owners · Founding-member benefits',
+                      Text(context.tr('Customer access free forever · 1 property free for owners · Founding-member benefits'),
                           textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: Colors.white70)),
                       const SizedBox(height: AppSpacing.x16),
                       FilledButton(
                         onPressed: () => context.go('/register'),
                         style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: AppColors.primary),
-                        child: const Text('Join free'),
+                        child: Text(context.tr('Join free')),
                       ),
                     ]),
                   ),
@@ -248,7 +248,7 @@ class _PricingScreenState extends State<PricingScreen> {
             for (final h in ['Feature', 'Free', 'Plus', 'Pro'])
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.x12),
-                child: Text(h, style: t.labelLarge?.copyWith(fontWeight: FontWeight.w700)),
+                child: Text(context.tr(h), style: t.labelLarge?.copyWith(fontWeight: FontWeight.w700)),
               ),
           ],
         );
@@ -262,10 +262,10 @@ class _PricingScreenState extends State<PricingScreen> {
           head(),
           for (final r in rows)
             TableRow(children: [
-              Padding(padding: const EdgeInsets.all(AppSpacing.x12), child: Text(r.$1)),
-              Padding(padding: const EdgeInsets.all(AppSpacing.x12), child: Text(r.$2, textAlign: TextAlign.center)),
-              Padding(padding: const EdgeInsets.all(AppSpacing.x12), child: Text(r.$3, textAlign: TextAlign.center)),
-              Padding(padding: const EdgeInsets.all(AppSpacing.x12), child: Text(r.$4, textAlign: TextAlign.center)),
+              Padding(padding: const EdgeInsets.all(AppSpacing.x12), child: Text(context.tr(r.$1))),
+              Padding(padding: const EdgeInsets.all(AppSpacing.x12), child: Text(context.tr(r.$2), textAlign: TextAlign.center)),
+              Padding(padding: const EdgeInsets.all(AppSpacing.x12), child: Text(context.tr(r.$3), textAlign: TextAlign.center)),
+              Padding(padding: const EdgeInsets.all(AppSpacing.x12), child: Text(context.tr(r.$4), textAlign: TextAlign.center)),
             ]),
         ],
       ),
@@ -296,16 +296,16 @@ class _PlanCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
                 color: AppColors.primary.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-            child: Text('Most popular', style: t.labelSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
+            child: Text(context.tr('Most popular'), style: t.labelSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
           ),
-        Text(plan.name, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+        Text(context.tr(plan.name), style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: AppSpacing.x8),
         Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(plan.price, style: t.headlineMedium?.copyWith(fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.primary)),
+          Text(context.tr(plan.price), style: t.headlineMedium?.copyWith(fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.primary)),
           if (plan.period.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 4, left: 2),
-              child: Text(plan.period, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+              child: Text(context.tr(plan.period), style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ),
         ]),
         const SizedBox(height: AppSpacing.x16),
@@ -315,15 +315,15 @@ class _PlanCard extends StatelessWidget {
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Icon(Icons.check_circle, size: 16, color: AppColors.success),
               const SizedBox(width: AppSpacing.x8),
-              Expanded(child: Text(f, style: t.bodyMedium)),
+              Expanded(child: Text(context.tr(f), style: t.bodyMedium)),
             ]),
           ),
         const SizedBox(height: AppSpacing.x16),
         SizedBox(
           width: double.infinity,
           child: plan.highlighted
-              ? FilledButton(onPressed: () => context.go('/register'), child: Text(plan.cta))
-              : OutlinedButton(onPressed: () => context.go('/register'), child: Text(plan.cta)),
+              ? FilledButton(onPressed: () => context.go('/register'), child: Text(context.tr(plan.cta)))
+              : OutlinedButton(onPressed: () => context.go('/register'), child: Text(context.tr(plan.cta))),
         ),
       ]),
     );
@@ -346,18 +346,17 @@ class _FounderCard extends StatelessWidget {
         Row(children: [
           const Icon(Icons.verified, color: AppColors.goldAccent, size: 20),
           const SizedBox(width: AppSpacing.x8),
-          Text('Founding Member Program',
+          Text(context.tr('Founding Member Program'),
               style: t.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
         ]),
         const SizedBox(height: AppSpacing.x8),
-        Text('Join before the official launch and receive management for up to 5 properties free for life — '
-            'Owner Plus features and a Founder badge included.',
+        Text(context.tr('Join before the official launch and receive management for up to 5 properties free for life — Owner Plus features and a Founder badge included.'),
             style: t.bodyMedium?.copyWith(color: Colors.white70, height: 1.5)),
         const SizedBox(height: AppSpacing.x16),
         FilledButton(
           onPressed: () => context.go('/register'),
           style: FilledButton.styleFrom(backgroundColor: Colors.white, foregroundColor: AppColors.primary),
-          child: const Text('Become a founding member'),
+          child: Text(context.tr('Become a founding member')),
         ),
       ]),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -55,11 +56,11 @@ class RewardsScreen extends ConsumerWidget {
                 Row(children: [
                   const Icon(Icons.local_offer_outlined, color: AppColors.goldAccent, size: 24),
                   const SizedBox(width: AppSpacing.x8),
-                  Expanded(child: Text('Launch offers',
+                  Expanded(child: Text(context.tr('Launch offers'),
                       style: t.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700))),
                 ]),
                 const SizedBox(height: 6),
-                Text('Early adopters get rewarded. Make the most of the launch.',
+                Text(context.tr('Early adopters get rewarded. Make the most of the launch.'),
                     style: t.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.9))),
               ]),
             ),
@@ -73,10 +74,10 @@ class RewardsScreen extends ConsumerWidget {
             Row(children: [
               Icon(Icons.leaderboard_outlined, size: 20, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: AppSpacing.x8),
-              Text('Top contributors', style: t.titleMedium),
+              Text(context.tr('Top contributors'), style: t.titleMedium),
             ]),
             const SizedBox(height: AppSpacing.x4),
-            Text('Members who added the most properties.',
+            Text(context.tr('Members who added the most properties.'),
                 style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const SizedBox(height: AppSpacing.x12),
             board.when(
@@ -86,7 +87,7 @@ class RewardsScreen extends ConsumerWidget {
                 final top = (m['top'] is List) ? m['top'] as List : const [];
                 final myCount = int.tryParse('${m['my_count'] ?? 0}') ?? 0;
                 if (top.isEmpty) {
-                  return Text('No rankings yet — add properties to climb the board.',
+                  return Text(context.tr('No rankings yet — add properties to climb the board.'),
                       style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted));
                 }
                 return Column(children: [
@@ -102,7 +103,7 @@ class RewardsScreen extends ConsumerWidget {
                     child: Row(children: [
                       const Icon(Icons.person_pin_circle_outlined, size: 18, color: AppColors.primary),
                       const SizedBox(width: AppSpacing.x8),
-                      Expanded(child: Text('You’ve added $myCount ${myCount == 1 ? 'property' : 'properties'}',
+                      Expanded(child: Text('${context.tr('You’ve added')} $myCount ${context.tr(myCount == 1 ? 'property' : 'properties')}',
                           style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600))),
                     ]),
                   ),
@@ -115,7 +116,7 @@ class RewardsScreen extends ConsumerWidget {
       );
     if (embedded) return body;
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Rewards & offers'),
+      appBar: NuzlAppBar(title: context.tr('Rewards & offers')),
       drawer: const NuzlDrawer(),
       body: body,
     );
@@ -129,14 +130,14 @@ class RewardsHubScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const DefaultTabController(
+    return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: NuzlAppBar(title: 'Rewards & referrals'),
-        drawer: NuzlDrawer(),
+        appBar: NuzlAppBar(title: context.tr('Rewards & referrals')),
+        drawer: const NuzlDrawer(),
         body: Column(children: [
-          TabBar(tabs: [Tab(text: 'Rewards & offers'), Tab(text: 'Refer & Earn')]),
-          Expanded(
+          TabBar(tabs: [Tab(text: context.tr('Rewards & offers')), Tab(text: context.tr('Refer & Earn'))]),
+          const Expanded(
             child: TabBarView(children: [
               RewardsScreen(embedded: true),
               ReferScreen(embedded: true),
@@ -175,9 +176,9 @@ class _OfferCard extends StatelessWidget {
             const SizedBox(width: AppSpacing.x12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                Text(context.tr(title), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
-                Text(body, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                Text(context.tr(body), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               ]),
             ),
             if (route != null) Icon(Icons.chevron_right, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
@@ -225,7 +226,7 @@ class _RankTile extends StatelessWidget {
           const SizedBox(width: AppSpacing.x8),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('${row['full_name'] ?? 'Member'}${isMe ? ' (you)' : ''}',
+              Text('${row['full_name'] ?? context.tr('Member')}${isMe ? ' (${context.tr('you')})' : ''}',
                   style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
               if ('${row['org_name'] ?? ''}'.isNotEmpty)
                 Text('${row['org_name']}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),

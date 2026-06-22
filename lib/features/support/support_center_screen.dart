@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -42,7 +43,7 @@ class SupportCenterScreen extends ConsumerWidget {
     final filter = ref.watch(_statusFilterProvider);
     final t = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Support Center'),
+      appBar: NuzlAppBar(title: context.tr('Support Center')),
       drawer: const NuzlDrawer(),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(_ticketsProvider),
@@ -53,7 +54,7 @@ class SupportCenterScreen extends ConsumerWidget {
               height: 40,
               child: ListView(scrollDirection: Axis.horizontal, children: [
                 ChoiceChip(
-                  label: const Text('All'),
+                  label: Text(context.tr('All')),
                   selected: filter == null,
                   onSelected: (_) => ref.read(_statusFilterProvider.notifier).state = null,
                 ),
@@ -74,7 +75,7 @@ class SupportCenterScreen extends ConsumerWidget {
               data: (list) => list.isEmpty
                   ? Padding(
                       padding: const EdgeInsets.all(40),
-                      child: Center(child: Text('No tickets here.', style: t.bodyMedium?.copyWith(color: AppColors.textMuted))))
+                      child: Center(child: Text(context.tr('No tickets here.'), style: t.bodyMedium?.copyWith(color: AppColors.textMuted))))
                   : Column(children: [for (final tk in list) _TicketCard(Map<String, dynamic>.from(tk as Map))]),
             ),
           ],
@@ -127,14 +128,14 @@ class _TicketCard extends ConsumerWidget {
           Text(
             [
               if ('${tk['reporter_name'] ?? ''}'.trim().isNotEmpty) '${tk['reporter_name']}',
-              if ('${tk['page'] ?? ''}'.trim().isNotEmpty) 'on ${tk['page']}',
+              if ('${tk['page'] ?? ''}'.trim().isNotEmpty) '${context.tr('on')} ${tk['page']}',
               dateStr,
             ].where((s) => s.trim().isNotEmpty).join('  ·  '),
             style: t.labelSmall?.copyWith(color: AppColors.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: AppSpacing.x4),
           Row(children: [
-            Text('Status', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            Text(context.tr('Status'), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
             const SizedBox(width: AppSpacing.x8),
             DropdownButton<String>(
               value: _statuses.contains(status) ? status : 'new',

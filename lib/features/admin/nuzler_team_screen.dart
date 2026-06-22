@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -33,7 +34,7 @@ class NuzlerTeamScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final team = ref.watch(nuzlerTeamProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Nuzler team'),
+      appBar: NuzlAppBar(title: context.tr('Nuzler team')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: RefreshIndicator(
@@ -109,15 +110,15 @@ class _MemberTile extends ConsumerWidget {
               child: DropdownButtonFormField<String?>(
                 initialValue: current,
                 isExpanded: true,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   isDense: true,
-                  labelText: 'Designation',
-                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  labelText: context.tr('Designation'),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 ),
                 items: [
                   const DropdownMenuItem<String?>(value: null, child: Text('—')),
                   ...nuzlerDesignations.entries.map((e) =>
-                      DropdownMenuItem<String?>(value: e.key, child: Text(e.value, overflow: TextOverflow.ellipsis))),
+                      DropdownMenuItem<String?>(value: e.key, child: Text(context.tr(e.value), overflow: TextOverflow.ellipsis))),
                 ],
                 onChanged: (v) => _set(context, ref, v),
               ),
@@ -143,9 +144,9 @@ class _Empty extends StatelessWidget {
           children: [
             Icon(Icons.badge_outlined, size: 56, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
             const SizedBox(height: AppSpacing.x16),
-            Text('No Nuzlers yet', style: t.titleMedium),
+            Text(context.tr('No Nuzlers yet'), style: t.titleMedium),
             const SizedBox(height: AppSpacing.x8),
-            Text('Platform staff (@nuzl.ae) appear here for designation assignment.',
+            Text(context.tr('Platform staff (@nuzl.ae) appear here for designation assignment.'),
                 textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ],
         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -26,7 +27,7 @@ class DealsScreen extends ConsumerWidget {
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
     return CrmScaffold(
       tab: CrmTab.deals,
-      title: 'Deals',
+      title: context.tr('Deals'),
       body: ResponsiveCenter(
         child: RefreshIndicator(
           onRefresh: () async => ref.refresh(dealsProvider.future),
@@ -34,11 +35,11 @@ class DealsScreen extends ConsumerWidget {
             loading: () => const SkeletonList(),
             error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (list) => list.isEmpty
-                ? ListView(children: const [
+                ? ListView(children: [
                     EmptyState(
                       icon: Icons.handshake_outlined,
-                      title: 'No deals yet',
-                      message: 'Deals appear here when an offer is accepted.',
+                      title: context.tr('No deals yet'),
+                      message: context.tr('Deals appear here when an offer is accepted.'),
                     ),
                   ])
                 : ListView.separated(
@@ -57,7 +58,7 @@ class DealsScreen extends ConsumerWidget {
                         padding: const EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x12, AppSpacing.x8, AppSpacing.x8),
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Row(children: [
-                            Expanded(child: Text(price != null ? aed.format(price) : 'Deal',
+                            Expanded(child: Text(price != null ? aed.format(price) : context.tr('Deal'),
                                 style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
                             _StageChip(stage: stage),
                           ]),
@@ -66,13 +67,13 @@ class DealsScreen extends ConsumerWidget {
                             Icon(Icons.payments_outlined, size: 16, color: Theme.of(context).hintColor),
                             const SizedBox(width: 6),
                             Expanded(child: Text.rich(TextSpan(children: [
-                              const TextSpan(text: 'Commission  '),
+                              TextSpan(text: '${context.tr('Commission')}  '),
                               TextSpan(
-                                text: commAmt != null ? aed.format(commAmt) : 'Not set',
+                                text: commAmt != null ? aed.format(commAmt) : context.tr('Not set'),
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   color: commAmt != null ? AppColors.success : Theme.of(context).hintColor)),
-                              if (split.isNotEmpty) TextSpan(text: '   ·   split $split'),
+                              if (split.isNotEmpty) TextSpan(text: '   ·   ${context.tr('split')} $split'),
                             ]), style: TextStyle(fontSize: 13, color: Theme.of(context).textTheme.bodyMedium?.color))),
                           ]),
                           const SizedBox(height: AppSpacing.x4),
@@ -80,11 +81,11 @@ class DealsScreen extends ConsumerWidget {
                             TextButton.icon(
                               onPressed: () => _editCommission(context, ref, id, commAmt, split),
                               icon: const Icon(Icons.edit_outlined, size: 16),
-                              label: const Text('Commission')),
+                              label: Text(context.tr('Commission'))),
                             TextButton.icon(
                               onPressed: () => _changeStage(context, ref, id, stage),
                               icon: const Icon(Icons.swap_horiz, size: 16),
-                              label: const Text('Stage')),
+                              label: Text(context.tr('Stage'))),
                           ]),
                         ]),
                       ));
@@ -99,7 +100,7 @@ class DealsScreen extends ConsumerWidget {
     final picked = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(child: ListView(shrinkWrap: true, children: [
-        const Padding(padding: EdgeInsets.all(16), child: Text('Move deal to stage', style: TextStyle(fontWeight: FontWeight.w600))),
+        Padding(padding: const EdgeInsets.all(16), child: Text(context.tr('Move deal to stage'), style: const TextStyle(fontWeight: FontWeight.w600))),
         ..._stages.map((s) => ListTile(
           title: Text(s[0].toUpperCase() + s.substring(1)),
           trailing: s == current ? const Icon(Icons.check, color: AppColors.primary) : null,
@@ -122,23 +123,23 @@ class DealsScreen extends ConsumerWidget {
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Edit commission'),
+        title: Text(context.tr('Edit commission')),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           TextField(
             controller: amtCtrl,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Commission amount (AED)', prefixText: 'AED '),
+            decoration: InputDecoration(labelText: context.tr('Commission amount (AED)'), prefixText: 'AED '),
           ),
           const SizedBox(height: AppSpacing.x12),
           TextField(
             controller: splitCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Split', hintText: 'e.g. 50% / 50%'),
+            decoration: InputDecoration(
+              labelText: context.tr('Split'), hintText: context.tr('e.g. 50% / 50%')),
           ),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Save'))),
         ],
       ),
     );

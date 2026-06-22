@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
@@ -67,7 +68,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     try {
       await ref.read(apiClientProvider).patch('/admin/settings', body: body);
       ref.invalidate(_adminSettingsProvider);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Settings saved')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Settings saved'))));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     } finally {
@@ -79,7 +80,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
   Widget build(BuildContext context) {
     final async = ref.watch(_adminSettingsProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Settings'),
+      appBar: NuzlAppBar(title: context.tr('Settings')),
       drawer: const NuzlDrawer(),
       floatingActionButton: async.hasValue
           ? FloatingActionButton.extended(
@@ -87,7 +88,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
               icon: _saving
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.save_outlined),
-              label: const Text('Save'),
+              label: Text(context.tr('Save')),
             )
           : null,
       body: ResponsiveCenter(
@@ -101,7 +102,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
               for (final e in (d['secretSet'] as Map? ?? const {}).entries) '${e.key}': e.value == true,
             };
             if (defs.isEmpty) {
-              return const Center(child: Padding(padding: EdgeInsets.all(24), child: Text('No settings available.')));
+              return Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(context.tr('No settings available.'))));
             }
             _hydrate(settings, defs);
             final groups = <String, List<String>>{};
@@ -137,14 +138,14 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
           Row(children: [
             const Icon(Icons.warning_amber_rounded, size: 18, color: Colors.red),
             const SizedBox(width: AppSpacing.x8),
-            Text('Danger zone', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: Colors.red)),
+            Text(context.tr('Danger zone'), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: Colors.red)),
           ]),
           const SizedBox(height: AppSpacing.x8),
           Text(
-            'Permanently delete all seed/demo data: test accounts (@nuzl.test, @demo.nuzl.ae), demo '
-            'listings, properties, marketplace items and posts. Real accounts and admin@nuzl.ae are kept. '
-            'Reversible only by re-seeding. Also set SEED_TEST_ACCOUNTS=false in the API env so it does not '
-            'recreate test accounts on the next deploy.',
+            context.tr('Permanently delete all seed/demo data: test accounts (@nuzl.test, @demo.nuzl.ae), demo '
+                'listings, properties, marketplace items and posts. Real accounts and admin@nuzl.ae are kept. '
+                'Reversible only by re-seeding. Also set SEED_TEST_ACCOUNTS=false in the API env so it does not '
+                'recreate test accounts on the next deploy.'),
             style: t.bodySmall?.copyWith(color: muted),
           ),
           const SizedBox(height: AppSpacing.x12),
@@ -154,7 +155,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
             icon: _purging
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red))
                 : const Icon(Icons.delete_sweep_outlined, size: 18),
-            label: const Text('Purge demo / test data'),
+            label: Text(context.tr('Purge demo / test data')),
           ),
         ]),
       ),
@@ -166,19 +167,19 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Purge demo / test data'),
+        title: Text(context.tr('Purge demo / test data')),
         content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('This permanently deletes all seed/demo records. Real users and admin@nuzl.ae are kept. '
-              'Type PURGE to confirm.'),
+          Text(context.tr('This permanently deletes all seed/demo records. Real users and admin@nuzl.ae are kept. '
+              'Type PURGE to confirm.')),
           const SizedBox(height: AppSpacing.x12),
           TextField(controller: confirm, autofocus: true, decoration: const InputDecoration(hintText: 'PURGE')),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, confirm.text.trim().toUpperCase() == 'PURGE'),
-            child: const Text('Purge'),
+            child: Text(context.tr('Purge')),
           ),
         ],
       ),
@@ -191,7 +192,7 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
       final total = del.values.fold<int>(0, (s, v) => s + (int.tryParse('$v') ?? 0));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Demo data purged — $total records removed. Hard-refresh to see the clean state.')));
+            SnackBar(content: Text('${context.tr('Demo data purged —')} $total ${context.tr('records removed. Hard-refresh to see the clean state.')}')));
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -237,9 +238,9 @@ class _AdminSettingsScreenState extends ConsumerState<AdminSettingsScreen> {
         decoration: InputDecoration(
           labelText: label,
           // Stored secrets are never sent back; a blank field keeps the current value.
-          hintText: isSecret && configured ? '•••••••• (configured)' : null,
+          hintText: isSecret && configured ? '•••••••• ${context.tr('(configured)')}' : null,
           helperText: isSecret
-              ? (configured ? 'Configured — leave blank to keep, or type a new value to replace' : 'Not set')
+              ? (configured ? context.tr('Configured — leave blank to keep, or type a new value to replace') : context.tr('Not set'))
               : null,
           helperMaxLines: 2,
           suffixIcon: isSecret

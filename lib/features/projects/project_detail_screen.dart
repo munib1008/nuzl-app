@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/upload_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -69,7 +70,7 @@ class ProjectDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(projectDetailProvider(projectId));
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Project'),
+      appBar: NuzlAppBar(title: context.tr('Project')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: detail.when(
@@ -104,7 +105,7 @@ class ProjectDetailScreen extends ConsumerWidget {
                 if (isOwnerDev)
                   _InquiriesInbox(projectId: projectId)
                 else
-                  _InquiryActions(projectId: projectId, projectName: '${p['name'] ?? 'this project'}'),
+                  _InquiryActions(projectId: projectId, projectName: '${p['name'] ?? context.tr('this project')}'),
                 const SizedBox(height: AppSpacing.x16),
                 if (isOwnerDev) ...[
                   _actions(context, ref, p),
@@ -114,7 +115,7 @@ class ProjectDetailScreen extends ConsumerWidget {
                       child: OutlinedButton.icon(
                         onPressed: () => _assignProjectAgent(context, ref, '${p['id']}'),
                         icon: const Icon(Icons.person_pin_outlined, size: 18),
-                        label: const Text('Assign agent'),
+                        label: Text(context.tr('Assign agent')),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.x8),
@@ -122,19 +123,19 @@ class ProjectDetailScreen extends ConsumerWidget {
                       child: OutlinedButton.icon(
                         onPressed: () => _requestQuote(context, ref, p),
                         icon: const Icon(Icons.request_quote_outlined, size: 18),
-                        label: const Text('Request quote'),
+                        label: Text(context.tr('Request quote')),
                       ),
                     ),
                   ]),
                   const SizedBox(height: AppSpacing.x16),
                 ],
-                Text('Units (${units.length})',
+                Text('${context.tr('Units')} (${units.length})',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: AppSpacing.x8),
                 if (units.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: AppSpacing.x24),
-                    child: Center(child: Text('No units yet. Use “Add units”, then “Release” them to market.')),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.x24),
+                    child: Center(child: Text(context.tr('No units yet. Use “Add units”, then “Release” them to market.'))),
                   )
                 else
                   ...units.map((u) => _unitTile(context, ref, Map<String, dynamic>.from(u))),
@@ -160,10 +161,10 @@ class ProjectDetailScreen extends ConsumerWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Expanded(
-              child: Text('${p['name'] ?? 'Project'}',
+              child: Text('${p['name'] ?? context.tr('Project')}',
                   style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
             ),
-            StatusBadge(_humanize(status), tone: _projectTone(status)),
+            StatusBadge(context.tr(_humanize(status)), tone: _projectTone(status)),
           ]),
           if ('${p['location'] ?? ''}'.trim().isNotEmpty || '${p['community'] ?? ''}'.trim().isNotEmpty) ...[
             const SizedBox(height: 4),
@@ -176,8 +177,8 @@ class ProjectDetailScreen extends ConsumerWidget {
           ],
           const SizedBox(height: AppSpacing.x8),
           Wrap(spacing: AppSpacing.x16, runSpacing: 6, children: [
-            if (handover != null) _meta(Icons.event_outlined, 'Handover ${DateFormat('MMM y').format(handover)}', dark),
-            if (priceFrom != null && priceFrom > 0) _meta(Icons.sell_outlined, 'From ${aed.format(priceFrom)}', dark),
+            if (handover != null) _meta(Icons.event_outlined, '${context.tr('Handover')} ${DateFormat('MMM y').format(handover)}', dark),
+            if (priceFrom != null && priceFrom > 0) _meta(Icons.sell_outlined, '${context.tr('From')} ${aed.format(priceFrom)}', dark),
           ]),
           if ('${p['description'] ?? ''}'.trim().isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x8),
@@ -192,18 +193,18 @@ class ProjectDetailScreen extends ConsumerWidget {
               OutlinedButton.icon(
                 onPressed: () => launchUrl(Uri.parse('${p['video_url']}'), webOnlyWindowName: '_blank'),
                 icon: const Icon(Icons.play_circle_outline, size: 16),
-                label: const Text('Video'),
+                label: Text(context.tr('Video')),
               ),
             if ('${p['tour_url'] ?? ''}'.trim().isNotEmpty)
               OutlinedButton.icon(
                 onPressed: () => launchUrl(Uri.parse('${p['tour_url']}'), webOnlyWindowName: '_blank'),
                 icon: const Icon(Icons.threed_rotation, size: 16),
-                label: const Text('360° tour'),
+                label: Text(context.tr('360° tour')),
               ),
             OutlinedButton.icon(
               onPressed: () => _editProject(context, ref, p),
               icon: const Icon(Icons.edit_outlined, size: 16),
-              label: const Text('Edit'),
+              label: Text(context.tr('Edit')),
             ),
           ]),
         ]),
@@ -230,7 +231,7 @@ class ProjectDetailScreen extends ConsumerWidget {
         }
       },
       icon: Icon(has ? Icons.description_outlined : Icons.upload_file_outlined, size: 16),
-      label: Text(has ? 'View $label' : 'Upload $label'),
+      label: Text(has ? '${context.tr('View')} ${context.tr(label)}' : '${context.tr('Upload')} ${context.tr(label)}'),
       style: OutlinedButton.styleFrom(
         foregroundColor: has ? Theme.of(context).colorScheme.primary : null,
       ),
@@ -260,9 +261,9 @@ class ProjectDetailScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Text('Availability', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            Text(context.tr('Availability'), style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
             const Spacer(),
-            Text('$total units', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+            Text('$total ${context.tr('units')}', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ]),
           const SizedBox(height: AppSpacing.x12),
           ClipRRect(
@@ -281,7 +282,7 @@ class ProjectDetailScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.x12),
           Wrap(spacing: AppSpacing.x16, runSpacing: AppSpacing.x8, children: [
-            for (final s in segs) _legend(s.$2, s.$3, s.$1),
+            for (final s in segs) _legend(s.$2, context.tr(s.$3), s.$1),
           ]),
         ]),
       ),
@@ -302,7 +303,7 @@ class ProjectDetailScreen extends ConsumerWidget {
         child: OutlinedButton.icon(
           onPressed: () => _addUnits(context, ref, '${p['id']}'),
           icon: const Icon(Icons.add_home_work_outlined, size: 18),
-          label: const Text('Add units'),
+          label: Text(context.tr('Add units')),
         ),
       ),
       const SizedBox(width: AppSpacing.x8),
@@ -310,7 +311,7 @@ class ProjectDetailScreen extends ConsumerWidget {
         child: FilledButton.icon(
           onPressed: unreleased > 0 ? () => _release(context, ref, '${p['id']}', unreleased) : null,
           icon: const Icon(Icons.rocket_launch_outlined, size: 18),
-          label: Text(unreleased > 0 ? 'Release ($unreleased)' : 'All released'),
+          label: Text(unreleased > 0 ? '${context.tr('Release')} ($unreleased)' : context.tr('All released')),
         ),
       ),
     ]);
@@ -327,14 +328,14 @@ class ProjectDetailScreen extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: AppSpacing.x8),
       child: ListTile(
         leading: const Icon(Icons.meeting_room_outlined),
-        title: Text('${u['unit_no'] ?? 'Unit'}'),
+        title: Text('${u['unit_no'] ?? context.tr('Unit')}'),
         subtitle: Text([
-          if (type.isNotEmpty) _humanize(type),
-          if (beds != null) '$beds BR',
-          agent.isNotEmpty ? 'Agent: $agent' : (released ? 'Unassigned' : 'Held'),
+          if (type.isNotEmpty) context.tr(_humanize(type)),
+          if (beds != null) '$beds ${context.tr('BR')}',
+          agent.isNotEmpty ? '${context.tr('Agent')}: $agent' : (released ? context.tr('Unassigned') : context.tr('Held')),
         ].join('  ·  ')),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-          StatusBadge(released ? _humanize(status ?? 'available') : 'Held',
+          StatusBadge(released ? context.tr(_humanize(status ?? 'available')) : context.tr('Held'),
               tone: released ? _unitTone(status) : BadgeTone.neutral),
           PopupMenuButton<String>(
             onSelected: (v) {
@@ -342,8 +343,8 @@ class ProjectDetailScreen extends ConsumerWidget {
               if (v == 'unassign') _doAssign(context, ref, '${u['id']}', null);
             },
             itemBuilder: (_) => [
-              const PopupMenuItem(value: 'assign', child: Text('Assign agent')),
-              if (agent.isNotEmpty) const PopupMenuItem(value: 'unassign', child: Text('Clear agent')),
+              PopupMenuItem(value: 'assign', child: Text(context.tr('Assign agent'))),
+              if (agent.isNotEmpty) PopupMenuItem(value: 'unassign', child: Text(context.tr('Clear agent'))),
             ],
           ),
         ]),
@@ -370,10 +371,10 @@ class ProjectDetailScreen extends ConsumerWidget {
       await ref.read(apiClientProvider).patch('/projects/$id', body: {field: url});
       ref.invalidate(projectDetailProvider(id));
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Plan uploaded')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Plan uploaded'))));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('Upload failed')}: $e')));
     }
   }
 
@@ -384,24 +385,24 @@ class ProjectDetailScreen extends ConsumerWidget {
     var type = 'apartment';
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Add units',
+      title: context.tr('Add units'),
       children: [
         StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: count, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'How many units')),
+            TextField(controller: count, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('How many units'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: prefix, decoration: const InputDecoration(labelText: 'Unit label prefix')),
+            TextField(controller: prefix, decoration: InputDecoration(labelText: context.tr('Unit label prefix'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: beds, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Bedrooms')),
+            TextField(controller: beds, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Bedrooms'))),
             const SizedBox(height: AppSpacing.x8),
             DropdownButtonFormField<String>(
               initialValue: type,
-              decoration: const InputDecoration(labelText: 'Type'),
-              items: const [
-                DropdownMenuItem(value: 'apartment', child: Text('Apartment')),
-                DropdownMenuItem(value: 'villa', child: Text('Villa')),
-                DropdownMenuItem(value: 'townhouse', child: Text('Townhouse')),
-                DropdownMenuItem(value: 'office', child: Text('Office')),
+              decoration: InputDecoration(labelText: context.tr('Type')),
+              items: [
+                DropdownMenuItem(value: 'apartment', child: Text(context.tr('Apartment'))),
+                DropdownMenuItem(value: 'villa', child: Text(context.tr('Villa'))),
+                DropdownMenuItem(value: 'townhouse', child: Text(context.tr('Townhouse'))),
+                DropdownMenuItem(value: 'office', child: Text(context.tr('Office'))),
               ],
               onChanged: (v) => setS(() => type = v ?? 'apartment'),
             ),
@@ -409,8 +410,8 @@ class ProjectDetailScreen extends ConsumerWidget {
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Add')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Add'))),
       ],
     );
     if (ok != true) return;
@@ -422,7 +423,7 @@ class ProjectDetailScreen extends ConsumerWidget {
         'property_type': type,
       });
       ref.invalidate(projectDetailProvider(id));
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Units added')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Units added'))));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
@@ -432,16 +433,16 @@ class ProjectDetailScreen extends ConsumerWidget {
     final count = TextEditingController(text: '$unreleased');
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Release units to market',
+      title: context.tr('Release units to market'),
       children: [
-        Text('Releasing flips held units to Available so they appear in the market and can be assigned to agents. '
-            '$unreleased unit(s) are currently held.'),
+        Text('${context.tr('Releasing flips held units to Available so they appear in the market and can be assigned to agents.')} '
+            '$unreleased ${context.tr('unit(s) are currently held.')}'),
         const SizedBox(height: AppSpacing.x8),
-        TextField(controller: count, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'How many to release')),
+        TextField(controller: count, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('How many to release'))),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Release')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Release'))),
       ],
     );
     if (ok != true) return;
@@ -451,7 +452,7 @@ class ProjectDetailScreen extends ConsumerWidget {
       });
       ref.invalidate(projectDetailProvider(id));
       final n = (res is Map) ? res['released'] ?? 0 : 0;
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Released $n unit(s) to market')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('Released')} $n ${context.tr('unit(s) to market')}')));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
@@ -461,21 +462,21 @@ class ProjectDetailScreen extends ConsumerWidget {
     final agents = await ref.read(assignableAgentsProvider.future);
     if (!context.mounted) return;
     if (agents.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No agents available to assign')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('No agents available to assign'))));
       return;
     }
     final chosen = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(
         child: ListView(shrinkWrap: true, children: [
-          const Padding(
-            padding: EdgeInsets.all(AppSpacing.x16),
-            child: Text('Assign agent', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.x16),
+            child: Text(context.tr('Assign agent'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
           ),
           for (final a in agents)
             ListTile(
               leading: const Icon(Icons.person_outline),
-              title: Text('${a['full_name'] ?? a['email'] ?? 'Agent'}'),
+              title: Text('${a['full_name'] ?? a['email'] ?? context.tr('Agent')}'),
               subtitle: '${a['email'] ?? ''}'.isNotEmpty ? Text('${a['email']}') : null,
               onTap: () => Navigator.pop(ctx, '${a['id']}'),
             ),
@@ -492,7 +493,7 @@ class ProjectDetailScreen extends ConsumerWidget {
       ref.invalidate(projectDetailProvider(projectId));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(agentId == null ? 'Agent cleared' : 'Unit assigned to agent')));
+            SnackBar(content: Text(context.tr(agentId == null ? 'Agent cleared' : 'Unit assigned to agent'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -513,18 +514,18 @@ class ProjectDetailScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(AppSpacing.x16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Expanded(child: Text('Gallery', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700))),
+              Expanded(child: Text(context.tr('Gallery'), style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700))),
               if (isOwner)
                 TextButton.icon(
                   onPressed: () => _addGalleryPhoto(context, ref, '${p['id']}', list),
                   icon: const Icon(Icons.add_photo_alternate_outlined, size: 16),
-                  label: const Text('Add'),
+                  label: Text(context.tr('Add')),
                   style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
                 ),
             ]),
             const SizedBox(height: AppSpacing.x8),
             if (list.isEmpty)
-              Text('No photos yet. Add gallery images buyers can browse.',
+              Text(context.tr('No photos yet. Add gallery images buyers can browse.'),
                   style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor))
             else
               Wrap(spacing: 8, runSpacing: 8, children: [
@@ -585,25 +586,25 @@ class ProjectDetailScreen extends ConsumerWidget {
     final agents = await ref.read(assignableAgentsProvider.future);
     if (!context.mounted) return;
     if (agents.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No agents available to assign')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('No agents available to assign'))));
       return;
     }
     final chosen = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(
         child: ListView(shrinkWrap: true, children: [
-          const Padding(padding: EdgeInsets.all(AppSpacing.x16),
-              child: Text('Assign the project to an agent', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
+          Padding(padding: const EdgeInsets.all(AppSpacing.x16),
+              child: Text(context.tr('Assign the project to an agent'), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
           for (final a in agents)
             ListTile(
               leading: const Icon(Icons.person_outline),
-              title: Text('${a['full_name'] ?? a['email'] ?? 'Agent'}'),
+              title: Text('${a['full_name'] ?? a['email'] ?? context.tr('Agent')}'),
               subtitle: '${a['email'] ?? ''}'.isNotEmpty ? Text('${a['email']}') : null,
               onTap: () => Navigator.pop(ctx, '${a['id']}'),
             ),
           ListTile(
             leading: const Icon(Icons.clear),
-            title: const Text('Clear assignment'),
+            title: Text(context.tr('Clear assignment')),
             onTap: () => Navigator.pop(ctx, ''),
           ),
         ]),
@@ -616,7 +617,7 @@ class ProjectDetailScreen extends ConsumerWidget {
       final n = (res is Map) ? res['units'] ?? 0 : 0;
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(chosen.isEmpty ? 'Cleared agent on $n units' : 'Assigned $n units to the agent')));
+            SnackBar(content: Text(chosen.isEmpty ? '${context.tr('Cleared agent on')} $n ${context.tr('units')}' : '${context.tr('Assigned')} $n ${context.tr('units to the agent')}')));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -631,38 +632,38 @@ class ProjectDetailScreen extends ConsumerWidget {
     var category = 'fit_out';
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Request a project quote',
+      title: context.tr('Request a project quote'),
       children: [
-        Text('Post a request for the whole project — service providers bid in the marketplace.',
+        Text(context.tr('Post a request for the whole project — service providers bid in the marketplace.'),
             style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: AppSpacing.x12),
         StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
             DropdownButtonFormField<String>(
               initialValue: category,
-              decoration: const InputDecoration(labelText: 'Scope'),
-              items: const [
-                DropdownMenuItem(value: 'fit_out', child: Text('Fit-out')),
-                DropdownMenuItem(value: 'mep', child: Text('MEP')),
-                DropdownMenuItem(value: 'landscaping', child: Text('Landscaping')),
-                DropdownMenuItem(value: 'facade', child: Text('Façade')),
-                DropdownMenuItem(value: 'interior', child: Text('Interior design')),
-                DropdownMenuItem(value: 'other', child: Text('Other')),
+              decoration: InputDecoration(labelText: context.tr('Scope')),
+              items: [
+                DropdownMenuItem(value: 'fit_out', child: Text(context.tr('Fit-out'))),
+                DropdownMenuItem(value: 'mep', child: Text(context.tr('MEP'))),
+                DropdownMenuItem(value: 'landscaping', child: Text(context.tr('Landscaping'))),
+                DropdownMenuItem(value: 'facade', child: Text(context.tr('Façade'))),
+                DropdownMenuItem(value: 'interior', child: Text(context.tr('Interior design'))),
+                DropdownMenuItem(value: 'other', child: Text(context.tr('Other'))),
               ],
               onChanged: (v) => setS(() => category = v ?? 'fit_out'),
             ),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: scope, decoration: const InputDecoration(labelText: 'Title', hintText: 'e.g. Full fit-out — 120 units')),
+            TextField(controller: scope, decoration: InputDecoration(labelText: context.tr('Title'), hintText: context.tr('e.g. Full fit-out — 120 units'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: budget, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Budget (AED) — optional')),
+            TextField(controller: budget, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Budget (AED) — optional'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: desc, maxLines: 3, decoration: const InputDecoration(labelText: 'Details')),
+            TextField(controller: desc, maxLines: 3, decoration: InputDecoration(labelText: context.tr('Details'))),
           ]),
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Post request')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Post request'))),
       ],
     );
     if (ok != true) return;
@@ -677,7 +678,7 @@ class ProjectDetailScreen extends ConsumerWidget {
         if (budget.text.trim().isNotEmpty) 'budget': num.tryParse(budget.text.trim()),
       });
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quote request posted to the marketplace')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Quote request posted to the marketplace'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -695,42 +696,42 @@ class ProjectDetailScreen extends ConsumerWidget {
     var status = '${p['status'] ?? 'planning'}';
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Edit project',
+      title: context.tr('Edit project'),
       children: [
         StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: loc, decoration: const InputDecoration(labelText: 'Location / area')),
+            TextField(controller: loc, decoration: InputDecoration(labelText: context.tr('Location / area'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: city, decoration: const InputDecoration(labelText: 'City (e.g. Dubai)')),
+            TextField(controller: city, decoration: InputDecoration(labelText: context.tr('City (e.g. Dubai)'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price from (AED)')),
+            TextField(controller: price, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Price from (AED)'))),
             const SizedBox(height: AppSpacing.x8),
             DropdownButtonFormField<String>(
               initialValue: status,
-              decoration: const InputDecoration(labelText: 'Status'),
-              items: const [
-                DropdownMenuItem(value: 'planning', child: Text('Planning')),
-                DropdownMenuItem(value: 'launching', child: Text('Launching')),
-                DropdownMenuItem(value: 'under_construction', child: Text('Under construction')),
-                DropdownMenuItem(value: 'ready', child: Text('Ready')),
-                DropdownMenuItem(value: 'completed', child: Text('Completed')),
-                DropdownMenuItem(value: 'sold_out', child: Text('Sold out')),
-                DropdownMenuItem(value: 'handover', child: Text('Handover')),
+              decoration: InputDecoration(labelText: context.tr('Status')),
+              items: [
+                DropdownMenuItem(value: 'planning', child: Text(context.tr('Planning'))),
+                DropdownMenuItem(value: 'launching', child: Text(context.tr('Launching'))),
+                DropdownMenuItem(value: 'under_construction', child: Text(context.tr('Under construction'))),
+                DropdownMenuItem(value: 'ready', child: Text(context.tr('Ready'))),
+                DropdownMenuItem(value: 'completed', child: Text(context.tr('Completed'))),
+                DropdownMenuItem(value: 'sold_out', child: Text(context.tr('Sold out'))),
+                DropdownMenuItem(value: 'handover', child: Text(context.tr('Handover'))),
               ],
               onChanged: (v) => setS(() => status = v ?? 'planning'),
             ),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: video, decoration: const InputDecoration(labelText: 'Video URL (optional)')),
+            TextField(controller: video, decoration: InputDecoration(labelText: context.tr('Video URL (optional)'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: tour, decoration: const InputDecoration(labelText: '360° tour URL (optional)')),
+            TextField(controller: tour, decoration: InputDecoration(labelText: context.tr('360° tour URL (optional)'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: desc, maxLines: 3, decoration: const InputDecoration(labelText: 'Description')),
+            TextField(controller: desc, maxLines: 3, decoration: InputDecoration(labelText: context.tr('Description'))),
           ]),
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Save'))),
       ],
     );
     if (ok != true) return;
@@ -745,7 +746,7 @@ class ProjectDetailScreen extends ConsumerWidget {
         'status': status,
       });
       ref.invalidate(projectDetailProvider(id));
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Project updated')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Project updated'))));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
@@ -780,9 +781,9 @@ class _InquiryActions extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Interested in $projectName?', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          Text('${context.tr('Interested in')} $projectName?', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 2),
-          Text('Send a request and the developer will reach out.',
+          Text(context.tr('Send a request and the developer will reach out.'),
               style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
           const SizedBox(height: AppSpacing.x12),
           Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
@@ -790,7 +791,7 @@ class _InquiryActions extends ConsumerWidget {
               OutlinedButton.icon(
                 onPressed: () => _submitInquiry(context, ref, k.$1),
                 icon: Icon(k.$3, size: 16),
-                label: Text(k.$2),
+                label: Text(context.tr(k.$2)),
               ),
           ]),
         ]),
@@ -811,18 +812,18 @@ class _InquiryActions extends ConsumerWidget {
       builder: (ctx) => Padding(
         padding: EdgeInsets.fromLTRB(20, 4, 20, 20 + MediaQuery.of(ctx).viewInsets.bottom),
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(_inquiryKinds.firstWhere((k) => k.$1 == kind).$2,
+          Text(ctx.tr(_inquiryKinds.firstWhere((k) => k.$1 == kind).$2),
               style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
           const SizedBox(height: AppSpacing.x12),
-          TextField(controller: name, decoration: const InputDecoration(labelText: 'Your name', isDense: true)),
+          TextField(controller: name, decoration: InputDecoration(labelText: ctx.tr('Your name'), isDense: true)),
           const SizedBox(height: AppSpacing.x8),
-          TextField(controller: phone, decoration: const InputDecoration(labelText: 'Phone', isDense: true)),
+          TextField(controller: phone, decoration: InputDecoration(labelText: ctx.tr('Phone'), isDense: true)),
           if (kind == 'offer') ...[
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: offer, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Offer amount (AED)', isDense: true)),
+            TextField(controller: offer, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: ctx.tr('Offer amount (AED)'), isDense: true)),
           ],
           const SizedBox(height: AppSpacing.x8),
-          TextField(controller: message, maxLines: 2, decoration: const InputDecoration(labelText: 'Message (optional)', isDense: true)),
+          TextField(controller: message, maxLines: 2, decoration: InputDecoration(labelText: ctx.tr('Message (optional)'), isDense: true)),
           const SizedBox(height: AppSpacing.x12),
           SizedBox(
             width: double.infinity,
@@ -838,13 +839,13 @@ class _InquiryActions extends ConsumerWidget {
                   });
                   if (ctx.mounted) {
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request sent — the developer will be in touch.')));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Request sent — the developer will be in touch.'))));
                   }
                 } catch (e) {
                   if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(friendlyError(e))));
                 }
               },
-              child: const Text('Send request'),
+              child: Text(ctx.tr('Send request')),
             ),
           ),
         ]),
@@ -871,8 +872,8 @@ class _InquiriesInbox extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           inq.maybeWhen(
-            data: (list) => Text('Leads (${list.length})', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-            orElse: () => Text('Leads', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            data: (list) => Text('${context.tr('Leads')} (${list.length})', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            orElse: () => Text(context.tr('Leads'), style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           ),
           const SizedBox(height: AppSpacing.x8),
           inq.when(
@@ -880,7 +881,7 @@ class _InquiriesInbox extends ConsumerWidget {
             error: (e, _) => Text(friendlyError(e), style: t.bodySmall),
             data: (list) {
               if (list.isEmpty) {
-                return Text('No inquiries yet. Customer brochure/viewing/callback/offer requests land here.',
+                return Text(context.tr('No inquiries yet. Customer brochure/viewing/callback/offer requests land here.'),
                     style: t.bodySmall?.copyWith(color: muted));
               }
               return Column(children: [
@@ -891,7 +892,7 @@ class _InquiriesInbox extends ConsumerWidget {
                     final status = '${m['status'] ?? 'new'}';
                     final when = DateTime.tryParse('${m['created_at']}');
                     final offer = num.tryParse('${m['offer_amount'] ?? ''}');
-                    final who = '${m['name'] ?? m['user_name'] ?? 'Customer'}';
+                    final who = '${m['name'] ?? m['user_name'] ?? context.tr('Customer')}';
                     final contact = [m['phone'], m['user_email'] ?? m['email']].where((x) => '$x'.trim().isNotEmpty).join(' · ');
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -900,7 +901,7 @@ class _InquiriesInbox extends ConsumerWidget {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Text('$who · ${_humanize(kind)}${offer != null ? ' · ${aed.format(offer)}' : ''}',
+                            Text('$who · ${context.tr(_humanize(kind))}${offer != null ? ' · ${aed.format(offer)}' : ''}',
                                 style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
                             if (contact.isNotEmpty) Text(contact, style: t.bodySmall?.copyWith(color: muted)),
                             if ('${m['message'] ?? ''}'.isNotEmpty) Text('${m['message']}', style: t.bodySmall),
@@ -911,12 +912,12 @@ class _InquiriesInbox extends ConsumerWidget {
                           if (when != null) Text(df.format(when), style: t.labelSmall?.copyWith(color: muted)),
                           PopupMenuButton<String>(
                             onSelected: (s) => _setStatus(context, ref, '${m['id']}', s),
-                            itemBuilder: (_) => [for (final s in _statuses) PopupMenuItem(value: s, child: Text(_humanize(s)))],
+                            itemBuilder: (_) => [for (final s in _statuses) PopupMenuItem(value: s, child: Text(context.tr(_humanize(s))))],
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(color: _leadStatusColor(status).withValues(alpha: 0.14), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
                               child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                Text(_humanize(status), style: t.labelSmall?.copyWith(color: _leadStatusColor(status), fontWeight: FontWeight.w700)),
+                                Text(context.tr(_humanize(status)), style: t.labelSmall?.copyWith(color: _leadStatusColor(status), fontWeight: FontWeight.w700)),
                                 Icon(Icons.arrow_drop_down, size: 16, color: _leadStatusColor(status)),
                               ]),
                             ),
@@ -963,11 +964,11 @@ class _ConstructionProgress extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Expanded(child: Text('Construction progress', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700))),
+            Expanded(child: Text(context.tr('Construction progress'), style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700))),
             TextButton.icon(
               onPressed: () => _logProgress(context, ref),
               icon: const Icon(Icons.add, size: 16),
-              label: const Text('Log'),
+              label: Text(context.tr('Log')),
               style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
             ),
           ]),
@@ -986,14 +987,14 @@ class _ConstructionProgress extends ConsumerWidget {
               final overall = _progressPhases.map((p) => latest[p] ?? 0).fold<int>(0, (a, b) => a + b) ~/ _progressPhases.length;
               return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Text('Overall', style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  Text(context.tr('Overall'), style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
                   const Spacer(),
                   Text('$overall%', style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary)),
                 ]),
                 const SizedBox(height: 8),
                 for (final ph in _progressPhases) ...[
                   Row(children: [
-                    SizedBox(width: 96, child: Text(_humanize(ph), style: t.bodySmall)),
+                    SizedBox(width: 96, child: Text(context.tr(_humanize(ph)), style: t.bodySmall)),
                     Expanded(
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(AppSpacing.rFull),
@@ -1012,7 +1013,7 @@ class _ConstructionProgress extends ConsumerWidget {
                 ],
                 if (list.isNotEmpty) ...[
                   const Divider(height: AppSpacing.x24),
-                  Text('Updates', style: t.labelLarge),
+                  Text(context.tr('Updates'), style: t.labelLarge),
                   const SizedBox(height: 6),
                   for (final e in list.take(8))
                     Builder(builder: (_) {
@@ -1033,7 +1034,7 @@ class _ConstructionProgress extends ConsumerWidget {
                             ),
                           Expanded(
                             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text('${_humanize('${m['phase']}')} · ${m['pct']}%', style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                              Text('${context.tr(_humanize('${m['phase']}'))} · ${m['pct']}%', style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
                               if ('${m['note'] ?? ''}'.isNotEmpty) Text('${m['note']}', style: t.bodySmall?.copyWith(color: muted)),
                             ]),
                           ),
@@ -1063,18 +1064,18 @@ class _ConstructionProgress extends ConsumerWidget {
         builder: (ctx, setS) => Padding(
           padding: EdgeInsets.fromLTRB(20, 4, 20, 20 + MediaQuery.of(ctx).viewInsets.bottom),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Log construction progress', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+            Text(ctx.tr('Log construction progress'), style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
             const SizedBox(height: AppSpacing.x12),
             DropdownButtonFormField<String>(
               initialValue: phase,
-              decoration: const InputDecoration(labelText: 'Phase', isDense: true),
-              items: [for (final p in _progressPhases) DropdownMenuItem(value: p, child: Text(_humanize(p)))],
+              decoration: InputDecoration(labelText: ctx.tr('Phase'), isDense: true),
+              items: [for (final p in _progressPhases) DropdownMenuItem(value: p, child: Text(ctx.tr(_humanize(p))))],
               onChanged: (v) => setS(() => phase = v ?? 'structure'),
             ),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: pct, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Completion %', isDense: true)),
+            TextField(controller: pct, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: ctx.tr('Completion %'), isDense: true)),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: note, maxLines: 2, decoration: const InputDecoration(labelText: 'Note (optional)', isDense: true)),
+            TextField(controller: note, maxLines: 2, decoration: InputDecoration(labelText: ctx.tr('Note (optional)'), isDense: true)),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
               OutlinedButton.icon(
@@ -1088,7 +1089,7 @@ class _ConstructionProgress extends ConsumerWidget {
                   if (url != null) setS(() => imageUrl = url);
                 },
                 icon: const Icon(Icons.photo_camera_outlined, size: 16),
-                label: Text(imageUrl == null ? 'Add photo' : 'Photo added'),
+                label: Text(ctx.tr(imageUrl == null ? 'Add photo' : 'Photo added')),
               ),
               if (imageUrl != null) ...[
                 const SizedBox(width: 8),
@@ -1110,13 +1111,13 @@ class _ConstructionProgress extends ConsumerWidget {
                     ref.invalidate(projectProgressProvider(projectId));
                     if (ctx.mounted) {
                       Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Progress logged')));
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Progress logged'))));
                     }
                   } catch (e) {
                     if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(friendlyError(e))));
                   }
                 },
-                child: const Text('Save'),
+                child: Text(ctx.tr('Save')),
               ),
             ),
           ]),

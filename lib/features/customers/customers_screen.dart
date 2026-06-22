@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
@@ -21,11 +22,11 @@ class CustomersScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final customers = ref.watch(customersProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Customers'),
+      appBar: NuzlAppBar(title: context.tr('Customers')),
       drawer: const NuzlDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _createDialog(context, ref),
-        icon: const Icon(Icons.person_add_alt), label: const Text('Add customer')),
+        icon: const Icon(Icons.person_add_alt), label: Text(context.tr('Add customer'))),
       body: ResponsiveCenter(
         child: customers.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
@@ -40,9 +41,9 @@ class CustomersScreen extends ConsumerWidget {
                     final c = Map<String, dynamic>.from(list[i]);
                     return Card(child: ListTile(
                       leading: UserAvatar(name: '${c['full_name'] ?? '?'}', url: '${c['avatar'] ?? ''}'),
-                      title: Text(c['full_name'] ?? 'Customer'),
+                      title: Text(c['full_name'] ?? context.tr('Customer')),
                       subtitle: Text([c['customer_type'], c['phone'], c['email']].where((e) => e != null && '$e'.isNotEmpty).join(' · ')),
-                      trailing: Text('${c['properties'] ?? 0} props'),
+                      trailing: Text('${c['properties'] ?? 0} ${context.tr('props')}'),
                       onTap: c['id'] != null ? () => context.push('/customers/${c['id']}') : null,
                     ));
                   }),
@@ -55,23 +56,23 @@ class CustomersScreen extends ConsumerWidget {
     final name = TextEditingController(); final email = TextEditingController(); final phone = TextEditingController();
     String type = 'client';
     final ok = await AppDialog.show<bool>(context,
-      title: 'Add customer',
+      title: context.tr('Add customer'),
       children: [
-        TextField(controller: name, decoration: const InputDecoration(labelText: 'Full name')),
-        TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone')),
-        TextField(controller: email, decoration: const InputDecoration(labelText: 'Email')),
+        TextField(controller: name, decoration: InputDecoration(labelText: context.tr('Full name'))),
+        TextField(controller: phone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.tr('Phone'))),
+        TextField(controller: email, decoration: InputDecoration(labelText: context.tr('Email'))),
         const SizedBox(height: 8),
         StatefulBuilder(builder: (ctx, setS) => DropdownButtonFormField<String>(
-          initialValue: type, decoration: const InputDecoration(labelText: 'Type'),
-          items: const [
-            DropdownMenuItem(value: 'client', child: Text('Client')),
-            DropdownMenuItem(value: 'investor', child: Text('Investor')),
-            DropdownMenuItem(value: 'owner', child: Text('Owner')),
+          initialValue: type, decoration: InputDecoration(labelText: context.tr('Type')),
+          items: [
+            DropdownMenuItem(value: 'client', child: Text(context.tr('Client'))),
+            DropdownMenuItem(value: 'investor', child: Text(context.tr('Investor'))),
+            DropdownMenuItem(value: 'owner', child: Text(context.tr('Owner'))),
           ], onChanged: (v) => setS(() => type = v ?? 'client'))),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Save'))),
       ],
     );
     if (ok != true) return;
@@ -83,7 +84,7 @@ class CustomersScreen extends ConsumerWidget {
       final id = res is Map ? '${res['id'] ?? ''}' : '';
       if (context.mounted) {
         // Consistent post-submit workflow: confirm + land on the new customer.
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Customer added successfully.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Customer added successfully.'))));
         if (id.isNotEmpty) context.push('/customers/$id');
       }
     } catch (e) {
@@ -100,9 +101,9 @@ class _Empty extends StatelessWidget {
     child: Column(mainAxisSize: MainAxisSize.min, children: [
       Icon(Icons.contacts_outlined, size: 44, color: Theme.of(context).hintColor),
       const SizedBox(height: 12),
-      const Text('No customers yet'),
+      Text(context.tr('No customers yet')),
       const SizedBox(height: 4),
-      Text('Add a customer or convert a lead.', style: TextStyle(color: Theme.of(context).hintColor)),
+      Text(context.tr('Add a customer or convert a lead.'), style: TextStyle(color: Theme.of(context).hintColor)),
     ]),
   ));
 }

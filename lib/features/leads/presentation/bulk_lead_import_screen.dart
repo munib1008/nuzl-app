@@ -3,6 +3,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/utils/spreadsheet.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -21,6 +22,7 @@ class _BulkLeadImportScreenState extends ConsumerState<BulkLeadImportScreen> {
   final _csv = TextEditingController();
   bool _importing = false;
   String? _result;
+  bool _resultOk = false;
 
   static const _known = {
     'name', 'buyer_name', 'phone', 'buyer_phone', 'type', 'buyer_type',
@@ -62,7 +64,7 @@ class _BulkLeadImportScreenState extends ConsumerState<BulkLeadImportScreen> {
     if (ext == 'xlsx') {
       final csv = xlsxBytesToCsv(bytes);
       if (csv.isEmpty) {
-        setState(() => _result = 'Could not read that .xlsx file. Try re-saving it, or export as CSV.');
+        setState(() { _result = context.tr('Could not read that .xlsx file. Try re-saving it, or export as CSV.'); _resultOk = false; });
         return;
       }
       setState(() { _csv.text = csv; _result = null; });
@@ -74,7 +76,7 @@ class _BulkLeadImportScreenState extends ConsumerState<BulkLeadImportScreen> {
   Future<void> _import() async {
     final rows = _parse(_csv.text);
     if (rows.isEmpty) {
-      setState(() => _result = 'No valid rows found. Check the format below.');
+      setState(() { _result = context.tr('No valid rows found. Check the format below.'); _resultOk = false; });
       return;
     }
     setState(() { _importing = true; _result = null; });
@@ -84,10 +86,13 @@ class _BulkLeadImportScreenState extends ConsumerState<BulkLeadImportScreen> {
       final created = m['created'] ?? 0;
       final skipped = m['skipped'] ?? 0;
       ref.invalidate(leadsProvider);
-      setState(() => _result = 'Imported $created lead${created == 1 ? '' : 's'}'
-          '${(skipped is int && skipped > 0) ? ' · $skipped skipped' : ''}.');
+      setState(() {
+        _result = '${context.tr('Imported')} $created ${context.tr(created == 1 ? 'lead' : 'leads')}'
+            '${(skipped is int && skipped > 0) ? ' · $skipped ${context.tr('skipped')}' : ''}.';
+        _resultOk = true;
+      });
     } catch (e) {
-      setState(() => _result = 'Import failed: $e');
+      setState(() { _result = '${context.tr('Import failed')}: $e'; _resultOk = false; });
     } finally {
       if (mounted) setState(() => _importing = false);
     }
@@ -98,7 +103,7 @@ class _BulkLeadImportScreenState extends ConsumerState<BulkLeadImportScreen> {
     final t = Theme.of(context).textTheme;
     final count = _parse(_csv.text).length;
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Import leads'),
+      appBar: NuzlAppBar(title: context.tr('Import leads')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: ListView(padding: const EdgeInsets.all(AppSpacing.x16), children: [
@@ -106,9 +111,9 @@ class _BulkLeadImportScreenState extends ConsumerState<BulkLeadImportScreen> {
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.x16),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Bulk upload leads', style: t.titleMedium),
+                Text(context.tr('Bulk upload leads'), style: t.titleMedium),
                 const SizedBox(height: 4),
-                Text('Paste rows from a spreadsheet or upload a .csv / .xlsx file. Up to 500 leads at a time.',
+                Text(context.tr('Paste rows from a spreadsheet or upload a .csv / .xlsx file. Up to 500 leads at a time.'),
                     style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
                 const SizedBox(height: AppSpacing.x12),
                 Container(
@@ -119,12 +124,12 @@ class _BulkLeadImportScreenState extends ConsumerState<BulkLeadImportScreen> {
                     borderRadius: BorderRadius.circular(AppSpacing.rMd),
                   ),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Columns (header row optional)', style: t.labelMedium?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(context.tr('Columns (header row optional)'), style: t.labelMedium?.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 4),
                     Text('name, phone, type, purpose, min_budget, max_budget, property_type, status',
                         style: t.bodySmall?.copyWith(color: AppColors.textMuted, fontFamily: 'monospace')),
                     const SizedBox(height: 6),
-                    Text('Example:  Ahmed Ali, +97150…, end_user, sale, 1000000, 1500000, Apartment, potential',
+                    Text('${context.tr('Example')}:  Ahmed Ali, +97150…, end_user, sale, 1000000, 1500000, Apartment, potential',
                         style: t.bodySmall?.copyWith(color: AppColors.textSubtle)),
                   ]),
                 ),
@@ -136,10 +141,10 @@ class _BulkLeadImportScreenState extends ConsumerState<BulkLeadImportScreen> {
             OutlinedButton.icon(
               onPressed: _pickFile,
               icon: const Icon(Icons.upload_file, size: 18),
-              label: const Text('Upload .csv / .xlsx'),
+              label: Text(context.tr('Upload .csv / .xlsx')),
             ),
             const Spacer(),
-            if (count > 0) Text('$count row${count == 1 ? '' : 's'} detected',
+            if (count > 0) Text('$count ${context.tr(count == 1 ? 'row detected' : 'rows detected')}',
                 style: t.bodySmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
           ]),
           const SizedBox(height: AppSpacing.x8),
@@ -148,9 +153,9 @@ class _BulkLeadImportScreenState extends ConsumerState<BulkLeadImportScreen> {
             maxLines: 12,
             onChanged: (_) => setState(() {}),
             style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
-            decoration: const InputDecoration(
-              hintText: 'Paste CSV rows here…',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              hintText: context.tr('Paste CSV rows here…'),
+              border: const OutlineInputBorder(),
               alignLabelWithHint: true,
             ),
           ),
@@ -159,12 +164,12 @@ class _BulkLeadImportScreenState extends ConsumerState<BulkLeadImportScreen> {
             Container(
               padding: const EdgeInsets.all(AppSpacing.x12),
               decoration: BoxDecoration(
-                color: _result!.startsWith('Imported') ? AppColors.success.withValues(alpha: 0.10) : AppColors.danger.withValues(alpha: 0.08),
+                color: _resultOk ? AppColors.success.withValues(alpha: 0.10) : AppColors.danger.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(AppSpacing.rMd),
               ),
               child: Text(_result!,
                   style: t.bodyMedium?.copyWith(
-                      color: _result!.startsWith('Imported') ? AppColors.success : AppColors.danger,
+                      color: _resultOk ? AppColors.success : AppColors.danger,
                       fontWeight: FontWeight.w600)),
             ),
           ],
@@ -174,7 +179,9 @@ class _BulkLeadImportScreenState extends ConsumerState<BulkLeadImportScreen> {
             icon: _importing
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.cloud_upload_outlined, size: 18),
-            label: Text(_importing ? 'Importing…' : 'Import ${count > 0 ? '$count ' : ''}leads'),
+            label: Text(_importing
+                ? context.tr('Importing…')
+                : '${context.tr('Import')} ${count > 0 ? '$count ' : ''}${context.tr('leads')}'),
             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
           ),
         ]),

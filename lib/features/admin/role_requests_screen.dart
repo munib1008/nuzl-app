@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
@@ -25,7 +26,7 @@ class RoleRequestsScreen extends ConsumerWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final reqs = ref.watch(roleRequestsProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Role requests'),
+      appBar: NuzlAppBar(title: context.tr('Role requests')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: RefreshIndicator(
@@ -38,9 +39,9 @@ class RoleRequestsScreen extends ConsumerWidget {
                     const SizedBox(height: 80),
                     Icon(Icons.verified_user_outlined, size: 48, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
                     const SizedBox(height: 12),
-                    const Center(child: Text('No pending role requests', style: TextStyle(fontWeight: FontWeight.w700))),
+                    Center(child: Text(context.tr('No pending role requests'), style: const TextStyle(fontWeight: FontWeight.w700))),
                     const SizedBox(height: 4),
-                    Center(child: Text('Agent / developer / supplier requests appear here for review.',
+                    Center(child: Text(context.tr('Agent / developer / supplier requests appear here for review.'),
                         style: TextStyle(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
                   ])
                 : ListView.separated(
@@ -67,7 +68,7 @@ class _RoleCard extends ConsumerWidget {
       ref.invalidate(roleRequestsProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(approve ? 'Role approved ✓' : 'Role request declined')));
+            SnackBar(content: Text(approve ? '${context.tr('Role approved')} ✓' : context.tr('Role request declined'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -88,7 +89,7 @@ class _RoleCard extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Expanded(child: Text('${r['full_name'] ?? 'User'}',
+            Expanded(child: Text('${r['full_name'] ?? context.tr('User')}',
                 style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700))),
             StatusBadge(personaFromRole(role).label, tone: BadgeTone.gold),
           ]),
@@ -97,10 +98,10 @@ class _RoleCard extends ConsumerWidget {
           const SizedBox(height: AppSpacing.x8),
           // Supporting verification evidence for the reviewer.
           Wrap(spacing: AppSpacing.x8, runSpacing: 6, children: [
-            if (rera.isNotEmpty) _evi(Icons.badge_outlined, 'RERA $rera'),
+            if (rera.isNotEmpty) _evi(Icons.badge_outlined, '${context.tr('RERA')} $rera'),
             if ('${r['org_name'] ?? ''}'.isNotEmpty) _evi(Icons.business_outlined, '${r['org_name']}'),
-            if (license.isNotEmpty) _evi(Icons.description_outlined, 'License $license'),
-            if (verifStatus.isNotEmpty) _evi(Icons.verified_outlined, 'Company $verifStatus'),
+            if (license.isNotEmpty) _evi(Icons.description_outlined, '${context.tr('License')} $license'),
+            if (verifStatus.isNotEmpty) _evi(Icons.verified_outlined, '${context.tr('Company')} $verifStatus'),
             if (when != null) _evi(Icons.schedule, DateFormat('d MMM').format(when.toLocal())),
           ]),
           // Documents the applicant uploaded in the verification wizard.
@@ -114,7 +115,7 @@ class _RoleCard extends ConsumerWidget {
                 for (final d in valid)
                   ActionChip(
                     avatar: const Icon(Icons.open_in_new, size: 14),
-                    label: Text('${d['label'] ?? 'Document'}'),
+                    label: Text('${d['label'] ?? context.tr('Document')}'),
                     onPressed: () => launchUrl(Uri.parse('${d['url']}'), mode: LaunchMode.externalApplication),
                   ),
               ]),
@@ -123,7 +124,7 @@ class _RoleCard extends ConsumerWidget {
           if (rera.isEmpty && license.isEmpty && !(r['documents'] is List && (r['documents'] as List).isNotEmpty))
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.x8),
-              child: Text('No RERA / trade-license / documents on file — verify externally before approving.',
+              child: Text(context.tr('No RERA / trade-license / documents on file — verify externally before approving.'),
                   style: t.bodySmall?.copyWith(color: AppColors.warning)),
             ),
           const SizedBox(height: AppSpacing.x12),
@@ -132,13 +133,13 @@ class _RoleCard extends ConsumerWidget {
               onPressed: () => _decide(context, ref, false),
               style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
               icon: const Icon(Icons.close, size: 18),
-              label: const Text('Reject'),
+              label: Text(context.tr('Reject')),
             ),
             const SizedBox(width: AppSpacing.x8),
             FilledButton.icon(
               onPressed: () => _decide(context, ref, true),
               icon: const Icon(Icons.verified, size: 18),
-              label: const Text('Approve'),
+              label: Text(context.tr('Approve')),
             ),
           ]),
         ]),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -38,7 +39,7 @@ class SaveListingButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final saved = ref.watch(savedIdsProvider).maybeWhen(data: (s) => s.contains(listingId), orElse: () => false);
     return IconButton(
-      tooltip: saved ? 'Saved' : 'Save',
+      tooltip: context.tr(saved ? 'Saved' : 'Save'),
       icon: Icon(saved ? Icons.bookmark : Icons.bookmark_border,
           color: saved ? Theme.of(context).colorScheme.primary : null),
       onPressed: () async {
@@ -47,7 +48,7 @@ class SaveListingButton extends ConsumerWidget {
           if (context.mounted) {
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(content: Text(saved ? 'Removed from saved' : 'Saved')));
+              ..showSnackBar(SnackBar(content: Text(context.tr(saved ? 'Removed from saved' : 'Saved'))));
           }
         } catch (e) {
           if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -64,9 +65,9 @@ class SavedScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final saved = ref.watch(savedListingsProvider);
     return Scaffold(
-      appBar: NuzlAppBar(title: 'Saved', actions: [
+      appBar: NuzlAppBar(title: context.tr('Saved'), actions: [
         IconButton(
-          tooltip: 'Saved searches',
+          tooltip: context.tr('Saved searches'),
           icon: const Icon(Icons.saved_search),
           onPressed: () => context.push('/saved-searches'),
         ),
@@ -85,9 +86,9 @@ class SavedScreen extends ConsumerWidget {
                 ? ListView(children: [
                     EmptyState(
                       icon: Icons.bookmark_border,
-                      title: 'No saved properties yet',
-                      message: 'Tap the bookmark on any listing to save it here for quick access.',
-                      actionLabel: 'Browse properties',
+                      title: context.tr('No saved properties yet'),
+                      message: context.tr('Tap the bookmark on any listing to save it here for quick access.'),
+                      actionLabel: context.tr('Browse properties'),
                       onAction: () => context.go('/properties'),
                     ),
                   ])
@@ -119,7 +120,7 @@ class _SavedCard extends StatelessWidget {
     final type = '${m['property_type'] ?? ''}'.replaceAll('_', ' ');
     final community = '${m['community'] ?? ''}';
     final cover = '${m['cover_image'] ?? ''}';
-    final title = '$beds$type'.trim().isEmpty ? 'Property' : '$beds$type';
+    final title = '$beds$type'.trim().isEmpty ? context.tr('Property') : '$beds$type';
     return Card(
       child: InkWell(
         onTap: () => context.go('/listings/$id'),

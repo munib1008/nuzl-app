@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -30,9 +31,9 @@ class ProfileCompletionBanner extends ConsumerWidget {
               const SizedBox(width: AppSpacing.x12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Profile $pct% complete', style: t.titleSmall),
+                  Text('${context.tr('Profile')} $pct% ${context.tr('complete')}', style: t.titleSmall),
                   if (missing.isNotEmpty)
-                    Text('Add: $missing', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                    Text('${context.tr('Add')}: $missing', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
                 ]),
               ),
             ]),

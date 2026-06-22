@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/empty_state.dart';
@@ -26,11 +27,11 @@ class ActivitiesScreen extends ConsumerWidget {
     final activities = ref.watch(activitiesProvider);
     return CrmScaffold(
       tab: CrmTab.activities,
-      title: 'Activities',
+      title: context.tr('Activities'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _addDialog(context, ref),
         icon: const Icon(Icons.add),
-        label: const Text('Log activity'),
+        label: Text(context.tr('Log activity')),
       ),
       body: ResponsiveCenter(
         child: activities.when(
@@ -39,9 +40,9 @@ class ActivitiesScreen extends ConsumerWidget {
           data: (list) => list.isEmpty
               ? EmptyState(
                   icon: Icons.timeline_outlined,
-                  title: 'No activity yet',
-                  message: 'Log calls, meetings and notes to keep a timeline of your work.',
-                  actionLabel: 'Log activity',
+                  title: context.tr('No activity yet'),
+                  message: context.tr('Log calls, meetings and notes to keep a timeline of your work.'),
+                  actionLabel: context.tr('Log activity'),
                   onAction: () => _addDialog(context, ref),
                 )
               : ListView.separated(
@@ -74,14 +75,14 @@ class ActivitiesScreen extends ConsumerWidget {
     final note = TextEditingController();
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Log activity',
+      title: context.tr('Log activity'),
       children: [
-        TextField(controller: type, decoration: const InputDecoration(labelText: 'Type', hintText: 'call, viewing, follow_up…')),
-        TextField(controller: note, decoration: const InputDecoration(labelText: 'Note'), maxLines: 2),
+        TextField(controller: type, decoration: InputDecoration(labelText: context.tr('Type'), hintText: context.tr('call, viewing, follow_up…'))),
+        TextField(controller: note, decoration: InputDecoration(labelText: context.tr('Note')), maxLines: 2),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Save'))),
       ],
     );
     if (ok != true) return;

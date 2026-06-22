@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -42,7 +43,7 @@ class PartnersScreen extends ConsumerWidget {
     final partners = ref.watch(_partnersProvider);
     final df = DateFormat('d MMM yyyy');
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Sales partners'),
+      appBar: NuzlAppBar(title: context.tr('Sales partners')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: RefreshIndicator(
@@ -58,9 +59,9 @@ class PartnersScreen extends ConsumerWidget {
                     child: Column(children: [
                       Icon(Icons.handshake_outlined, size: 44, color: Theme.of(context).hintColor),
                       const SizedBox(height: 12),
-                      const Text('No partner requests yet'),
+                      Text(context.tr('No partner requests yet')),
                       const SizedBox(height: 4),
-                      Text('Agencies and agents can request to sell your projects from your public company page.',
+                      Text(context.tr('Agencies and agents can request to sell your projects from your public company page.'),
                           textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).hintColor)),
                     ]),
                   ),
@@ -81,13 +82,13 @@ class PartnersScreen extends ConsumerWidget {
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                             Row(children: [
                               Expanded(
-                                child: Text('${p['partner_company'] ?? p['partner_name'] ?? 'Agency'}',
+                                child: Text('${p['partner_company'] ?? p['partner_name'] ?? context.tr('Agency')}',
                                     style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(color: _statusColor(status).withValues(alpha: 0.14), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                                child: Text(status[0].toUpperCase() + status.substring(1),
+                                child: Text(context.tr(status[0].toUpperCase() + status.substring(1)),
                                     style: t.labelSmall?.copyWith(color: _statusColor(status), fontWeight: FontWeight.w700)),
                               ),
                             ]),
@@ -105,10 +106,10 @@ class PartnersScreen extends ConsumerWidget {
                                 TextButton(
                                   style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
                                   onPressed: () => _decide(context, ref, '${p['id']}', false),
-                                  child: const Text('Decline'),
+                                  child: Text(context.tr('Decline')),
                                 ),
                                 const SizedBox(width: AppSpacing.x8),
-                                FilledButton(onPressed: () => _decide(context, ref, '${p['id']}', true), child: const Text('Approve')),
+                                FilledButton(onPressed: () => _decide(context, ref, '${p['id']}', true), child: Text(context.tr('Approve'))),
                               ]),
                             ],
                           ]),

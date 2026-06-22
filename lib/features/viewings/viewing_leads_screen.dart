@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/network/api_client.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/status_badge.dart';
@@ -43,7 +44,7 @@ class ViewingLeadsScreen extends ConsumerWidget {
     final assigned = ref.watch(viewingAssignedProvider);
     final metrics = ref.watch(viewingMetricsProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Leasing leads'),
+      appBar: NuzlAppBar(title: context.tr('Leasing leads')),
       drawer: const NuzlDrawer(),
       body: RefreshIndicator(
         onRefresh: () async => _refresh(ref),
@@ -56,24 +57,24 @@ class ViewingLeadsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.x20),
 
-            Text('Pending — first to accept gets the lead', style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
+            Text(context.tr('Pending — first to accept gets the lead'), style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
             const SizedBox(height: AppSpacing.x8),
             pending.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('No pending viewing requests.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
+                  ? Text(context.tr('No pending viewing requests.'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Column(children: [for (final v in list) _PendingCard(v)]),
             ),
             const SizedBox(height: AppSpacing.x20),
 
-            Text('Assigned to me', style: t.titleSmall),
+            Text(context.tr('Assigned to me'), style: t.titleSmall),
             const SizedBox(height: AppSpacing.x8),
             assigned.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('No leads assigned to you yet.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
+                  ? Text(context.tr('No leads assigned to you yet.'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Column(children: [for (final v in list) _AssignedCard(v)]),
             ),
           ],
@@ -101,14 +102,14 @@ class _MetricsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final conv = m['conversion_rate'];
     final stats = <(String, String)>[
-      ('Total requests', '${_i(m['total_requests'])}'),
-      ('Pending', '${_i(m['pending'])}'),
-      ('Accepted', '${_i(m['accepted'])}'),
-      ('Scheduled', '${_i(m['scheduled'])}'),
-      ('Active pipeline', '${_i(m['active_pipeline'])}'),
-      ('Conversion', '${conv is num ? conv.toStringAsFixed(0) : 0}%'),
-      ('Won / Lost', '${_i(m['closed_won'])} / ${_i(m['closed_lost'])}'),
-      ('Avg response', _avg()),
+      (context.tr('Total requests'), '${_i(m['total_requests'])}'),
+      (context.tr('Pending'), '${_i(m['pending'])}'),
+      (context.tr('Accepted'), '${_i(m['accepted'])}'),
+      (context.tr('Scheduled'), '${_i(m['scheduled'])}'),
+      (context.tr('Active pipeline'), '${_i(m['active_pipeline'])}'),
+      (context.tr('Conversion'), '${conv is num ? conv.toStringAsFixed(0) : 0}%'),
+      (context.tr('Won / Lost'), '${_i(m['closed_won'])} / ${_i(m['closed_lost'])}'),
+      (context.tr('Avg response'), _avg()),
     ];
     final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
@@ -153,7 +154,7 @@ class _PendingCardState extends ConsumerState<_PendingCard> {
       ref.invalidate(viewingAssignedProvider);
       ref.invalidate(viewingMetricsProvider);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lead accepted — it is yours')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Lead accepted — it is yours'))));
       context.push('/viewings/${widget.v['id']}/crm');
     } catch (e) {
       if (!mounted) return;
@@ -177,7 +178,7 @@ class _PendingCardState extends ConsumerState<_PendingCard> {
               Text(_propTitle(v), maxLines: 1, overflow: TextOverflow.ellipsis, style: t.titleMedium),
               const SizedBox(height: 2),
               Text([
-                if ('${v['requested_by_name'] ?? ''}'.isNotEmpty) 'from ${v['requested_by_name']}',
+                if ('${v['requested_by_name'] ?? ''}'.isNotEmpty) '${context.tr('from')} ${v['requested_by_name']}',
                 if ('${v['community'] ?? ''}'.isNotEmpty) '${v['community']}',
               ].join('  ·  '), maxLines: 2, overflow: TextOverflow.ellipsis, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
             ]),
@@ -187,7 +188,7 @@ class _PendingCardState extends ConsumerState<_PendingCard> {
             onPressed: _busy ? null : _accept,
             child: _busy
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('Accept'),
+                : Text(context.tr('Accept')),
           ),
         ]),
       ),

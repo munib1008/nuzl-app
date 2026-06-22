@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -32,7 +33,7 @@ class ViewingCrmScreen extends ConsumerWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final myId = ref.watch(authControllerProvider).user?.id;
     return Scaffold(
-      appBar: AppBar(title: const Text('Lead')),
+      appBar: AppBar(title: Text(context.tr('Lead'))),
       body: RefreshIndicator(
         onRefresh: () async => ref.refresh(viewingCrmProvider(id).future),
         child: AsyncView<Map<String, dynamic>>(
@@ -51,18 +52,18 @@ class ViewingCrmScreen extends ConsumerWidget {
                 Text(_title(v), style: t.headlineSmall),
                 const SizedBox(height: AppSpacing.x4),
                 Text([
-                  if ('${v['requested_by_name'] ?? ''}'.isNotEmpty) 'Customer: ${v['requested_by_name']}',
-                  if ('${v['assigned_agent_name'] ?? ''}'.isNotEmpty) 'Agent: ${v['assigned_agent_name']}',
+                  if ('${v['requested_by_name'] ?? ''}'.isNotEmpty) '${context.tr('Customer')}: ${v['requested_by_name']}',
+                  if ('${v['assigned_agent_name'] ?? ''}'.isNotEmpty) '${context.tr('Agent')}: ${v['assigned_agent_name']}',
                 ].join('  ·  '), style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 const SizedBox(height: AppSpacing.x20),
 
-                Text('Leasing pipeline', style: t.titleSmall),
+                Text(context.tr('Leasing pipeline'), style: t.titleSmall),
                 const SizedBox(height: AppSpacing.x8),
                 if (!isAssigned)
                   Text(
                     v['assigned_agent_id'] == null
-                        ? 'Not yet assigned.'
-                        : 'Assigned to another agent — read only.',
+                        ? context.tr('Not yet assigned.')
+                        : context.tr('Assigned to another agent — read only.'),
                     style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                   ),
                 const SizedBox(height: AppSpacing.x8),
@@ -82,31 +83,31 @@ class ViewingCrmScreen extends ConsumerWidget {
                     FilledButton.icon(
                       onPressed: () => _openChat(context, ref),
                       icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                      label: Text(isAssigned ? 'Message customer' : 'Message agent'),
+                      label: Text(context.tr(isAssigned ? 'Message customer' : 'Message agent')),
                     ),
                     if (isAssigned)
                       OutlinedButton.icon(
                         onPressed: () => _scheduleCall(context, ref),
                         icon: const Icon(Icons.call_outlined, size: 18),
-                        label: const Text('Schedule call'),
+                        label: Text(context.tr('Schedule call')),
                       ),
                   ]),
                   const SizedBox(height: AppSpacing.x20),
                 ],
 
                 Row(children: [
-                  Text('Activity & communications', style: t.titleSmall),
+                  Text(context.tr('Activity & communications'), style: t.titleSmall),
                   const Spacer(),
                   if (isAssigned)
                     TextButton.icon(
                       onPressed: () => _logActivity(context, ref),
                       icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Log'),
+                      label: Text(context.tr('Log')),
                     ),
                 ]),
                 const SizedBox(height: AppSpacing.x8),
                 if (activities.isEmpty)
-                  Text('No activity yet.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
+                  Text(context.tr('No activity yet.'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                 else
                   for (final a in activities)
                     _activityTile(Map<String, dynamic>.from(a), t, dark, Theme.of(context).colorScheme.primary),
@@ -159,7 +160,7 @@ class ViewingCrmScreen extends ConsumerWidget {
         context: context, initialTime: TimeOfDay.fromDateTime(now.add(const Duration(hours: 1))));
     if (time == null || !context.mounted) return;
     final dt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
-    final note = 'Call scheduled for ${DateFormat('EEE d MMM, h:mm a').format(dt)}';
+    final note = '${context.tr('Call scheduled for')} ${DateFormat('EEE d MMM, h:mm a').format(dt)}';
     try {
       await ref.read(viewingLeadsRepoProvider).scheduleCall(id, dt.toIso8601String(), note);
       ref.invalidate(viewingCrmProvider(id));
@@ -187,28 +188,28 @@ class ViewingCrmScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          title: const Text('Log an interaction'),
+          title: Text(context.tr('Log an interaction')),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
             DropdownButtonFormField<String>(
               initialValue: type,
-              decoration: const InputDecoration(labelText: 'Type'),
-              items: const [
-                DropdownMenuItem(value: 'note', child: Text('Note')),
-                DropdownMenuItem(value: 'call', child: Text('Call')),
-                DropdownMenuItem(value: 'message', child: Text('Message')),
-                DropdownMenuItem(value: 'follow_up', child: Text('Follow-up')),
-                DropdownMenuItem(value: 'viewing', child: Text('Appointment')),
-                DropdownMenuItem(value: 'offer', child: Text('Offer')),
+              decoration: InputDecoration(labelText: context.tr('Type')),
+              items: [
+                DropdownMenuItem(value: 'note', child: Text(context.tr('Note'))),
+                DropdownMenuItem(value: 'call', child: Text(context.tr('Call'))),
+                DropdownMenuItem(value: 'message', child: Text(context.tr('Message'))),
+                DropdownMenuItem(value: 'follow_up', child: Text(context.tr('Follow-up'))),
+                DropdownMenuItem(value: 'viewing', child: Text(context.tr('Appointment'))),
+                DropdownMenuItem(value: 'offer', child: Text(context.tr('Offer'))),
               ],
               onChanged: (val) => setLocal(() => type = val ?? 'note'),
             ),
             const SizedBox(height: AppSpacing.x12),
             TextField(controller: ctrl, autofocus: true, maxLines: 3,
-                decoration: const InputDecoration(hintText: 'What happened?')),
+                decoration: InputDecoration(hintText: context.tr('What happened?'))),
           ]),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Save'))),
           ],
         ),
       ),

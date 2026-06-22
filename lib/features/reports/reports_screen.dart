@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
@@ -54,7 +55,7 @@ class ReportsScreen extends ConsumerWidget {
     final showTeam = _orgPersona(persona);
     return CrmScaffold(
       tab: CrmTab.reports,
-      title: 'Reports',
+      title: context.tr('Reports'),
       embedded: embedded,
       body: ResponsiveCenter(
         child: report.when(
@@ -67,8 +68,10 @@ class ReportsScreen extends ConsumerWidget {
                     e.value is num ? e.value as num : num.tryParse('${e.value}') ?? 0))
                 .toList();
             if (entries.isEmpty) {
-              return const Center(
-                  child: Padding(padding: EdgeInsets.all(40), child: Text('No report data yet.')));
+              return Center(
+                  child: Padding(
+                      padding: const EdgeInsets.all(40),
+                      child: Text(context.tr('No report data yet.'))));
             }
             final maxVal = entries.map((e) => e.value).fold<num>(0, (a, b) => b > a ? b : a);
             return ListView(
@@ -86,12 +89,12 @@ class ReportsScreen extends ConsumerWidget {
                   children: entries.map((e) => _StatCard(label: e.key, value: e.value)).toList(),
                 ),
                 const SizedBox(height: AppSpacing.x24),
-                Text('Breakdown', style: Theme.of(context).textTheme.titleMedium),
+                Text(context.tr('Breakdown'), style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: AppSpacing.x8),
                 ...entries.map((e) => _Bar(label: e.key, value: e.value, max: maxVal)),
                 if (showTeam) ...[
                   const SizedBox(height: AppSpacing.x24),
-                  Text('Team performance', style: Theme.of(context).textTheme.titleMedium),
+                  Text(context.tr('Team performance'), style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: AppSpacing.x8),
                   Consumer(builder: (context, ref, _) {
                     final lb = ref.watch(orgLeaderboardProvider);
@@ -101,9 +104,9 @@ class ReportsScreen extends ConsumerWidget {
                           child: LinearProgressIndicator()),
                       error: (_, __) => const SizedBox.shrink(),
                       data: (rows) => rows.isEmpty
-                          ? const Padding(
-                              padding: EdgeInsets.symmetric(vertical: AppSpacing.x8),
-                              child: Text('No team members yet.'))
+                          ? Padding(
+                              padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
+                              child: Text(context.tr('No team members yet.')))
                           : Column(children: [for (final r in rows) _AgentRow(r)]),
                     );
                   }),
@@ -112,17 +115,17 @@ class ReportsScreen extends ConsumerWidget {
                 Card(
                   child: ListTile(
                     leading: const Icon(Icons.file_download_outlined),
-                    title: const Text('Export report'),
-                    subtitle: const Text('Download as a spreadsheet or a PDF.'),
+                    title: Text(context.tr('Export report')),
+                    subtitle: Text(context.tr('Download as a spreadsheet or a PDF.')),
                     trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                       OutlinedButton(
                         onPressed: () => _exportCsv(context, ref, entries, showTeam),
-                        child: const Text('CSV'),
+                        child: Text(context.tr('CSV')),
                       ),
                       const SizedBox(width: AppSpacing.x8),
                       FilledButton(
                         onPressed: () => _exportPdf(context, ref, entries, showTeam),
-                        child: const Text('PDF'),
+                        child: Text(context.tr('PDF')),
                       ),
                     ]),
                   ),
@@ -172,7 +175,7 @@ Future<void> _exportCsv(BuildContext context, WidgetRef ref, List<MapEntry<Strin
   } catch (_) {/* fall back to clipboard only */}
   if (context.mounted) {
     ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('CSV exported — opened in a new tab and copied to clipboard')));
+        SnackBar(content: Text(context.tr('CSV exported — opened in a new tab and copied to clipboard'))));
   }
 }
 
@@ -191,19 +194,19 @@ Future<void> _exportPdf(BuildContext context, WidgetRef ref, List<MapEntry<Strin
   }
   final doc = pw.Document();
   doc.addPage(pw.MultiPage(build: (ctx) => [
-        pw.Text('NUZL — Report', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+        pw.Text('NUZL — ${context.tr('Report')}', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
         pw.SizedBox(height: 12),
         pw.TableHelper.fromTextArray(
-          headers: const ['Metric', 'Value'],
+          headers: [context.tr('Metric'), context.tr('Value')],
           data: entries.map((e) => [e.key, _fmt(e.value)]).toList(),
           headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
         ),
         if (teamRows.isNotEmpty) ...[
           pw.SizedBox(height: 18),
-          pw.Text('Team performance', style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+          pw.Text(context.tr('Team performance'), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 6),
           pw.TableHelper.fromTextArray(
-            headers: const ['Agent', 'Listings', 'Leads', 'Deals', 'Won'],
+            headers: [context.tr('Agent'), context.tr('Listings'), context.tr('Leads'), context.tr('Deals'), context.tr('Won')],
             data: teamRows,
             headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
           ),
@@ -212,7 +215,7 @@ Future<void> _exportPdf(BuildContext context, WidgetRef ref, List<MapEntry<Strin
   try {
     await Printing.layoutPdf(onLayout: (format) async => doc.save());
   } catch (e) {
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF export failed: $e')));
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('PDF export failed')}: $e')));
   }
 }
 
@@ -275,10 +278,10 @@ class _AgentRow extends StatelessWidget {
                 Text(designation, style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
             ]),
           ),
-          chip('Listings', _n('listings'), AppColors.primary),
-          chip('Leads', _n('active_leads'), AppColors.info),
-          chip('Deals', _n('active_deals'), AppColors.warning),
-          chip('Won', _n('closed_deals'), AppColors.success),
+          chip(context.tr('Listings'), _n('listings'), AppColors.primary),
+          chip(context.tr('Leads'), _n('active_leads'), AppColors.info),
+          chip(context.tr('Deals'), _n('active_deals'), AppColors.warning),
+          chip(context.tr('Won'), _n('closed_deals'), AppColors.success),
         ]),
       ),
     );

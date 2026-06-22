@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
@@ -32,7 +33,7 @@ class LeadAnalyticsScreen extends ConsumerWidget {
     int n(Map m, String k) => int.tryParse('${m[k] ?? 0}') ?? 0;
     return CrmScaffold(
       tab: CrmTab.insights,
-      title: 'Lead analytics',
+      title: context.tr('Lead analytics'),
       embedded: embedded,
       body: ResponsiveCenter(
         child: RefreshIndicator(
@@ -46,7 +47,7 @@ class LeadAnalyticsScreen extends ConsumerWidget {
                 return ListView(children: [
                   Padding(
                     padding: const EdgeInsets.all(48),
-                    child: Center(child: Text('No leads to analyse yet.',
+                    child: Center(child: Text(context.tr('No leads to analyse yet.'),
                         style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
                   ),
                 ]);
@@ -63,32 +64,32 @@ class LeadAnalyticsScreen extends ConsumerWidget {
                     child: Padding(
                       padding: const EdgeInsets.all(AppSpacing.x16),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Conversion rate', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                        Text(context.tr('Conversion rate'), style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                         Text('$rate%',
                             style: t.displaySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
-                        Text('of decided leads converted (won vs lost)',
+                        Text(context.tr('of decided leads converted (won vs lost)'),
                             style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       ]),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.x12),
                   Row(children: [
-                    _stat('Total', total, Theme.of(context).colorScheme.primary, t, dark),
-                    _stat('Active', n(m, 'active'), AppColors.info, t, dark),
-                    _stat('Won', n(m, 'converted'), AppColors.success, t, dark),
-                    _stat('Lost', n(m, 'lost'), AppColors.danger, t, dark),
+                    _stat(context.tr('Total'), total, Theme.of(context).colorScheme.primary, t, dark),
+                    _stat(context.tr('Active'), n(m, 'active'), AppColors.info, t, dark),
+                    _stat(context.tr('Won'), n(m, 'converted'), AppColors.success, t, dark),
+                    _stat(context.tr('Lost'), n(m, 'lost'), AppColors.danger, t, dark),
                   ]),
                   const SizedBox(height: AppSpacing.x24),
                   if (labels.isNotEmpty) ...[
-                    Text('Won vs lost (6 months)', style: t.titleMedium),
+                    Text(context.tr('Won vs lost (6 months)'), style: t.titleMedium),
                     const SizedBox(height: AppSpacing.x8),
                     _TrendBars(labels: labels, converted: conv, lost: lost),
                     const SizedBox(height: AppSpacing.x24),
                   ],
-                  Text('By source', style: t.titleMedium),
+                  Text(context.tr('By source'), style: t.titleMedium),
                   const SizedBox(height: AppSpacing.x8),
                   if (sources.isEmpty)
-                    Text('No source data.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
+                    Text(context.tr('No source data.'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   else
                     ...sources.map((s) {
                       final sm = Map<String, dynamic>.from(s as Map);
@@ -96,12 +97,12 @@ class LeadAnalyticsScreen extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(vertical: 6),
                         child: Row(children: [
                           Expanded(child: Text('${sm['source']}', style: t.bodyMedium)),
-                          Text('${sm['total']} total', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                          Text('${sm['total']} ${context.tr('total')}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                           const SizedBox(width: AppSpacing.x12),
-                          Text('${sm['converted']} won',
+                          Text('${sm['converted']} ${context.tr('won')}',
                               style: t.bodySmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
                           const SizedBox(width: AppSpacing.x8),
-                          Text('${sm['lost']} lost',
+                          Text('${sm['lost']} ${context.tr('lost')}',
                               style: t.bodySmall?.copyWith(color: AppColors.danger, fontWeight: FontWeight.w600)),
                         ]),
                       );

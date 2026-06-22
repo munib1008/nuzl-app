@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
@@ -34,7 +35,7 @@ class LeadCrmScreen extends ConsumerWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final canManage = ref.watch(personaProvider).canManageLeads;
     return Scaffold(
-      appBar: AppBar(title: const Text('Lead')),
+      appBar: AppBar(title: Text(context.tr('Lead'))),
       body: RefreshIndicator(
         onRefresh: () async => ref.refresh(leadCrmProvider(id).future),
         child: AsyncView<Map<String, dynamic>>(
@@ -58,7 +59,7 @@ class LeadCrmScreen extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
-                Text(lead['buyer_name'] ?? 'Lead', style: t.headlineSmall),
+                Text(lead['buyer_name'] ?? context.tr('Lead'), style: t.headlineSmall),
                 if (lead['buyer_phone'] != null && '${lead['buyer_phone']}'.isNotEmpty) ...[
                   Text('${lead['buyer_phone']}', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                   const SizedBox(height: AppSpacing.x12),
@@ -71,12 +72,12 @@ class LeadCrmScreen extends ConsumerWidget {
                 ],
                 const SizedBox(height: AppSpacing.x20),
 
-                Text('Leasing stage', style: t.titleSmall),
+                Text(context.tr('Leasing stage'), style: t.titleSmall),
                 const SizedBox(height: AppSpacing.x8),
                 Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
                   for (final s in stages)
                     ChoiceChip(
-                      label: Text(_stageLabels[s] ?? s),
+                      label: Text(context.tr(_stageLabels[s] ?? s)),
                       selected: s == stage,
                       onSelected: (_) {
                         if (s != stage) _setStage(context, ref, s);
@@ -94,19 +95,19 @@ class LeadCrmScreen extends ConsumerWidget {
                       // button, not a large empty container.
                       style: OutlinedButton.styleFrom(minimumSize: const Size(0, 40)),
                       icon: const Icon(Icons.group_add_outlined, size: 18),
-                      label: const Text('Offer to agents'),
+                      label: Text(context.tr('Offer to agents')),
                     ),
                   ),
                   const SizedBox(height: AppSpacing.x20),
                 ],
 
                 Row(children: [
-                  Text('Activity & communications', style: t.titleSmall),
+                  Text(context.tr('Activity & communications'), style: t.titleSmall),
                   const Spacer(),
                   TextButton.icon(
                     onPressed: () => _addNote(context, ref),
                     icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Log update'),
+                    label: Text(context.tr('Log update')),
                   ),
                 ]),
                 const SizedBox(height: AppSpacing.x8),
@@ -114,7 +115,7 @@ class LeadCrmScreen extends ConsumerWidget {
                 _QuickNote(id),
                 const SizedBox(height: AppSpacing.x12),
                 if (activities.isEmpty)
-                  Text('No activity yet.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
+                  Text(context.tr('No activity yet.'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                 else
                   for (final a in activities)
                     _activityTile(Map<String, dynamic>.from(a), t, dark, Theme.of(context).colorScheme.primary),
@@ -164,28 +165,28 @@ class LeadCrmScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          title: const Text('Log an update'),
+          title: Text(context.tr('Log an update')),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
             DropdownButtonFormField<String>(
               initialValue: type,
-              decoration: const InputDecoration(labelText: 'Type'),
-              items: const [
-                DropdownMenuItem(value: 'note', child: Text('Note')),
-                DropdownMenuItem(value: 'call', child: Text('Call')),
-                DropdownMenuItem(value: 'message', child: Text('Message')),
-                DropdownMenuItem(value: 'follow_up', child: Text('Follow-up')),
-                DropdownMenuItem(value: 'viewing', child: Text('Viewing')),
-                DropdownMenuItem(value: 'offer', child: Text('Offer')),
+              decoration: InputDecoration(labelText: context.tr('Type')),
+              items: [
+                DropdownMenuItem(value: 'note', child: Text(context.tr('Note'))),
+                DropdownMenuItem(value: 'call', child: Text(context.tr('Call'))),
+                DropdownMenuItem(value: 'message', child: Text(context.tr('Message'))),
+                DropdownMenuItem(value: 'follow_up', child: Text(context.tr('Follow-up'))),
+                DropdownMenuItem(value: 'viewing', child: Text(context.tr('Viewing'))),
+                DropdownMenuItem(value: 'offer', child: Text(context.tr('Offer'))),
               ],
               onChanged: (v) => setLocal(() => type = v ?? 'note'),
             ),
             const SizedBox(height: AppSpacing.x12),
             TextField(controller: ctrl, autofocus: true, maxLines: 3,
-                decoration: const InputDecoration(hintText: 'What happened?')),
+                decoration: InputDecoration(hintText: context.tr('What happened?'))),
           ]),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Save'))),
           ],
         ),
       ),
@@ -210,7 +211,7 @@ class LeadCrmScreen extends ConsumerWidget {
       ref.invalidate(leadCrmProvider(id));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Offered to ${picked.length} agent(s) — first to accept gets it')));
+            SnackBar(content: Text('${context.tr('Offered to')} ${picked.length} ${context.tr('agent(s) — first to accept gets it')}')));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -251,7 +252,7 @@ class _QuickNoteState extends ConsumerState<_QuickNote> {
       _ctrl.clear();
       ref.invalidate(leadCrmProvider(widget.id));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Note saved')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Note saved'))));
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -277,13 +278,13 @@ class _QuickNoteState extends ConsumerState<_QuickNote> {
       minLines: 1,
       textInputAction: TextInputAction.newline,
       decoration: InputDecoration(
-        hintText: 'Add a quick note — saved to the timeline when you tap away',
+        hintText: context.tr('Add a quick note — saved to the timeline when you tap away'),
         suffixIcon: _saving
             ? const Padding(
                 padding: EdgeInsets.all(12),
                 child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)))
             : IconButton(
-                tooltip: 'Save note',
+                tooltip: context.tr('Save note'),
                 icon: const Icon(Icons.send_outlined, size: 18),
                 onPressed: _save),
       ),
@@ -333,7 +334,7 @@ class _AssignAgentsDialogState extends ConsumerState<_AssignAgentsDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Offer to agents'),
+      title: Text(context.tr('Offer to agents')),
       content: SizedBox(
         width: 360,
         child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -341,7 +342,7 @@ class _AssignAgentsDialogState extends ConsumerState<_AssignAgentsDialog> {
             controller: _q,
             autofocus: true,
             onChanged: _search,
-            decoration: const InputDecoration(hintText: 'Search agents by name', prefixIcon: Icon(Icons.search)),
+            decoration: InputDecoration(hintText: context.tr('Search agents by name'), prefixIcon: const Icon(Icons.search)),
           ),
           const SizedBox(height: AppSpacing.x8),
           if (_selected.isNotEmpty)
@@ -357,17 +358,17 @@ class _AssignAgentsDialogState extends ConsumerState<_AssignAgentsDialog> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : (_results.isEmpty
-                    ? const Center(child: Text('Type a name to search'))
+                    ? Center(child: Text(context.tr('Type a name to search')))
                     : ListView(children: [
                         for (final u in _results)
                           CheckboxListTile(
                             value: _selected.containsKey('${u['id']}'),
-                            title: Text('${u['full_name'] ?? 'User'}'),
+                            title: Text('${u['full_name'] ?? context.tr('User')}'),
                             subtitle: u['role'] != null ? Text('${u['role']}') : null,
                             onChanged: (v) => setState(() {
                               final uid = '${u['id']}';
                               if (v == true) {
-                                _selected[uid] = '${u['full_name'] ?? 'User'}';
+                                _selected[uid] = '${u['full_name'] ?? context.tr('User')}';
                               } else {
                                 _selected.remove(uid);
                               }
@@ -378,10 +379,10 @@ class _AssignAgentsDialogState extends ConsumerState<_AssignAgentsDialog> {
         ]),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Cancel'))),
         FilledButton(
           onPressed: _selected.isEmpty ? null : () => Navigator.pop(context, _selected.keys.toList()),
-          child: Text('Offer (${_selected.length})'),
+          child: Text('${context.tr('Offer')} (${_selected.length})'),
         ),
       ],
     );

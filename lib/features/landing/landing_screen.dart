@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/network/api_client.dart';
+import '../../core/i18n/app_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -26,7 +27,7 @@ void _openListing(BuildContext context, Map<String, dynamic> data) {
   if (id.isNotEmpty) {
     context.go('/property/$id');
   } else {
-    showAuthPrompt(context, action: 'view full property details');
+    showAuthPrompt(context, action: context.tr('view full property details'));
   }
 }
 Color _surface(BuildContext c) => Theme.of(c).colorScheme.surface;
@@ -285,24 +286,24 @@ class _StickyTopBar extends ConsumerWidget {
                         for (final l in _nav)
                           TextButton(
                             onPressed: () => onNav?.call(l.$2),
-                            child: Text(l.$1,
+                            child: Text(context.tr(l.$1),
                                 style: GoogleFonts.poppins(color: _onBg(context), fontWeight: FontWeight.w500)),
                           ),
                       IconButton(
-                        tooltip: 'Toggle light / dark',
+                        tooltip: context.tr('Toggle light / dark'),
                         icon: Icon(_isDark(context) ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
                             color: _onBg(context)),
                         onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
                       ),
                       TextButton(
                         onPressed: () => context.go('/login'),
-                        child: Text('Sign in',
+                        child: Text(context.tr('Sign in'),
                             style: GoogleFonts.poppins(color: _onBg(context), fontWeight: FontWeight.w600)),
                       ),
                       FilledButton(
                         onPressed: () => context.go('/register'),
                         style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
-                        child: const Text('Join NUZL'),
+                        child: Text(context.tr('Join NUZL')),
                       ),
                     ],
                   ),
@@ -324,27 +325,29 @@ class _Hero extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final wide = MediaQuery.of(context).size.width >= 900;
     final textCol = Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-      Text('The Real Estate\nOperating System',
+      Text(context.tr('The Real Estate\nOperating System'),
           style: GoogleFonts.manrope(
               fontSize: wide ? 52 : 34, height: 1.05, fontWeight: FontWeight.w700, letterSpacing: -0.5, color: _onBg(context))),
       const SizedBox(height: AppSpacing.x16),
       ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 640),
         child: Text(
-          'From finding your next property to managing ownership, tenants, mortgages, '
-          'maintenance and investments — everything in one place.',
+          context.tr(
+            'From finding your next property to managing ownership, tenants, mortgages, '
+            'maintenance and investments — everything in one place.',
+          ),
           style: t.bodyLarge?.copyWith(color: _body(context), height: 1.6),
         ),
       ),
       const SizedBox(height: AppSpacing.x20),
-      Text('Trusted by owners, buyers, agents and service providers across the UAE.',
+      Text(context.tr('Trusted by owners, buyers, agents and service providers across the UAE.'),
           style: t.bodySmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w600)),
       const SizedBox(height: AppSpacing.x24),
       _ctaPair(
         context,
-        primaryLabel: 'Explore properties',
+        primaryLabel: context.tr('Explore properties'),
         onPrimary: () => context.go('/login?next=/properties'),
-        secondaryLabel: 'Start managing properties',
+        secondaryLabel: context.tr('Start managing properties'),
         onSecondary: () => context.go('/register'),
         equalWidth: true,
       ),
@@ -416,7 +419,7 @@ class _HeroPreview extends StatelessWidget {
             decoration: BoxDecoration(color: c.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(AppSpacing.rMd)),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(v, style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w700, color: c)),
-              Text(l, style: t.labelSmall?.copyWith(color: _muted(context))),
+              Text(context.tr(l), style: t.labelSmall?.copyWith(color: _muted(context))),
             ]),
           ),
         );
@@ -436,7 +439,7 @@ class _HeroPreview extends StatelessWidget {
             child: Row(children: [
               dot(AppColors.danger), const SizedBox(width: 5), dot(AppColors.warning),
               const SizedBox(width: 5), dot(AppColors.success), const SizedBox(width: 10),
-              Text('Owner dashboard', style: t.labelMedium?.copyWith(color: _onBg(context))),
+              Text(context.tr('Owner dashboard'), style: t.labelMedium?.copyWith(color: _onBg(context))),
             ]),
           ),
           Padding(
@@ -462,9 +465,9 @@ class _HeroPreview extends StatelessWidget {
                   const SizedBox(width: AppSpacing.x12),
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('Marina Heights · 2BR',
+                      Text(context.tr('Marina Heights · 2BR'),
                           style: t.bodySmall?.copyWith(color: _onBg(context), fontWeight: FontWeight.w600)),
-                      Text('AED 2.1M · For sale', style: t.labelSmall?.copyWith(color: _muted(context))),
+                      Text(context.tr('AED 2.1M · For sale'), style: t.labelSmall?.copyWith(color: _muted(context))),
                     ]),
                   ),
                   const Icon(Icons.verified, size: 16, color: AppColors.success),
@@ -472,8 +475,8 @@ class _HeroPreview extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.x12),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text('Mortgage', style: t.bodySmall?.copyWith(color: _muted(context))),
-                Text('78% paid', style: t.bodySmall?.copyWith(color: _onBg(context), fontWeight: FontWeight.w600)),
+                Text(context.tr('Mortgage'), style: t.bodySmall?.copyWith(color: _muted(context))),
+                Text('78% ${context.tr('paid')}', style: t.bodySmall?.copyWith(color: _onBg(context), fontWeight: FontWeight.w600)),
               ]),
               const SizedBox(height: 4),
               ClipRRect(
@@ -504,8 +507,8 @@ class _WhoAreYou extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     return _section(
       context,
-      title: 'Built for every real estate journey',
-      subtitle: 'Whether you own, buy, rent, lease, manage, service or invest in property, NUZL adapts to your needs.',
+      title: context.tr('Built for every real estate journey'),
+      subtitle: context.tr('Whether you own, buy, rent, lease, manage, service or invest in property, NUZL adapts to your needs.'),
       child: LayoutBuilder(builder: (ctx, cons) {
         const spacing = AppSpacing.x16;
         final cols = cons.maxWidth >= 900 ? 3 : (cons.maxWidth >= 560 ? 2 : 1);
@@ -529,19 +532,19 @@ class _WhoAreYou extends StatelessWidget {
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Icon(r.$1, color: _primary(context), size: 28),
                       const SizedBox(height: AppSpacing.x12),
-                      Text(r.$2,
+                      Text(context.tr(r.$2),
                           style: GoogleFonts.poppins(
                               fontSize: 17, fontWeight: FontWeight.w600, color: _onBg(context))),
                       const SizedBox(height: AppSpacing.x4),
                       Expanded(
-                        child: Text(r.$3, style: t.bodySmall?.copyWith(color: _body(context), height: 1.4)),
+                        child: Text(context.tr(r.$3), style: t.bodySmall?.copyWith(color: _body(context), height: 1.4)),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                             color: _primary(context).withValues(alpha: 0.10),
                             borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                        child: Text(r.$4,
+                        child: Text(context.tr(r.$4),
                             style: t.labelSmall?.copyWith(color: _primary(context), fontWeight: FontWeight.w700)),
                       ),
                     ]),
@@ -612,7 +615,7 @@ class _EcosystemState extends State<_Ecosystem> {
               child: Icon(icon, color: color, size: 22),
             ),
             const SizedBox(width: AppSpacing.x12),
-            Text(role, style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: _onBg(ctx))),
+            Text(ctx.tr(role), style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w700, color: _onBg(ctx))),
           ]),
           const SizedBox(height: AppSpacing.x16),
           for (final c in caps)
@@ -621,7 +624,7 @@ class _EcosystemState extends State<_Ecosystem> {
               child: Row(children: [
                 Icon(Icons.check_circle, size: 18, color: color),
                 const SizedBox(width: AppSpacing.x8),
-                Text(c, style: Theme.of(ctx).textTheme.bodyLarge?.copyWith(color: _onBg(ctx))),
+                Text(ctx.tr(c), style: Theme.of(ctx).textTheme.bodyLarge?.copyWith(color: _onBg(ctx))),
               ]),
             ),
           const SizedBox(height: AppSpacing.x20),
@@ -629,7 +632,7 @@ class _EcosystemState extends State<_Ecosystem> {
             width: double.infinity,
             child: GradientButton(
               onPressed: () { Navigator.pop(ctx); context.go('/register'); },
-              label: 'Explore the $role workspace',
+              label: '${ctx.tr('Explore the')} ${ctx.tr(role)} ${ctx.tr('workspace')}',
               icon: Icons.arrow_forward,
             ),
           ),
@@ -652,9 +655,9 @@ class _EcosystemState extends State<_Ecosystem> {
     });
     return _section(
       context,
-      title: 'One property. One record. One ecosystem.',
+      title: context.tr('One property. One record. One ecosystem.'),
       subtitle:
-          'Developers create the inventory. Every project becomes a property record that owners, agents, customers, tenants, suppliers and service providers all work from.',
+          context.tr('Developers create the inventory. Every project becomes a property record that owners, agents, customers, tenants, suppliers and service providers all work from.'),
       bg: _surface(context),
       child: wide ? _wide(context, cards) : _stacked(context, cards),
     );
@@ -738,17 +741,17 @@ class _EcosystemState extends State<_Ecosystem> {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Wrap(crossAxisAlignment: WrapCrossAlignment.center, spacing: 8, runSpacing: 4, children: [
-                    Text('DEVELOPER',
+                    Text(context.tr('DEVELOPER'),
                         style: t.labelSmall?.copyWith(color: dev, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
                           color: dev.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                      child: Text('SOURCE OF INVENTORY',
+                      child: Text(context.tr('SOURCE OF INVENTORY'),
                           style: t.labelSmall?.copyWith(color: dev, fontWeight: FontWeight.w700, fontSize: 9, letterSpacing: 0.5)),
                     ),
                   ]),
-                  Text(_developer.title,
+                  Text(context.tr(_developer.title),
                       style: t.titleSmall?.copyWith(color: _onBg(context), fontWeight: FontWeight.w700)),
                 ]),
               ),
@@ -761,7 +764,7 @@ class _EcosystemState extends State<_Ecosystem> {
                   decoration: BoxDecoration(
                       color: _isDark(context) ? Colors.white10 : AppColors.surface2,
                       borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                  child: Text(tag, style: t.labelSmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w500)),
+                  child: Text(context.tr(tag), style: t.labelSmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w500)),
                 ),
             ]),
           ]),
@@ -784,7 +787,7 @@ class _EcosystemState extends State<_Ecosystem> {
         ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Text('CREATES',
+          child: Text(context.tr('CREATES'),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                   color: on, fontWeight: FontWeight.w700, letterSpacing: 1.5, fontSize: 10)),
         ),
@@ -807,7 +810,7 @@ class _EcosystemState extends State<_Ecosystem> {
     final t = Theme.of(context).textTheme;
     final active = _devActive ? AppColors.info : (_active != null ? _pillars[_active!].color : null);
     final activeRole = _devActive ? 'Developer' : (_active != null ? _pillars[_active!].role : null);
-    final verb = _devActive ? 'creates this record' : 'works from this record';
+    final verb = context.tr(_devActive ? 'creates this record' : 'works from this record');
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOut,
@@ -827,15 +830,15 @@ class _EcosystemState extends State<_Ecosystem> {
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           const Icon(Icons.account_tree_outlined, color: AppColors.goldAccent, size: 20),
           const SizedBox(width: AppSpacing.x8),
-          Text('PROPERTY RECORD',
+          Text(context.tr('PROPERTY RECORD'),
               style: GoogleFonts.poppins(
                   color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18, letterSpacing: 1)),
         ]),
         const SizedBox(height: 6),
         Text(
             activeRole != null
-                ? '$activeRole $verb'
-                : 'One property. One source of truth. Everyone connected.',
+                ? '${context.tr(activeRole)} $verb'
+                : context.tr('One property. One source of truth. Everyone connected.'),
             textAlign: TextAlign.center,
             style: t.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.85))),
       ]),
@@ -897,9 +900,9 @@ class _PillarCard extends StatelessWidget {
               const SizedBox(width: AppSpacing.x12),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(role.toUpperCase(),
+                  Text(context.tr(role).toUpperCase(),
                       style: t.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w700, letterSpacing: 0.5)),
-                  Text(title,
+                  Text(context.tr(title),
                       style: t.titleSmall?.copyWith(color: _onBg(context), fontWeight: FontWeight.w700),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                 ]),
@@ -913,7 +916,7 @@ class _PillarCard extends StatelessWidget {
                   decoration: BoxDecoration(
                       color: _isDark(context) ? Colors.white10 : AppColors.surface2,
                       borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                  child: Text(tag, style: t.labelSmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w500)),
+                  child: Text(context.tr(tag), style: t.labelSmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w500)),
                 ),
             ]),
           ]),
@@ -958,8 +961,8 @@ class _WhyNuzl extends StatelessWidget {
     final wide = MediaQuery.of(context).size.width >= 900;
     return _section(
       context,
-      title: 'Why property owners choose NUZL',
-      subtitle: 'Traditional platforms help you buy or rent. NUZL manages everything that happens after.',
+      title: context.tr('Why property owners choose NUZL'),
+      subtitle: context.tr('Traditional platforms help you buy or rent. NUZL manages everything that happens after.'),
       child: Column(children: [
         Wrap(
           alignment: WrapAlignment.center,
@@ -971,8 +974,8 @@ class _WhyNuzl extends StatelessWidget {
           alignment: WrapAlignment.center,
           spacing: AppSpacing.x16, runSpacing: AppSpacing.x16,
           children: [
-            _journey(context, 'Traditional property portals', _traditional, good: false, wide: wide),
-            _journey(context, 'The NUZL property lifecycle', _lifecycle, good: true, wide: wide),
+            _journey(context, context.tr('Traditional property portals'), _traditional, good: false, wide: wide),
+            _journey(context, context.tr('The NUZL property lifecycle'), _lifecycle, good: true, wide: wide),
           ],
         ),
       ]),
@@ -986,7 +989,7 @@ class _WhyNuzl extends StatelessWidget {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Text(value, style: t.displaySmall?.copyWith(color: _primary(context), fontWeight: FontWeight.w800)),
         const SizedBox(height: 2),
-        Text(label, textAlign: TextAlign.center, style: t.bodySmall?.copyWith(color: _muted(context))),
+        Text(context.tr(label), textAlign: TextAlign.center, style: t.bodySmall?.copyWith(color: _muted(context))),
       ]),
     );
   }
@@ -1024,7 +1027,7 @@ class _WhyNuzl extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.x12),
             Expanded(
-              child: Text(steps[i].$2,
+              child: Text(context.tr(steps[i].$2),
                   style: t.bodyMedium?.copyWith(
                       color: (i == steps.length - 1) ? endColor : _onBg(context),
                       fontWeight: (i == steps.length - 1) ? FontWeight.w700 : FontWeight.w500)),
@@ -1083,9 +1086,9 @@ class _PropertyTimelineState extends State<_PropertyTimeline> with SingleTickerP
     final primary = _primary(context);
     return _section(
       context,
-      eyebrow: 'One living record',
-      title: 'The property timeline',
-      subtitle: 'From discovery to ownership — one record at every stage.',
+      eyebrow: context.tr('One living record'),
+      title: context.tr('The property timeline'),
+      subtitle: context.tr('From discovery to ownership — one record at every stage.'),
       bg: _surface(context),
       child: AnimatedBuilder(
         animation: _ctrl,
@@ -1179,7 +1182,7 @@ class _PropertyTimelineState extends State<_PropertyTimeline> with SingleTickerP
         ),
       ),
       const SizedBox(height: 6),
-      Text(_steps[i].$2,
+      Text(context.tr(_steps[i].$2),
           style: t.labelLarge?.copyWith(
               color: isActive ? primary : _onBg(context),
               fontWeight: isActive ? FontWeight.w700 : FontWeight.w500)),
@@ -1206,8 +1209,8 @@ class _EcosystemTrust extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     return _section(
       context,
-      title: 'Built for the UAE property ecosystem',
-      subtitle: 'Every party in a property’s life — working from one shared record.',
+      title: context.tr('Built for the UAE property ecosystem'),
+      subtitle: context.tr('Every party in a property’s life — working from one shared record.'),
       bg: _surface(context),
       centered: true,
       child: Column(children: [
@@ -1225,13 +1228,13 @@ class _EcosystemTrust extends StatelessWidget {
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(r.$1, size: 18, color: _primary(context)),
                   const SizedBox(width: AppSpacing.x8),
-                  Text(r.$2, style: t.bodyMedium?.copyWith(color: _onBg(context), fontWeight: FontWeight.w600)),
+                  Text(context.tr(r.$2), style: t.bodyMedium?.copyWith(color: _onBg(context), fontWeight: FontWeight.w600)),
                 ]),
               ),
           ],
         ),
         const SizedBox(height: AppSpacing.x24),
-        Text('Built around the UAE’s property framework',
+        Text(context.tr('Built around the UAE’s property framework'),
             style: t.bodySmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w600, letterSpacing: 0.3)),
         const SizedBox(height: AppSpacing.x12),
         Wrap(
@@ -1248,7 +1251,7 @@ class _EcosystemTrust extends StatelessWidget {
                 child: Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(Icons.verified_outlined, size: 14, color: _muted(context)),
                   const SizedBox(width: 6),
-                  Text(name, style: t.labelMedium?.copyWith(color: _muted(context), fontWeight: FontWeight.w600)),
+                  Text(context.tr(name), style: t.labelMedium?.copyWith(color: _muted(context), fontWeight: FontWeight.w600)),
                 ]),
               ),
           ],
@@ -1277,8 +1280,8 @@ class _MainModules extends StatelessWidget {
     final r = BorderRadius.circular(_kCardR);
     return _section(
       context,
-      title: 'Everything in one place',
-      subtitle: 'Six core modules cover the entire journey — discover the rest as you go.',
+      title: context.tr('Everything in one place'),
+      subtitle: context.tr('Six core modules cover the entire journey — discover the rest as you go.'),
       bg: _surface(context),
       // Uniform grid: every card the same width AND height (no ragged rows from
       // 1- vs 2-line descriptions). 3 across on desktop, 2 on tablet, 1 on mobile.
@@ -1319,12 +1322,12 @@ class _MainModules extends StatelessWidget {
                                     child: Icon(m.$1, color: accent, size: 22),
                                   ),
                                   const SizedBox(height: AppSpacing.x12),
-                                  Text(m.$2,
+                                  Text(context.tr(m.$2),
                                       style: GoogleFonts.poppins(
                                           fontSize: 15, fontWeight: FontWeight.w600, color: _onBg(context))),
                                   const SizedBox(height: AppSpacing.x4),
                                   Expanded(
-                                    child: Text(m.$3,
+                                    child: Text(context.tr(m.$3),
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                         style: t.bodySmall?.copyWith(color: _body(context), height: 1.4)),
@@ -1364,8 +1367,8 @@ class _MarketIntelligence extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     return _section(
       context,
-      title: 'Market intelligence',
-      subtitle: 'Stay ahead with the data that drives decisions.',
+      title: context.tr('Market intelligence'),
+      subtitle: context.tr('Stay ahead with the data that drives decisions.'),
       // Uniform grid: identical card width + height (4 across on desktop, 2 on
       // tablet, 1 on mobile) so 1- vs 2-line copy never makes rows ragged.
       child: LayoutBuilder(builder: (ctx, cons) {
@@ -1391,12 +1394,12 @@ class _MarketIntelligence extends StatelessWidget {
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           Icon(it.$1, color: _primary(context), size: 24),
                           const SizedBox(height: AppSpacing.x8),
-                          Text(it.$2,
+                          Text(context.tr(it.$2),
                               style: GoogleFonts.poppins(
                                   fontSize: 15, fontWeight: FontWeight.w600, color: _onBg(context))),
                           const SizedBox(height: AppSpacing.x4),
                           Expanded(
-                            child: Text(it.$3,
+                            child: Text(context.tr(it.$3),
                                 maxLines: 3,
                                 overflow: TextOverflow.ellipsis,
                                 style: t.bodySmall?.copyWith(color: _body(context), height: 1.4)),
@@ -1428,7 +1431,7 @@ class _HowItWorks extends StatelessWidget {
     final wide = MediaQuery.of(context).size.width >= 900;
     return _section(
       context,
-      title: 'How it works',
+      title: context.tr('How it works'),
       bg: _surface(context),
       child: wide
           ? Row(
@@ -1452,7 +1455,7 @@ class _HowItWorks extends StatelessWidget {
                     child: Row(children: [
                       _badge(context, i),
                       const SizedBox(width: AppSpacing.x12),
-                      Text(_steps[i].$2,
+                      Text(context.tr(_steps[i].$2),
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               color: _onBg(context), fontWeight: FontWeight.w600)),
                     ]),
@@ -1483,7 +1486,7 @@ class _HowItWorks extends StatelessWidget {
         ),
       ]),
       const SizedBox(height: AppSpacing.x8),
-      Text(_steps[i].$2,
+      Text(context.tr(_steps[i].$2),
           textAlign: TextAlign.center,
           style: t.bodySmall?.copyWith(color: _onBg(context), fontWeight: FontWeight.w600)),
     ]);
@@ -1504,7 +1507,7 @@ class _Testimonials extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     return _section(
       context,
-      title: 'Built for everyone in the deal',
+      title: context.tr('Built for everyone in the deal'),
       // Uniform grid: equal width + height so quotes of different lengths don't
       // make rows ragged (4 across on desktop, 2 on tablet, 1 on mobile).
       child: LayoutBuilder(builder: (ctx, cons) {
@@ -1530,13 +1533,13 @@ class _Testimonials extends StatelessWidget {
                         Icon(Icons.format_quote, color: _primary(context), size: 24),
                         const SizedBox(height: AppSpacing.x8),
                         Expanded(
-                          child: Text(q.$2,
+                          child: Text(context.tr(q.$2),
                               maxLines: 4,
                               overflow: TextOverflow.ellipsis,
                               style: t.bodyMedium?.copyWith(color: _onBg(context), height: 1.5)),
                         ),
                         const SizedBox(height: AppSpacing.x8),
-                        Text(q.$1, style: t.bodySmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w600)),
+                        Text(context.tr(q.$1), style: t.bodySmall?.copyWith(color: _muted(context), fontWeight: FontWeight.w600)),
                       ]),
                     ),
                   ))
@@ -1564,12 +1567,12 @@ class _FinalCta extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x24),
             child: Column(children: [
-              Text('Ready to manage your entire property journey?',
+              Text(context.tr('Ready to manage your entire property journey?'),
                   textAlign: TextAlign.center,
                   style: GoogleFonts.manrope(
                       fontSize: wide ? 34 : 26, fontWeight: FontWeight.w700, letterSpacing: -0.4, color: _onBg(context), height: 1.15)),
               const SizedBox(height: AppSpacing.x12),
-              Text('Find. Buy. Own. Lease. Finance. Maintain. Grow — all from one platform.',
+              Text(context.tr('Find. Buy. Own. Lease. Finance. Maintain. Grow — all from one platform.'),
                   textAlign: TextAlign.center,
                   style: t.bodyLarge?.copyWith(color: _muted(context))),
               const SizedBox(height: AppSpacing.x24),
@@ -1577,9 +1580,9 @@ class _FinalCta extends StatelessWidget {
               // 'Explore properties' lives in the hero only — not duplicated here.
               _ctaPair(
                 context,
-                primaryLabel: 'Join NUZL',
+                primaryLabel: context.tr('Join NUZL'),
                 onPrimary: () => context.go('/register'),
-                secondaryLabel: 'Sign in',
+                secondaryLabel: context.tr('Sign in'),
                 onSecondary: () => context.go('/login'),
                 center: true,
               ),
@@ -1597,8 +1600,8 @@ class _CalculatorSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return _section(
       context,
-      title: 'Mortgage calculator',
-      subtitle: 'Estimate a monthly payment instantly — no account needed.',
+      title: context.tr('Mortgage calculator'),
+      subtitle: context.tr('Estimate a monthly payment instantly — no account needed.'),
       child: Container(
         decoration: BoxDecoration(
           color: _surface(context),
@@ -1621,13 +1624,13 @@ class _Footer extends StatelessWidget {
     Widget col(String title, List<(String, String)> links) => Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: GoogleFonts.poppins(color: _onBg(context), fontWeight: FontWeight.w600, fontSize: 15)),
+            Text(context.tr(title), style: GoogleFonts.poppins(color: _onBg(context), fontWeight: FontWeight.w600, fontSize: 15)),
             const SizedBox(height: AppSpacing.x12),
             ...links.map((l) => Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.x8),
                   child: InkWell(
                     onTap: () => context.go(l.$2),
-                    child: Text(l.$1, style: t.bodyMedium?.copyWith(color: _muted(context))),
+                    child: Text(context.tr(l.$1), style: t.bodyMedium?.copyWith(color: _muted(context))),
                   ),
                 )),
           ],
@@ -1662,14 +1665,14 @@ class _Footer extends StatelessWidget {
                       const SizedBox(height: AppSpacing.x12),
                       SizedBox(
                         width: 280,
-                        child: Text('The real-estate operating system. Dubai · Abu Dhabi.',
+                        child: Text(context.tr('The real-estate operating system. Dubai · Abu Dhabi.'),
                             style: t.bodySmall?.copyWith(color: _muted(context), height: 1.5)),
                       ),
                       const SizedBox(height: AppSpacing.x8),
                       Row(mainAxisSize: MainAxisSize.min, children: [
                         Icon(Icons.bolt_outlined, size: 14, color: _subtle(context)),
                         const SizedBox(width: 4),
-                        Text('Powered by Relaam — UAE’s Trusted Property Portal',
+                        Text(context.tr('Powered by Relaam — UAE’s Trusted Property Portal'),
                             style: t.labelSmall?.copyWith(color: _subtle(context))),
                       ]),
                     ]),
@@ -1683,14 +1686,14 @@ class _Footer extends StatelessWidget {
               const SizedBox(height: AppSpacing.x32),
               Divider(color: _border(context)),
               const SizedBox(height: AppSpacing.x16),
-              Text('© 2026 nuzl by Businesstech Arabia FZE, Innovation Licence 6803. All rights reserved.',
+              Text(context.tr('© 2026 nuzl by Businesstech Arabia FZE, Innovation Licence 6803. All rights reserved.'),
                   style: t.bodySmall?.copyWith(color: _subtle(context))),
               const SizedBox(height: AppSpacing.x16),
-              Text('Important disclaimer',
+              Text(context.tr('Important disclaimer'),
                   style: GoogleFonts.poppins(color: _muted(context), fontWeight: FontWeight.w600, fontSize: 13)),
               const SizedBox(height: AppSpacing.x4),
               Text(
-                'nuzl is not a real estate broker or agent. We are licensed to conduct opportunity facilitation and operate as a marketplace platform connecting real estate professionals. We are not involved directly in the sale, purchase, or lease of any property units. All real estate transactions are conducted between licensed brokers, agents, and their clients in accordance with UAE real estate regulations. Users must ensure they work with RERA-certified professionals for all property transactions.',
+                context.tr('nuzl is not a real estate broker or agent. We are licensed to conduct opportunity facilitation and operate as a marketplace platform connecting real estate professionals. We are not involved directly in the sale, purchase, or lease of any property units. All real estate transactions are conducted between licensed brokers, agents, and their clients in accordance with UAE real estate regulations. Users must ensure they work with RERA-certified professionals for all property transactions.'),
                 style: t.bodySmall?.copyWith(color: _subtle(context), height: 1.5),
               ),
               const SizedBox(height: AppSpacing.x16),
@@ -1787,7 +1790,7 @@ class _FeaturedListingsState extends ConsumerState<_FeaturedListings> {
         return SizedBox(
           height: _height,
           child: Center(
-            child: Text('More featured listings coming soon.',
+            child: Text(context.tr('More featured listings coming soon.'),
                 style: t.bodyMedium?.copyWith(color: _muted(context))),
           ),
         );
@@ -1847,14 +1850,14 @@ class _FeaturedListingsState extends ConsumerState<_FeaturedListings> {
 
     return _section(
       context,
-      eyebrow: 'Handpicked',
-      title: 'Featured opportunities',
-      subtitle: 'Verified homes, investment opportunities and rental listings across the UAE.',
+      eyebrow: context.tr('Handpicked'),
+      title: context.tr('Featured opportunities'),
+      subtitle: context.tr('Verified homes, investment opportunities and rental listings across the UAE.'),
       bg: _surface(context),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Wrap(spacing: 8, runSpacing: 8, children: [
           for (final q in quick)
-            ChoiceChip(label: Text(q.$2), selected: _filter == q.$1, onSelected: (_) => setState(() => _filter = q.$1)),
+            ChoiceChip(label: Text(context.tr(q.$2)), selected: _filter == q.$1, onSelected: (_) => setState(() => _filter = q.$1)),
         ]),
         const SizedBox(height: AppSpacing.x16),
         listings.when(
@@ -1867,9 +1870,9 @@ class _FeaturedListingsState extends ConsumerState<_FeaturedListings> {
           child: OutlinedButton(
             onPressed: () => context.go('/login'),
             style: OutlinedButton.styleFrom(foregroundColor: _onBg(context), side: BorderSide(color: _borderStrong(context))),
-            child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x8),
-                child: Text('Sign in to view all listings')),
+            child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x8),
+                child: Text(context.tr('Sign in to view all listings'))),
           ),
         ),
       ]),
@@ -1948,11 +1951,11 @@ class _ListingCard extends StatelessWidget {
     final agent = '${data['agent_name'] ?? ''}'.trim();
     final refCode = '${data['ref_code'] ?? ''}'.trim();
     String cap(String s) => s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
-    final title = building.isNotEmpty ? building : (ptype.isNotEmpty ? cap(ptype) : 'Featured property');
+    final title = building.isNotEmpty ? building : (ptype.isNotEmpty ? cap(ptype) : context.tr('Featured property'));
     final specs = <String>[
-      if (data['bedrooms'] != null) '${data['bedrooms']} Bed',
-      if (data['bathrooms'] != null) '${data['bathrooms']} Bath',
-      if (data['size_sqft'] != null) '${data['size_sqft']} sqft',
+      if (data['bedrooms'] != null) '${data['bedrooms']} ${context.tr('Bed')}',
+      if (data['bathrooms'] != null) '${data['bathrooms']} ${context.tr('Bath')}',
+      if (data['size_sqft'] != null) '${data['size_sqft']} ${context.tr('sqft')}',
     ].join(' • ');
     // At most TWO tags (view + status) — the rest is noise on a card.
     final tags = <String>[
@@ -1982,9 +1985,9 @@ class _ListingCard extends StatelessWidget {
                 cover.isNotEmpty
                     ? HoverZoomImage(url: cover, placeholder: const _Placeholder())
                     : const _Placeholder(),
-                Positioned(top: 10, left: 10, child: _pill(context, isRent ? 'For rent' : 'For sale', _primary(context))),
+                Positioned(top: 10, left: 10, child: _pill(context, context.tr(isRent ? 'For rent' : 'For sale'), _primary(context))),
                 if (verified)
-                  Positioned(top: 10, right: 10, child: _pill(context, 'Verified', AppColors.success, icon: Icons.verified)),
+                  Positioned(top: 10, right: 10, child: _pill(context, context.tr('Verified'), AppColors.success, icon: Icons.verified)),
               ]),
             ),
           ),
@@ -2000,7 +2003,7 @@ class _ListingCard extends StatelessWidget {
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: AppSpacing.x4),
                 if (price > 0)
-                  Text('${aed.format(price)}${isRent ? ' / yr' : ''}',
+                  Text('${aed.format(price)}${isRent ? ' / ${context.tr('yr')}' : ''}',
                       style: t.titleLarge?.copyWith(color: _primary(context), fontWeight: FontWeight.w800)),
                 if (specs.isNotEmpty) ...[
                   const SizedBox(height: AppSpacing.x8),
@@ -2021,9 +2024,9 @@ class _ListingCard extends StatelessWidget {
                 ],
                 const Spacer(),
                 if (refCode.isNotEmpty)
-                  Text('Ref: $refCode', style: t.labelSmall?.copyWith(color: _subtle(context))),
+                  Text('${context.tr('Ref')}: $refCode', style: t.labelSmall?.copyWith(color: _subtle(context))),
                 if (agent.isNotEmpty)
-                  Text('Listed by $agent',
+                  Text('${context.tr('Listed by')} $agent',
                       style: t.bodySmall?.copyWith(color: _muted(context)), maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: AppSpacing.x8),
                 // Compact action bar: a wide single-line primary CTA + a small
@@ -2033,7 +2036,7 @@ class _ListingCard extends StatelessWidget {
                     child: FilledButton(
                       onPressed: onOpen,
                       style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(38)),
-                      child: const Text('View property', maxLines: 1, overflow: TextOverflow.ellipsis),
+                      child: Text(context.tr('View property'), maxLines: 1, overflow: TextOverflow.ellipsis),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.x8),
@@ -2041,7 +2044,7 @@ class _ListingCard extends StatelessWidget {
                     height: 38,
                     width: 42,
                     child: OutlinedButton(
-                      onPressed: () => showAuthPrompt(context, action: 'save this property'),
+                      onPressed: () => showAuthPrompt(context, action: context.tr('save this property')),
                       style: OutlinedButton.styleFrom(
                         padding: EdgeInsets.zero,
                         minimumSize: const Size(42, 38),

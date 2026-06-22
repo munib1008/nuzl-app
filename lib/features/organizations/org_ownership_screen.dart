@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -51,7 +52,7 @@ class OrgOwnershipScreen extends ConsumerWidget {
     final claims = ref.watch(orgClaimsProvider);
     final joinReqs = ref.watch(joinRequestsProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Organization ownership'),
+      appBar: NuzlAppBar(title: context.tr('Organization ownership')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: RefreshIndicator(
@@ -68,21 +69,21 @@ class OrgOwnershipScreen extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(AppSpacing.x16),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Claim ownership', style: t.titleMedium),
+                    Text(context.tr('Claim ownership'), style: t.titleMedium),
                     const SizedBox(height: AppSpacing.x4),
-                    Text('Request to become the owner of your organization. The current owner approves or declines.',
+                    Text(context.tr('Request to become the owner of your organization. The current owner approves or declines.'),
                         style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                     const SizedBox(height: AppSpacing.x12),
                     FilledButton.icon(
                       onPressed: () => _claim(context, ref),
                       icon: const Icon(Icons.workspace_premium_outlined, size: 18),
-                      label: const Text('Claim ownership'),
+                      label: Text(context.tr('Claim ownership')),
                     ),
                   ]),
                 ),
               ),
               const SizedBox(height: AppSpacing.x16),
-              Text('Pending claims', style: t.titleMedium),
+              Text(context.tr('Pending claims'), style: t.titleMedium),
               const SizedBox(height: AppSpacing.x8),
               AsyncView<List<Map<String, dynamic>>>(
                 value: claims,
@@ -90,12 +91,12 @@ class OrgOwnershipScreen extends ConsumerWidget {
                 data: (list) => list.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
-                        child: Text('No pending claims.', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                        child: Text(context.tr('No pending claims.'), style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       )
                     : Column(children: [for (final c in list) _ClaimTile(c)]),
               ),
               const SizedBox(height: AppSpacing.x16),
-              Text('Company join requests', style: t.titleMedium),
+              Text(context.tr('Company join requests'), style: t.titleMedium),
               const SizedBox(height: AppSpacing.x8),
               AsyncView<List<Map<String, dynamic>>>(
                 value: joinReqs,
@@ -103,7 +104,7 @@ class OrgOwnershipScreen extends ConsumerWidget {
                 data: (list) => list.isEmpty
                     ? Padding(
                         padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
-                        child: Text('No join requests.', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                        child: Text(context.tr('No join requests.'), style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       )
                     : Column(children: [for (final j in list) _JoinTile(j)]),
               ),
@@ -118,17 +119,17 @@ class OrgOwnershipScreen extends ConsumerWidget {
     final reason = TextEditingController();
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Claim ownership',
+      title: context.tr('Claim ownership'),
       children: [
         TextField(
           controller: reason,
           maxLines: 3,
-          decoration: const InputDecoration(labelText: 'Reason (optional)', hintText: 'Why should you own this org?'),
+          decoration: InputDecoration(labelText: context.tr('Reason (optional)'), hintText: context.tr('Why should you own this org?')),
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Submit claim')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Submit claim'))),
       ],
     );
     if (ok != true) return;
@@ -136,7 +137,7 @@ class OrgOwnershipScreen extends ConsumerWidget {
       await ref.read(apiClientProvider).post('/organizations/mine/claim', body: {'reason': reason.text.trim()});
       ref.invalidate(orgClaimsProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Claim submitted')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Claim submitted'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -163,27 +164,27 @@ class _JoinTile extends ConsumerWidget {
     final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final iAmOwner = j['i_am_owner'] == true;
-    final orgName = '${j['org_name'] ?? 'the company'}';
-    final requester = '${j['requester_name'] ?? 'A user'}';
+    final orgName = '${j['org_name'] ?? context.tr('the company')}';
+    final requester = '${j['requester_name'] ?? context.tr('A user')}';
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x12),
         child: Row(children: [
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(iAmOwner ? '$requester wants to join $orgName' : 'Your request to join $orgName',
+              Text(iAmOwner ? '$requester ${context.tr('wants to join')} $orgName' : '${context.tr('Your request to join')} $orgName',
                   style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
               if (iAmOwner && '${j['requester_email'] ?? ''}'.trim().isNotEmpty)
                 Text('${j['requester_email']}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               if (!iAmOwner)
-                Text('Awaiting the company owner’s decision.',
+                Text(context.tr('Awaiting the company owner’s decision.'),
                     style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ]),
           ),
           if (iAmOwner) ...[
             const SizedBox(width: AppSpacing.x8),
-            TextButton(onPressed: () => _decide(context, ref, false), child: const Text('Decline')),
-            FilledButton(onPressed: () => _decide(context, ref, true), child: const Text('Approve')),
+            TextButton(onPressed: () => _decide(context, ref, false), child: Text(context.tr('Decline'))),
+            FilledButton(onPressed: () => _decide(context, ref, true), child: Text(context.tr('Approve'))),
           ],
         ]),
       ),
@@ -205,7 +206,7 @@ class _CompanyVerificationCard extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: company.when(
           loading: () => const SizedBox(height: 48, child: Center(child: CircularProgressIndicator())),
-          error: (_, __) => Text('Company unavailable.', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+          error: (_, __) => Text(context.tr('Company unavailable.'), style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           data: (c) {
             if (c == null) return _noCompany(context, ref, t);
             final status = '${c['verification_status'] ?? 'pending'}';
@@ -214,14 +215,14 @@ class _CompanyVerificationCard extends ConsumerWidget {
             final note = '${c['verification_note'] ?? ''}'.trim();
             return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Expanded(child: Text('Company verification', style: t.titleMedium)),
+                Expanded(child: Text(context.tr('Company verification'), style: t.titleMedium)),
                 VerificationBadge(status),
               ]),
               const SizedBox(height: AppSpacing.x4),
-              Text('${c['name'] ?? 'Your company'}',
+              Text('${c['name'] ?? context.tr('Your company')}',
                   style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: AppSpacing.x8),
-              Text(_blurb(status, submitted),
+              Text(_blurb(context, status, submitted),
                   style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               if (status == 'rejected' && note.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.x8),
@@ -232,7 +233,7 @@ class _CompanyVerificationCard extends ConsumerWidget {
                     color: AppColors.danger.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(AppSpacing.rMd),
                   ),
-                  child: Text('Reviewer note: $note',
+                  child: Text('${context.tr('Reviewer note:')} $note',
                       style: t.bodySmall?.copyWith(color: AppColors.danger)),
                 ),
               ],
@@ -241,13 +242,13 @@ class _CompanyVerificationCard extends ConsumerWidget {
                 FilledButton.icon(
                   onPressed: () => _submit(context, ref, c),
                   icon: const Icon(Icons.verified_user_outlined, size: 18),
-                  label: Text(status == 'rejected' || submitted ? 'Resubmit for verification' : 'Submit for verification'),
+                  label: Text(status == 'rejected' || submitted ? context.tr('Resubmit for verification') : context.tr('Submit for verification')),
                 ),
               ],
               if (!owner && status != 'verified')
                 Padding(
                   padding: const EdgeInsets.only(top: AppSpacing.x8),
-                  child: Text('Only the company owner can submit for verification.',
+                  child: Text(context.tr('Only the company owner can submit for verification.'),
                       style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ),
             ]);
@@ -257,16 +258,16 @@ class _CompanyVerificationCard extends ConsumerWidget {
     );
   }
 
-  String _blurb(String status, bool submitted) {
+  String _blurb(BuildContext context, String status, bool submitted) {
     switch (status) {
       case 'verified':
-        return 'Your company is verified — you can publish listings and appear in the marketplace.';
+        return context.tr('Your company is verified — you can publish listings and appear in the marketplace.');
       case 'rejected':
-        return 'Verification was declined. Fix the issue below and resubmit.';
+        return context.tr('Verification was declined. Fix the issue below and resubmit.');
       default:
         return submitted
-            ? 'Submitted for review. We’ll notify you once it’s approved. You can save drafts meanwhile, but listings stay private until verified.'
-            : 'Submit your trade license to get verified. Until then you can save drafts, but listings won’t be published publicly.';
+            ? context.tr('Submitted for review. We’ll notify you once it’s approved. You can save drafts meanwhile, but listings stay private until verified.')
+            : context.tr('Submit your trade license to get verified. Until then you can save drafts, but listings won’t be published publicly.');
     }
   }
 
@@ -275,29 +276,29 @@ class _CompanyVerificationCard extends ConsumerWidget {
     final name = TextEditingController();
     String type = 'agency';
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Company verification', style: t.titleMedium),
+      Text(context.tr('Company verification'), style: t.titleMedium),
       const SizedBox(height: AppSpacing.x4),
-      Text('You’re not part of a company yet. Create one to list services, products or inventory.',
+      Text(context.tr('You’re not part of a company yet. Create one to list services, products or inventory.'),
           style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
       const SizedBox(height: AppSpacing.x12),
       FilledButton.icon(
         onPressed: () async {
           final ok = await AppDialog.show<bool>(
             context,
-            title: 'Create company',
+            title: context.tr('Create company'),
             children: [
               StatefulBuilder(
                 builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
-                  TextField(controller: name, decoration: const InputDecoration(labelText: 'Company name *')),
+                  TextField(controller: name, decoration: InputDecoration(labelText: context.tr('Company name *'))),
                   const SizedBox(height: AppSpacing.x8),
                   DropdownButtonFormField<String>(
                     initialValue: type,
-                    decoration: const InputDecoration(labelText: 'Business type'),
-                    items: const [
-                      DropdownMenuItem(value: 'agency', child: Text('Real estate agency')),
-                      DropdownMenuItem(value: 'developer', child: Text('Developer')),
-                      DropdownMenuItem(value: 'maintenance', child: Text('Service provider')),
-                      DropdownMenuItem(value: 'supplier', child: Text('Product supplier')),
+                    decoration: InputDecoration(labelText: context.tr('Business type')),
+                    items: [
+                      DropdownMenuItem(value: 'agency', child: Text(context.tr('Real estate agency'))),
+                      DropdownMenuItem(value: 'developer', child: Text(context.tr('Developer'))),
+                      DropdownMenuItem(value: 'maintenance', child: Text(context.tr('Service provider'))),
+                      DropdownMenuItem(value: 'supplier', child: Text(context.tr('Product supplier'))),
                     ],
                     onChanged: (v) => setS(() => type = v ?? 'agency'),
                   ),
@@ -305,8 +306,8 @@ class _CompanyVerificationCard extends ConsumerWidget {
               ),
             ],
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-              FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Create')),
+              TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+              FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Create'))),
             ],
           );
           if (ok != true || name.text.trim().isEmpty) return;
@@ -314,14 +315,14 @@ class _CompanyVerificationCard extends ConsumerWidget {
             await ref.read(apiClientProvider).post('/organizations/mine', body: {'name': name.text.trim(), 'org_type': type});
             ref.invalidate(myCompanyProvider);
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Company created')));
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Company created'))));
             }
           } catch (e) {
             if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
           }
         },
         icon: const Icon(Icons.add_business_outlined, size: 18),
-        label: const Text('Create company'),
+        label: Text(context.tr('Create company')),
       ),
     ]);
   }
@@ -342,17 +343,17 @@ class _CompanyVerificationCard extends ConsumerWidget {
     var uploading = false;
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Submit for verification',
+      title: context.tr('Submit for verification'),
       maxWidth: 460,
       children: [
         StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: license, decoration: const InputDecoration(labelText: 'Trade license number *')),
+            TextField(controller: license, decoration: InputDecoration(labelText: context.tr('Trade license number *'))),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
               Expanded(
                 child: Text(
-                  docUrl == null ? 'Attach trade-license document' : 'Document attached ✓',
+                  docUrl == null ? context.tr('Attach trade-license document') : context.tr('Document attached ✓'),
                   style: TextStyle(color: docUrl == null ? (dark ? AppColors.dTextMuted : AppColors.textMuted) : AppColors.success),
                 ),
               ),
@@ -381,26 +382,26 @@ class _CompanyVerificationCard extends ConsumerWidget {
                 icon: uploading
                     ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.upload_file, size: 18),
-                label: const Text('Upload'),
+                label: Text(context.tr('Upload')),
               ),
             ]),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
-              Expanded(child: TextField(controller: phone, decoration: const InputDecoration(labelText: 'Contact phone'))),
+              Expanded(child: TextField(controller: phone, decoration: InputDecoration(labelText: context.tr('Contact phone')))),
               const SizedBox(width: AppSpacing.x8),
-              Expanded(child: TextField(controller: email, decoration: const InputDecoration(labelText: 'Contact email'))),
+              Expanded(child: TextField(controller: email, decoration: InputDecoration(labelText: context.tr('Contact email')))),
             ]),
             const SizedBox(height: AppSpacing.x8),
             // Company registration / legal identity (company ≠ user).
             Row(children: [
-              Expanded(child: TextField(controller: country, decoration: const InputDecoration(labelText: 'Country of registration *'))),
+              Expanded(child: TextField(controller: country, decoration: InputDecoration(labelText: context.tr('Country of registration *')))),
               const SizedBox(width: AppSpacing.x8),
-              Expanded(child: TextField(controller: emirate, decoration: const InputDecoration(labelText: 'Emirate / State *'))),
+              Expanded(child: TextField(controller: emirate, decoration: InputDecoration(labelText: context.tr('Emirate / State *')))),
             ]),
             const SizedBox(height: AppSpacing.x8),
             DropdownButtonFormField<String>(
               initialValue: const ['LLC', 'Free Zone Company', 'Sole Proprietorship', 'Corporation', 'Partnership', 'Government Entity', 'Non-Profit', 'Freelancer'].contains(legalType) ? legalType : 'LLC',
-              decoration: const InputDecoration(labelText: 'Legal entity type'),
+              decoration: InputDecoration(labelText: context.tr('Legal entity type')),
               items: const [
                 DropdownMenuItem(value: 'LLC', child: Text('LLC')),
                 DropdownMenuItem(value: 'Free Zone Company', child: Text('Free Zone Company')),
@@ -415,26 +416,26 @@ class _CompanyVerificationCard extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
-              Expanded(child: TextField(controller: vat, decoration: const InputDecoration(labelText: 'VAT number (optional)'))),
+              Expanded(child: TextField(controller: vat, decoration: InputDecoration(labelText: context.tr('VAT number (optional)')))),
               const SizedBox(width: AppSpacing.x8),
-              Expanded(child: TextField(controller: year, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Year established'))),
+              Expanded(child: TextField(controller: year, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Year established')))),
             ]),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: address, decoration: const InputDecoration(labelText: 'Company address *')),
+            TextField(controller: address, decoration: InputDecoration(labelText: context.tr('Company address *'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: about, maxLines: 2, decoration: const InputDecoration(labelText: 'Company description')),
+            TextField(controller: about, maxLines: 2, decoration: InputDecoration(labelText: context.tr('Company description'))),
           ]),
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Submit')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Submit'))),
       ],
     );
     if (ok != true) return;
     if (license.text.trim().isEmpty) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A trade license number is required.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('A trade license number is required.'))));
       }
       return;
     }
@@ -454,7 +455,7 @@ class _CompanyVerificationCard extends ConsumerWidget {
       });
       ref.invalidate(myCompanyProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Submitted for verification')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Submitted for verification'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -480,27 +481,27 @@ class _ClaimTile extends ConsumerWidget {
     final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final iAmOwner = c['i_am_owner'] == true;
-    final orgName = '${c['org_name'] ?? 'Organization'}';
-    final claimant = '${c['claimant_name'] ?? 'A member'}';
+    final orgName = '${c['org_name'] ?? context.tr('Organization')}';
+    final claimant = '${c['claimant_name'] ?? context.tr('A member')}';
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x12),
         child: Row(children: [
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(iAmOwner ? '$claimant wants to own $orgName' : 'Your claim on $orgName',
+              Text(iAmOwner ? '$claimant ${context.tr('wants to own')} $orgName' : '${context.tr('Your claim on')} $orgName',
                   style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
               if ('${c['reason'] ?? ''}'.trim().isNotEmpty)
                 Text('${c['reason']}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               if (!iAmOwner)
-                Text('Awaiting the current owner’s decision.',
+                Text(context.tr('Awaiting the current owner’s decision.'),
                     style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ]),
           ),
           if (iAmOwner) ...[
             const SizedBox(width: AppSpacing.x8),
-            TextButton(onPressed: () => _decide(context, ref, false), child: const Text('Decline')),
-            FilledButton(onPressed: () => _decide(context, ref, true), child: const Text('Approve')),
+            TextButton(onPressed: () => _decide(context, ref, false), child: Text(context.tr('Decline'))),
+            FilledButton(onPressed: () => _decide(context, ref, true), child: Text(context.tr('Approve'))),
           ],
         ]),
       ),

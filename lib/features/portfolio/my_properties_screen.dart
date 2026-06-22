@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/upload_service.dart';
 import '../../core/theme/app_spacing.dart';
@@ -46,12 +47,12 @@ class MyPropertiesScreen extends ConsumerWidget {
     final portfolios = ref.watch(_portfoliosProvider);
     final selected = ref.watch(_selectedPortfolioProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'My Properties'),
+      appBar: NuzlAppBar(title: context.tr('My Properties')),
       drawer: const NuzlDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _verifyOwnership(context, ref),
         icon: const Icon(Icons.verified_user_outlined),
-        label: const Text('Verify ownership'),
+        label: Text(context.tr('Verify ownership')),
       ),
       body: ResponsiveCenter(
         child: portfolios.when(
@@ -61,11 +62,11 @@ class MyPropertiesScreen extends ConsumerWidget {
             if (list.isEmpty) {
               return EmptyState(
                 icon: Icons.verified_user_outlined,
-                title: 'Start with ownership',
-                message: 'Verify a property you own — upload your title deed and we’ll create the '
+                title: context.tr('Start with ownership'),
+                message: context.tr('Verify a property you own — upload your title deed and we’ll create the '
                     'record for you. (Off-plan, international or commercial without a deed? '
-                    'Use “Add unverified property”.)',
-                actionLabel: 'Verify property ownership',
+                    'Use “Add unverified property”.)'),
+                actionLabel: context.tr('Verify property ownership'),
                 onAction: () => _verifyOwnership(context, ref),
               );
             }
@@ -82,7 +83,7 @@ class MyPropertiesScreen extends ConsumerWidget {
                   child: TextButton.icon(
                     onPressed: () => _addProperty(context, ref),
                     icon: const Icon(Icons.add_home_outlined, size: 18),
-                    label: const Text('Add unverified property'),
+                    label: Text(context.tr('Add unverified property')),
                   ),
                 ),
                 const SizedBox(height: AppSpacing.x8),
@@ -90,10 +91,10 @@ class MyPropertiesScreen extends ConsumerWidget {
                   DropdownButtonFormField<String>(
                     initialValue: active,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Portfolio'),
+                    decoration: InputDecoration(labelText: context.tr('Portfolio')),
                     items: list.map((e) {
                       final m = Map<String, dynamic>.from(e);
-                      return DropdownMenuItem(value: '${m['id']}', child: Text('${m['name'] ?? 'Portfolio'}'));
+                      return DropdownMenuItem(value: '${m['id']}', child: Text('${m['name'] ?? context.tr('Portfolio')}'));
                     }).toList(),
                     onChanged: (v) => ref.read(_selectedPortfolioProvider.notifier).state = v,
                   ),
@@ -122,7 +123,7 @@ class MyPropertiesScreen extends ConsumerWidget {
     double? lat, lng;
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Add unverified property',
+      title: context.tr('Add unverified property'),
       children: [
         StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
@@ -137,8 +138,8 @@ class MyPropertiesScreen extends ConsumerWidget {
                 const SizedBox(width: AppSpacing.x8),
                 Expanded(
                   child: Text(
-                    'For off-plan (Oqood), international or commercial properties without a title deed. '
-                    'It will be marked Unverified until you verify ownership.',
+                    context.tr('For off-plan (Oqood), international or commercial properties without a title deed. '
+                    'It will be marked Unverified until you verify ownership.'),
                     style: Theme.of(ctx).textTheme.bodySmall,
                   ),
                 ),
@@ -147,52 +148,52 @@ class MyPropertiesScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.x12),
             PlaceField(
               controller: building,
-              label: 'Building / location',
+              label: context.tr('Building / location'),
               onSelected: (p) { lat = p.lat; lng = p.lng; },
               onCleared: () { lat = null; lng = null; },
             ),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: unit, decoration: const InputDecoration(labelText: 'Unit no.')),
+            TextField(controller: unit, decoration: InputDecoration(labelText: context.tr('Unit no.'))),
             const SizedBox(height: AppSpacing.x8),
             DropdownButtonFormField<String>(
               initialValue: type,
-              decoration: const InputDecoration(labelText: 'Type'),
-              items: const [
-                DropdownMenuItem(value: 'apartment', child: Text('Apartment')),
-                DropdownMenuItem(value: 'villa', child: Text('Villa')),
-                DropdownMenuItem(value: 'townhouse', child: Text('Townhouse')),
-                DropdownMenuItem(value: 'office', child: Text('Office')),
+              decoration: InputDecoration(labelText: context.tr('Type')),
+              items: [
+                DropdownMenuItem(value: 'apartment', child: Text(context.tr('Apartment'))),
+                DropdownMenuItem(value: 'villa', child: Text(context.tr('Villa'))),
+                DropdownMenuItem(value: 'townhouse', child: Text(context.tr('Townhouse'))),
+                DropdownMenuItem(value: 'office', child: Text(context.tr('Office'))),
               ],
               onChanged: (v) => setS(() => type = v ?? 'apartment'),
             ),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
-              Expanded(child: TextField(controller: beds, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Beds'))),
+              Expanded(child: TextField(controller: beds, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Beds')))),
               const SizedBox(width: AppSpacing.x8),
-              Expanded(child: TextField(controller: baths, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Baths'))),
+              Expanded(child: TextField(controller: baths, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Baths')))),
             ]),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
-              Expanded(child: TextField(controller: size, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Size (sqft)'))),
+              Expanded(child: TextField(controller: size, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Size (sqft)')))),
               const SizedBox(width: AppSpacing.x8),
-              Expanded(child: TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Purchase price'))),
+              Expanded(child: TextField(controller: price, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Purchase price')))),
             ]),
           ]),
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
         FilledButton(
           onPressed: () {
             if (building.text.trim().isEmpty) {
               ScaffoldMessenger.of(context)
                 ..hideCurrentSnackBar()
-                ..showSnackBar(const SnackBar(content: Text('Add a building or location.')));
+                ..showSnackBar(SnackBar(content: Text(context.tr('Add a building or location.'))));
               return;
             }
             Navigator.pop(context, true);
           },
-          child: const Text('Add'),
+          child: Text(context.tr('Add')),
         ),
       ],
     );
@@ -213,7 +214,7 @@ class MyPropertiesScreen extends ConsumerWidget {
       ref.invalidate(_overviewProvider);
       final id = res is Map ? '${res['id'] ?? ''}' : '';
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Property added to your portfolio.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Property added to your portfolio.'))));
         if (id.isNotEmpty) context.push('/property-record/$id');
       }
     } catch (e) {
@@ -229,7 +230,7 @@ class MyPropertiesScreen extends ConsumerWidget {
     final f = result.files.first;
     final bytes = f.bytes;
     if (bytes == null) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not read the file')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Could not read the file'))));
       return null;
     }
     final ext = (f.extension ?? '').toLowerCase();
@@ -239,12 +240,12 @@ class MyPropertiesScreen extends ConsumerWidget {
     try {
       final url = await ref.read(uploadServiceProvider).upload(bytes, f.name, ct);
       if (url == null) {
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload returned no URL')));
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Upload returned no URL'))));
         return null;
       }
       return (url, f.name);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: ${friendlyError(e)}')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('Upload failed')}: ${friendlyError(e)}')));
       return null;
     }
   }
@@ -274,7 +275,7 @@ class MyPropertiesScreen extends ConsumerWidget {
 
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Verify property ownership',
+      title: context.tr('Verify property ownership'),
       children: [
         StatefulBuilder(builder: (ctx, setS) {
           Future<void> pick() async {
@@ -326,9 +327,9 @@ class MyPropertiesScreen extends ConsumerWidget {
                 const SizedBox(width: AppSpacing.x8),
                 Expanded(
                   child: Text(
-                    extracted
+                    context.tr(extracted
                         ? 'Auto-filled from your title deed — please review and confirm before saving.'
-                        : 'Upload your title deed and confirm the details below. Fields auto-fill when document AI is enabled.',
+                        : 'Upload your title deed and confirm the details below. Fields auto-fill when document AI is enabled.'),
                     style: theme.textTheme.bodySmall),
                 ),
               ]),
@@ -341,52 +342,52 @@ class MyPropertiesScreen extends ConsumerWidget {
                 icon: uploading
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                     : Icon(deedUrl != null ? Icons.check_circle_outline : Icons.upload_file_outlined),
-                label: Text(deedFile ?? 'Upload title deed (PDF / JPG / PNG)', overflow: TextOverflow.ellipsis),
+                label: Text(deedFile ?? context.tr('Upload title deed (PDF / JPG / PNG)'), overflow: TextOverflow.ellipsis),
               ),
             ),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: deedName, decoration: const InputDecoration(
-                labelText: 'Owner name (exactly as on the deed)')),
+            TextField(controller: deedName, decoration: InputDecoration(
+                labelText: context.tr('Owner name (exactly as on the deed)'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: deedNo, decoration: const InputDecoration(labelText: 'Title deed number')),
+            TextField(controller: deedNo, decoration: InputDecoration(labelText: context.tr('Title deed number'))),
             const Divider(height: AppSpacing.x24),
             PlaceField(
               controller: building,
-              label: 'Building / location',
+              label: context.tr('Building / location'),
               onSelected: (p) { lat = p.lat; lng = p.lng; },
               onCleared: () { lat = null; lng = null; },
             ),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: unit, decoration: const InputDecoration(labelText: 'Unit no.')),
+            TextField(controller: unit, decoration: InputDecoration(labelText: context.tr('Unit no.'))),
             const SizedBox(height: AppSpacing.x8),
             DropdownButtonFormField<String>(
               initialValue: type,
-              decoration: const InputDecoration(labelText: 'Type'),
-              items: const [
-                DropdownMenuItem(value: 'apartment', child: Text('Apartment')),
-                DropdownMenuItem(value: 'villa', child: Text('Villa')),
-                DropdownMenuItem(value: 'townhouse', child: Text('Townhouse')),
-                DropdownMenuItem(value: 'office', child: Text('Office')),
+              decoration: InputDecoration(labelText: context.tr('Type')),
+              items: [
+                DropdownMenuItem(value: 'apartment', child: Text(context.tr('Apartment'))),
+                DropdownMenuItem(value: 'villa', child: Text(context.tr('Villa'))),
+                DropdownMenuItem(value: 'townhouse', child: Text(context.tr('Townhouse'))),
+                DropdownMenuItem(value: 'office', child: Text(context.tr('Office'))),
               ],
               onChanged: (v) => setS(() => type = v ?? 'apartment'),
             ),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
-              Expanded(child: TextField(controller: beds, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Beds'))),
+              Expanded(child: TextField(controller: beds, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Beds')))),
               const SizedBox(width: AppSpacing.x8),
-              Expanded(child: TextField(controller: baths, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Baths'))),
+              Expanded(child: TextField(controller: baths, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Baths')))),
             ]),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
-              Expanded(child: TextField(controller: size, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Size (sqft)'))),
+              Expanded(child: TextField(controller: size, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Size (sqft)')))),
               const SizedBox(width: AppSpacing.x8),
-              Expanded(child: TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Purchase price'))),
+              Expanded(child: TextField(controller: price, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Purchase price')))),
             ]),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
-              Expanded(child: TextField(controller: plot, decoration: const InputDecoration(labelText: 'Plot no.'))),
+              Expanded(child: TextField(controller: plot, decoration: InputDecoration(labelText: context.tr('Plot no.')))),
               const SizedBox(width: AppSpacing.x8),
-              Expanded(child: TextField(controller: muni, decoration: const InputDecoration(labelText: 'Municipality no.'))),
+              Expanded(child: TextField(controller: muni, decoration: InputDecoration(labelText: context.tr('Municipality no.')))),
             ]),
             const SizedBox(height: AppSpacing.x8),
             InkWell(
@@ -400,26 +401,26 @@ class MyPropertiesScreen extends ConsumerWidget {
                 if (d != null) setS(() => purchaseDate = d);
               },
               child: InputDecorator(
-                decoration: const InputDecoration(labelText: 'Purchase date', suffixIcon: Icon(Icons.calendar_today, size: 18)),
-                child: Text(purchaseDate == null ? 'Select date' : DateFormat('d MMM yyyy').format(purchaseDate!)),
+                decoration: InputDecoration(labelText: context.tr('Purchase date'), suffixIcon: const Icon(Icons.calendar_today, size: 18)),
+                child: Text(purchaseDate == null ? context.tr('Select date') : DateFormat('d MMM yyyy').format(purchaseDate!)),
               ),
             ),
           ]);
         }),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
         FilledButton(
           onPressed: () {
             if (building.text.trim().isEmpty) {
               ScaffoldMessenger.of(context)
                 ..hideCurrentSnackBar()
-                ..showSnackBar(const SnackBar(content: Text('Add a building or location.')));
+                ..showSnackBar(SnackBar(content: Text(context.tr('Add a building or location.'))));
               return;
             }
             Navigator.pop(context, true);
           },
-          child: const Text('Verify & add'),
+          child: Text(context.tr('Verify & add')),
         ),
       ],
     );
@@ -471,10 +472,10 @@ class MyPropertiesScreen extends ConsumerWidget {
       }
       if (context.mounted) {
         final msg = status == 'verified'
-            ? 'Ownership verified ✓ — property added.'
+            ? context.tr('Ownership verified ✓ — property added.')
             : status == 'pending'
-                ? 'Property added — ownership pending review.'
-                : 'Property added to your portfolio.';
+                ? context.tr('Property added — ownership pending review.')
+                : context.tr('Property added to your portfolio.');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
         if (id.isNotEmpty) context.push('/property-record/$id');
       }
@@ -510,10 +511,10 @@ class _Overview extends ConsumerWidget {
                 mainAxisExtent: 104,
               ),
               children: [
-                _Stat('Market value', _money(totals['market_value'])),
-                _Stat('Equity', _money(totals['equity'])),
-                _Stat('Net operating income', _money(totals['net_operating_income'])),
-                _Stat('Outstanding debt', _money(totals['outstanding_debt'])),
+                _Stat(context.tr('Market value'), _money(totals['market_value'])),
+                _Stat(context.tr('Equity'), _money(totals['equity'])),
+                _Stat(context.tr('Net operating income'), _money(totals['net_operating_income'])),
+                _Stat(context.tr('Outstanding debt'), _money(totals['outstanding_debt'])),
               ],
             ),
             // Investor View — a portfolio mode that auto-surfaces once the owner
@@ -524,18 +525,18 @@ class _Overview extends ConsumerWidget {
               Card(
                 child: ListTile(
                   leading: Icon(Icons.insights_outlined, color: Theme.of(context).colorScheme.primary),
-                  title: const Text('Investor View'),
-                  subtitle: const Text('Portfolio ROI, yield, cash flow & capital growth'),
+                  title: Text(context.tr('Investor View')),
+                  subtitle: Text(context.tr('Portfolio ROI, yield, cash flow & capital growth')),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push('/finance'),
                 ),
               ),
             ],
             const SizedBox(height: AppSpacing.x24),
-            Text('Properties', style: Theme.of(context).textTheme.titleMedium),
+            Text(context.tr('Properties'), style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: AppSpacing.x8),
             if (properties.isEmpty)
-              Text('No properties in this portfolio yet.',
+              Text(context.tr('No properties in this portfolio yet.'),
                   style: TextStyle(color: Theme.of(context).hintColor))
             else
               ...properties.map((e) => _PropCard(Map<String, dynamic>.from(e))),
@@ -580,16 +581,16 @@ class _PropCard extends StatelessWidget {
     final title = [
       p['building_name'] ?? p['community'],
       p['property_type'],
-      if ('${p['unit_no'] ?? ''}'.trim().isNotEmpty) 'Unit ${p['unit_no']}',
+      if ('${p['unit_no'] ?? ''}'.trim().isNotEmpty) '${context.tr('Unit')} ${p['unit_no']}',
     ].where((x) => x != null && '$x'.trim().isNotEmpty).join('  ·  ');
     return Card(
       child: ListTile(
         leading: const Icon(Icons.home_outlined),
         title: Row(children: [
-          Expanded(child: Text(title.isEmpty ? 'Property' : title, overflow: TextOverflow.ellipsis)),
+          Expanded(child: Text(title.isEmpty ? context.tr('Property') : title, overflow: TextOverflow.ellipsis)),
           _ownershipChip(context, '${p['ownership_status'] ?? ''}'),
         ]),
-        subtitle: Text('Equity ${_money(p['equity'])}'),
+        subtitle: Text('${context.tr('Equity')} ${_money(p['equity'])}'),
         // Open the full property record hub (lease, mortgage, maintenance, docs, timeline).
         onTap: pid.isEmpty ? null : () => context.push('/property-record/$pid'),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -607,10 +608,10 @@ class _PropCard extends StatelessWidget {
   /// asset's trust state is visible at a glance (Verify-ownership-first model).
   Widget _ownershipChip(BuildContext context, String status) {
     final (label, color) = switch (status) {
-      'verified' => ('Verified', Colors.green),
-      'pending' => ('Pending', Colors.orange),
-      'rejected' => ('Rejected', Colors.red),
-      _ => ('Unverified', Theme.of(context).hintColor),
+      'verified' => (context.tr('Verified'), Colors.green),
+      'pending' => (context.tr('Pending'), Colors.orange),
+      'rejected' => (context.tr('Rejected'), Colors.red),
+      _ => (context.tr('Unverified'), Theme.of(context).hintColor),
     };
     return Container(
       margin: const EdgeInsets.only(left: 6),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -65,12 +66,12 @@ class InventoryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final inventory = ref.watch(inventoryProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Inventory'),
+      appBar: NuzlAppBar(title: context.tr('Inventory')),
       drawer: const NuzlDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _createProject(context, ref),
         icon: const Icon(Icons.add),
-        label: const Text('New project'),
+        label: Text(context.tr('New project')),
       ),
       body: ResponsiveCenter(
         child: Column(children: [
@@ -81,11 +82,11 @@ class InventoryScreen extends ConsumerWidget {
               error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
               data: (list) {
                 if (list.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: EmptyState(
                       icon: Icons.meeting_room_outlined,
-                      title: 'No units yet',
-                      message: 'Create a project, then add units to it to build your inventory.',
+                      title: context.tr('No units yet'),
+                      message: context.tr('Create a project, then add units to it to build your inventory.'),
                     ),
                   );
                 }
@@ -118,22 +119,22 @@ class InventoryScreen extends ConsumerWidget {
     var status = 'planning';
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'New project',
+      title: context.tr('New project'),
       children: [
         StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: name, decoration: const InputDecoration(labelText: 'Project name')),
+            TextField(controller: name, decoration: InputDecoration(labelText: context.tr('Project name'))),
             const SizedBox(height: AppSpacing.x8),
             DropdownButtonFormField<String>(
               initialValue: status,
-              decoration: const InputDecoration(labelText: 'Status'),
-              items: const [
-                DropdownMenuItem(value: 'planning', child: Text('Planning')),
-                DropdownMenuItem(value: 'launching', child: Text('Launching')),
-                DropdownMenuItem(value: 'under_construction', child: Text('Under construction')),
-                DropdownMenuItem(value: 'ready', child: Text('Ready')),
-                DropdownMenuItem(value: 'completed', child: Text('Completed')),
-                DropdownMenuItem(value: 'sold_out', child: Text('Sold out')),
+              decoration: InputDecoration(labelText: context.tr('Status')),
+              items: [
+                DropdownMenuItem(value: 'planning', child: Text(context.tr('Planning'))),
+                DropdownMenuItem(value: 'launching', child: Text(context.tr('Launching'))),
+                DropdownMenuItem(value: 'under_construction', child: Text(context.tr('Under construction'))),
+                DropdownMenuItem(value: 'ready', child: Text(context.tr('Ready'))),
+                DropdownMenuItem(value: 'completed', child: Text(context.tr('Completed'))),
+                DropdownMenuItem(value: 'sold_out', child: Text(context.tr('Sold out'))),
               ],
               onChanged: (v) => setS(() => status = v ?? 'planning'),
             ),
@@ -141,8 +142,8 @@ class InventoryScreen extends ConsumerWidget {
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Create')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Create'))),
       ],
     );
     if (ok != true) return;
@@ -155,7 +156,7 @@ class InventoryScreen extends ConsumerWidget {
       });
       ref.invalidate(inventoryProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Project created')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Project created'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -174,7 +175,7 @@ class _Legend extends StatelessWidget {
         Row(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 10, height: 10, decoration: BoxDecoration(color: _statusColor(s), shape: BoxShape.circle)),
           const SizedBox(width: 4),
-          Text(_statusLabel(s), style: t.labelSmall),
+          Text(context.tr(_statusLabel(s)), style: t.labelSmall),
         ]),
     ]);
   }
@@ -202,7 +203,7 @@ class _ProjectBoard extends ConsumerWidget {
     final towers = <String, List<Map<String, dynamic>>>{};
     for (final u in units) {
       final tw = '${u['tower'] ?? ''}'.trim();
-      (towers[tw.isEmpty ? 'Units' : 'Building $tw'] ??= []).add(u);
+      (towers[tw.isEmpty ? context.tr('Units') : '${context.tr('Building')} $tw'] ??= []).add(u);
     }
     final projectId = '${units.first['project_id'] ?? ''}';
     return Card(
@@ -216,11 +217,11 @@ class _ProjectBoard extends ConsumerWidget {
               TextButton.icon(
                 onPressed: () => _addUnits(context, ref, projectId),
                 icon: const Icon(Icons.add, size: 16),
-                label: const Text('Add units'),
+                label: Text(context.tr('Add units')),
                 style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
               ),
           ]),
-          Text('${units.length} units · $available available · $sold sold',
+          Text('${units.length} ${context.tr('units')} · $available ${context.tr('available')} · $sold ${context.tr('sold')}',
               style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
           const SizedBox(height: AppSpacing.x12),
           for (final tw in towers.keys) ...[
@@ -299,15 +300,15 @@ class _UnitSheet extends ConsumerWidget {
     final price = num.tryParse('${u['unit_price'] ?? ''}');
     final spec = [
       if (u['property_type'] != null) _humanize('${u['property_type']}'),
-      if (u['bedrooms'] != null) '${u['bedrooms']} BR',
-      if (u['bathrooms'] != null) '${u['bathrooms']} bath',
-      if (u['size_sqft'] != null) '${(num.tryParse('${u['size_sqft']}') ?? 0).toStringAsFixed(0)} sqft',
+      if (u['bedrooms'] != null) '${u['bedrooms']} ${context.tr('BR')}',
+      if (u['bathrooms'] != null) '${u['bathrooms']} ${context.tr('bath')}',
+      if (u['size_sqft'] != null) '${(num.tryParse('${u['size_sqft']}') ?? 0).toStringAsFixed(0)} ${context.tr('sqft')}',
     ].join('  ·  ');
     final extra = [
-      if ('${u['tower'] ?? ''}'.isNotEmpty) 'Building ${u['tower']}',
-      if (u['floor'] != null) 'Floor ${u['floor']}',
-      if (u['parking'] != null) '${u['parking']} parking',
-      if ('${u['view'] ?? ''}'.isNotEmpty) '${u['view']} view',
+      if ('${u['tower'] ?? ''}'.isNotEmpty) '${context.tr('Building')} ${u['tower']}',
+      if (u['floor'] != null) '${context.tr('Floor')} ${u['floor']}',
+      if (u['parking'] != null) '${u['parking']} ${context.tr('parking')}',
+      if ('${u['view'] ?? ''}'.isNotEmpty) '${u['view']} ${context.tr('view')}',
       if ('${u['furnishing'] ?? ''}'.isNotEmpty) _humanize('${u['furnishing']}'),
     ].join('  ·  ');
     return Padding(
@@ -315,11 +316,11 @@ class _UnitSheet extends ConsumerWidget {
       child: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Expanded(child: Text('${u['unit_no'] ?? 'Unit'}', style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800))),
+            Expanded(child: Text('${u['unit_no'] ?? context.tr('Unit')}', style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800))),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(color: _statusColor(status).withValues(alpha: 0.14), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-              child: Text(_statusLabel(status), style: t.labelMedium?.copyWith(color: _statusColor(status), fontWeight: FontWeight.w700)),
+              child: Text(context.tr(_statusLabel(status)), style: t.labelMedium?.copyWith(color: _statusColor(status), fontWeight: FontWeight.w700)),
             ),
           ]),
           if ('${u['project'] ?? ''}'.isNotEmpty)
@@ -332,18 +333,18 @@ class _UnitSheet extends ConsumerWidget {
             Text(aed.format(price), style: t.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800)),
             if (u['down_payment_pct'] != null || '${u['payment_plan'] ?? ''}'.isNotEmpty)
               Text([
-                if (u['down_payment_pct'] != null) '${u['down_payment_pct']}% down',
+                if (u['down_payment_pct'] != null) '${u['down_payment_pct']}% ${context.tr('down')}',
                 if ('${u['payment_plan'] ?? ''}'.isNotEmpty) '${u['payment_plan']}',
               ].join('  ·  '), style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
           ],
           const Divider(height: AppSpacing.x24),
           // Deal — the buyer + price behind a reserved/booked/sold status.
           Row(children: [
-            Expanded(child: Text('Deal', style: t.labelLarge)),
+            Expanded(child: Text(context.tr('Deal'), style: t.labelLarge)),
             TextButton.icon(
               onPressed: () => _editDeal(context, ref, u),
               icon: const Icon(Icons.edit_outlined, size: 14),
-              label: Text('${u['sale_buyer'] ?? ''}'.trim().isEmpty ? 'Add' : 'Edit'),
+              label: Text('${u['sale_buyer'] ?? ''}'.trim().isEmpty ? context.tr('Add') : context.tr('Edit')),
               style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
             ),
           ]),
@@ -351,7 +352,7 @@ class _UnitSheet extends ConsumerWidget {
             final buyer = '${u['sale_buyer'] ?? ''}'.trim();
             final sp = num.tryParse('${u['sale_price'] ?? ''}');
             if (buyer.isEmpty && sp == null) {
-              return Text('No buyer recorded.', style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor));
+              return Text(context.tr('No buyer recorded.'), style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor));
             }
             return Text([
               if (buyer.isNotEmpty) buyer,
@@ -361,12 +362,12 @@ class _UnitSheet extends ConsumerWidget {
             ].join('  ·  '), style: t.bodyMedium);
           }),
           const SizedBox(height: AppSpacing.x16),
-          Text('Set status', style: t.labelLarge),
+          Text(context.tr('Set status'), style: t.labelLarge),
           const SizedBox(height: 6),
           Wrap(spacing: 8, runSpacing: 8, children: [
             for (final s in _unitStatuses)
               ChoiceChip(
-                label: Text(_humanize(s)),
+                label: Text(context.tr(_humanize(s))),
                 selected: status == s,
                 selectedColor: _statusColor(s).withValues(alpha: 0.18),
                 onSelected: (_) async {
@@ -383,18 +384,18 @@ class _UnitSheet extends ConsumerWidget {
             child: TextButton.icon(
               onPressed: () => _requestBlock(context, ref, id),
               icon: const Icon(Icons.lock_clock_outlined, size: 16),
-              label: const Text('Request to block'),
+              label: Text(context.tr('Request to block')),
               style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: EdgeInsets.zero),
             ),
           ),
           const SizedBox(height: AppSpacing.x16),
-          Text('History', style: t.labelLarge),
+          Text(context.tr('History'), style: t.labelLarge),
           const SizedBox(height: 6),
           Consumer(builder: (_, r, __) {
             final h = r.watch(_unitHistoryProvider(id));
             return h.maybeWhen(
               data: (list) => list.isEmpty
-                  ? Text('No status changes yet.', style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor))
+                  ? Text(context.tr('No status changes yet.'), style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor))
                   : Column(children: [
                       for (final e in list.take(12))
                         Builder(builder: (_) {
@@ -405,8 +406,8 @@ class _UnitSheet extends ConsumerWidget {
                             child: Row(children: [
                               Expanded(
                                 child: Text([
-                                  if (m['from_status'] != null) _humanize('${m['from_status']}'),
-                                  '→ ${_humanize('${m['to_status'] ?? ''}')}',
+                                  if (m['from_status'] != null) context.tr(_humanize('${m['from_status']}')),
+                                  '→ ${context.tr(_humanize('${m['to_status'] ?? ''}'))}',
                                   if ('${m['note'] ?? ''}'.isNotEmpty) '· ${m['note']}',
                                 ].join(' '), style: t.bodySmall),
                               ),
@@ -429,7 +430,7 @@ class _UnitSheet extends ConsumerWidget {
       ref.invalidate(inventoryProvider);
       ref.invalidate(_unitHistoryProvider(id));
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Unit set to ${_humanize(status)}')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('Unit set to')} ${context.tr(_humanize(status))}')));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -444,21 +445,21 @@ class _UnitSheet extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Deal details'),
+        title: Text(context.tr('Deal details')),
         content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: buyer, decoration: const InputDecoration(labelText: 'Buyer name')),
+            TextField(controller: buyer, decoration: InputDecoration(labelText: context.tr('Buyer name'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Buyer phone')),
+            TextField(controller: phone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.tr('Buyer phone'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Sale price (AED)')),
+            TextField(controller: price, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Sale price (AED)'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: date, decoration: const InputDecoration(labelText: 'Date (YYYY-MM-DD)')),
+            TextField(controller: date, decoration: InputDecoration(labelText: context.tr('Date (YYYY-MM-DD)'))),
           ]),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Save'))),
         ],
       ),
     );
@@ -473,7 +474,7 @@ class _UnitSheet extends ConsumerWidget {
       ref.invalidate(inventoryProvider);
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deal saved')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Deal saved'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -485,12 +486,12 @@ class _UnitSheet extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Request to block'),
+        title: Text(context.tr('Request to block')),
         content: TextField(controller: note, maxLines: 2,
-            decoration: const InputDecoration(labelText: 'Note (client / reservation)')),
+            decoration: InputDecoration(labelText: context.tr('Note (client / reservation)'))),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Send'))),
         ],
       ),
     );
@@ -499,7 +500,7 @@ class _UnitSheet extends ConsumerWidget {
       await ref.read(apiClientProvider).post('/inventory/units/$id/block-request', body: {'note': note.text.trim()});
       if (context.mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Block request sent')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Block request sent'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -543,63 +544,63 @@ Future<void> _showAddUnitsSheet(BuildContext context, WidgetRef ref, String proj
           padding: EdgeInsets.fromLTRB(20, 4, 20, 20 + MediaQuery.of(ctx).viewInsets.bottom),
           child: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Add units', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+              Text(context.tr('Add units'), style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
               const SizedBox(height: AppSpacing.x12),
               Row(children: [
-                Expanded(child: field(count, 'How many', num: true)),
+                Expanded(child: field(count, context.tr('How many'), num: true)),
                 const SizedBox(width: AppSpacing.x8),
-                Expanded(child: field(prefix, 'Name prefix')),
+                Expanded(child: field(prefix, context.tr('Name prefix'))),
                 const SizedBox(width: AppSpacing.x8),
-                Expanded(child: field(startNo, 'Start #', num: true)),
+                Expanded(child: field(startNo, context.tr('Start #'), num: true)),
               ]),
               Row(children: [
-                Expanded(child: field(tower, 'Building')),
+                Expanded(child: field(tower, context.tr('Building'))),
                 const SizedBox(width: AppSpacing.x8),
-                Expanded(child: field(floor, 'Floor', num: true)),
+                Expanded(child: field(floor, context.tr('Floor'), num: true)),
               ]),
               DropdownButtonFormField<String>(
                 initialValue: ptype,
-                decoration: const InputDecoration(labelText: 'Type', isDense: true),
-                items: const [
-                  DropdownMenuItem(value: 'apartment', child: Text('Apartment')),
-                  DropdownMenuItem(value: 'villa', child: Text('Villa')),
-                  DropdownMenuItem(value: 'townhouse', child: Text('Townhouse')),
-                  DropdownMenuItem(value: 'penthouse', child: Text('Penthouse')),
-                  DropdownMenuItem(value: 'office', child: Text('Office')),
-                  DropdownMenuItem(value: 'retail', child: Text('Retail')),
+                decoration: InputDecoration(labelText: context.tr('Type'), isDense: true),
+                items: [
+                  DropdownMenuItem(value: 'apartment', child: Text(context.tr('Apartment'))),
+                  DropdownMenuItem(value: 'villa', child: Text(context.tr('Villa'))),
+                  DropdownMenuItem(value: 'townhouse', child: Text(context.tr('Townhouse'))),
+                  DropdownMenuItem(value: 'penthouse', child: Text(context.tr('Penthouse'))),
+                  DropdownMenuItem(value: 'office', child: Text(context.tr('Office'))),
+                  DropdownMenuItem(value: 'retail', child: Text(context.tr('Retail'))),
                 ],
                 onChanged: (v) => setS(() => ptype = v ?? 'apartment'),
               ),
               const SizedBox(height: AppSpacing.x8),
               Row(children: [
-                Expanded(child: field(beds, 'Beds', num: true)),
+                Expanded(child: field(beds, context.tr('Beds'), num: true)),
                 const SizedBox(width: AppSpacing.x8),
-                Expanded(child: field(baths, 'Baths', num: true)),
+                Expanded(child: field(baths, context.tr('Baths'), num: true)),
                 const SizedBox(width: AppSpacing.x8),
-                Expanded(child: field(sqft, 'Area (sqft)', num: true)),
+                Expanded(child: field(sqft, context.tr('Area (sqft)'), num: true)),
               ]),
               Row(children: [
-                Expanded(child: field(parking, 'Parking', num: true)),
+                Expanded(child: field(parking, context.tr('Parking'), num: true)),
                 const SizedBox(width: AppSpacing.x8),
-                Expanded(child: field(view, 'View')),
+                Expanded(child: field(view, context.tr('View'))),
               ]),
               DropdownButtonFormField<String>(
                 initialValue: furnishing,
-                decoration: const InputDecoration(labelText: 'Furnishing', isDense: true),
-                items: const [
-                  DropdownMenuItem(value: 'unfurnished', child: Text('Unfurnished')),
-                  DropdownMenuItem(value: 'partly_furnished', child: Text('Partly furnished')),
-                  DropdownMenuItem(value: 'furnished', child: Text('Furnished')),
+                decoration: InputDecoration(labelText: context.tr('Furnishing'), isDense: true),
+                items: [
+                  DropdownMenuItem(value: 'unfurnished', child: Text(context.tr('Unfurnished'))),
+                  DropdownMenuItem(value: 'partly_furnished', child: Text(context.tr('Partly furnished'))),
+                  DropdownMenuItem(value: 'furnished', child: Text(context.tr('Furnished'))),
                 ],
                 onChanged: (v) => setS(() => furnishing = v ?? 'unfurnished'),
               ),
               const SizedBox(height: AppSpacing.x8),
               Row(children: [
-                Expanded(child: field(price, 'Price (AED)', num: true)),
+                Expanded(child: field(price, context.tr('Price (AED)'), num: true)),
                 const SizedBox(width: AppSpacing.x8),
-                Expanded(child: field(downPct, 'Down %', num: true)),
+                Expanded(child: field(downPct, context.tr('Down %'), num: true)),
               ]),
-              field(plan, 'Payment plan (e.g. 60/40 on handover)'),
+              field(plan, context.tr('Payment plan (e.g. 60/40 on handover)')),
               const SizedBox(height: AppSpacing.x8),
               SizedBox(
                 width: double.infinity,
@@ -628,13 +629,13 @@ Future<void> _showAddUnitsSheet(BuildContext context, WidgetRef ref, String proj
                       ref.invalidate(inventoryProvider);
                       if (ctx.mounted) {
                         Navigator.pop(ctx);
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$n unit${n == 1 ? '' : 's'} added')));
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$n ${context.tr(n == 1 ? 'unit' : 'units')} ${context.tr('added')}')));
                       }
                     } catch (e) {
                       if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(friendlyError(e))));
                     }
                   },
-                  child: const Text('Add units'),
+                  child: Text(context.tr('Add units')),
                 ),
               ),
             ]),
@@ -672,24 +673,24 @@ class _BlockRequestsPanel extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.x12),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Block requests (${list.length})', style: t.titleSmall),
+                Text('${context.tr('Block requests')} (${list.length})', style: t.titleSmall),
                 for (final m in list)
                   Builder(builder: (_) {
                     final r = Map<String, dynamic>.from(m);
                     return ListTile(
                       dense: true,
                       contentPadding: EdgeInsets.zero,
-                      title: Text('${r['unit_no'] ?? 'Unit'} · ${r['project'] ?? ''}'),
+                      title: Text('${r['unit_no'] ?? context.tr('Unit')} · ${r['project'] ?? ''}'),
                       subtitle: Text([
-                        if (r['agent_name'] != null) 'by ${r['agent_name']}',
+                        if (r['agent_name'] != null) '${context.tr('by')} ${r['agent_name']}',
                         if ('${r['note'] ?? ''}'.isNotEmpty) '${r['note']}',
                       ].join('  ·  ')),
                       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                        TextButton(onPressed: () => _decide(context, ref, '${r['id']}', 'approve'), child: const Text('Approve')),
+                        TextButton(onPressed: () => _decide(context, ref, '${r['id']}', 'approve'), child: Text(context.tr('Approve'))),
                         TextButton(
                           style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
                           onPressed: () => _decide(context, ref, '${r['id']}', 'reject'),
-                          child: const Text('Reject'),
+                          child: Text(context.tr('Reject')),
                         ),
                       ]),
                     );

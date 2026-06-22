@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -33,11 +34,11 @@ class ContactsScreen extends ConsumerWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return CrmScaffold(
       tab: CrmTab.contacts,
-      title: 'Contacts',
+      title: context.tr('Contacts'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _addContact(context, ref),
         icon: const Icon(Icons.person_add_alt_1),
-        label: const Text('Add contact'),
+        label: Text(context.tr('Add contact')),
       ),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(contactsProvider),
@@ -47,11 +48,11 @@ class ContactsScreen extends ConsumerWidget {
           loading: const SkeletonList(),
           data: (list) {
             if (list.isEmpty) {
-              return ListView(children: const [
+              return ListView(children: [
                 EmptyState(
                   icon: Icons.contacts_outlined,
-                  title: 'No contacts yet',
-                  message: 'Contacts appear here automatically as leads and customers come in.',
+                  title: context.tr('No contacts yet'),
+                  message: context.tr('Contacts appear here automatically as leads and customers come in.'),
                 ),
               ]);
             }
@@ -62,7 +63,7 @@ class ContactsScreen extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
-                _summaryStrip(byLife, list.length, t, dark),
+                _summaryStrip(context, byLife, list.length, t, dark),
                 const SizedBox(height: AppSpacing.x16),
                 for (final l in contactLifecycleOrder)
                   if (byLife[l]?.isNotEmpty == true) ...[
@@ -84,14 +85,14 @@ class ContactsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _summaryStrip(Map<String, List> byLife, int total, TextTheme t, bool dark) {
+  Widget _summaryStrip(BuildContext context, Map<String, List> byLife, int total, TextTheme t, bool dark) {
     final customers = (byLife['customer']?.length ?? 0) + (byLife['owner']?.length ?? 0) + (byLife['tenant']?.length ?? 0);
     final leads = (byLife['lead']?.length ?? 0) + (byLife['qualified']?.length ?? 0);
     final stats = <(String, String)>[
-      ('Total', '$total'),
-      ('Leads', '$leads'),
-      ('Customers', '$customers'),
-      ('Lost', '${byLife['lost']?.length ?? 0}'),
+      (context.tr('Total'), '$total'),
+      (context.tr('Leads'), '$leads'),
+      (context.tr('Customers'), '$customers'),
+      (context.tr('Lost'), '${byLife['lost']?.length ?? 0}'),
     ];
     return Card(
       child: Padding(
@@ -118,19 +119,19 @@ class ContactsScreen extends ConsumerWidget {
     var lifecycle = 'lead';
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Add contact',
+      title: context.tr('Add contact'),
       children: [
         StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: name, decoration: const InputDecoration(labelText: 'Full name')),
+            TextField(controller: name, decoration: InputDecoration(labelText: context.tr('Full name'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone')),
+            TextField(controller: phone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.tr('Phone'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email')),
+            TextField(controller: email, keyboardType: TextInputType.emailAddress, decoration: InputDecoration(labelText: context.tr('Email'))),
             const SizedBox(height: AppSpacing.x8),
             DropdownButtonFormField<String>(
               initialValue: lifecycle,
-              decoration: const InputDecoration(labelText: 'Lifecycle'),
+              decoration: InputDecoration(labelText: context.tr('Lifecycle')),
               items: [for (final l in contactLifecycleOrder) DropdownMenuItem(value: l, child: Text(contactLifecycleLabels[l] ?? l))],
               onChanged: (v) => setS(() => lifecycle = v ?? 'lead'),
             ),
@@ -138,8 +139,8 @@ class ContactsScreen extends ConsumerWidget {
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Add')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Add'))),
       ],
     );
     if (ok != true) return;
@@ -155,7 +156,7 @@ class ContactsScreen extends ConsumerWidget {
       final id = res is Map ? '${res['id'] ?? ''}' : '';
       if (context.mounted) {
         // Consistent post-submit workflow: confirm + land on the new contact.
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Contact added successfully.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Contact added successfully.'))));
         if (id.isNotEmpty) context.push('/contacts/$id');
       }
     } catch (e) {
@@ -184,18 +185,18 @@ class ContactsScreen extends ConsumerWidget {
                 AppSpacing.x20 + MediaQuery.of(sheetCtx).viewInsets.bottom),
             child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Expanded(child: Text('${c['full_name'] ?? 'Contact'}', maxLines: 1, overflow: TextOverflow.ellipsis, style: t.titleLarge)),
+                Expanded(child: Text('${c['full_name'] ?? sheetCtx.tr('Contact')}', maxLines: 1, overflow: TextOverflow.ellipsis, style: t.titleLarge)),
                 StatusBadge(contactLifecycleLabels[lifecycle] ?? lifecycle, tone: _lifeTone(lifecycle)),
               ]),
               const SizedBox(height: AppSpacing.x8),
               if (phone.isNotEmpty) _line(Icons.phone_outlined, phone, t, dark),
               if (email.isNotEmpty) _line(Icons.email_outlined, email, t, dark),
-              if (owner.isNotEmpty) _line(Icons.person_outline, 'Owner: $owner', t, dark),
-              if (props > 0) _line(Icons.home_work_outlined, '$props propert${props == 1 ? 'y' : 'ies'}', t, dark),
+              if (owner.isNotEmpty) _line(Icons.person_outline, '${sheetCtx.tr('Owner')}: $owner', t, dark),
+              if (props > 0) _line(Icons.home_work_outlined, '$props ${sheetCtx.tr(props == 1 ? 'property' : 'properties')}', t, dark),
               const SizedBox(height: AppSpacing.x16),
               DropdownButtonFormField<String>(
                 initialValue: lifecycle,
-                decoration: const InputDecoration(labelText: 'Lifecycle'),
+                decoration: InputDecoration(labelText: sheetCtx.tr('Lifecycle')),
                 items: [for (final l in contactLifecycleOrder) DropdownMenuItem(value: l, child: Text(contactLifecycleLabels[l] ?? l))],
                 onChanged: (v) async {
                   if (v == null || v == lifecycle) return;
@@ -220,7 +221,7 @@ class ContactsScreen extends ConsumerWidget {
                       context.push('/leads/${c['lead_id']}');
                     },
                     icon: const Icon(Icons.open_in_new, size: 18),
-                    label: const Text('Open lead'),
+                    label: Text(sheetCtx.tr('Open lead')),
                   ),
                 ),
               ],

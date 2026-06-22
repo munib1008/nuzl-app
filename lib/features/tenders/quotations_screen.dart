@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -28,7 +29,7 @@ class QuotationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final quotes = ref.watch(myQuotesProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Quotations'),
+      appBar: NuzlAppBar(title: context.tr('Quotations')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: RefreshIndicator(
@@ -40,9 +41,9 @@ class QuotationsScreen extends ConsumerWidget {
                 ? ListView(children: [
                     EmptyState(
                       icon: Icons.request_quote_outlined,
-                      title: 'No quotations yet',
-                      message: 'Quotes you submit on open requests appear here. Browse open requests to start bidding.',
-                      actionLabel: 'Browse requests',
+                      title: context.tr('No quotations yet'),
+                      message: context.tr('Quotes you submit on open requests appear here. Browse open requests to start bidding.'),
+                      actionLabel: context.tr('Browse requests'),
                       onAction: () => context.push('/tenders'),
                     ),
                   ])
@@ -89,22 +90,22 @@ class _QuoteCard extends StatelessWidget {
               const SizedBox(width: 6),
               Text('${q['ref_code'] ?? ''}', style: t.labelSmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w700)),
               const Spacer(),
-              StatusBadge(label, tone: tone),
+              StatusBadge(context.tr(label), tone: tone),
             ]),
             const SizedBox(height: 4),
-            Text('${q['request_title'] ?? 'Request'}', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            Text('${q['request_title'] ?? context.tr('Request')}', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
               if (price != null) ...[
-                Text('Your quote ', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                Text('${context.tr('Your quote')} ', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 Text(aed.format(price), style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary)),
               ],
               if (days != null) ...[
                 const SizedBox(width: AppSpacing.x12),
-                Text('$days days', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                Text('$days ${context.tr('days')}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               ],
               const Spacer(),
-              Text('View →', style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
+              Text('${context.tr('View')} →', style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
             ]),
           ]),
         ),

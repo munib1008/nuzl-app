@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/payments/payments_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -17,7 +18,7 @@ class MyPlanScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final ent = ref.watch(entitlementsProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Plan & billing'),
+      appBar: NuzlAppBar(title: context.tr('Plan & billing')),
       drawer: const NuzlDrawer(),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(entitlementsProvider),
@@ -29,15 +30,17 @@ class MyPlanScreen extends ConsumerWidget {
             children: [
               _CurrentPlanCard(e),
               const SizedBox(height: AppSpacing.x20),
-              Text('All plans', style: Theme.of(context).textTheme.titleSmall),
+              Text(context.tr('All plans'), style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: AppSpacing.x8),
               for (final p in (e.allPlans..sort((a, b) => a.rank.compareTo(b.rank))))
                 _PlanCard(p, current: p.key == e.plan),
               if (!e.enforced) ...[
                 const SizedBox(height: AppSpacing.x12),
                 Text(
-                  'You currently have full access while we finish billing setup. '
-                  'Plan limits will apply once billing goes live.',
+                  context.tr(
+                    'You currently have full access while we finish billing setup. '
+                    'Plan limits will apply once billing goes live.',
+                  ),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
                 ),
               ],
@@ -64,12 +67,14 @@ class _CurrentPlanCard extends StatelessWidget {
           Row(children: [
             const Icon(Icons.workspace_premium, color: Colors.white, size: 20),
             const SizedBox(width: AppSpacing.x8),
-            Text('Current plan', style: t.bodySmall?.copyWith(color: Colors.white70)),
+            Text(context.tr('Current plan'), style: t.bodySmall?.copyWith(color: Colors.white70)),
           ]),
           const SizedBox(height: AppSpacing.x4),
           Text(e.planName, style: t.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
           Text(
-            e.priceAed > 0 ? '${NumberFormat.decimalPattern().format(e.priceAed)} AED / month' : 'Free',
+            e.priceAed > 0
+                ? '${NumberFormat.decimalPattern().format(e.priceAed)} ${context.tr('AED / month')}'
+                : context.tr('Free'),
             style: t.bodyMedium?.copyWith(color: Colors.white70),
           ),
         ]),
@@ -87,8 +92,8 @@ class _PlanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final price = p.priceAed > 0
-        ? '${NumberFormat.decimalPattern().format(p.priceAed)} AED/mo'
-        : (p.key == 'enterprise' ? 'Custom' : 'Free');
+        ? '${NumberFormat.decimalPattern().format(p.priceAed)} ${context.tr('AED/mo')}'
+        : (p.key == 'enterprise' ? context.tr('Custom') : context.tr('Free'));
     return Card(
       shape: current
           ? RoundedRectangleBorder(
@@ -106,7 +111,7 @@ class _PlanCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                     color: AppColors.primaryTint, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                child: Text('Current', style: t.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                child: Text(context.tr('Current'), style: t.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
               )
             else
               Text(price, style: t.titleSmall?.copyWith(color: AppColors.primary)),
@@ -129,7 +134,9 @@ class _PlanCard extends StatelessWidget {
                 width: double.infinity,
                 child: OutlinedButton(
                   onPressed: () => _upgrade(ctx, ref),
-                  child: Text(p.key == 'enterprise' ? 'Contact sales' : 'Upgrade to ${p.name}'),
+                  child: Text(p.key == 'enterprise'
+                      ? ctx.tr('Contact sales')
+                      : '${ctx.tr('Upgrade to')} ${p.name}'),
                 ),
               ),
             ),
@@ -155,10 +162,10 @@ class _PlanCard extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text('Upgrade to ${p.name}'),
-        content: const Text(
-            'Our team will reach out to set up your plan and billing. In the meantime you keep full access.'),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+        title: Text('${context.tr('Upgrade to')} ${p.name}'),
+        content: Text(context.tr(
+            'Our team will reach out to set up your plan and billing. In the meantime you keep full access.')),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('OK')))],
       ),
     );
   }

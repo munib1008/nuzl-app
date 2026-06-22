@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
@@ -68,13 +69,13 @@ class TeamScreen extends ConsumerWidget {
     final org = ref.watch(_myOrgProvider).asData?.value;
     final isOwner = org != null && '${org['owner_id']}' == user?.id;
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Team'),
+      appBar: NuzlAppBar(title: context.tr('Team')),
       drawer: const NuzlDrawer(),
       floatingActionButton: (orgId != null && isOwner)
           ? FloatingActionButton.extended(
               onPressed: () => _invite(context, ref, orgId),
               icon: const Icon(Icons.person_add_alt_1),
-              label: const Text('Invite'),
+              label: Text(context.tr('Invite')),
             )
           : null,
       body: ResponsiveCenter(
@@ -85,9 +86,9 @@ class TeamScreen extends ConsumerWidget {
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     Icon(Icons.groups_outlined, size: 44, color: Theme.of(context).hintColor),
                     const SizedBox(height: 12),
-                    const Text('No company yet'),
+                    Text(context.tr('No company yet')),
                     const SizedBox(height: 4),
-                    Text('Create your company in My Company to build a team.',
+                    Text(context.tr('Create your company in My Company to build a team.'),
                         textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).hintColor)),
                   ]),
                 ),
@@ -101,7 +102,7 @@ class TeamScreen extends ConsumerWidget {
                     loading: () => const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
                     error: (e, _) => Text(friendlyError(e)),
                     data: (list) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text('${list.length} member${list.length == 1 ? '' : 's'}',
+                      Text('${list.length} ${context.tr(list.length == 1 ? 'member' : 'members')}',
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                       const SizedBox(height: AppSpacing.x8),
                       ...list.map((m) {
@@ -114,12 +115,12 @@ class TeamScreen extends ConsumerWidget {
                                 ? () => _assignTeam(context, ref, orgId, '${u['id']}', '${u['team_id'] ?? ''}')
                                 : null,
                             leading: UserAvatar(name: '${u['full_name'] ?? '?'}', url: '${u['avatar_url'] ?? ''}'),
-                            title: Text('${u['full_name'] ?? 'Member'}${isMe ? ' (you)' : ''}',
+                            title: Text('${u['full_name'] ?? context.tr('Member')}${isMe ? ' ${context.tr('(you)')}' : ''}',
                                 maxLines: 1, overflow: TextOverflow.ellipsis),
                             subtitle: Text(
                               [
                                 '${u['email'] ?? ''}',
-                                if (teamName.isNotEmpty) 'Team: $teamName',
+                                if (teamName.isNotEmpty) '${context.tr('Team')}: $teamName',
                               ].where((s) => s.trim().isNotEmpty).join('  ·  '),
                               maxLines: 1, overflow: TextOverflow.ellipsis,
                             ),
@@ -145,18 +146,18 @@ class TeamScreen extends ConsumerWidget {
     var role = 'sales_executive';
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Invite team member',
+      title: context.tr('Invite team member'),
       children: [
-        const Text('Add an existing NUZL user to your company team by email.'),
+        Text(context.tr('Add an existing NUZL user to your company team by email.')),
         const SizedBox(height: AppSpacing.x12),
         StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
             TextField(controller: email, keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.email_outlined))),
+                decoration: InputDecoration(labelText: context.tr('Email'), prefixIcon: const Icon(Icons.email_outlined))),
             const SizedBox(height: AppSpacing.x8),
             DropdownButtonFormField<String>(
               initialValue: role,
-              decoration: const InputDecoration(labelText: 'Team role'),
+              decoration: InputDecoration(labelText: context.tr('Team role')),
               items: [for (final r in _teamRoles) DropdownMenuItem(value: r, child: Text(_roleLabel(r)))],
               onChanged: (v) => setS(() => role = v ?? 'member'),
             ),
@@ -164,8 +165,8 @@ class TeamScreen extends ConsumerWidget {
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Invite')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Invite'))),
       ],
     );
     if (ok != true || email.text.trim().isEmpty) return;
@@ -173,7 +174,7 @@ class TeamScreen extends ConsumerWidget {
       await ref.read(apiClientProvider).post('/organizations/$orgId/invite',
           body: {'email': email.text.trim(), 'team_role': role});
       ref.invalidate(teamMembersProvider);
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Member added to the team')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Member added to the team'))));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
@@ -188,7 +189,7 @@ class _RolePicker extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return PopupMenuButton<String>(
-      tooltip: 'Set role',
+      tooltip: context.tr('Set role'),
       onSelected: (r) async {
         try {
           await ref.read(apiClientProvider).patch('/organizations/$orgId/members/$userId/role', body: {'team_role': r});
@@ -227,19 +228,19 @@ class _JoinRequests extends ConsumerWidget {
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.x12),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Join requests (${pending.length})', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+              Text('${context.tr('Join requests')} (${pending.length})', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
               for (final r in pending)
                 ListTile(
                   dense: true,
                   contentPadding: EdgeInsets.zero,
-                  title: Text('${r['requester_name'] ?? 'Someone'}'),
+                  title: Text('${r['requester_name'] ?? context.tr('Someone')}'),
                   subtitle: Text('${r['requester_email'] ?? ''}'),
                   trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                    TextButton(onPressed: () => _decide(context, ref, '${r['id']}', true), child: const Text('Approve')),
+                    TextButton(onPressed: () => _decide(context, ref, '${r['id']}', true), child: Text(context.tr('Approve'))),
                     TextButton(
                       style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
                       onPressed: () => _decide(context, ref, '${r['id']}', false),
-                      child: const Text('Decline'),
+                      child: Text(context.tr('Decline')),
                     ),
                   ]),
                 ),
@@ -273,19 +274,19 @@ class _TeamsSection extends ConsumerWidget {
     final teams = ref.watch(teamsProvider);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        Text('Teams', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+        Text(context.tr('Teams'), style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
         const Spacer(),
         TextButton.icon(
           onPressed: () => _createTeam(context, ref),
           icon: const Icon(Icons.add, size: 18),
-          label: const Text('New team'),
+          label: Text(context.tr('New team')),
         ),
       ]),
       teams.maybeWhen(
         data: (list) => list.isEmpty
             ? Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.x8),
-                child: Text('No teams yet — create one to group your agents, then tap a member to assign them.',
+                child: Text(context.tr('No teams yet — create one to group your agents, then tap a member to assign them.'),
                     style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)))
             : Column(children: [for (final tm in list) _teamCard(context, ref, Map<String, dynamic>.from(tm as Map))]),
         orElse: () => const SizedBox.shrink(),
@@ -300,8 +301,8 @@ class _TeamsSection extends ConsumerWidget {
     return Card(
       child: ListTile(
         leading: const Icon(Icons.groups_outlined),
-        title: Text('${tm['name'] ?? 'Team'}', maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text('$count member${count == 1 ? '' : 's'}${active ? '' : '  ·  inactive'}'),
+        title: Text('${tm['name'] ?? context.tr('Team')}', maxLines: 1, overflow: TextOverflow.ellipsis),
+        subtitle: Text('$count ${context.tr(count == 1 ? 'member' : 'members')}${active ? '' : '  ·  ${context.tr('inactive')}'}'),
         trailing: Switch(
           value: active,
           onChanged: (v) async {
@@ -321,21 +322,21 @@ class _TeamsSection extends ConsumerWidget {
     final name = TextEditingController();
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'New team',
+      title: context.tr('New team'),
       maxWidth: 380,
       children: [
-        TextField(controller: name, decoration: const InputDecoration(labelText: 'Team name', hintText: 'e.g. Marina Sales')),
+        TextField(controller: name, decoration: InputDecoration(labelText: context.tr('Team name'), hintText: context.tr('e.g. Marina Sales'))),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Create')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Create'))),
       ],
     );
     if (ok != true || name.text.trim().isEmpty) return;
     try {
       await ref.read(apiClientProvider).post('/organizations/$orgId/teams', body: {'name': name.text.trim()});
       ref.invalidate(teamsProvider);
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team created')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Team created'))));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
@@ -350,16 +351,16 @@ Future<void> _assignTeam(BuildContext context, WidgetRef ref, String orgId, Stri
   if (selected != null && !teams.any((t) => '${(t as Map)['id']}' == selected)) selected = null;
   final ok = await AppDialog.show<bool>(
     context,
-    title: 'Assign to team',
+    title: context.tr('Assign to team'),
     maxWidth: 380,
     children: [
       StatefulBuilder(
         builder: (ctx, setS) => DropdownButtonFormField<String?>(
           initialValue: selected,
           isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Team'),
+          decoration: InputDecoration(labelText: context.tr('Team')),
           items: [
-            const DropdownMenuItem<String?>(value: null, child: Text('No team')),
+            DropdownMenuItem<String?>(value: null, child: Text(context.tr('No team'))),
             for (final t in teams)
               DropdownMenuItem<String?>(value: '${(t as Map)['id']}', child: Text('${t['name']}')),
           ],
@@ -368,8 +369,8 @@ Future<void> _assignTeam(BuildContext context, WidgetRef ref, String orgId, Stri
       ),
     ],
     actions: [
-      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-      FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+      TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+      FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Save'))),
     ],
   );
   if (ok != true) return;
@@ -377,7 +378,7 @@ Future<void> _assignTeam(BuildContext context, WidgetRef ref, String orgId, Stri
     await ref.read(apiClientProvider).patch('/organizations/$orgId/members/$userId/team', body: {'team_id': selected});
     ref.invalidate(teamMembersProvider);
     ref.invalidate(teamsProvider);
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Team updated')));
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Team updated'))));
   } catch (e) {
     if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
   }

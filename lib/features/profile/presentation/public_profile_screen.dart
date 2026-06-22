@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
@@ -55,7 +56,7 @@ class PublicProfileScreen extends ConsumerWidget {
         error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.x24),
-            child: Text('This profile is not available.', style: Theme.of(context).textTheme.bodyMedium),
+            child: Text(context.tr('This profile is not available.'), style: Theme.of(context).textTheme.bodyMedium),
           ),
         ),
         data: (m) => _Body(id: id, user: m),
@@ -75,7 +76,7 @@ class _Body extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final name = '${user['full_name'] ?? 'Member'}';
+    final name = '${user['full_name'] ?? context.tr('Member')}';
     final role = personaFromRole('${user['role'] ?? ''}').label;
     final reraVerified = '${user['rera_brn'] ?? ''}'.trim().isNotEmpty;
     final avatarUrl = '${user['avatar_url'] ?? ''}'.trim();
@@ -133,7 +134,7 @@ class _Body extends ConsumerWidget {
                         children: [
                           _Pill(text: role, color: AppColors.primaryTint, textColor: AppColors.primaryDark),
                           if (reraVerified)
-                            const _Pill(text: 'RERA verified', color: AppColors.accentGoldTint, textColor: AppColors.accentGold, icon: Icons.verified),
+                            _Pill(text: context.tr('RERA verified'), color: AppColors.accentGoldTint, textColor: AppColors.accentGold, icon: Icons.verified),
                           if (orgName.isNotEmpty)
                             GestureDetector(
                               onTap: orgSlug.isNotEmpty ? () => context.push('/org/$orgSlug') : null,
@@ -153,10 +154,10 @@ class _Body extends ConsumerWidget {
 
                 // stats strip
                 _StatsStrip(items: [
-                  ('Listings', '$listingCount'),
-                  ('Areas', '${areas.length}'),
-                  ('Languages', '${languages.length}'),
-                  if (avg != null) ('Rating', avg.toStringAsFixed(1)),
+                  (context.tr('Listings'), '$listingCount'),
+                  (context.tr('Areas'), '${areas.length}'),
+                  (context.tr('Languages'), '${languages.length}'),
+                  if (avg != null) (context.tr('Rating'), avg.toStringAsFixed(1)),
                 ]),
                 const SizedBox(height: AppSpacing.x20),
 
@@ -164,25 +165,25 @@ class _Body extends ConsumerWidget {
                 if (phone.isNotEmpty || whatsapp.isNotEmpty) ...[
                   Row(children: [
                     if (phone.isNotEmpty)
-                      Expanded(child: _ContactButton(icon: Icons.call_outlined, label: 'Call', value: phone)),
+                      Expanded(child: _ContactButton(icon: Icons.call_outlined, label: context.tr('Call'), value: phone)),
                     if (phone.isNotEmpty && whatsapp.isNotEmpty) const SizedBox(width: AppSpacing.x12),
                     if (whatsapp.isNotEmpty)
-                      Expanded(child: _ContactButton(icon: Icons.chat_outlined, label: 'WhatsApp', value: whatsapp)),
+                      Expanded(child: _ContactButton(icon: Icons.chat_outlined, label: context.tr('WhatsApp'), value: whatsapp)),
                   ]),
                   const SizedBox(height: AppSpacing.x20),
                 ],
 
                 // about / bio
                 if (bio.isNotEmpty) ...[
-                  Text('About', style: t.titleMedium),
+                  Text(context.tr('About'), style: t.titleMedium),
                   const SizedBox(height: AppSpacing.x8),
                   Text(bio, style: t.bodyMedium),
                   const SizedBox(height: AppSpacing.x20),
                 ],
 
-                if (areas.isNotEmpty) _ChipBlock(label: 'Areas covered', values: areas),
-                if (languages.isNotEmpty) _ChipBlock(label: 'Languages', values: languages),
-                if (specialties.isNotEmpty) _ChipBlock(label: 'Specialties', values: specialties),
+                if (areas.isNotEmpty) _ChipBlock(label: context.tr('Areas covered'), values: areas),
+                if (languages.isNotEmpty) _ChipBlock(label: context.tr('Languages'), values: languages),
+                if (specialties.isNotEmpty) _ChipBlock(label: context.tr('Specialties'), values: specialties),
 
                 // reviews summary
                 reviews.maybeWhen(
@@ -191,13 +192,13 @@ class _Body extends ConsumerWidget {
                 ),
 
                 const SizedBox(height: AppSpacing.x16),
-                Text('Active listings', style: t.titleMedium),
+                Text(context.tr('Active listings'), style: t.titleMedium),
                 const SizedBox(height: AppSpacing.x8),
                 listings.when(
                   loading: () => const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator())),
-                  error: (e, _) => const Text('No listings.'),
+                  error: (e, _) => Text(context.tr('No listings.')),
                   data: (list) => list.isEmpty
-                      ? Text('No active listings.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
+                      ? Text(context.tr('No active listings.'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                       : LayoutBuilder(builder: (ctx, c) {
                           final cols = c.maxWidth >= 560 ? 2 : 1;
                           final cardW = cols == 1 ? c.maxWidth : (c.maxWidth - AppSpacing.x12) / 2;
@@ -245,7 +246,7 @@ class _MessageCta extends ConsumerWidget {
             }
           },
           icon: const Icon(Icons.chat_bubble_outline),
-          label: const Text('Message'),
+          label: Text(context.tr('Message')),
         ),
       ),
     );
@@ -288,7 +289,7 @@ class _ContactButton extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: () {
         Clipboard.setData(ClipboardData(text: value));
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label copied — $value')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label ${context.tr('copied')} — $value')));
       },
       icon: Icon(icon, size: 18),
       label: Text(label),
@@ -364,7 +365,7 @@ class _ReviewsSection extends StatelessWidget {
             const SizedBox(width: 4),
             Text(avg.toStringAsFixed(1), style: t.titleMedium),
             const SizedBox(width: 6),
-            Text('(${reviews.length} reviews)', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+            Text('(${reviews.length} ${context.tr('reviews')})', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ]),
           const SizedBox(height: AppSpacing.x8),
           ...reviews.take(5).map((e) {
@@ -374,7 +375,7 @@ class _ReviewsSection extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               leading: Icon(Icons.format_quote, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
               title: Text('${m['comment'] ?? ''}'),
-              subtitle: Text('${m['rater'] ?? 'Anonymous'} · ${m['rating'] ?? '-'}★'),
+              subtitle: Text('${m['rater'] ?? context.tr('Anonymous')} · ${m['rating'] ?? '-'}★'),
             );
           }),
         ],
@@ -395,8 +396,8 @@ class _PublicListingCard extends StatelessWidget {
     final cover = '${l['cover_image'] ?? ''}';
     final facts = [
       if (l['community'] != null) '${l['community']}',
-      if (l['bedrooms'] != null) '${l['bedrooms']} BR',
-      if (l['size_sqft'] != null) '${(num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0)} sqft',
+      if (l['bedrooms'] != null) '${l['bedrooms']} ${context.tr('BR')}',
+      if (l['size_sqft'] != null) '${(num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0)} ${context.tr('sqft')}',
     ].join('  ·  ');
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -429,9 +430,9 @@ class _PublicListingCard extends StatelessWidget {
                         style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
                   ),
                   if ('${l['ownership_status']}' == 'verified')
-                    const Tooltip(
-                      message: 'Ownership verified',
-                      child: Icon(Icons.verified_user, size: 16, color: AppColors.accentGold),
+                    Tooltip(
+                      message: context.tr('Ownership verified'),
+                      child: const Icon(Icons.verified_user, size: 16, color: AppColors.accentGold),
                     ),
                 ]),
                 const SizedBox(height: 2),

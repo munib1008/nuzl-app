@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -7,13 +8,13 @@ import '../../core/widgets/status_badge.dart';
 import '../crm/crm_scaffold.dart';
 import 'collaboration_repository.dart';
 
-String _title(Map v) {
+String _title(BuildContext context, Map v) {
   final bn = '${v['building_name'] ?? ''}'.trim();
   final un = '${v['unit_no'] ?? ''}'.trim();
   final comm = '${v['community'] ?? ''}'.trim();
   if (bn.isNotEmpty) return un.isNotEmpty ? '$bn - $un' : bn;
-  if (un.isNotEmpty) return 'Unit $un';
-  return comm.isNotEmpty ? comm : 'Listing';
+  if (un.isNotEmpty) return '${context.tr('Unit')} $un';
+  return comm.isNotEmpty ? comm : context.tr('Listing');
 }
 
 String _split(dynamic v) {
@@ -46,29 +47,29 @@ class CollaborationScreen extends ConsumerWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return CrmScaffold(
       tab: CrmTab.collaboration,
-      title: 'Collaboration',
+      title: context.tr('Collaboration'),
       body: RefreshIndicator(
         onRefresh: () async => _refresh(ref),
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.x16),
           children: [
-            Text('Requests on your listings', style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
+            Text(context.tr('Requests on your listings'), style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
             const SizedBox(height: AppSpacing.x8),
             incoming.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('No incoming requests.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
+                  ? Text(context.tr('No incoming requests.'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Column(children: [for (final r in list) _IncomingCard(r)]),
             ),
             const SizedBox(height: AppSpacing.x20),
-            Text('Your requests', style: t.titleSmall),
+            Text(context.tr('Your requests'), style: t.titleSmall),
             const SizedBox(height: AppSpacing.x8),
             outgoing.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('You have no outgoing requests.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
+                  ? Text(context.tr('You have no outgoing requests.'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Column(children: [for (final r in list) _OutgoingCard(r)]),
             ),
           ],
@@ -97,12 +98,12 @@ class _IncomingCard extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Counter the split'),
+        title: Text(context.tr('Counter the split')),
         content: TextField(controller: ctrl, keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Your counter split (%)')),
+            decoration: InputDecoration(labelText: context.tr('Your counter split (%)'))),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Send'))),
         ],
       ),
     );
@@ -122,12 +123,12 @@ class _IncomingCard extends ConsumerWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(_title(r), style: t.titleSmall),
+          Text(_title(context, r), style: t.titleSmall),
           const SizedBox(height: 2),
           Text([
-            if (r['requester_name'] != null) 'from ${r['requester_name']}',
-            if (_split(r['proposed_split']).isNotEmpty) 'wants ${_split(r['proposed_split'])}',
-            if (countered && _split(r['counter_split']).isNotEmpty) 'you countered ${_split(r['counter_split'])}',
+            if (r['requester_name'] != null) '${context.tr('from')} ${r['requester_name']}',
+            if (_split(r['proposed_split']).isNotEmpty) '${context.tr('wants')} ${_split(r['proposed_split'])}',
+            if (countered && _split(r['counter_split']).isNotEmpty) '${context.tr('you countered')} ${_split(r['counter_split'])}',
           ].join('  ·  '), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           if ('${r['message'] ?? ''}'.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x4),
@@ -137,13 +138,13 @@ class _IncomingCard extends ConsumerWidget {
           Wrap(spacing: AppSpacing.x8, children: [
             FilledButton(
               onPressed: () => _do(context, ref, () => ref.read(collabRepoProvider).respond('${r['id']}', 'accept')),
-              child: const Text('Accept'),
+              child: Text(context.tr('Accept')),
             ),
-            OutlinedButton(onPressed: () => _counter(context, ref), child: const Text('Counter')),
+            OutlinedButton(onPressed: () => _counter(context, ref), child: Text(context.tr('Counter'))),
             TextButton(
               style: TextButton.styleFrom(foregroundColor: AppColors.danger),
               onPressed: () => _do(context, ref, () => ref.read(collabRepoProvider).respond('${r['id']}', 'reject')),
-              child: const Text('Reject'),
+              child: Text(context.tr('Reject')),
             ),
           ]),
         ]),
@@ -178,14 +179,14 @@ class _OutgoingCard extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Expanded(child: Text(_title(r), style: t.titleSmall)),
+            Expanded(child: Text(_title(context, r), style: t.titleSmall)),
             StatusBadge(status, tone: _statusTone(status)),
           ]),
           const SizedBox(height: 2),
           Text([
-            if (r['owner_name'] != null) 'to ${r['owner_name']}',
-            if (_split(r['proposed_split']).isNotEmpty) 'you asked ${_split(r['proposed_split'])}',
-            if (countered && _split(r['counter_split']).isNotEmpty) 'countered ${_split(r['counter_split'])}',
+            if (r['owner_name'] != null) '${context.tr('to')} ${r['owner_name']}',
+            if (_split(r['proposed_split']).isNotEmpty) '${context.tr('you asked')} ${_split(r['proposed_split'])}',
+            if (countered && _split(r['counter_split']).isNotEmpty) '${context.tr('countered')} ${_split(r['counter_split'])}',
           ].join('  ·  '), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           if (open) ...[
             const SizedBox(height: AppSpacing.x12),
@@ -193,12 +194,12 @@ class _OutgoingCard extends ConsumerWidget {
               if (countered)
                 FilledButton(
                   onPressed: () => _do(context, ref, () => ref.read(collabRepoProvider).acceptCounter('${r['id']}')),
-                  child: const Text('Accept counter'),
+                  child: Text(context.tr('Accept counter')),
                 ),
               TextButton(
                 style: TextButton.styleFrom(foregroundColor: AppColors.danger),
                 onPressed: () => _do(context, ref, () => ref.read(collabRepoProvider).withdraw('${r['id']}')),
-                child: const Text('Withdraw'),
+                child: Text(context.tr('Withdraw')),
               ),
             ]),
           ],

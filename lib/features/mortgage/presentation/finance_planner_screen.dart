@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -169,27 +170,27 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                 : (label: 'Low', color: AppColors.danger);
 
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Finance Planner'),
+      appBar: NuzlAppBar(title: context.tr('Finance Planner')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: ListView(
           controller: _scrollCtrl,
           padding: const EdgeInsets.all(AppSpacing.x20),
           children: [
-            Text('Plan your purchase', style: t.headlineSmall),
+            Text(context.tr('Plan your purchase'), style: t.headlineSmall),
             const SizedBox(height: 2),
-            Text('See what you can afford, the monthly cost, and the income a bank looks for.',
+            Text(context.tr('See what you can afford, the monthly cost, and the income a bank looks for.'),
                 style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const SizedBox(height: AppSpacing.x20),
 
             // ── Inputs ──
-            _Panel(title: 'Your numbers', child: Column(children: [
+            _Panel(title: context.tr('Your numbers'), child: Column(children: [
               DropdownButtonFormField<String>(
                 initialValue: _countryCode,
-                decoration: const InputDecoration(labelText: 'Country (sets the bank DBR cap)'),
+                decoration: InputDecoration(labelText: context.tr('Country (sets the bank DBR cap)')),
                 items: [
                   for (final c in _gccCountries)
-                    DropdownMenuItem(value: c.code, child: Text('${c.name}  ·  ${(c.dbr * 100).round()}% DBR')),
+                    DropdownMenuItem(value: c.code, child: Text('${context.tr(c.name)}  ·  ${(c.dbr * 100).round()}% ${context.tr('DBR')}')),
                 ],
                 onChanged: (v) => setState(() {
                   _countryCode = v ?? 'AE';
@@ -200,14 +201,14 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
               // Property number drives the regulatory LTV cap (e.g. UAE 1st 80% / 2nd+ 60%).
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Which property is this for you? (sets the loan-to-value cap)',
+                child: Text(context.tr('Which property is this for you? (sets the loan-to-value cap)'),
                     style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               ),
               const SizedBox(height: 6),
               Wrap(spacing: AppSpacing.x8, children: [
                 for (final p in const [(1, '1st home'), (2, '2nd property'), (3, '3rd or more')])
                   ChoiceChip(
-                    label: Text(p.$2),
+                    label: Text(context.tr(p.$2)),
                     visualDensity: VisualDensity.compact,
                     selected: _propertyNo == p.$1,
                     onSelected: (_) => setState(() {
@@ -220,27 +221,27 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                    '${country.name} · ${_propertyNo == 1 ? "1st home" : _propertyNo == 2 ? "2nd property" : "3rd+ property"} — '
-                    'up to ${(maxLtv * 100).round()}% finance (${(minDownPct * 100).round()}% min down)',
+                    '${context.tr(country.name)} · ${context.tr(_propertyNo == 1 ? "1st home" : _propertyNo == 2 ? "2nd property" : "3rd+ property")} — '
+                    '${context.tr('up to')} ${(maxLtv * 100).round()}% ${context.tr('finance')} (${(minDownPct * 100).round()}% ${context.tr('min down')})',
                     style: t.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
               ),
               const SizedBox(height: AppSpacing.x12),
-              _money(_income, 'Gross monthly income (${country.currency})', live: true),
+              _money(_income, '${context.tr('Gross monthly income')} (${country.currency})', live: true),
               const SizedBox(height: AppSpacing.x12),
-              _money(_obligations, 'Existing monthly obligations (${country.currency})', live: true),
+              _money(_obligations, '${context.tr('Existing monthly obligations')} (${country.currency})', live: true),
               const SizedBox(height: AppSpacing.x12),
-              _money(_price, 'Property price (${country.currency}) — optional', live: true),
+              _money(_price, '${context.tr('Property price')} (${country.currency}) — ${context.tr('optional')}', live: true),
               const SizedBox(height: AppSpacing.x12),
               Row(children: [
-                Expanded(child: _money(_downPct, 'Down payment % (min ${(minDownPct * 100).round()}%)', live: true, prefix: '')),
+                Expanded(child: _money(_downPct, '${context.tr('Down payment %')} (${context.tr('min')} ${(minDownPct * 100).round()}%)', live: true, prefix: '')),
                 const SizedBox(width: AppSpacing.x12),
                 Expanded(
                   child: TextField(
                     controller: _rate,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(labelText: _rateLabel),
+                    decoration: InputDecoration(labelText: context.tr(_rateLabel)),
                   ),
                 ),
               ]),
@@ -249,10 +250,10 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     initialValue: _financeType,
-                    decoration: const InputDecoration(labelText: 'Finance type'),
-                    items: const [
-                      DropdownMenuItem(value: 'conventional', child: Text('Conventional')),
-                      DropdownMenuItem(value: 'islamic', child: Text('Islamic (Ijarah)')),
+                    decoration: InputDecoration(labelText: context.tr('Finance type')),
+                    items: [
+                      DropdownMenuItem(value: 'conventional', child: Text(context.tr('Conventional'))),
+                      DropdownMenuItem(value: 'islamic', child: Text(context.tr('Islamic (Ijarah)'))),
                     ],
                     onChanged: (v) => setState(() => _financeType = v ?? 'conventional'),
                   ),
@@ -261,12 +262,12 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                 Expanded(
                   child: DropdownButtonFormField<int>(
                     initialValue: _years,
-                    decoration: const InputDecoration(labelText: 'Term'),
-                    items: const [
-                      DropdownMenuItem(value: 10, child: Text('10 years')),
-                      DropdownMenuItem(value: 15, child: Text('15 years')),
-                      DropdownMenuItem(value: 20, child: Text('20 years')),
-                      DropdownMenuItem(value: 25, child: Text('25 years')),
+                    decoration: InputDecoration(labelText: context.tr('Term')),
+                    items: [
+                      DropdownMenuItem(value: 10, child: Text('10 ${context.tr('years')}')),
+                      DropdownMenuItem(value: 15, child: Text('15 ${context.tr('years')}')),
+                      DropdownMenuItem(value: 20, child: Text('20 ${context.tr('years')}')),
+                      DropdownMenuItem(value: 25, child: Text('25 ${context.tr('years')}')),
                     ],
                     onChanged: (v) => setState(() => _years = v ?? 25),
                   ),
@@ -279,26 +280,25 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
             // ── What you can afford (from income) ──
             if (income > 0)
               _Panel(
-                title: 'What you can afford',
+                title: context.tr('What you can afford'),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(aed.format(maxPrice),
                       style: t.displaySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800)),
-                  Text('estimated maximum property price', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                  Text(context.tr('estimated maximum property price'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                   const SizedBox(height: AppSpacing.x12),
                   // DBR breakdown — how the available instalment is derived.
-                  _kv('Gross monthly income', aed.format(income)),
-                  _kv('Max debt burden (${(dbrCap * 100).round()}% — ${country.name})', aed.format(dbrAllowance)),
+                  _kv(context.tr('Gross monthly income'), aed.format(income)),
+                  _kv('${context.tr('Max debt burden')} (${(dbrCap * 100).round()}% — ${context.tr(country.name)})', aed.format(dbrAllowance)),
                   // Always shown so the DBR formula is transparent (capacity = cap − obligations).
-                  _kv('Less existing obligations', obligations > 0 ? '− ${aed.format(obligations)}' : aed.format(0)),
+                  _kv(context.tr('Less existing obligations'), obligations > 0 ? '− ${aed.format(obligations)}' : aed.format(0)),
                   const Divider(height: AppSpacing.x16),
-                  _kv('Available for new ${_installmentLabel.toLowerCase()}', aed.format(maxMonthly)),
-                  _kv('Eligible ${_financeLabel.toLowerCase()}', aed.format(maxLoan)),
-                  _kv('Loan-to-value cap', '${(maxLtv * 100).round()}% · min ${(minDownPct * 100).round()}% down'),
-                  _kv('Over', '$_years years at ${rate.toStringAsFixed(2)}%'),
+                  _kv('${context.tr('Available for new')} ${context.tr(_installmentLabel).toLowerCase()}', aed.format(maxMonthly)),
+                  _kv('${context.tr('Eligible')} ${context.tr(_financeLabel).toLowerCase()}', aed.format(maxLoan)),
+                  _kv(context.tr('Loan-to-value cap'), '${(maxLtv * 100).round()}% · ${context.tr('min')} ${(minDownPct * 100).round()}% ${context.tr('down')}'),
+                  _kv(context.tr('Over'), '$_years ${context.tr('years at')} ${rate.toStringAsFixed(2)}%'),
                   if (maxMonthly <= 0) ...[
                     const SizedBox(height: AppSpacing.x8),
-                    Text('Your existing obligations already reach the ${(dbrCap * 100).round()}% debt-burden cap — '
-                        'a bank is unlikely to approve new finance until they reduce.',
+                    Text('${context.tr('Your existing obligations already reach the')} ${(dbrCap * 100).round()}% ${context.tr('debt-burden cap — a bank is unlikely to approve new finance until they reduce.')}',
                         style: t.bodySmall?.copyWith(color: AppColors.danger)),
                   ],
                 ]),
@@ -308,28 +308,28 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
             // ── This property (from price) ──
             if (price > 0)
               _Panel(
-                title: 'This property',
+                title: context.tr('This property'),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                    Text(_installmentLabel, style: t.bodyMedium),
+                    Text(context.tr(_installmentLabel), style: t.bodyMedium),
                     Text(aed.format(installment),
                         style: t.titleLarge?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800)),
                   ]),
                   const Divider(height: AppSpacing.x16),
-                  _kv('Property price', aed.format(price)),
-                  _kv('Down payment (${(downPct * 100).round()}%)', aed.format(downPayment)),
-                  _kv(_financeLabel, aed.format(financeAmount)),
-                  _kv('Recommended income', aed.format(recommendedIncome)),
+                  _kv(context.tr('Property price'), aed.format(price)),
+                  _kv('${context.tr('Down payment')} (${(downPct * 100).round()}%)', aed.format(downPayment)),
+                  _kv(context.tr(_financeLabel), aed.format(financeAmount)),
+                  _kv(context.tr('Recommended income'), aed.format(recommendedIncome)),
                   if (approval != null) ...[
                     const SizedBox(height: AppSpacing.x8),
                     Row(children: [
-                      Text('Approval likelihood  ', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                      Text('${context.tr('Approval likelihood')}  ', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
                             color: approval.color.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                        child: Text(approval.label,
+                        child: Text(context.tr(approval.label),
                             style: t.labelMedium?.copyWith(color: approval.color, fontWeight: FontWeight.w700)),
                       ),
                     ]),
@@ -340,9 +340,8 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
 
             if (income <= 0 && price <= 0)
               _Panel(
-                title: 'Get started',
-                child: Text('Enter your monthly income to see what you can afford, or a property price to see the '
-                    'monthly cost and the income a bank typically looks for.',
+                title: context.tr('Get started'),
+                child: Text(context.tr('Enter your monthly income to see what you can afford, or a property price to see the monthly cost and the income a bank typically looks for.'),
                     style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               ),
 
@@ -355,7 +354,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                         price: price, income: income, downPayment: downPayment, financeAmount: financeAmount,
                         installment: installment, rate: rate, dbr: dbr, maxPrice: maxPrice),
                   icon: const Icon(Icons.bookmark_add_outlined, size: 18),
-                  label: Text(_saving ? 'Saving…' : 'Save this scenario'),
+                  label: Text(context.tr(_saving ? 'Saving…' : 'Save this scenario')),
                 ),
               ),
             ],
@@ -371,7 +370,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
                   context.go('/properties');
                 },
                 icon: const Icon(Icons.search, size: 18),
-                label: Text(income > 0 ? 'Browse properties in budget' : 'Browse properties'),
+                label: Text(context.tr(income > 0 ? 'Browse properties in budget' : 'Browse properties')),
               ),
             ),
 
@@ -382,7 +381,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
               return [
                 const SizedBox(height: AppSpacing.x16),
                 _Panel(
-                  title: 'Saved scenarios',
+                  title: context.tr('Saved scenarios'),
                   child: Column(children: [
                     for (final s in saved) _scenarioTile(Map<String, dynamic>.from(s), aed),
                   ]),
@@ -391,7 +390,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
             })(),
 
             const SizedBox(height: AppSpacing.x12),
-            Text('Estimates only — actual eligibility, rates and fees are set by your bank or finance provider.',
+            Text(context.tr('Estimates only — actual eligibility, rates and fees are set by your bank or finance provider.'),
                 style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textSubtle)),
           ],
         ),
@@ -423,15 +422,15 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
     required double installment, required double rate, double? dbr, required double maxPrice,
   }) async {
     final ctrl = TextEditingController(
-      text: price > 0 ? NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price) : 'My scenario');
+      text: price > 0 ? NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price) : context.tr('My scenario'));
     final label = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Save scenario'),
-        content: TextField(controller: ctrl, autofocus: true, decoration: const InputDecoration(labelText: 'Label')),
+        title: Text(context.tr('Save scenario')),
+        content: TextField(controller: ctrl, autofocus: true, decoration: InputDecoration(labelText: context.tr('Label'))),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: const Text('Save')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, ctrl.text.trim()), child: Text(context.tr('Save'))),
         ],
       ),
     );
@@ -453,7 +452,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
         'is_islamic': _isl,
       });
       ref.invalidate(financeScenariosProvider);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Scenario saved')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Scenario saved'))));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     } finally {
@@ -483,7 +482,7 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
       _scrollCtrl.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
     }
     ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Loaded into the form — edit the numbers and save again.')));
+        SnackBar(content: Text(context.tr('Loaded into the form — edit the numbers and save again.'))));
   }
 
   Future<void> _delete(String id) async {
@@ -502,24 +501,24 @@ class _FinancePlannerScreenState extends ConsumerState<FinancePlannerScreen> {
     final inst = num.tryParse('${s['monthly_installment']}');
     final sub = [
       if (price != null) aed.format(price),
-      if (inst != null) '${aed.format(inst)}/mo',
+      if (inst != null) '${aed.format(inst)}/${context.tr('mo')}',
       if ('${s['community'] ?? ''}'.isNotEmpty) '${s['community']}',
     ].join('  ·  ');
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(Icons.savings_outlined, color: Theme.of(context).colorScheme.primary),
-      title: Text('${s['label'] ?? 'Scenario'}', maxLines: 1, overflow: TextOverflow.ellipsis),
+      title: Text('${s['label'] ?? context.tr('Scenario')}', maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: sub.isEmpty ? null : Text(sub, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
       onTap: () => _load(s),
       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
         TextButton.icon(
           onPressed: () => _load(s),
           icon: const Icon(Icons.edit_outlined, size: 16),
-          label: const Text('Edit'),
+          label: Text(context.tr('Edit')),
           style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
         ),
         IconButton(
-          tooltip: 'Delete',
+          tooltip: context.tr('Delete'),
           icon: const Icon(Icons.delete_outline, size: 20),
           onPressed: () => _delete('${s['id']}'),
         ),

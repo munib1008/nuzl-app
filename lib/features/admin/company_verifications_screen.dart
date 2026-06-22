@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -28,7 +29,7 @@ class _CompanyVerificationsScreenState extends ConsumerState<CompanyVerification
   Widget build(BuildContext context) {
     final queue = ref.watch(companyVerifProvider(_status));
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Company verifications'),
+      appBar: NuzlAppBar(title: context.tr('Company verifications')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: Column(children: [
@@ -37,7 +38,7 @@ class _CompanyVerificationsScreenState extends ConsumerState<CompanyVerification
             child: Wrap(spacing: AppSpacing.x8, children: [
               for (final s in const ['pending', 'verified', 'rejected'])
                 ChoiceChip(
-                  label: Text(s[0].toUpperCase() + s.substring(1)),
+                  label: Text(context.tr(s[0].toUpperCase() + s.substring(1))),
                   selected: _status == s,
                   onSelected: (_) => setState(() => _status = s),
                 ),
@@ -52,7 +53,7 @@ class _CompanyVerificationsScreenState extends ConsumerState<CompanyVerification
                 data: (list) => list.isEmpty
                     ? ListView(children: [
                         const SizedBox(height: 80),
-                        Center(child: Text('Nothing $_status.', style: const TextStyle(color: AppColors.textMuted))),
+                        Center(child: Text('${context.tr('Nothing')} $_status.', style: const TextStyle(color: AppColors.textMuted))),
                       ])
                     : ListView.separated(
                         padding: const EdgeInsets.all(AppSpacing.x16),
@@ -81,7 +82,7 @@ class _CompanyCard extends ConsumerWidget {
       ref.invalidate(companyVerifProvider(status));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(approve ? 'Company verified ✓' : 'Company rejected')));
+            SnackBar(content: Text(context.tr(approve ? 'Company verified ✓' : 'Company rejected'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -96,15 +97,15 @@ class _CompanyCard extends ConsumerWidget {
       builder: (_) => Dialog(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           AppBar(
-            title: const Text('Trade license'),
+            title: Text(context.tr('Trade license')),
             automaticallyImplyLeading: false,
             actions: [IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context))],
           ),
           Flexible(
             child: InteractiveViewer(
               child: Image.network(url, fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Padding(
-                      padding: EdgeInsets.all(40), child: Text('Could not load the document.'))),
+                  errorBuilder: (_, __, ___) => Padding(
+                      padding: const EdgeInsets.all(40), child: Text(context.tr('Could not load the document.')))),
             ),
           ),
         ]),
@@ -123,30 +124,30 @@ class _CompanyCard extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Expanded(child: Text('${org['name'] ?? 'Company'}',
+            Expanded(child: Text('${org['name'] ?? context.tr('Company')}',
                 style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700))),
             VerificationBadge('${org['verification_status'] ?? status}'),
           ]),
           const SizedBox(height: 2),
           Text([
-            if ('${org['owner_name'] ?? ''}'.isNotEmpty) 'Owner: ${org['owner_name']}',
+            if ('${org['owner_name'] ?? ''}'.isNotEmpty) '${context.tr('Owner')}: ${org['owner_name']}',
             if ('${org['owner_email'] ?? ''}'.isNotEmpty) '${org['owner_email']}',
           ].join(' · '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
           const SizedBox(height: AppSpacing.x4),
           Text([
-            if (license.isNotEmpty) 'License: $license',
-            if (submitted != null) 'Submitted ${DateFormat('d MMM, HH:mm').format(submitted.toLocal())}',
+            if (license.isNotEmpty) '${context.tr('License')}: $license',
+            if (submitted != null) '${context.tr('Submitted')} ${DateFormat('d MMM, HH:mm').format(submitted.toLocal())}',
           ].join(' · '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
           if ('${org['verification_note'] ?? ''}'.trim().isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x4),
-            Text('Note: ${org['verification_note']}', style: t.bodySmall?.copyWith(color: AppColors.danger)),
+            Text('${context.tr('Note')}: ${org['verification_note']}', style: t.bodySmall?.copyWith(color: AppColors.danger)),
           ],
           const SizedBox(height: AppSpacing.x12),
           Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
             OutlinedButton.icon(
               onPressed: hasDoc ? () => _viewDoc(context) : null,
               icon: const Icon(Icons.description_outlined, size: 18),
-              label: const Text('View license'),
+              label: Text(context.tr('View license')),
             ),
             if (status != 'rejected')
               OutlinedButton.icon(
@@ -157,13 +158,13 @@ class _CompanyCard extends ConsumerWidget {
                 },
                 style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
                 icon: const Icon(Icons.close, size: 18),
-                label: const Text('Reject'),
+                label: Text(context.tr('Reject')),
               ),
             if (status != 'verified')
               FilledButton.icon(
                 onPressed: () => _decide(context, ref, true),
                 icon: const Icon(Icons.verified, size: 18),
-                label: const Text('Approve'),
+                label: Text(context.tr('Approve')),
               ),
           ]),
         ]),
@@ -192,20 +193,20 @@ class _RejectReasonDialogState extends State<_RejectReasonDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Reject company'),
+      title: Text(context.tr('Reject company')),
       content: TextField(
         controller: _ctrl,
         autofocus: true,
         minLines: 2,
         maxLines: 4,
-        decoration: const InputDecoration(
-          hintText: 'Reason (shown to the company), e.g. license expired',
-          border: OutlineInputBorder(),
+        decoration: InputDecoration(
+          hintText: context.tr('Reason (shown to the company), e.g. license expired'),
+          border: const OutlineInputBorder(),
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, _ctrl.text.trim()), child: const Text('Reject')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, _ctrl.text.trim()), child: Text(context.tr('Reject'))),
       ],
     );
   }

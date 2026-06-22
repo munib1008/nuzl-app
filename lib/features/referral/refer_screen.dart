@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -46,7 +47,7 @@ class ReferScreen extends ConsumerWidget {
     );
     if (embedded) return body;
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Refer & Earn'),
+      appBar: NuzlAppBar(title: context.tr('Refer & Earn')),
       drawer: const NuzlDrawer(),
       body: body,
     );
@@ -75,11 +76,11 @@ class ReferScreen extends ConsumerWidget {
           Row(children: [
             const Icon(Icons.card_giftcard, color: AppColors.goldAccent, size: 26),
             const SizedBox(width: AppSpacing.x8),
-            Expanded(child: Text('Give a month, get a month',
+            Expanded(child: Text(context.tr('Give a month, get a month'),
                 style: t.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w700))),
           ]),
           const SizedBox(height: 6),
-          Text('Earn 1 free month of membership for every friend who joins with your link. Unlimited referrals.',
+          Text(context.tr('Earn 1 free month of membership for every friend who joins with your link. Unlimited referrals.'),
               style: t.bodyMedium?.copyWith(color: Colors.white.withValues(alpha: 0.9))),
         ]),
       ),
@@ -87,9 +88,9 @@ class ReferScreen extends ConsumerWidget {
 
       // Stats
       Row(children: [
-        Expanded(child: _stat(context, '$joined', joined == 1 ? 'Friend joined' : 'Friends joined', Icons.group_add_outlined, Theme.of(context).colorScheme.primary)),
+        Expanded(child: _stat(context, '$joined', context.tr(joined == 1 ? 'Friend joined' : 'Friends joined'), Icons.group_add_outlined, Theme.of(context).colorScheme.primary)),
         const SizedBox(width: AppSpacing.x12),
-        Expanded(child: _stat(context, '$months', months == 1 ? 'Free month' : 'Free months', Icons.calendar_month_outlined, AppColors.success)),
+        Expanded(child: _stat(context, '$months', context.tr(months == 1 ? 'Free month' : 'Free months'), Icons.calendar_month_outlined, AppColors.success)),
       ]),
       const SizedBox(height: AppSpacing.x16),
 
@@ -98,7 +99,7 @@ class ReferScreen extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.all(AppSpacing.x16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Your referral code', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+            Text(context.tr('Your referral code'), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: AppSpacing.x8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.x16, vertical: AppSpacing.x12),
@@ -114,24 +115,24 @@ class ReferScreen extends ConsumerWidget {
                 ),
                 if (code.isNotEmpty)
                   TextButton.icon(
-                    onPressed: () => _copy(context, code, 'Code copied'),
+                    onPressed: () => _copy(context, code, context.tr('Code copied')),
                     icon: const Icon(Icons.copy, size: 16),
-                    label: const Text('Copy'),
+                    label: Text(context.tr('Copy')),
                   ),
               ]),
             ),
             if (link.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.x12),
-              Text('Share link', style: t.labelMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+              Text(context.tr('Share link'), style: t.labelMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               const SizedBox(height: 4),
               Text(link, style: t.bodySmall?.copyWith(color: AppColors.info), maxLines: 1, overflow: TextOverflow.ellipsis),
               const SizedBox(height: AppSpacing.x12),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: () => _copy(context, link, 'Invite link copied — share it with your network'),
+                  onPressed: () => _copy(context, link, context.tr('Invite link copied — share it with your network')),
                   icon: const Icon(Icons.ios_share, size: 18),
-                  label: const Text('Copy invite link'),
+                  label: Text(context.tr('Copy invite link')),
                 ),
               ),
             ],
@@ -140,12 +141,12 @@ class ReferScreen extends ConsumerWidget {
       ),
       const SizedBox(height: AppSpacing.x16),
 
-      Text('Your referrals', style: t.titleMedium),
+      Text(context.tr('Your referrals'), style: t.titleMedium),
       const SizedBox(height: AppSpacing.x8),
       if (referrals.isEmpty)
         Padding(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
-          child: Text('No referrals yet — share your link to start earning free months.',
+          child: Text(context.tr('No referrals yet — share your link to start earning free months.'),
               style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
         )
       else
@@ -181,7 +182,7 @@ class _ReferralTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final name = '${r['referred_name'] ?? 'New member'}';
+    final name = '${r['referred_name'] ?? context.tr('New member')}';
     final when = DateTime.tryParse('${r['created_at'] ?? ''}');
     final rewarded = '${r['status']}' == 'rewarded';
     return Card(
@@ -192,8 +193,8 @@ class _ReferralTile extends StatelessWidget {
               style: const TextStyle(color: AppColors.success, fontWeight: FontWeight.w700)),
         ),
         title: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text(when != null ? 'Joined ${DateFormat('d MMM yyyy').format(when.toLocal())}' : 'Joined'),
-        trailing: Text(rewarded ? 'Rewarded' : '+1 month',
+        subtitle: Text(when != null ? '${context.tr('Joined')} ${DateFormat('d MMM yyyy').format(when.toLocal())}' : context.tr('Joined')),
+        trailing: Text(context.tr(rewarded ? 'Rewarded' : '+1 month'),
             style: t.labelMedium?.copyWith(color: AppColors.success, fontWeight: FontWeight.w700)),
       ),
     );

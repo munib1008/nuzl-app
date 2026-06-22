@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/upload_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -44,7 +45,7 @@ class PropertyDocsScreen extends ConsumerWidget {
     final documents = ref.watch(propertyDocumentsProvider(propertyId));
     final activity = ref.watch(propertyDocActivityProvider(propertyId));
     return Scaffold(
-      appBar: AppBar(title: const Text('Documents')),
+      appBar: AppBar(title: Text(context.tr('Documents'))),
       body: RefreshIndicator(
         onRefresh: () async => _refresh(ref),
         child: ListView(
@@ -55,7 +56,7 @@ class PropertyDocsScreen extends ConsumerWidget {
                 child: OutlinedButton.icon(
                   onPressed: () => _requestDialog(context, ref),
                   icon: const Icon(Icons.request_page_outlined, size: 18),
-                  label: const Text('Request'),
+                  label: Text(context.tr('Request')),
                 ),
               ),
               const SizedBox(width: AppSpacing.x12),
@@ -63,46 +64,46 @@ class PropertyDocsScreen extends ConsumerWidget {
                 child: FilledButton.icon(
                   onPressed: () => _uploadDocument(context, ref),
                   icon: const Icon(Icons.upload_file, size: 18),
-                  label: const Text('Upload'),
+                  label: Text(context.tr('Upload')),
                 ),
               ),
             ]),
             const SizedBox(height: AppSpacing.x20),
 
-            Text('Requests', style: t.titleSmall),
+            Text(context.tr('Requests'), style: t.titleSmall),
             const SizedBox(height: AppSpacing.x8),
             requests.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('No document requests yet.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
+                  ? Text(context.tr('No document requests yet.'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Column(children: [for (final r in list) _requestTile(context, ref, r, t)]),
             ),
             const SizedBox(height: AppSpacing.x16),
             const Divider(),
             const SizedBox(height: AppSpacing.x8),
 
-            Text('Documents', style: t.titleSmall),
+            Text(context.tr('Documents'), style: t.titleSmall),
             const SizedBox(height: AppSpacing.x8),
             documents.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('No documents uploaded yet.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
+                  ? Text(context.tr('No documents uploaded yet.'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Column(children: [for (final d in list) _docTile(context, ref, d, t)]),
             ),
             const SizedBox(height: AppSpacing.x16),
             const Divider(),
             const SizedBox(height: AppSpacing.x8),
 
-            Text('Activity log', style: t.titleSmall),
+            Text(context.tr('Activity log'), style: t.titleSmall),
             const SizedBox(height: AppSpacing.x8),
             activity.when(
               loading: () => const LinearProgressIndicator(),
               error: (e, _) => Text('$e', style: t.bodySmall),
               data: (list) => list.isEmpty
-                  ? Text('Nothing logged yet.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
-                  : Column(children: [for (final a in list) _activityTile(a, t, dark)]),
+                  ? Text(context.tr('Nothing logged yet.'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
+                  : Column(children: [for (final a in list) _activityTile(context, a, t, dark)]),
             ),
           ],
         ),
@@ -114,18 +115,18 @@ class PropertyDocsScreen extends ConsumerWidget {
     final pending = r['status'] == 'pending';
     return Card(
       child: ListTile(
-        title: Text(r['label']?.toString().isNotEmpty == true ? '${r['label']}' : _docLabel(r['doc_type'])),
+        title: Text(r['label']?.toString().isNotEmpty == true ? '${r['label']}' : context.tr(_docLabel(r['doc_type']))),
         subtitle: Text([
-          _docLabel(r['doc_type']),
-          if (r['requested_by_name'] != null) 'by ${r['requested_by_name']}',
+          context.tr(_docLabel(r['doc_type'])),
+          if (r['requested_by_name'] != null) '${context.tr('by')} ${r['requested_by_name']}',
           if (r['note'] != null && '${r['note']}'.isNotEmpty) '${r['note']}',
         ].join('  ·  '), style: t.bodySmall),
         trailing: pending
             ? TextButton(
                 onPressed: () => _fulfilRequest(context, ref, r),
-                child: const Text('Upload'),
+                child: Text(context.tr('Upload')),
               )
-            : const StatusBadge('Fulfilled', tone: BadgeTone.success),
+            : StatusBadge(context.tr('Fulfilled'), tone: BadgeTone.success),
       ),
     );
   }
@@ -135,25 +136,25 @@ class PropertyDocsScreen extends ConsumerWidget {
     return Card(
       child: ListTile(
         leading: const Icon(Icons.description_outlined),
-        title: Text(d['label']?.toString().isNotEmpty == true ? '${d['label']}' : _docLabel(d['doc_type'])),
+        title: Text(d['label']?.toString().isNotEmpty == true ? '${d['label']}' : context.tr(_docLabel(d['doc_type']))),
         subtitle: Text([
-          _docLabel(d['doc_type']),
+          context.tr(_docLabel(d['doc_type'])),
           if (d['uploaded_by_name'] != null) '${d['uploaded_by_name']}',
           if (when != null) DateFormat.yMMMd().format(when),
         ].join('  ·  '), style: t.bodySmall),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
-            tooltip: 'Copy share link',
+            tooltip: context.tr('Copy share link'),
             icon: const Icon(Icons.link, size: 20),
             onPressed: () async {
               await Clipboard.setData(ClipboardData(text: '${d['file_url']}'));
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Download link copied')));
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Download link copied'))));
               }
             },
           ),
           IconButton(
-            tooltip: 'Delete',
+            tooltip: context.tr('Delete'),
             icon: const Icon(Icons.delete_outline, size: 20),
             onPressed: () => _delete(context, ref, '${d['id']}'),
           ),
@@ -162,10 +163,10 @@ class PropertyDocsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _activityTile(Map<String, dynamic> a, TextTheme t, bool dark) {
+  Widget _activityTile(BuildContext context, Map<String, dynamic> a, TextTheme t, bool dark) {
     final when = DateTime.tryParse('${a['created_at'] ?? ''}');
     final isReq = a['kind'] == 'request';
-    final verb = isReq ? 'requested' : 'uploaded';
+    final verb = context.tr(isReq ? 'requested' : 'uploaded');
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.x8),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -177,7 +178,7 @@ class PropertyDocsScreen extends ConsumerWidget {
         const SizedBox(width: AppSpacing.x12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('${a['actor_name'] ?? 'Someone'} $verb ${a['label']?.toString().isNotEmpty == true ? a['label'] : _docLabel(a['doc_type'])}',
+            Text('${a['actor_name'] ?? context.tr('Someone')} $verb ${a['label']?.toString().isNotEmpty == true ? a['label'] : context.tr(_docLabel(a['doc_type']))}',
                 style: t.bodyMedium),
             if (when != null)
               Text(DateFormat.yMMMd().add_jm().format(when),
@@ -198,23 +199,23 @@ class PropertyDocsScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          title: const Text('Request a document'),
+          title: Text(context.tr('Request a document')),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
             DropdownButtonFormField<String>(
               initialValue: type,
-              decoration: const InputDecoration(labelText: 'Document type'),
-              items: [for (final e in _docTypes.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
+              decoration: InputDecoration(labelText: context.tr('Document type')),
+              items: [for (final e in _docTypes.entries) DropdownMenuItem(value: e.key, child: Text(context.tr(e.value)))],
               onChanged: (v) => setLocal(() => type = v ?? 'other'),
             ),
             const SizedBox(height: AppSpacing.x12),
-            TextField(controller: label, decoration: const InputDecoration(
-                labelText: 'What exactly do you need?', hintText: 'e.g. Q2 rent cheque copy')),
+            TextField(controller: label, decoration: InputDecoration(
+                labelText: context.tr('What exactly do you need?'), hintText: context.tr('e.g. Q2 rent cheque copy'))),
             const SizedBox(height: AppSpacing.x12),
-            TextField(controller: note, maxLines: 2, decoration: const InputDecoration(labelText: 'Note (optional)')),
+            TextField(controller: note, maxLines: 2, decoration: InputDecoration(labelText: context.tr('Note (optional)'))),
           ]),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Send request')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Send request'))),
           ],
         ),
       ),
@@ -223,7 +224,7 @@ class PropertyDocsScreen extends ConsumerWidget {
     try {
       await ref.read(propertyDocsRepoProvider).requestDoc(propertyId, type, label.text.trim(), note.text.trim());
       _refresh(ref);
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request sent')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Request sent'))));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
@@ -236,22 +237,22 @@ class PropertyDocsScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setLocal) => AlertDialog(
-          title: const Text('Upload a document'),
+          title: Text(context.tr('Upload a document')),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
             DropdownButtonFormField<String>(
               initialValue: type,
-              decoration: const InputDecoration(labelText: 'Document type'),
-              items: [for (final e in _docTypes.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
+              decoration: InputDecoration(labelText: context.tr('Document type')),
+              items: [for (final e in _docTypes.entries) DropdownMenuItem(value: e.key, child: Text(context.tr(e.value)))],
               onChanged: (v) => setLocal(() => type = v ?? 'other'),
             ),
             const SizedBox(height: AppSpacing.x12),
-            TextField(controller: label, decoration: const InputDecoration(labelText: 'Label (optional)')),
+            TextField(controller: label, decoration: InputDecoration(labelText: context.tr('Label (optional)'))),
             const SizedBox(height: AppSpacing.x8),
-            const Text('You can attach a PDF or an image.', style: TextStyle(fontSize: 12)),
+            Text(context.tr('You can attach a PDF or an image.'), style: const TextStyle(fontSize: 12)),
           ]),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Choose file')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Choose file'))),
           ],
         ),
       ),
@@ -263,7 +264,7 @@ class PropertyDocsScreen extends ConsumerWidget {
       await ref.read(propertyDocsRepoProvider).addDoc(propertyId,
           docType: type, label: label.text.trim(), fileUrl: url);
       _refresh(ref);
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Document uploaded')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Document uploaded'))));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
@@ -276,7 +277,7 @@ class PropertyDocsScreen extends ConsumerWidget {
       await ref.read(propertyDocsRepoProvider).addDoc(propertyId,
           docType: '${r['doc_type']}', label: r['label']?.toString(), fileUrl: url, requestId: '${r['id']}');
       _refresh(ref);
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request fulfilled')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Request fulfilled'))));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
@@ -302,7 +303,7 @@ class PropertyDocsScreen extends ConsumerWidget {
     final f = result.files.first;
     final bytes = f.bytes;
     if (bytes == null) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not read the file')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Could not read the file'))));
       return null;
     }
     final ext = (f.extension ?? '').toLowerCase();
@@ -316,11 +317,11 @@ class PropertyDocsScreen extends ConsumerWidget {
     try {
       final url = await ref.read(uploadServiceProvider).upload(bytes, f.name, ct);
       if (url == null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Upload returned no URL')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Upload returned no URL'))));
       }
       return url;
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('Upload failed')}: $e')));
       return null;
     }
   }

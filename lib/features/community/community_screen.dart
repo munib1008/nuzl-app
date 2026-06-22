@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../shell/app_shell.dart';
 import '../deal_board/deal_board_screen.dart';
 import '../feed/presentation/feed_screen.dart';
+import '../../core/i18n/app_localizations.dart';
 
 /// Agents' professional Community — the Deal Board and the professional
 /// discussion merged into one surface. Private to the professional network: it
@@ -33,18 +34,18 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
   Widget build(BuildContext context) {
     final onDeals = _tab.index == 0;
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Community'),
+      appBar: NuzlAppBar(title: context.tr('Community')),
       drawer: const NuzlDrawer(),
       floatingActionButton: onDeals
           ? FloatingActionButton.extended(
               onPressed: () => openDealComposer(context, ref),
               icon: const Icon(Icons.campaign_outlined),
-              label: const Text('Post a deal'),
+              label: Text(context.tr('Post a deal')),
             )
           : FloatingActionButton.extended(
               onPressed: () => openFeedComposer(context, ref, audience: 'company'),
               icon: const Icon(Icons.edit_outlined),
-              label: const Text('New post'),
+              label: Text(context.tr('New post')),
             ),
       body: Column(
         children: [
@@ -52,9 +53,9 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen>
             color: Theme.of(context).colorScheme.surface,
             child: TabBar(
               controller: _tab,
-              tabs: const [
-                Tab(icon: Icon(Icons.campaign_outlined), text: 'Deals'),
-                Tab(icon: Icon(Icons.forum_outlined), text: 'Discussion'),
+              tabs: [
+                Tab(icon: const Icon(Icons.campaign_outlined), text: context.tr('Deals')),
+                Tab(icon: const Icon(Icons.forum_outlined), text: context.tr('Discussion')),
               ],
             ),
           ),

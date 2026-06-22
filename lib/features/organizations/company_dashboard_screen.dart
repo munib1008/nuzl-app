@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/upload_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -26,7 +27,7 @@ class CompanyDashboardScreen extends ConsumerWidget {
       orElse: () => 0,
     );
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'My Company'),
+      appBar: NuzlAppBar(title: context.tr('My Company')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: RefreshIndicator(
@@ -52,16 +53,16 @@ class CompanyDashboardScreen extends ConsumerWidget {
           const SizedBox(height: 60),
           Icon(Icons.business_outlined, size: 48, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
           const SizedBox(height: 12),
-          Center(child: Text('No company yet', style: t.titleMedium)),
+          Center(child: Text(context.tr('No company yet'), style: t.titleMedium)),
           const SizedBox(height: 4),
-          Center(child: Text('Create or join a company to manage listings and get verified.',
+          Center(child: Text(context.tr('Create or join a company to manage listings and get verified.'),
               textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
           const SizedBox(height: AppSpacing.x16),
           Center(
             child: FilledButton.icon(
               onPressed: () => context.push('/org-ownership'),
               icon: const Icon(Icons.add_business_outlined, size: 18),
-              label: const Text('Set up company'),
+              label: Text(context.tr('Set up company')),
             ),
           ),
         ],
@@ -77,19 +78,19 @@ class CompanyDashboardScreen extends ConsumerWidget {
       final bytes = await picked.readAsBytes();
       final url = await ref.read(uploadServiceProvider).upload(bytes, picked.name, 'image/jpeg');
       if (url == null || url.isEmpty) {
-        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Logo upload failed — try again.')));
+        if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Logo upload failed — try again.'))));
         return;
       }
       await ref.read(apiClientProvider).patch('/organizations/mine/logo', body: {'logo_url': url});
       ref.invalidate(myCompanyProvider);
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Company logo updated.')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Company logo updated.'))));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
   Widget _dashboard(BuildContext context, WidgetRef ref, TextTheme t, Map<String, dynamic> c, int pendingJoins) {
-    final name = '${c['name'] ?? 'Your company'}';
+    final name = '${c['name'] ?? context.tr('Your company')}';
     final logo = '${c['logo_url'] ?? ''}'.trim();
     final slug = '${c['slug'] ?? ''}'.trim();
     final status = '${c['verification_status'] ?? 'pending'}';
@@ -145,18 +146,18 @@ class CompanyDashboardScreen extends ConsumerWidget {
               OutlinedButton.icon(
                 onPressed: () => context.push('/company/edit'),
                 icon: const Icon(Icons.edit_outlined, size: 18),
-                label: const Text('Edit public page'),
+                label: Text(context.tr('Edit public page')),
               ),
             ],
             if (!verified) ...[
               const SizedBox(height: AppSpacing.x12),
-              Text('Get verified to publish listings publicly and appear in the marketplace.',
+              Text(context.tr('Get verified to publish listings publicly and appear in the marketplace.'),
                   style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               const SizedBox(height: AppSpacing.x8),
               FilledButton.icon(
                 onPressed: () => context.push('/org-ownership'),
                 icon: const Icon(Icons.verified_user_outlined, size: 18),
-                label: const Text('Manage verification'),
+                label: Text(context.tr('Manage verification')),
               ),
             ] else if (slug.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.x12),
@@ -164,12 +165,12 @@ class CompanyDashboardScreen extends ConsumerWidget {
                 OutlinedButton.icon(
                   onPressed: () => context.push('/org/$slug'),
                   icon: const Icon(Icons.open_in_new, size: 18),
-                  label: const Text('View public page'),
+                  label: Text(context.tr('View public page')),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => context.push('/sales-performance'),
                   icon: const Icon(Icons.leaderboard_outlined, size: 18),
-                  label: const Text('Sales performance'),
+                  label: Text(context.tr('Sales performance')),
                 ),
               ]),
             ],
@@ -177,18 +178,18 @@ class CompanyDashboardScreen extends ConsumerWidget {
         ),
       ),
       const SizedBox(height: AppSpacing.x16),
-      Text('Manage', style: t.titleMedium),
+      Text(context.tr('Manage'), style: t.titleMedium),
       const SizedBox(height: AppSpacing.x8),
       LayoutBuilder(builder: (ctx, cons) {
         final cols = cons.maxWidth >= 720 ? 3 : (cons.maxWidth >= 460 ? 2 : 1);
         final w = cols == 1 ? cons.maxWidth : (cons.maxWidth - (cols - 1) * AppSpacing.x12) / cols;
         final tiles = <Widget>[
-          _tile(context, w, Icons.storefront_outlined, 'Listings', 'Your services & products', AppColors.primaryBright, '/marketplace'),
-          _tile(context, w, Icons.receipt_long_outlined, 'Orders', 'Bookings & sales', AppColors.success, '/orders'),
-          _tile(context, w, Icons.assignment_outlined, 'Requests', 'Bid on open requests', AppColors.warning, '/tenders'),
-          _tile(context, w, Icons.groups_outlined, 'Members', pendingJoins > 0 ? '$pendingJoins join request${pendingJoins == 1 ? '' : 's'}' : 'Team & join requests', AppColors.secondary, '/org-ownership'),
-          _tile(context, w, Icons.handshake_outlined, 'Sales partners', 'Agencies selling your projects', AppColors.primary, '/partners'),
-          _tile(context, w, Icons.verified_user_outlined, 'Verification', status[0].toUpperCase() + status.substring(1), AppColors.info, '/org-ownership'),
+          _tile(context, w, Icons.storefront_outlined, context.tr('Listings'), context.tr('Your services & products'), AppColors.primaryBright, '/marketplace'),
+          _tile(context, w, Icons.receipt_long_outlined, context.tr('Orders'), context.tr('Bookings & sales'), AppColors.success, '/orders'),
+          _tile(context, w, Icons.assignment_outlined, context.tr('Requests'), context.tr('Bid on open requests'), AppColors.warning, '/tenders'),
+          _tile(context, w, Icons.groups_outlined, context.tr('Members'), pendingJoins > 0 ? '$pendingJoins ${context.tr(pendingJoins == 1 ? 'join request' : 'join requests')}' : context.tr('Team & join requests'), AppColors.secondary, '/org-ownership'),
+          _tile(context, w, Icons.handshake_outlined, context.tr('Sales partners'), context.tr('Agencies selling your projects'), AppColors.primary, '/partners'),
+          _tile(context, w, Icons.verified_user_outlined, context.tr('Verification'), status[0].toUpperCase() + status.substring(1), AppColors.info, '/org-ownership'),
         ];
         return Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x12, children: tiles);
       }),

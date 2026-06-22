@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
@@ -80,7 +81,7 @@ class _PublicRoiEstimate extends ConsumerWidget {
           Row(children: [
             const Icon(Icons.trending_up, size: 18, color: AppColors.success),
             const SizedBox(width: AppSpacing.x8),
-            Text('Investor view — rental ROI', style: t.titleMedium),
+            Text(context.tr('Investor view — rental ROI'), style: t.titleMedium),
           ]),
           const SizedBox(height: AppSpacing.x8),
           Container(
@@ -93,14 +94,14 @@ class _PublicRoiEstimate extends ConsumerWidget {
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Expanded(child: metric('${gross.toStringAsFixed(1)}%', 'Gross yield')),
-                Expanded(child: metric('${net.toStringAsFixed(1)}%', 'Net yield')),
-                Expanded(child: metric(aed.format(rent), 'Est. annual rent')),
+                Expanded(child: metric('${gross.toStringAsFixed(1)}%', context.tr('Gross yield'))),
+                Expanded(child: metric('${net.toStringAsFixed(1)}%', context.tr('Net yield'))),
+                Expanded(child: metric(aed.format(rent), context.tr('Est. annual rent'))),
               ]),
               const SizedBox(height: AppSpacing.x8),
               Text(
-                'Indicative, based on $n comparable ${m['basis'] ?? 'rentals'}. '
-                'Net yield deducts the service charge and a 10% management / vacancy allowance.',
+                '${context.tr('Indicative, based on')} $n ${context.tr('comparable')} ${m['basis'] ?? 'rentals'}. '
+                '${context.tr('Net yield deducts the service charge and a 10% management / vacancy allowance.')}',
                 style: t.bodySmall?.copyWith(color: AppColors.textMuted),
               ),
             ]),
@@ -136,10 +137,10 @@ class PublicListingScreen extends ConsumerWidget {
         titleSpacing: AppSpacing.x16,
         title: InkWell(onTap: () => context.go('/'), child: const NuzlLogo(size: 26)),
         actions: [
-          TextButton(onPressed: () => context.go('/login'), child: const Text('Sign in')),
+          TextButton(onPressed: () => context.go('/login'), child: Text(context.tr('Sign in'))),
           Padding(
             padding: const EdgeInsets.only(right: AppSpacing.x12, left: AppSpacing.x8),
-            child: FilledButton(onPressed: () => context.go('/register'), child: const Text('Sign up')),
+            child: FilledButton(onPressed: () => context.go('/register'), child: Text(context.tr('Sign up'))),
           ),
         ],
       ),
@@ -159,11 +160,11 @@ class PublicListingScreen extends ConsumerWidget {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Icon(Icons.search_off, size: 44, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
             const SizedBox(height: AppSpacing.x12),
-            const Text('This listing is no longer available.'),
+            Text(context.tr('This listing is no longer available.')),
             const SizedBox(height: AppSpacing.x16),
             // Width-capped — the global filled-button theme is full-width (good for
             // form CTAs), which made this centred button a giant bar.
-            SizedBox(width: 220, child: FilledButton(onPressed: () => context.go('/'), child: const Text('Back to NUZL'))),
+            SizedBox(width: 220, child: FilledButton(onPressed: () => context.go('/'), child: Text(context.tr('Back to NUZL')))),
           ]),
         ),
       );
@@ -200,8 +201,8 @@ class _Body extends ConsumerWidget {
     final community = '${m['community'] ?? ''}'.trim();
     final ptype = '${m['property_type'] ?? ''}'.trim();
     final title = building.isNotEmpty
-        ? (unit.isNotEmpty ? '$building · Unit $unit' : building)
-        : (ptype.isNotEmpty ? _cap(ptype) : 'Property');
+        ? (unit.isNotEmpty ? '$building · ${context.tr('Unit')} $unit' : building)
+        : (ptype.isNotEmpty ? _cap(ptype) : context.tr('Property'));
     final desc = '${m['description'] ?? ''}'.trim();
     final verified = '${m['ownership_status']}' == 'verified';
     final refCode = '${m['ref_code'] ?? ''}'.trim();
@@ -223,8 +224,8 @@ class _Body extends ConsumerWidget {
 
     final info = Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Wrap(spacing: 8, runSpacing: 8, children: [
-        _pill(context, isRent ? 'For rent' : 'For sale', AppColors.primary),
-        if (verified) _pill(context, 'Verified', AppColors.success, icon: Icons.verified),
+        _pill(context, context.tr(isRent ? 'For rent' : 'For sale'), AppColors.primary),
+        if (verified) _pill(context, context.tr('Verified'), AppColors.success, icon: Icons.verified),
       ]),
       const SizedBox(height: AppSpacing.x12),
       Text(title, style: t.headlineSmall),
@@ -238,20 +239,20 @@ class _Body extends ConsumerWidget {
       ],
       if (refCode.isNotEmpty) ...[
         const SizedBox(height: 4),
-        Text('Ref $refCode', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w600)),
+        Text('${context.tr('Ref')} $refCode', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontWeight: FontWeight.w600)),
       ],
       const SizedBox(height: AppSpacing.x12),
-      Text('${aed.format(price)}${isRent ? ' / yr' : ''}',
+      Text('${aed.format(price)}${isRent ? ' / ${context.tr('yr')}' : ''}',
           style: t.displaySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800)),
       if (!isRent && est > 0)
-        Text('~${aed.format(est)}/mo estimated mortgage',
+        Text('~${aed.format(est)}/${context.tr('mo')} ${context.tr('estimated mortgage')}',
             style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
       const SizedBox(height: AppSpacing.x16),
       Wrap(spacing: AppSpacing.x12, runSpacing: AppSpacing.x12, children: [
-        _fact(context, Icons.bed_outlined, '${m['bedrooms'] ?? '-'}', 'Bedrooms'),
-        _fact(context, Icons.bathtub_outlined, '${m['bathrooms'] ?? '-'}', 'Bathrooms'),
-        _fact(context, Icons.straighten, '${m['size_sqft'] ?? '-'}', 'Sq ft'),
-        if (ptype.isNotEmpty) _fact(context, Icons.home_work_outlined, _cap(ptype), 'Type'),
+        _fact(context, Icons.bed_outlined, '${m['bedrooms'] ?? '-'}', context.tr('Bedrooms')),
+        _fact(context, Icons.bathtub_outlined, '${m['bathrooms'] ?? '-'}', context.tr('Bathrooms')),
+        _fact(context, Icons.straighten, '${m['size_sqft'] ?? '-'}', context.tr('Sq ft')),
+        if (ptype.isNotEmpty) _fact(context, Icons.home_work_outlined, _cap(ptype), context.tr('Type')),
       ]),
       if (highlights.isNotEmpty) ...[
         const SizedBox(height: AppSpacing.x16),
@@ -267,13 +268,13 @@ class _Body extends ConsumerWidget {
       ],
       if (desc.isNotEmpty) ...[
         const SizedBox(height: AppSpacing.x24),
-        Text('About this property', style: t.titleMedium),
+        Text(context.tr('About this property'), style: t.titleMedium),
         const SizedBox(height: AppSpacing.x8),
         Text(desc, style: t.bodyMedium?.copyWith(height: 1.5)),
       ],
       if ('${m['floorplan_url'] ?? ''}'.trim().isNotEmpty) ...[
         const SizedBox(height: AppSpacing.x24),
-        Text('Floor plan', style: t.titleMedium),
+        Text(context.tr('Floor plan'), style: t.titleMedium),
         const SizedBox(height: AppSpacing.x8),
         GestureDetector(
           onTap: () => showDialog<void>(
@@ -284,8 +285,8 @@ class _Body extends ConsumerWidget {
                 InteractiveViewer(
                   maxScale: 5,
                   child: Image.network('${m['floorplan_url']}', fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => const Padding(
-                          padding: EdgeInsets.all(AppSpacing.x24), child: Text('Floor plan unavailable'))),
+                      errorBuilder: (_, __, ___) => Padding(
+                          padding: const EdgeInsets.all(AppSpacing.x24), child: Text(context.tr('Floor plan unavailable')))),
                 ),
                 Positioned(
                   top: 4, right: 4,
@@ -307,7 +308,7 @@ class _Body extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text('Tap to enlarge', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+        Text(context.tr('Tap to enlarge'), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
       ],
       _PublicRoiEstimate(id: id),
       ...(() {
@@ -321,7 +322,7 @@ class _Body extends ConsumerWidget {
         if (items.isEmpty) return <Widget>[];
         return [
           const SizedBox(height: AppSpacing.x24),
-          Text('Amenities', style: t.titleMedium),
+          Text(context.tr('Amenities'), style: t.titleMedium),
           const SizedBox(height: AppSpacing.x8),
           Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
             for (final a in items) Chip(label: Text(a), visualDensity: VisualDensity.compact),
@@ -330,9 +331,9 @@ class _Body extends ConsumerWidget {
       })(),
       if (details.isNotEmpty) ...[
         const SizedBox(height: AppSpacing.x24),
-        Text('Details', style: t.titleMedium),
+        Text(context.tr('Details'), style: t.titleMedium),
         const SizedBox(height: AppSpacing.x12),
-        DetailGrid(items: details.map((d) => (detailIcon(d.$1), d.$1, d.$2)).toList()),
+        DetailGrid(items: details.map((d) => (detailIcon(d.$1), context.tr(d.$1), d.$2)).toList()),
       ],
       // Regulatory information — the RERA/permit + verified trust block that
       // every UAE portal (Bayut / PropertyFinder / dubizzle) shows.
@@ -359,7 +360,7 @@ class _Body extends ConsumerWidget {
             );
         return [
           const SizedBox(height: AppSpacing.x24),
-          Text('Regulatory information', style: t.titleMedium),
+          Text(context.tr('Regulatory information'), style: t.titleMedium),
           const SizedBox(height: AppSpacing.x8),
           Container(
             padding: const EdgeInsets.all(AppSpacing.x12),
@@ -369,10 +370,10 @@ class _Body extends ConsumerWidget {
               border: Border.all(color: Theme.of(context).dividerColor),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (ownershipVerified) badge(Icons.verified_user, 'Ownership verified', AppColors.accentGold),
-              if (availVerified) badge(Icons.verified, 'Verified listing', AppColors.success),
-              if (permit.isNotEmpty) kv('Permit no.', permit),
-              if (rera.isNotEmpty) kv('RERA no.', rera),
+              if (ownershipVerified) badge(Icons.verified_user, context.tr('Ownership verified'), AppColors.accentGold),
+              if (availVerified) badge(Icons.verified, context.tr('Verified listing'), AppColors.success),
+              if (permit.isNotEmpty) kv(context.tr('Permit no.'), permit),
+              if (rera.isNotEmpty) kv(context.tr('RERA no.'), rera),
             ]),
           ),
         ];
@@ -390,7 +391,7 @@ class _Body extends ConsumerWidget {
         if (lat == null && lng == null && query.isEmpty) return <Widget>[];
         return [
           const SizedBox(height: AppSpacing.x24),
-          Text('Location', style: t.titleMedium),
+          Text(context.tr('Location'), style: t.titleMedium),
           const SizedBox(height: AppSpacing.x8),
           LocationMap(lat: lat, lng: lng, query: query),
         ];
@@ -401,7 +402,7 @@ class _Body extends ConsumerWidget {
         OutlinedButton.icon(
           onPressed: () => context.go('/finance-planner'),
           icon: const Icon(Icons.calculate_outlined, size: 18),
-          label: const Text('Calculate your affordability'),
+          label: Text(context.tr('Calculate your affordability')),
         ),
       ],
     ]);
@@ -494,7 +495,7 @@ class _SimilarStrip extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(AppSpacing.x20, 0, AppSpacing.x20, AppSpacing.x32),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Similar listings', style: t.titleLarge),
+            Text(context.tr('Similar listings'), style: t.titleLarge),
             const SizedBox(height: AppSpacing.x12),
             SizedBox(
               height: 240,
@@ -524,7 +525,7 @@ class _SimilarCard extends StatelessWidget {
     final price = num.tryParse('${m['price']}') ?? 0;
     final isRent = '${m['purpose']}' == 'rent';
     final money = price > 0
-        ? '${NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price)}${isRent ? ' / yr' : ''}'
+        ? '${NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price)}${isRent ? ' / ${context.tr('yr')}' : ''}'
         : '';
     final cover = '${m['cover_image'] ?? ''}';
     final community = '${m['community'] ?? ''}';
@@ -552,8 +553,8 @@ class _SimilarCard extends StatelessWidget {
                       style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 const SizedBox(height: 4),
                 Text([
-                  if (beds != null) '$beds bed',
-                  if (baths != null) '$baths bath',
+                  if (beds != null) '$beds ${context.tr('bed')}',
+                  if (baths != null) '$baths ${context.tr('bath')}',
                 ].join(' · '), style: t.bodySmall),
               ]),
             ),
@@ -612,7 +613,7 @@ class _AgentCard extends ConsumerWidget {
                   Row(children: [
                     const Icon(Icons.star, size: 14, color: AppColors.accentGold),
                     const SizedBox(width: 2),
-                    Text('${score.toStringAsFixed(1)} rating', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                    Text('${score.toStringAsFixed(1)} ${context.tr('rating')}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                   ]),
               ]),
             ),
@@ -621,7 +622,7 @@ class _AgentCard extends ConsumerWidget {
         ],
         if (phone.isNotEmpty || whatsapp.isNotEmpty) ...[
           Row(children: [
-            if (phone.isNotEmpty) Expanded(child: _ContactButton(icon: Icons.call_outlined, label: 'Call', value: phone)),
+            if (phone.isNotEmpty) Expanded(child: _ContactButton(icon: Icons.call_outlined, label: context.tr('Call'), value: phone)),
             if (phone.isNotEmpty && whatsapp.isNotEmpty) const SizedBox(width: AppSpacing.x8),
             if (whatsapp.isNotEmpty)
               Expanded(child: _ContactButton(icon: Icons.chat_outlined, label: 'WhatsApp', value: whatsapp)),
@@ -635,14 +636,14 @@ class _AgentCard extends ConsumerWidget {
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: () => gated('save this property'),
+            onPressed: () => gated(context.tr('save this property')),
             icon: const Icon(Icons.bookmark_outline, size: 18),
-            label: const Text('Save property'),
+            label: Text(context.tr('Save property')),
           ),
         ),
         if (!authed) ...[
           const SizedBox(height: AppSpacing.x8),
-          Text('Free account — save searches, track mortgages and manage your property.',
+          Text(context.tr('Free account — save searches, track mortgages and manage your property.'),
               style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
         ],
       ]),
@@ -660,7 +661,7 @@ class _ContactButton extends StatelessWidget {
     return OutlinedButton.icon(
       onPressed: () {
         Clipboard.setData(ClipboardData(text: value));
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label copied — $value')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label ${context.tr('copied')} — $value')));
       },
       icon: Icon(icon, size: 18),
       label: Text(label),
@@ -681,9 +682,17 @@ class _InquiryForm extends ConsumerStatefulWidget {
 class _InquiryFormState extends ConsumerState<_InquiryForm> {
   final _name = TextEditingController();
   final _phone = TextEditingController();
-  final _message = TextEditingController(text: "I'm interested in this property.");
+  final _message = TextEditingController();
   bool _busy = false;
   bool _sent = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_message.text.isEmpty) {
+      _message.text = context.tr("I'm interested in this property.");
+    }
+  }
 
   @override
   void dispose() {
@@ -698,7 +707,7 @@ class _InquiryFormState extends ConsumerState<_InquiryForm> {
     final phone = _phone.text.trim();
     if (name.isEmpty || phone.isEmpty) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Please add your name and phone number.')));
+          .showSnackBar(SnackBar(content: Text(context.tr('Please add your name and phone number.'))));
       return;
     }
     setState(() => _busy = true);
@@ -733,28 +742,28 @@ class _InquiryFormState extends ConsumerState<_InquiryForm> {
         child: Row(children: [
           const Icon(Icons.check_circle_outline, color: AppColors.success, size: 20),
           const SizedBox(width: AppSpacing.x8),
-          Expanded(child: Text('Enquiry sent — the agent will reach out shortly.', style: t.bodySmall)),
+          Expanded(child: Text(context.tr('Enquiry sent — the agent will reach out shortly.'), style: t.bodySmall)),
         ]),
       );
     }
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Enquire about this property', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+      Text(context.tr('Enquire about this property'), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
       const SizedBox(height: AppSpacing.x8),
       TextField(
           controller: _name,
           textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(labelText: 'Your name', isDense: true)),
+          decoration: InputDecoration(labelText: context.tr('Your name'), isDense: true)),
       const SizedBox(height: AppSpacing.x8),
       TextField(
           controller: _phone,
           keyboardType: TextInputType.phone,
           textInputAction: TextInputAction.next,
-          decoration: const InputDecoration(labelText: 'Phone', isDense: true)),
+          decoration: InputDecoration(labelText: context.tr('Phone'), isDense: true)),
       const SizedBox(height: AppSpacing.x8),
       TextField(
           controller: _message,
           maxLines: 3,
-          decoration: const InputDecoration(labelText: 'Message', isDense: true)),
+          decoration: InputDecoration(labelText: context.tr('Message'), isDense: true)),
       const SizedBox(height: AppSpacing.x12),
       SizedBox(
         width: double.infinity,
@@ -763,7 +772,7 @@ class _InquiryFormState extends ConsumerState<_InquiryForm> {
           icon: _busy
               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
               : const Icon(Icons.send_outlined, size: 18),
-          label: Text(_busy ? 'Sending…' : 'Send enquiry'),
+          label: Text(context.tr(_busy ? 'Sending…' : 'Send enquiry')),
         ),
       ),
     ]);

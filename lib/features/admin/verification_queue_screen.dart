@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -26,15 +27,15 @@ class VerificationQueueScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const DefaultTabController(
+    return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: NuzlAppBar(title: 'Verification queue'),
-        drawer: NuzlDrawer(),
+        appBar: NuzlAppBar(title: context.tr('Verification queue')),
+        drawer: const NuzlDrawer(),
         body: ResponsiveCenter(
           child: Column(children: [
-            TabBar(tabs: [Tab(text: 'Listings'), Tab(text: 'Owner records')]),
-            Expanded(child: TabBarView(children: [_ListingQueue(), _OwnerRecordQueue()])),
+            TabBar(tabs: [Tab(text: context.tr('Listings')), Tab(text: context.tr('Owner records'))]),
+            const Expanded(child: TabBarView(children: [_ListingQueue(), _OwnerRecordQueue()])),
           ]),
         ),
       ),
@@ -103,7 +104,7 @@ class _QueueCard extends ConsumerWidget {
       await ref.read(apiClientProvider).post('/admin/verification-queue/${item['id']}/approve');
       ref.invalidate(verificationQueueProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Listing verified ✓')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Listing verified ✓'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -118,7 +119,7 @@ class _QueueCard extends ConsumerWidget {
           .post('/admin/verification-queue/${item['id']}/reject', body: {'reason': reason});
       ref.invalidate(verificationQueueProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Submission rejected')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Submission rejected'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -135,7 +136,7 @@ class _QueueCard extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             AppBar(
-              title: const Text('Title deed'),
+              title: Text(context.tr('Title deed')),
               automaticallyImplyLeading: false,
               actions: [IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context))],
             ),
@@ -143,8 +144,8 @@ class _QueueCard extends ConsumerWidget {
               child: InteractiveViewer(
                 child: Image.network(url,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => const Padding(
-                        padding: EdgeInsets.all(40), child: Text('Could not load the document.'))),
+                    errorBuilder: (_, __, ___) => Padding(
+                        padding: const EdgeInsets.all(40), child: Text(context.tr('Could not load the document.')))),
               ),
             ),
           ],
@@ -159,9 +160,9 @@ class _QueueCard extends ConsumerWidget {
     final title = [
       if ('${item['community'] ?? ''}'.isNotEmpty) '${item['community']}',
       if ('${item['property_type'] ?? ''}'.isNotEmpty) _cap('${item['property_type']}'),
-      if ('${item['unit_no'] ?? ''}'.isNotEmpty) 'Unit ${item['unit_no']}',
+      if ('${item['unit_no'] ?? ''}'.isNotEmpty) '${context.tr('Unit')} ${item['unit_no']}',
     ].join(' · ');
-    final broker = '${item['broker_name'] ?? 'Unknown'}';
+    final broker = '${item['broker_name'] ?? context.tr('Unknown')}';
     final submitted = DateTime.tryParse('${item['ownership_submitted_at'] ?? ''}');
     final hasDeed = '${item['ownership_doc_url'] ?? ''}'.trim().isNotEmpty;
 
@@ -171,10 +172,10 @@ class _QueueCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title.isEmpty ? 'Listing' : title,
+            Text(title.isEmpty ? context.tr('Listing') : title,
                 style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 2),
-            Text('Submitted by $broker${submitted != null ? ' · ${DateFormat('d MMM, HH:mm').format(submitted.toLocal())}' : ''}',
+            Text('${context.tr('Submitted by')} $broker${submitted != null ? ' · ${DateFormat('d MMM, HH:mm').format(submitted.toLocal())}' : ''}',
                 style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
             const SizedBox(height: AppSpacing.x12),
             Wrap(
@@ -184,18 +185,18 @@ class _QueueCard extends ConsumerWidget {
                 OutlinedButton.icon(
                   onPressed: hasDeed ? () => _viewDeed(context) : null,
                   icon: const Icon(Icons.description_outlined, size: 18),
-                  label: const Text('View deed'),
+                  label: Text(context.tr('View deed')),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => _reject(context, ref),
                   style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
                   icon: const Icon(Icons.close, size: 18),
-                  label: const Text('Reject'),
+                  label: Text(context.tr('Reject')),
                 ),
                 FilledButton.icon(
                   onPressed: () => _approve(context, ref),
                   icon: const Icon(Icons.verified, size: 18),
-                  label: const Text('Approve'),
+                  label: Text(context.tr('Approve')),
                 ),
               ],
             ),
@@ -233,28 +234,28 @@ Future<Map<String, dynamic>?> _pickUser(BuildContext context, WidgetRef ref) {
         }
 
         return AlertDialog(
-          title: const Text('Transfer to'),
+          title: Text(context.tr('Transfer to')),
           content: SizedBox(
             width: 380,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               TextField(
                 controller: search,
                 autofocus: true,
-                decoration: const InputDecoration(hintText: 'Search a user by name…', prefixIcon: Icon(Icons.search)),
+                decoration: InputDecoration(hintText: context.tr('Search a user by name…'), prefixIcon: const Icon(Icons.search)),
                 onChanged: run,
               ),
               const SizedBox(height: AppSpacing.x8),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 280),
                 child: results.isEmpty
-                    ? const Padding(padding: EdgeInsets.all(16), child: Text('Type at least 2 letters to search'))
+                    ? Padding(padding: const EdgeInsets.all(16), child: Text(context.tr('Type at least 2 letters to search')))
                     : ListView(
                         shrinkWrap: true,
                         children: [
                           for (final u in results)
                             ListTile(
                               dense: true,
-                              title: Text('${u['full_name'] ?? 'User'}'),
+                              title: Text('${u['full_name'] ?? context.tr('User')}'),
                               subtitle: u['email'] != null ? Text('${u['email']}') : null,
                               onTap: () => Navigator.pop(ctx, Map<String, dynamic>.from(u)),
                             ),
@@ -263,7 +264,7 @@ Future<Map<String, dynamic>?> _pickUser(BuildContext context, WidgetRef ref) {
               ),
             ]),
           ),
-          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('Close')))],
         );
       },
     ),
@@ -288,22 +289,22 @@ class _RejectReasonDialogState extends State<_RejectReasonDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Reject submission'),
+      title: Text(context.tr('Reject submission')),
       content: TextField(
         controller: _ctrl,
         autofocus: true,
         minLines: 2,
         maxLines: 4,
-        decoration: const InputDecoration(
-          hintText: 'Reason (shown to the lister), e.g. document unclear',
-          border: OutlineInputBorder(),
+        decoration: InputDecoration(
+          hintText: context.tr('Reason (shown to the lister), e.g. document unclear'),
+          border: const OutlineInputBorder(),
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Cancel'))),
         FilledButton(
           onPressed: () => Navigator.pop(context, _ctrl.text.trim()),
-          child: const Text('Reject'),
+          child: Text(context.tr('Reject')),
         ),
       ],
     );
@@ -321,7 +322,7 @@ class _OwnerRecordCard extends ConsumerWidget {
       await ref.read(apiClientProvider).post('/admin/ownership-records/${item['id']}/approve');
       ref.invalidate(ownershipRecordsProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ownership verified ✓')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Ownership verified ✓'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -336,7 +337,7 @@ class _OwnerRecordCard extends ConsumerWidget {
           .post('/admin/ownership-records/${item['id']}/reject', body: {'reason': reason});
       ref.invalidate(ownershipRecordsProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ownership rejected')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Ownership rejected'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -349,7 +350,7 @@ class _OwnerRecordCard extends ConsumerWidget {
       ref.invalidate(ownershipRecordsProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(locked ? 'Property locked' : 'Property unlocked')));
+            .showSnackBar(SnackBar(content: Text(context.tr(locked ? 'Property locked' : 'Property unlocked'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -359,15 +360,15 @@ class _OwnerRecordCard extends ConsumerWidget {
   Future<void> _transfer(BuildContext context, WidgetRef ref) async {
     final picked = await _pickUser(context, ref);
     if (picked == null || !context.mounted) return;
-    final name = '${picked['full_name'] ?? 'this user'}';
+    final name = '${picked['full_name'] ?? context.tr('this user')}';
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Transfer ownership'),
-        content: Text('Transfer this property to $name? Ownership resets to pending and the property moves to their portfolio.'),
+        title: Text(context.tr('Transfer ownership')),
+        content: Text('${context.tr('Transfer this property to')} $name? ${context.tr('Ownership resets to pending and the property moves to their portfolio.')}'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Transfer')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Transfer'))),
         ],
       ),
     );
@@ -377,7 +378,7 @@ class _OwnerRecordCard extends ConsumerWidget {
           .post('/admin/ownership-records/${item['id']}/transfer', body: {'owner_id': picked['id']});
       ref.invalidate(ownershipRecordsProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Ownership transferred to $name')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('Ownership transferred to')} $name')));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -390,9 +391,9 @@ class _OwnerRecordCard extends ConsumerWidget {
     final title = [
       if ('${item['building_name'] ?? item['community'] ?? ''}'.isNotEmpty) '${item['building_name'] ?? item['community']}',
       if ('${item['property_type'] ?? ''}'.isNotEmpty) _cap('${item['property_type']}'),
-      if ('${item['unit_no'] ?? ''}'.isNotEmpty) 'Unit ${item['unit_no']}',
+      if ('${item['unit_no'] ?? ''}'.isNotEmpty) '${context.tr('Unit')} ${item['unit_no']}',
     ].join(' · ');
-    final owner = '${item['owner_name'] ?? 'Unknown'}';
+    final owner = '${item['owner_name'] ?? context.tr('Unknown')}';
     final deedName = '${item['owner_name_on_deed'] ?? ''}'.trim();
     final deedNo = '${item['title_deed_number'] ?? ''}'.trim();
     final refCode = '${item['ref_code'] ?? ''}'.trim();
@@ -408,7 +409,7 @@ class _OwnerRecordCard extends ConsumerWidget {
           children: [
             Row(children: [
               Expanded(
-                child: Text(title.isEmpty ? 'Property' : title,
+                child: Text(title.isEmpty ? context.tr('Property') : title,
                     style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
               ),
               if (locked)
@@ -418,9 +419,9 @@ class _OwnerRecordCard extends ConsumerWidget {
               if (refCode.isNotEmpty) Text(refCode, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
             ]),
             const SizedBox(height: 2),
-            Text('Account: $owner', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
-            if (deedName.isNotEmpty) Text('On deed: $deedName', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
-            if (deedNo.isNotEmpty) Text('Deed no.: $deedNo', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            Text('${context.tr('Account')}: $owner', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            if (deedName.isNotEmpty) Text('${context.tr('On deed')}: $deedName', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+            if (deedNo.isNotEmpty) Text('${context.tr('Deed no.')}: $deedNo', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
             if (score != null) Padding(
               padding: const EdgeInsets.only(top: 6),
               child: _MatchChip(score: score.toDouble()),
@@ -438,28 +439,28 @@ class _OwnerRecordCard extends ConsumerWidget {
                           if (uri != null) await launchUrl(uri, mode: LaunchMode.externalApplication);
                         },
                   icon: const Icon(Icons.description_outlined, size: 18),
-                  label: const Text('View deed'),
+                  label: Text(context.tr('View deed')),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => _reject(context, ref),
                   style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
                   icon: const Icon(Icons.close, size: 18),
-                  label: const Text('Reject'),
+                  label: Text(context.tr('Reject')),
                 ),
                 FilledButton.icon(
                   onPressed: () => _approve(context, ref),
                   icon: const Icon(Icons.verified, size: 18),
-                  label: const Text('Verify'),
+                  label: Text(context.tr('Verify')),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => _lock(context, ref, !locked),
                   icon: Icon(locked ? Icons.lock_open_outlined : Icons.lock_outline, size: 18),
-                  label: Text(locked ? 'Unlock' : 'Lock'),
+                  label: Text(context.tr(locked ? 'Unlock' : 'Lock')),
                 ),
                 OutlinedButton.icon(
                   onPressed: () => _transfer(context, ref),
                   icon: const Icon(Icons.swap_horiz, size: 18),
-                  label: const Text('Transfer'),
+                  label: Text(context.tr('Transfer')),
                 ),
               ],
             ),
@@ -484,7 +485,7 @@ class _MatchChip extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AppSpacing.rFull),
       ),
-      child: Text('Name match $pct%',
+      child: Text('${context.tr('Name match')} $pct%',
           style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12)),
     );
   }
@@ -503,9 +504,9 @@ class _Empty extends StatelessWidget {
           children: [
             const Icon(Icons.verified_user_outlined, size: 56, color: AppColors.textSubtle),
             const SizedBox(height: AppSpacing.x16),
-            Text('Nothing to review', style: t.titleMedium),
+            Text(context.tr('Nothing to review'), style: t.titleMedium),
             const SizedBox(height: AppSpacing.x8),
-            Text('Title-deed submissions appear here for approval.',
+            Text(context.tr('Title-deed submissions appear here for approval.'),
                 textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
           ],
         ),

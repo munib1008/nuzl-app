@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/upload_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -41,7 +42,7 @@ class TenderDetailScreen extends ConsumerWidget {
     final req = ref.watch(_tenderProvider(id));
     final myId = ref.watch(authControllerProvider).user?.id;
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Request'),
+      appBar: NuzlAppBar(title: context.tr('Request')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: RefreshIndicator(
@@ -53,7 +54,7 @@ class TenderDetailScreen extends ConsumerWidget {
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
             error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (r) => r == null
-                ? ListView(children: const [Padding(padding: EdgeInsets.all(40), child: Center(child: Text('Request not found.')))])
+                ? ListView(children: [Padding(padding: const EdgeInsets.all(40), child: Center(child: Text(context.tr('Request not found.'))))])
                 : _body(context, ref, r, myId),
           ),
         ),
@@ -85,11 +86,11 @@ class TenderDetailScreen extends ConsumerWidget {
       const SizedBox(height: AppSpacing.x12),
       Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
         if ('${r['category'] ?? ''}'.isNotEmpty) _chip(Icons.category_outlined, '${r['category']}${'${r['subcategory'] ?? ''}'.isNotEmpty ? ' · ${r['subcategory']}' : ''}'),
-        if (budget != null) _chip(Icons.payments_outlined, 'Budget ${aed.format(budget)}'),
-        if (isProduct && r['quantity'] != null) _chip(Icons.numbers, 'Qty ${r['quantity']}'),
+        if (budget != null) _chip(Icons.payments_outlined, '${context.tr('Budget')} ${aed.format(budget)}'),
+        if (isProduct && r['quantity'] != null) _chip(Icons.numbers, '${context.tr('Qty')} ${r['quantity']}'),
         if ('${r['location'] ?? ''}'.isNotEmpty) _chip(Icons.place_outlined, '${r['location']}'),
         if ('${r['community'] ?? ''}'.isNotEmpty) _chip(Icons.home_work_outlined, '${r['community']}${'${r['unit_no'] ?? ''}'.isNotEmpty ? ' · ${r['unit_no']}' : ''}'),
-        if (preferred.isNotEmpty) _chip(Icons.event, 'Preferred $preferred'),
+        if (preferred.isNotEmpty) _chip(Icons.event, '${context.tr('Preferred')} $preferred'),
       ]),
       const SizedBox(height: AppSpacing.x16),
 
@@ -104,12 +105,12 @@ class TenderDetailScreen extends ConsumerWidget {
         FilledButton.icon(
           onPressed: () => _bidDialog(context, ref),
           icon: const Icon(Icons.request_quote_outlined, size: 18),
-          label: const Text('Submit / update your quote'),
+          label: Text(context.tr('Submit / update your quote')),
         ),
         const SizedBox(height: AppSpacing.x16),
       ],
 
-      Text(isOwner ? 'Quotes received' : 'Quotes', style: t.titleMedium),
+      Text(context.tr(isOwner ? 'Quotes received' : 'Quotes'), style: t.titleMedium),
       const SizedBox(height: AppSpacing.x8),
       Consumer(builder: (ctx, r2, _) {
         final bids = r2.watch(_bidsProvider(id));
@@ -119,7 +120,7 @@ class TenderDetailScreen extends ConsumerWidget {
           data: (list) => list.isEmpty
               ? Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
-                  child: Text('No quotes yet.', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)))
+                  child: Text(ctx.tr('No quotes yet.'), style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)))
               : Column(children: [
                   for (final b in list)
                     _BidCard(
@@ -152,7 +153,7 @@ class TenderDetailScreen extends ConsumerWidget {
     var uploading = false;
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Submit your quote',
+      title: context.tr('Submit your quote'),
       maxWidth: 420,
       children: [
         StatefulBuilder(builder: (ctx, setS) {
@@ -186,13 +187,13 @@ class TenderDetailScreen extends ConsumerWidget {
           }
 
           return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price (AED) *')),
+            TextField(controller: price, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: ctx.tr('Price (AED) *'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: days, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Completion time (days)')),
+            TextField(controller: days, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: ctx.tr('Completion time (days)'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: warranty, decoration: const InputDecoration(labelText: 'Warranty', hintText: 'e.g. 1 year')),
+            TextField(controller: warranty, decoration: InputDecoration(labelText: ctx.tr('Warranty'), hintText: ctx.tr('e.g. 1 year'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: note, maxLines: 2, decoration: const InputDecoration(labelText: 'Note')),
+            TextField(controller: note, maxLines: 2, decoration: InputDecoration(labelText: ctx.tr('Note'))),
             const SizedBox(height: AppSpacing.x8),
             Align(
               alignment: Alignment.centerLeft,
@@ -201,7 +202,7 @@ class TenderDetailScreen extends ConsumerWidget {
                 icon: uploading
                     ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.attach_file, size: 18),
-                label: Text(uploading ? 'Uploading…' : 'Attach quotation / document'),
+                label: Text(ctx.tr(uploading ? 'Uploading…' : 'Attach quotation / document')),
               ),
             ),
             for (final d in docs)
@@ -209,7 +210,7 @@ class TenderDetailScreen extends ConsumerWidget {
                 dense: true,
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.insert_drive_file_outlined, size: 18),
-                title: Text(d['name'] ?? 'Document', maxLines: 1, overflow: TextOverflow.ellipsis),
+                title: Text(d['name'] ?? ctx.tr('Document'), maxLines: 1, overflow: TextOverflow.ellipsis),
                 trailing: IconButton(
                   icon: const Icon(Icons.close, size: 18),
                   onPressed: () => setS(() => docs.remove(d)),
@@ -219,8 +220,8 @@ class TenderDetailScreen extends ConsumerWidget {
         }),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Submit quote')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Submit quote'))),
       ],
     );
     if (ok != true) return;
@@ -233,7 +234,7 @@ class TenderDetailScreen extends ConsumerWidget {
         'documents': docs,
       });
       ref.invalidate(_bidsProvider(id));
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quote submitted')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Quote submitted'))));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
@@ -260,7 +261,7 @@ class _StatusBar extends ConsumerWidget {
       FilledButton.icon(
         onPressed: () => _set(context, ref, step.$1),
         icon: const Icon(Icons.arrow_forward, size: 18),
-        label: Text(step.$2),
+        label: Text(context.tr(step.$2)),
       ),
     ]);
   }
@@ -293,7 +294,7 @@ class _BidCard extends ConsumerWidget {
     final reviews = int.tryParse('${bid['review_count'] ?? 0}') ?? 0;
     final accepted = '${bid['status']}' == 'accepted';
     final declined = '${bid['status']}' == 'declined';
-    final provider = '${bid['provider_org'] ?? ''}'.trim().isNotEmpty ? '${bid['provider_org']}' : '${bid['provider_name'] ?? 'Provider'}';
+    final provider = '${bid['provider_org'] ?? ''}'.trim().isNotEmpty ? '${bid['provider_org']}' : '${bid['provider_name'] ?? context.tr('Provider')}';
     return Card(
       color: accepted ? AppColors.success.withValues(alpha: 0.06) : null,
       child: Padding(
@@ -305,15 +306,15 @@ class _BidCard extends ConsumerWidget {
               const Icon(Icons.verified, size: 14, color: AppColors.success),
               const SizedBox(width: 4),
             ],
-            if (accepted) const StatusBadge('Awarded', tone: BadgeTone.success),
-            if (declined) const StatusBadge('Declined', tone: BadgeTone.neutral),
+            if (accepted) StatusBadge(context.tr('Awarded'), tone: BadgeTone.success),
+            if (declined) StatusBadge(context.tr('Declined'), tone: BadgeTone.neutral),
           ]),
           const SizedBox(height: 6),
           Wrap(spacing: AppSpacing.x16, runSpacing: 4, children: [
-            if (price != null) _kv(t, 'Price', aed.format(price), dark),
-            if (days != null) _kv(t, 'Time', '$days days', dark),
-            if ('${bid['warranty'] ?? ''}'.trim().isNotEmpty) _kv(t, 'Warranty', '${bid['warranty']}', dark),
-            if (rating != null && reviews > 0) _kv(t, 'Rating', '${rating.toStringAsFixed(1)} ($reviews)', dark),
+            if (price != null) _kv(t, context.tr('Price'), aed.format(price), dark),
+            if (days != null) _kv(t, context.tr('Time'), '$days ${context.tr('days')}', dark),
+            if ('${bid['warranty'] ?? ''}'.trim().isNotEmpty) _kv(t, context.tr('Warranty'), '${bid['warranty']}', dark),
+            if (rating != null && reviews > 0) _kv(t, context.tr('Rating'), '${rating.toStringAsFixed(1)} ($reviews)', dark),
           ]),
           if ('${bid['note'] ?? ''}'.trim().isNotEmpty) ...[
             const SizedBox(height: 6),
@@ -325,7 +326,7 @@ class _BidCard extends ConsumerWidget {
               for (final d in (bid['documents'] as List))
                 ActionChip(
                   avatar: const Icon(Icons.attach_file, size: 14),
-                  label: Text('${(d as Map)['name'] ?? 'Document'}'),
+                  label: Text('${(d as Map)['name'] ?? context.tr('Document')}'),
                   onPressed: () {
                     final url = '${d['url'] ?? ''}';
                     if (url.isNotEmpty) launchUrl(Uri.parse(url), webOnlyWindowName: '_blank');
@@ -340,7 +341,7 @@ class _BidCard extends ConsumerWidget {
               child: FilledButton.icon(
                 onPressed: () => _award(context, ref),
                 icon: const Icon(Icons.emoji_events_outlined, size: 18),
-                label: const Text('Award'),
+                label: Text(context.tr('Award')),
               ),
             ),
           ],
@@ -358,11 +359,11 @@ class _BidCard extends ConsumerWidget {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Award this quote?'),
-        content: const Text('The chosen provider is notified and accepted; all other quotes are declined.'),
+        title: Text(context.tr('Award this quote?')),
+        content: Text(context.tr('The chosen provider is notified and accepted; all other quotes are declined.')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Award')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Award'))),
         ],
       ),
     );
@@ -371,7 +372,7 @@ class _BidCard extends ConsumerWidget {
       await ref.read(apiClientProvider).post('/tenders/$requestId/award', body: {'bid_id': bid['id']});
       ref.invalidate(_bidsProvider(requestId));
       ref.invalidate(_tenderProvider(requestId));
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Quote awarded ✓')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Quote awarded ✓'))));
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }

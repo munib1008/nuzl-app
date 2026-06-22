@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 
@@ -37,7 +38,7 @@ class ListingRibbons extends StatelessWidget {
               color: color.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(AppSpacing.rFull),
             ),
-            child: Text(label,
+            child: Text(context.tr(label),
                 style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
           ),
       ],

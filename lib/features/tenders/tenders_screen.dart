@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -58,16 +59,16 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Requests'),
+      appBar: NuzlAppBar(title: context.tr('Requests')),
       drawer: const NuzlDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _postDialog(context),
         icon: const Icon(Icons.post_add),
-        label: const Text('Post request'),
+        label: Text(context.tr('Post request')),
       ),
       body: ResponsiveCenter(
         child: Column(children: [
-          TabBar(controller: _tabs, tabs: const [Tab(text: 'My requests'), Tab(text: 'Open to bid')]),
+          TabBar(controller: _tabs, tabs: [Tab(text: context.tr('My requests')), Tab(text: context.tr('Open to bid'))]),
           Expanded(child: TabBarView(controller: _tabs, children: [
             _myRequests(),
             _openRequests(),
@@ -85,7 +86,7 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
         loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
         error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
         data: (list) => list.isEmpty
-            ? _empty('No requests yet', 'Post a service request or product RFQ and let providers quote.')
+            ? _empty(context.tr('No requests yet'), context.tr('Post a service request or product RFQ and let providers quote.'))
             : ListView.separated(
                 padding: const EdgeInsets.all(AppSpacing.x16),
                 itemCount: list.length,
@@ -104,7 +105,7 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
         child: Wrap(spacing: AppSpacing.x8, children: [
           for (final k in const ['all', 'service', 'product'])
             ChoiceChip(
-              label: Text(k == 'all' ? 'All' : k == 'service' ? 'Services' : 'Products'),
+              label: Text(context.tr(k == 'all' ? 'All' : k == 'service' ? 'Services' : 'Products')),
               selected: _openKind == k,
               onSelected: (_) => setState(() => _openKind = k),
             ),
@@ -117,7 +118,7 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
             loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
             error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (list) => list.isEmpty
-                ? _empty('No open requests', 'New service requests and RFQs in your categories appear here to bid on.')
+                ? _empty(context.tr('No open requests'), context.tr('New service requests and RFQs in your categories appear here to bid on.'))
                 : ListView.separated(
                     padding: const EdgeInsets.all(AppSpacing.x16),
                     itemCount: list.length,
@@ -157,7 +158,7 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
     final qty = TextEditingController();
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Post a request',
+      title: context.tr('Post a request'),
       maxWidth: 480,
       children: [
         StatefulBuilder(
@@ -166,10 +167,10 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
           return Column(mainAxisSize: MainAxisSize.min, children: [
             DropdownButtonFormField<String>(
               initialValue: kind,
-              decoration: const InputDecoration(labelText: 'Type'),
-              items: const [
-                DropdownMenuItem(value: 'service', child: Text('Service request')),
-                DropdownMenuItem(value: 'product', child: Text('Product RFQ')),
+              decoration: InputDecoration(labelText: ctx.tr('Type')),
+              items: [
+                DropdownMenuItem(value: 'service', child: Text(ctx.tr('Service request'))),
+                DropdownMenuItem(value: 'product', child: Text(ctx.tr('Product RFQ'))),
               ],
               onChanged: (v) => setS(() { kind = v ?? 'service'; category = null; subcategory = null; }),
             ),
@@ -178,7 +179,7 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
               key: ValueKey('tc-$kind'),
               initialValue: category,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Category'),
+              decoration: InputDecoration(labelText: ctx.tr('Category')),
               items: [for (final c in MarketplaceTaxonomy.categories(kind)) DropdownMenuItem(value: c, child: Text(c))],
               onChanged: (v) => setS(() { category = v; subcategory = null; }),
             ),
@@ -187,27 +188,27 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
               key: ValueKey('ts-$kind-$category'),
               initialValue: subcategory,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Subcategory'),
+              decoration: InputDecoration(labelText: ctx.tr('Subcategory')),
               items: [for (final s in MarketplaceTaxonomy.subcategories(kind, category)) DropdownMenuItem(value: s, child: Text(s))],
               onChanged: category == null ? null : (v) => setS(() => subcategory = v),
             ),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: title, decoration: const InputDecoration(labelText: 'Title *', hintText: 'e.g. Apartment painting')),
+            TextField(controller: title, decoration: InputDecoration(labelText: '${ctx.tr('Title')} *', hintText: ctx.tr('e.g. Apartment painting'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: desc, maxLines: 2, decoration: const InputDecoration(labelText: 'Description')),
+            TextField(controller: desc, maxLines: 2, decoration: InputDecoration(labelText: ctx.tr('Description'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: location, decoration: const InputDecoration(labelText: 'Location', hintText: 'e.g. Marina Heights')),
+            TextField(controller: location, decoration: InputDecoration(labelText: ctx.tr('Location'), hintText: ctx.tr('e.g. Marina Heights'))),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
-              Expanded(child: TextField(controller: budget, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Budget (AED)'))),
+              Expanded(child: TextField(controller: budget, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: ctx.tr('Budget (AED)')))),
               if (kind == 'product') ...[
                 const SizedBox(width: AppSpacing.x8),
-                Expanded(child: TextField(controller: qty, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Quantity'))),
+                Expanded(child: TextField(controller: qty, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: ctx.tr('Quantity')))),
               ],
             ]),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
-              Expanded(child: Text(preferred == null ? 'Preferred date (optional)' : 'Preferred: ${DateFormat('d MMM yyyy').format(preferred!)}',
+              Expanded(child: Text(preferred == null ? ctx.tr('Preferred date (optional)') : '${ctx.tr('Preferred')}: ${DateFormat('d MMM yyyy').format(preferred!)}',
                   style: TextStyle(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
               TextButton.icon(
                 onPressed: () async {
@@ -216,7 +217,7 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
                   if (d != null) setS(() => preferred = d);
                 },
                 icon: const Icon(Icons.event, size: 18),
-                label: const Text('Pick date'),
+                label: Text(ctx.tr('Pick date')),
               ),
             ]),
           ]);
@@ -224,13 +225,13 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Post')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Post'))),
       ],
     );
     if (ok != true) return;
     if (title.text.trim().isEmpty) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A title is required.')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('A title is required.'))));
       return;
     }
     try {
@@ -247,7 +248,7 @@ class _TendersScreenState extends ConsumerState<TendersScreen> with SingleTicker
       });
       ref.invalidate(myTendersProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Request posted — providers will be notified.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Request posted — providers will be notified.'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -289,17 +290,19 @@ class _TenderCard extends StatelessWidget {
               const SizedBox(height: 2),
               Text([
                 if ('${m['category'] ?? ''}'.isNotEmpty) '${m['category']}',
-                if (budget != null) 'Budget ${aed.format(budget)}',
+                if (budget != null) '${context.tr('Budget')} ${aed.format(budget)}',
               ].join(' · '), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ],
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
               Icon(Icons.request_quote_outlined, size: 14, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 4),
-              Text(mine ? '$bids ${bids == 1 ? 'quote' : 'quotes'} received' : '$bids ${bids == 1 ? 'quote' : 'quotes'} so far',
+              Text(mine
+                      ? '$bids ${context.tr(bids == 1 ? 'quote' : 'quotes')} ${context.tr('received')}'
+                      : '$bids ${context.tr(bids == 1 ? 'quote' : 'quotes')} ${context.tr('so far')}',
                   style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
               const Spacer(),
-              Text(mine ? 'Compare →' : 'View & bid →', style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
+              Text(context.tr(mine ? 'Compare →' : 'View & bid →'), style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
             ]),
           ]),
         ),

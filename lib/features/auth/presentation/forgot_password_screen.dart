@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/nuzl_logo.dart';
 import '../data/auth_repository.dart';
@@ -48,29 +49,29 @@ class _S extends ConsumerState<ForgotPasswordScreen> {
               if (_sent) ...[
                 Icon(Icons.mark_email_read_outlined, size: 48, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(height: AppSpacing.x12),
-                Text('Check your email', style: t.headlineSmall, textAlign: TextAlign.center),
+                Text(context.tr('Check your email'), style: t.headlineSmall, textAlign: TextAlign.center),
                 const SizedBox(height: AppSpacing.x8),
-                Text('If an account exists for that address, we sent a link to reset your password. It expires in 1 hour.',
+                Text(context.tr('If an account exists for that address, we sent a link to reset your password. It expires in 1 hour.'),
                     style: t.bodyMedium?.copyWith(color: Theme.of(context).hintColor), textAlign: TextAlign.center),
                 const SizedBox(height: AppSpacing.x24),
                 if (_devToken != null) ...[
                   FilledButton(
                     onPressed: () => context.go('/reset?token=$_devToken'),
-                    child: const Text('Set new password now'),
+                    child: Text(context.tr('Set new password now')),
                   ),
                   const SizedBox(height: AppSpacing.x8),
                 ],
-                TextButton(onPressed: () => context.go('/login'), child: const Text('Back to sign in')),
+                TextButton(onPressed: () => context.go('/login'), child: Text(context.tr('Back to sign in'))),
               ] else ...[
-                Text('Reset your password', style: t.headlineSmall, textAlign: TextAlign.center),
+                Text(context.tr('Reset your password'), style: t.headlineSmall, textAlign: TextAlign.center),
                 const SizedBox(height: AppSpacing.x8),
-                Text('Enter your email and we’ll send you a reset link.',
+                Text(context.tr('Enter your email and we’ll send you a reset link.'),
                     style: t.bodyMedium?.copyWith(color: Theme.of(context).hintColor), textAlign: TextAlign.center),
                 const SizedBox(height: AppSpacing.x24),
                 TextField(
                   controller: _email,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(hintText: 'Email'),
+                  decoration: InputDecoration(hintText: context.tr('Email')),
                   onSubmitted: (_) => _submit(),
                 ),
                 const SizedBox(height: AppSpacing.x16),
@@ -78,10 +79,10 @@ class _S extends ConsumerState<ForgotPasswordScreen> {
                   onPressed: _sending ? null : _submit,
                   child: _sending
                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Send reset link'),
+                      : Text(context.tr('Send reset link')),
                 ),
                 const SizedBox(height: AppSpacing.x8),
-                TextButton(onPressed: () => context.go('/login'), child: const Text('Back to sign in')),
+                TextButton(onPressed: () => context.go('/login'), child: Text(context.tr('Back to sign in'))),
               ],
             ]),
           ),

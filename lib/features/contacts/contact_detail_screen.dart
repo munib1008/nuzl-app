@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -33,7 +34,7 @@ class ContactDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(contactDetailProvider(id));
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Contact'),
+      appBar: NuzlAppBar(title: context.tr('Contact')),
       drawer: const NuzlDrawer(),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(contactDetailProvider(id)),
@@ -75,19 +76,19 @@ class ContactDetailScreen extends ConsumerWidget {
         const SizedBox(height: AppSpacing.x16),
         if (phone.isNotEmpty) _row(Icons.phone_outlined, phone, t, muted),
         if (email.isNotEmpty) _row(Icons.email_outlined, email, t, muted),
-        if (owner.isNotEmpty) _row(Icons.person_outline, 'Owner: $owner', t, muted),
-        if (props > 0) _row(Icons.home_work_outlined, '$props propert${props == 1 ? 'y' : 'ies'}', t, muted),
+        if (owner.isNotEmpty) _row(Icons.person_outline, '${context.tr('Owner')}: $owner', t, muted),
+        if (props > 0) _row(Icons.home_work_outlined, '$props ${context.tr(props == 1 ? 'property' : 'properties')}', t, muted),
         if (notes.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.x12),
-          Text('Notes', style: t.labelLarge),
+          Text(context.tr('Notes'), style: t.labelLarge),
           Text(notes, style: t.bodyMedium),
         ],
         const SizedBox(height: AppSpacing.x20),
-        Text('Lifecycle stage', style: t.labelLarge),
+        Text(context.tr('Lifecycle stage'), style: t.labelLarge),
         const SizedBox(height: AppSpacing.x8),
         DropdownButtonFormField<String>(
           initialValue: contactLifecycleOrder.contains(lifecycle) ? lifecycle : null,
-          decoration: const InputDecoration(labelText: 'Stage'),
+          decoration: InputDecoration(labelText: context.tr('Stage')),
           items: [for (final l in contactLifecycleOrder) DropdownMenuItem(value: l, child: Text(contactLifecycleLabels[l] ?? l))],
           onChanged: (v) async {
             if (v == null || v == lifecycle) return;
@@ -106,7 +107,7 @@ class ContactDetailScreen extends ConsumerWidget {
             child: OutlinedButton.icon(
               onPressed: () => context.push('/leads/${c['lead_id']}'),
               icon: const Icon(Icons.open_in_new, size: 18),
-              label: const Text('Open lead'),
+              label: Text(context.tr('Open lead')),
             ),
           ),
         ],

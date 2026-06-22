@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
@@ -35,11 +36,11 @@ class PublicOrgScreen extends ConsumerWidget {
         error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.x24),
-            child: Text('This organization is not available.', style: Theme.of(context).textTheme.bodyMedium),
+            child: Text(context.tr('This organization is not available.'), style: Theme.of(context).textTheme.bodyMedium),
           ),
         ),
         data: (m) => m.isEmpty
-            ? const Center(child: Text('Not found'))
+            ? Center(child: Text(context.tr('Not found')))
             : _Body(org: m),
       ),
     );
@@ -54,7 +55,7 @@ class _Body extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final name = '${org['name'] ?? 'Agency'}';
+    final name = '${org['name'] ?? context.tr('Agency')}';
     final tagline = '${org['tagline'] ?? ''}'.trim();
     final about = '${org['about'] ?? ''}'.trim();
     final cover = '${org['cover_image_url'] ?? ''}'.trim();
@@ -73,14 +74,14 @@ class _Body extends StatelessWidget {
     final reviewCount = int.tryParse('${org['review_count'] ?? 0}') ?? 0;
     // Credentials & registration (shown when the company has supplied them).
     final credentials = <(String, String)>[
-      if ('${org['rera_orn'] ?? ''}'.trim().isNotEmpty) ('RERA ORN', '${org['rera_orn']}'),
-      if ('${org['trade_license'] ?? ''}'.trim().isNotEmpty) ('Trade licence', '${org['trade_license']}'),
-      if ('${org['legal_entity_type'] ?? ''}'.trim().isNotEmpty) ('Legal entity', '${org['legal_entity_type']}'),
+      if ('${org['rera_orn'] ?? ''}'.trim().isNotEmpty) (context.tr('RERA ORN'), '${org['rera_orn']}'),
+      if ('${org['trade_license'] ?? ''}'.trim().isNotEmpty) (context.tr('Trade licence'), '${org['trade_license']}'),
+      if ('${org['legal_entity_type'] ?? ''}'.trim().isNotEmpty) (context.tr('Legal entity'), '${org['legal_entity_type']}'),
       if ('${org['year_established'] ?? ''}'.trim().isNotEmpty && '${org['year_established']}' != '0')
-        ('Established', '${org['year_established']}'),
-      if ('${org['country_of_registration'] ?? ''}'.trim().isNotEmpty) ('Registered in', '${org['country_of_registration']}'),
-      if ('${org['vat_number'] ?? ''}'.trim().isNotEmpty) ('TRN / VAT', '${org['vat_number']}'),
-      if ('${org['innovation_license'] ?? ''}'.trim().isNotEmpty) ('Innovation licence', '${org['innovation_license']}'),
+        (context.tr('Established'), '${org['year_established']}'),
+      if ('${org['country_of_registration'] ?? ''}'.trim().isNotEmpty) (context.tr('Registered in'), '${org['country_of_registration']}'),
+      if ('${org['vat_number'] ?? ''}'.trim().isNotEmpty) (context.tr('TRN / VAT'), '${org['vat_number']}'),
+      if ('${org['innovation_license'] ?? ''}'.trim().isNotEmpty) (context.tr('Innovation licence'), '${org['innovation_license']}'),
     ];
     final location = [
       '${org['city'] ?? ''}'.trim(),
@@ -140,7 +141,7 @@ class _Body extends StatelessWidget {
                             for (var i = 1; i <= 5; i++)
                               Icon(i <= rating.round() ? Icons.star : Icons.star_border, size: 14, color: AppColors.accentGold),
                             const SizedBox(width: 6),
-                            Text('${rating.toStringAsFixed(1)} ($reviewCount ${reviewCount == 1 ? 'review' : 'reviews'})',
+                            Text('${rating.toStringAsFixed(1)} ($reviewCount ${context.tr(reviewCount == 1 ? 'review' : 'reviews')})',
                                 style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                           ]),
                         ],
@@ -157,15 +158,15 @@ class _Body extends StatelessWidget {
                   if (website.isNotEmpty || phone.isNotEmpty || email.isNotEmpty || location.isNotEmpty)
                     Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
                       if (location.isNotEmpty) _LinkChip(icon: Icons.place_outlined, label: location, value: location),
-                      if (website.isNotEmpty) _LinkChip(icon: Icons.language, label: 'Website', value: website),
-                      if (phone.isNotEmpty) _LinkChip(icon: Icons.call_outlined, label: 'Call', value: phone),
-                      if (email.isNotEmpty) _LinkChip(icon: Icons.mail_outline, label: 'Email', value: email),
+                      if (website.isNotEmpty) _LinkChip(icon: Icons.language, label: context.tr('Website'), value: website),
+                      if (phone.isNotEmpty) _LinkChip(icon: Icons.call_outlined, label: context.tr('Call'), value: phone),
+                      if (email.isNotEmpty) _LinkChip(icon: Icons.mail_outline, label: context.tr('Email'), value: email),
                     ]),
 
                   // about
                   if (about.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.x24),
-                    Text('About the company', style: t.titleMedium),
+                    Text(context.tr('About the company'), style: t.titleMedium),
                     const SizedBox(height: AppSpacing.x8),
                     Text(about, style: t.bodyMedium),
                   ],
@@ -176,7 +177,7 @@ class _Body extends StatelessWidget {
                     Row(children: [
                       const Icon(Icons.workspace_premium_outlined, size: 18, color: AppColors.accentGold),
                       const SizedBox(width: AppSpacing.x8),
-                      Text('Credentials & registration', style: t.titleMedium),
+                      Text(context.tr('Credentials & registration'), style: t.titleMedium),
                       if (verified) ...[
                         const SizedBox(width: AppSpacing.x8),
                         const Icon(Icons.verified, size: 16, color: AppColors.success),
@@ -204,7 +205,7 @@ class _Body extends StatelessWidget {
                   // listings
                   if (listings.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.x24),
-                    Text('Listings', style: t.titleMedium),
+                    Text(context.tr('Listings'), style: t.titleMedium),
                     const SizedBox(height: AppSpacing.x8),
                     LayoutBuilder(builder: (ctx, c) {
                       final cols = c.maxWidth >= 720 ? 3 : (c.maxWidth >= 480 ? 2 : 1);
@@ -222,7 +223,7 @@ class _Body extends StatelessWidget {
                   // services
                   if (services.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.x24),
-                    Text('Services', style: t.titleMedium),
+                    Text(context.tr('Services'), style: t.titleMedium),
                     const SizedBox(height: AppSpacing.x8),
                     _offeringsGrid(services),
                   ],
@@ -230,7 +231,7 @@ class _Body extends StatelessWidget {
                   // products
                   if (products.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.x24),
-                    Text('Products', style: t.titleMedium),
+                    Text(context.tr('Products'), style: t.titleMedium),
                     const SizedBox(height: AppSpacing.x8),
                     _offeringsGrid(products),
                   ],
@@ -239,7 +240,7 @@ class _Body extends StatelessWidget {
                   if (projects.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.x24),
                     Row(children: [
-                      Expanded(child: Text('Projects', style: t.titleMedium)),
+                      Expanded(child: Text(context.tr('Projects'), style: t.titleMedium)),
                       if ('${org['org_type'] ?? ''}' == 'developer')
                         _PartnerRequestButton(developerOrg: '${org['id'] ?? ''}', developerName: name),
                     ]),
@@ -250,7 +251,7 @@ class _Body extends StatelessWidget {
                   // team
                   if (agents.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.x24),
-                    Text('Our team', style: t.titleMedium),
+                    Text(context.tr('Our team'), style: t.titleMedium),
                     const SizedBox(height: AppSpacing.x8),
                     Wrap(
                       spacing: AppSpacing.x12,
@@ -262,7 +263,7 @@ class _Body extends StatelessWidget {
                   // reviews
                   if (reviews.isNotEmpty) ...[
                     const SizedBox(height: AppSpacing.x24),
-                    Text('Reviews', style: t.titleMedium),
+                    Text(context.tr('Reviews'), style: t.titleMedium),
                     const SizedBox(height: AppSpacing.x8),
                     Column(children: reviews.map((e) => _ReviewTile(Map<String, dynamic>.from(e))).toList()),
                   ],
@@ -299,7 +300,7 @@ class _LinkChip extends StatelessWidget {
       label: Text(label),
       onPressed: () {
         Clipboard.setData(ClipboardData(text: value));
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label copied — $value')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$label ${context.tr('copied')} — $value')));
       },
     );
   }
@@ -313,7 +314,7 @@ class _AgentChip extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
     final id = '${a['id']}';
-    final name = '${a['full_name'] ?? 'Agent'}';
+    final name = '${a['full_name'] ?? context.tr('Agent')}';
     final role = personaFromRole('${a['role'] ?? ''}').label;
     final avatar = '${a['avatar_url'] ?? ''}'.trim();
     return InkWell(
@@ -420,14 +421,14 @@ class _PartnerRequestButton extends ConsumerWidget {
           await ref.read(apiClientProvider).post('/developer/partners/request', body: {'developer_org': developerOrg});
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Request sent to $developerName — they\'ll review your partnership.')));
+                SnackBar(content: Text('${context.tr('Request sent to')} $developerName — ${context.tr('they\'ll review your partnership.')}')));
           }
         } catch (e) {
           if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
         }
       },
       icon: const Icon(Icons.handshake_outlined, size: 16),
-      label: const Text('Request to partner'),
+      label: Text(context.tr('Request to partner')),
       style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
     );
   }
@@ -445,8 +446,8 @@ class _ProjectTile extends StatelessWidget {
     final meta = [
       if ('${p['community'] ?? ''}'.isNotEmpty) '${p['community']}',
       '${p['status'] ?? ''}'.replaceAll('_', ' '),
-      if (units > 0) '$units ${units == 1 ? 'unit' : 'units'}',
-      if (handover.isNotEmpty) 'Handover $handover',
+      if (units > 0) '$units ${context.tr(units == 1 ? 'unit' : 'units')}',
+      if (handover.isNotEmpty) '${context.tr('Handover')} $handover',
     ].where((s) => s.trim().isNotEmpty).join(' · ');
     final id = '${p['id'] ?? ''}'.trim();
     return Card(
@@ -460,7 +461,7 @@ class _ProjectTile extends StatelessWidget {
             const SizedBox(width: AppSpacing.x12),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('${p['name'] ?? 'Project'}', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                Text('${p['name'] ?? context.tr('Project')}', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                 if (meta.isNotEmpty) Text(meta, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
               ]),
             ),
@@ -488,7 +489,7 @@ class _ReviewTile extends StatelessWidget {
             for (var i = 1; i <= 5; i++)
               Icon(i <= rating ? Icons.star : Icons.star_border, size: 14, color: AppColors.accentGold),
             const SizedBox(width: 6),
-            Expanded(child: Text('${r['customer_name'] ?? 'Customer'}',
+            Expanded(child: Text('${r['customer_name'] ?? context.tr('Customer')}',
                 style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis)),
           ]),
           if ('${r['review'] ?? ''}'.trim().isNotEmpty) ...[
@@ -517,8 +518,8 @@ class _OrgListingCard extends StatelessWidget {
     final cover = '${l['cover_image'] ?? ''}';
     final facts = [
       if (l['community'] != null) '${l['community']}',
-      if (l['bedrooms'] != null) '${l['bedrooms']} BR',
-      if (l['size_sqft'] != null) '${(num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0)} sqft',
+      if (l['bedrooms'] != null) '${l['bedrooms']} ${context.tr('BR')}',
+      if (l['size_sqft'] != null) '${(num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0)} ${context.tr('sqft')}',
     ].join('  ·  ');
     return Card(
       clipBehavior: Clip.antiAlias,

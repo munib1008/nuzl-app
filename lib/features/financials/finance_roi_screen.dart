@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -50,7 +51,7 @@ class FinanceRoiScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pfs = ref.watch(_roiPortfoliosProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Finance & ROI'),
+      appBar: NuzlAppBar(title: context.tr('Finance & ROI')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: pfs.when(
@@ -60,9 +61,9 @@ class FinanceRoiScreen extends ConsumerWidget {
             if (list.isEmpty) {
               return EmptyState(
                 icon: Icons.account_balance_wallet_outlined,
-                title: 'No portfolio yet',
-                message: 'Add a property in My Properties to track yield, ROI and appreciation.',
-                actionLabel: 'My Properties',
+                title: context.tr('No portfolio yet'),
+                message: context.tr('Add a property in My Properties to track yield, ROI and appreciation.'),
+                actionLabel: context.tr('My Properties'),
                 onAction: () => context.go('/my-properties'),
               );
             }
@@ -106,16 +107,16 @@ class _Body extends ConsumerWidget {
           final occupancy = occ.isEmpty ? null : occ.reduce((a, b) => a + b) / occ.length;
 
           final metrics = <({String label, String value, Color color})>[
-            (label: 'Market value', value: _money(marketValue), color: AppColors.primary),
-            (label: 'Capital gain', value: _money(capitalGain),
+            (label: context.tr('Market value'), value: _money(marketValue), color: AppColors.primary),
+            (label: context.tr('Capital gain'), value: _money(capitalGain),
                 color: (capitalGain ?? 0) >= 0 ? AppColors.success : AppColors.danger),
-            (label: 'Appreciation', value: _pct(apprec), color: AppColors.accentGold),
-            (label: 'Gross yield', value: _pct(tot['portfolio_gross_yield_pct']), color: AppColors.secondary),
-            (label: 'Net yield', value: _pct(netYield), color: AppColors.secondary),
-            (label: 'Total ROI', value: _pct(totalRoi), color: AppColors.success),
-            (label: 'Net cash flow', value: _money(tot['net_operating_income']), color: AppColors.primary),
-            (label: 'Equity', value: _money(tot['equity']), color: AppColors.primary),
-            (label: 'Occupancy', value: _pct(occupancy), color: AppColors.statusReady),
+            (label: context.tr('Appreciation'), value: _pct(apprec), color: AppColors.accentGold),
+            (label: context.tr('Gross yield'), value: _pct(tot['portfolio_gross_yield_pct']), color: AppColors.secondary),
+            (label: context.tr('Net yield'), value: _pct(netYield), color: AppColors.secondary),
+            (label: context.tr('Total ROI'), value: _pct(totalRoi), color: AppColors.success),
+            (label: context.tr('Net cash flow'), value: _money(tot['net_operating_income']), color: AppColors.primary),
+            (label: context.tr('Equity'), value: _money(tot['equity']), color: AppColors.primary),
+            (label: context.tr('Occupancy'), value: _pct(occupancy), color: AppColors.statusReady),
           ];
 
           return ListView(
@@ -138,17 +139,17 @@ class _Body extends ConsumerWidget {
               const SizedBox(height: AppSpacing.x20),
               _SummaryCard(tot: tot),
               const SizedBox(height: AppSpacing.x20),
-              Text('By property', style: Theme.of(context).textTheme.titleMedium),
+              Text(context.tr('By property'), style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: AppSpacing.x8),
               if (props.isEmpty)
-                Text('No properties yet.', style: TextStyle(color: Theme.of(context).hintColor))
+                Text(context.tr('No properties yet.'), style: TextStyle(color: Theme.of(context).hintColor))
               else
                 ...props.map((e) => _PropRoi(Map<String, dynamic>.from(e as Map))),
               const SizedBox(height: AppSpacing.x16),
               OutlinedButton.icon(
                 onPressed: () => context.push('/financials'),
                 icon: const Icon(Icons.receipt_long_outlined, size: 18),
-                label: const Text('Rental income & cheques'),
+                label: Text(context.tr('Rental income & cheques')),
               ),
               const SizedBox(height: AppSpacing.x24),
             ],
@@ -202,12 +203,12 @@ class _SummaryCard extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Cost basis & cash', style: t.titleSmall),
+          Text(context.tr('Cost basis & cash'), style: t.titleSmall),
           const SizedBox(height: AppSpacing.x8),
-          row('Total cost (purchase)', _money(tot['total_cost'])),
-          row('Gross income (annual)', _money(tot['gross_income'])),
-          row('Operating expenses', _money(tot['total_expenses'])),
-          row('Outstanding debt', _money(tot['outstanding_debt'])),
+          row(context.tr('Total cost (purchase)'), _money(tot['total_cost'])),
+          row(context.tr('Gross income (annual)'), _money(tot['gross_income'])),
+          row(context.tr('Operating expenses'), _money(tot['total_expenses'])),
+          row(context.tr('Outstanding debt'), _money(tot['outstanding_debt'])),
         ]),
       ),
     );
@@ -231,12 +232,12 @@ class _PropRoi extends StatelessWidget {
         padding: const EdgeInsets.all(AppSpacing.x12),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Expanded(child: Text(title.isEmpty ? 'Property' : title, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis)),
+            Expanded(child: Text(title.isEmpty ? context.tr('Property') : title, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis)),
             Text(_money(p['current_value']), style: t.titleSmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
           ]),
           const SizedBox(height: 4),
           Text(
-            'Net yield ${_pct(p['net_yield_pct'])}  ·  Gross ${_pct(p['gross_yield_pct'])}  ·  NOI ${_money(p['noi'])}  ·  Equity ${_money(p['equity'])}',
+            '${context.tr('Net yield')} ${_pct(p['net_yield_pct'])}  ·  ${context.tr('Gross')} ${_pct(p['gross_yield_pct'])}  ·  ${context.tr('NOI')} ${_money(p['noi'])}  ·  ${context.tr('Equity')} ${_money(p['equity'])}',
             style: t.bodySmall?.copyWith(color: muted),
           ),
         ]),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -44,11 +45,11 @@ class DealBoardScreen extends ConsumerWidget {
         onRetry: () => ref.invalidate(dealBoardProvider),
         loading: const SkeletonList(),
         data: (list) => list.isEmpty
-            ? ListView(children: const [
+            ? ListView(children: [
                 EmptyState(
                   icon: Icons.campaign_outlined,
-                  title: 'No deals on the board yet',
-                  message: 'Post a deal to share it with the network and find a co-broker.',
+                  title: context.tr('No deals on the board yet'),
+                  message: context.tr('Post a deal to share it with the network and find a co-broker.'),
                 ),
               ])
             : ListView(
@@ -60,11 +61,11 @@ class DealBoardScreen extends ConsumerWidget {
     if (embedded) return body;
     return CrmScaffold(
       tab: CrmTab.dealBoard,
-      title: 'Deal board',
+      title: context.tr('Deal board'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => openDealComposer(context, ref),
         icon: const Icon(Icons.campaign_outlined),
-        label: const Text('Post a deal'),
+        label: Text(context.tr('Post a deal')),
       ),
       body: body,
     );
@@ -127,10 +128,10 @@ class _DealCardState extends ConsumerState<_DealCard> {
             Text(propLine, style: t.bodySmall?.copyWith(color: AppColors.textMuted),
                 maxLines: 1, overflow: TextOverflow.ellipsis),
           Text([
-            if (d['bedrooms'] != null) '${d['bedrooms']} BR',
-            if (d['size_sqft'] != null) '${num.tryParse('${d['size_sqft']}')?.toStringAsFixed(0)} sqft',
+            if (d['bedrooms'] != null) '${d['bedrooms']} ${context.tr('BR')}',
+            if (d['size_sqft'] != null) '${num.tryParse('${d['size_sqft']}')?.toStringAsFixed(0)} ${context.tr('sqft')}',
             if ('${d['view'] ?? ''}'.isNotEmpty) '${d['view']}',
-            if ('${d['commission_share'] ?? ''}'.isNotEmpty) 'comm ${d['commission_share']}',
+            if ('${d['commission_share'] ?? ''}'.isNotEmpty) '${context.tr('comm')} ${d['commission_share']}',
           ].where((s) => s.isNotEmpty).join('  ·  '), style: t.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
           if ('${d['note'] ?? ''}'.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x4),
@@ -143,7 +144,7 @@ class _DealCardState extends ConsumerState<_DealCard> {
             Expanded(
               child: Text([
                 if (d['agent_name'] != null) '${d['agent_name']}',
-                if (expiry != null) 'until ${DateFormat.yMMMd().format(expiry)}',
+                if (expiry != null) '${context.tr('until')} ${DateFormat.yMMMd().format(expiry)}',
               ].join('  ·  '), style: t.bodySmall?.copyWith(color: AppColors.textMuted),
                   maxLines: 1, overflow: TextOverflow.ellipsis),
             ),
@@ -158,13 +159,13 @@ class _DealCardState extends ConsumerState<_DealCard> {
                     if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
                   }
                 },
-                child: const Text('Close'),
+                child: Text(context.tr('Close')),
               )
             else
               FilledButton.icon(
                 onPressed: () => _chat(context, ref),
                 icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                label: const Text('Chat'),
+                label: Text(context.tr('Chat')),
               ),
           ]),
         ]),
@@ -219,23 +220,23 @@ class _PostDealSheetState extends ConsumerState<_PostDealSheet> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Auto-fill from a message'),
+        title: Text(context.tr('Auto-fill from a message')),
         content: SizedBox(
           width: MediaQuery.sizeOf(ctx).width - 80 < 420 ? MediaQuery.sizeOf(ctx).width - 80 : 420,
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Paste a WhatsApp-style property message — we’ll extract the details.',
-                style: TextStyle(fontSize: 13)),
+            Text(context.tr('Paste a WhatsApp-style property message — we’ll extract the details.'),
+                style: const TextStyle(fontSize: 13)),
             const SizedBox(height: AppSpacing.x12),
             TextField(
               controller: ctrl, autofocus: true, maxLines: 5,
-              decoration: const InputDecoration(
-                  hintText: 'e.g. Burj Crown 2BR 1066 sqft Canal View AED 3.1M', border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                  hintText: context.tr('e.g. Burj Crown 2BR 1066 sqft Canal View AED 3.1M'), border: const OutlineInputBorder()),
             ),
           ]),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Extract')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Extract'))),
         ],
       ),
     );
@@ -262,7 +263,7 @@ class _PostDealSheetState extends ConsumerState<_PostDealSheet> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Filled from your message — review and adjust.')));
+            SnackBar(content: Text(context.tr('Filled from your message — review and adjust.'))));
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -271,7 +272,7 @@ class _PostDealSheetState extends ConsumerState<_PostDealSheet> {
 
   Future<void> _save() async {
     if (_title.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add a title')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Add a title'))));
       return;
     }
     setState(() => _saving = true);
@@ -306,60 +307,60 @@ class _PostDealSheetState extends ConsumerState<_PostDealSheet> {
       padding: EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x16, AppSpacing.x16, bottom + AppSpacing.x16),
       child: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Post a deal', style: Theme.of(context).textTheme.titleMedium),
+          Text(context.tr('Post a deal'), style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: AppSpacing.x8),
           // Paste a WhatsApp-style blurb → pre-fill the deal (same extractor the
           // listing form uses).
           OutlinedButton.icon(
             onPressed: _saving ? null : _autoFill,
             icon: const Icon(Icons.auto_fix_high_outlined, size: 18),
-            label: const Text('Auto-fill from a message'),
+            label: Text(context.tr('Auto-fill from a message')),
           ),
           const SizedBox(height: AppSpacing.x12),
           DropdownButtonFormField<String>(
             initialValue: _category,
-            decoration: const InputDecoration(labelText: 'Category'),
+            decoration: InputDecoration(labelText: context.tr('Category')),
             items: [for (final e in dealCategoryLabels.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
             onChanged: (v) => setState(() => _category = v ?? 'hot_deal'),
           ),
           const SizedBox(height: AppSpacing.x8),
           DropdownButtonFormField<String>(
             initialValue: _visibility,
-            decoration: const InputDecoration(labelText: 'Visible to'),
-            items: const [
-              DropdownMenuItem(value: 'verified', child: Text('Verified agents')),
-              DropdownMenuItem(value: 'company', child: Text('My company')),
-              DropdownMenuItem(value: 'team', child: Text('My team')),
-              DropdownMenuItem(value: 'public', child: Text('Public — incl. customers')),
+            decoration: InputDecoration(labelText: context.tr('Visible to')),
+            items: [
+              DropdownMenuItem(value: 'verified', child: Text(context.tr('Verified agents'))),
+              DropdownMenuItem(value: 'company', child: Text(context.tr('My company'))),
+              DropdownMenuItem(value: 'team', child: Text(context.tr('My team'))),
+              DropdownMenuItem(value: 'public', child: Text(context.tr('Public — incl. customers'))),
             ],
             onChanged: (v) => setState(() => _visibility = v ?? 'verified'),
           ),
           const SizedBox(height: AppSpacing.x8),
-          TextField(controller: _title, decoration: const InputDecoration(labelText: 'Title *', hintText: 'e.g. Distress 2BR Marina')),
+          TextField(controller: _title, decoration: InputDecoration(labelText: context.tr('Title *'), hintText: context.tr('e.g. Distress 2BR Marina'))),
           const SizedBox(height: AppSpacing.x8),
           Row(children: [
-            Expanded(child: TextField(controller: _building, decoration: const InputDecoration(labelText: 'Building'))),
+            Expanded(child: TextField(controller: _building, decoration: InputDecoration(labelText: context.tr('Building')))),
             const SizedBox(width: AppSpacing.x8),
-            Expanded(child: TextField(controller: _unit, decoration: const InputDecoration(labelText: 'Unit'))),
+            Expanded(child: TextField(controller: _unit, decoration: InputDecoration(labelText: context.tr('Unit')))),
           ]),
           const SizedBox(height: AppSpacing.x8),
           PlaceField(
             controller: _community,
-            label: 'Location / community',
-            hint: 'Search a building, community or address…',
+            label: context.tr('Location / community'),
+            hint: context.tr('Search a building, community or address…'),
             onSelected: (p) => setState(() { _lat = p.lat; _lng = p.lng; }),
             onCleared: () => setState(() { _lat = null; _lng = null; }),
           ),
           const SizedBox(height: AppSpacing.x8),
           Row(children: [
-            Expanded(child: TextField(controller: _beds, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Bedrooms'))),
+            Expanded(child: TextField(controller: _beds, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Bedrooms')))),
             const SizedBox(width: AppSpacing.x8),
-            Expanded(child: TextField(controller: _price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Asking price (AED)'))),
+            Expanded(child: TextField(controller: _price, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Asking price (AED)')))),
           ]),
           const SizedBox(height: AppSpacing.x8),
-          TextField(controller: _commission, decoration: const InputDecoration(labelText: 'Commission share', hintText: 'e.g. 50/50')),
+          TextField(controller: _commission, decoration: InputDecoration(labelText: context.tr('Commission share'), hintText: context.tr('e.g. 50/50'))),
           const SizedBox(height: AppSpacing.x8),
-          TextField(controller: _note, maxLines: 2, decoration: const InputDecoration(labelText: 'Note')),
+          TextField(controller: _note, maxLines: 2, decoration: InputDecoration(labelText: context.tr('Note'))),
           const SizedBox(height: AppSpacing.x16),
           SizedBox(
             width: double.infinity,
@@ -367,7 +368,7 @@ class _PostDealSheetState extends ConsumerState<_PostDealSheet> {
               onPressed: _saving ? null : _save,
               child: _saving
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Broadcast'),
+                  : Text(context.tr('Broadcast')),
             ),
           ),
         ]),

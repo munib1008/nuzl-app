@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -60,7 +61,7 @@ class KpiScreen extends ConsumerWidget {
     final me = ref.watch(_myKpiProvider);
     final org = ref.watch(_orgKpiProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Performance')),
+      appBar: AppBar(title: Text(context.tr('Performance'))),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(_myKpiProvider);
@@ -105,10 +106,10 @@ class _Scorecard extends StatelessWidget {
     final periodStart = '${data['period_start'] ?? ''}';
     final monthLabel = periodStart.length >= 7
         ? DateFormat('MMMM yyyy').format(DateTime.tryParse(periodStart) ?? DateTime(2026))
-        : 'This month';
+        : context.tr('This month');
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('My scorecard', style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+      Text(context.tr('My scorecard'), style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
       Text(monthLabel, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
       const SizedBox(height: AppSpacing.x12),
       Container(
@@ -125,20 +126,20 @@ class _Scorecard extends StatelessWidget {
                     style: t.displaySmall?.copyWith(fontWeight: FontWeight.w800, color: _statusColor(status))),
                 const SizedBox(width: AppSpacing.x16),
                 Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-                  Text('Overall achievement', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  Text(context.tr('Overall achievement'), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
                   const SizedBox(height: 2),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                         color: _statusColor(status), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                    child: Text(status, style: t.labelMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
+                    child: Text(context.tr(status), style: t.labelMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
                   ),
                 ]),
               ])
             : Row(children: [
                 const Icon(Icons.flag_outlined, color: AppColors.textMuted),
                 const SizedBox(width: AppSpacing.x8),
-                Expanded(child: Text('No target set for this month yet — your manager assigns KPI targets.',
+                Expanded(child: Text(context.tr('No target set for this month yet — your manager assigns KPI targets.'),
                     style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
               ]),
       ),
@@ -147,13 +148,13 @@ class _Scorecard extends StatelessWidget {
         Row(children: [
           const Icon(Icons.timer_outlined, size: 16, color: AppColors.textMuted),
           const SizedBox(width: 6),
-          Text('Avg response (TAT): ${_fmtHours(data['avg_response_hours'])}',
+          Text('${context.tr('Avg response (TAT)')}: ${_fmtHours(data['avg_response_hours'])}',
               style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
         ]),
       ],
       const SizedBox(height: AppSpacing.x16),
       for (final key in _metricLabels.keys)
-        if (metrics[key] is Map) _MetricRow(label: _metricLabels[key]!, m: Map<String, dynamic>.from(metrics[key]), money: key == 'sales_value'),
+        if (metrics[key] is Map) _MetricRow(label: context.tr(_metricLabels[key]!), m: Map<String, dynamic>.from(metrics[key]), money: key == 'sales_value'),
     ]);
   }
 }
@@ -218,11 +219,11 @@ class _TeamLeaderboard extends ConsumerWidget {
       Row(children: [
         const Icon(Icons.leaderboard_outlined, size: 20, color: AppColors.primary),
         const SizedBox(width: AppSpacing.x8),
-        Text('Team performance', style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+        Text(context.tr('Team performance'), style: t.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
       ]),
       const SizedBox(height: AppSpacing.x4),
-      Text('This month · ${money.format(num.tryParse('${team['sales_value'] ?? 0}') ?? 0)} sales · '
-          '${team['deals'] ?? 0} deals · ${team['viewings'] ?? 0} viewings · ${team['leads'] ?? 0} leads',
+      Text('${context.tr('This month')} · ${money.format(num.tryParse('${team['sales_value'] ?? 0}') ?? 0)} ${context.tr('sales')} · '
+          '${team['deals'] ?? 0} ${context.tr('deals')} · ${team['viewings'] ?? 0} ${context.tr('viewings')} · ${team['leads'] ?? 0} ${context.tr('leads')}',
           style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
       const SizedBox(height: AppSpacing.x12),
       for (var i = 0; i < members.length; i++)
@@ -244,7 +245,7 @@ class _LeaderRow extends ConsumerWidget {
     final sales = TextEditingController(text: '5000000');
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Set monthly target — ${m['full_name'] ?? 'agent'}',
+      title: '${context.tr('Set monthly target')} — ${m['full_name'] ?? context.tr('agent')}',
       maxWidth: 420,
       children: [
         Column(mainAxisSize: MainAxisSize.min, children: [
@@ -255,14 +256,14 @@ class _LeaderRow extends ConsumerWidget {
             ('Closed deals', deals),
             ('Sales value (AED)', sales),
           ]) ...[
-            TextField(controller: f.$2, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: f.$1)),
+            TextField(controller: f.$2, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr(f.$1))),
             const SizedBox(height: AppSpacing.x8),
           ],
         ]),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save target')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Save target'))),
       ],
     );
     if (ok != true) return;
@@ -279,7 +280,7 @@ class _LeaderRow extends ConsumerWidget {
       ref.invalidate(_orgKpiProvider);
       ref.invalidate(_myKpiProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Target saved')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Target saved'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -289,7 +290,7 @@ class _LeaderRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
-    final name = '${m['full_name'] ?? 'Agent'}';
+    final name = '${m['full_name'] ?? context.tr('Agent')}';
     final avatar = '${m['avatar_url'] ?? ''}';
     final status = '${m['status'] ?? 'No target'}';
     final overall = m['overall'];
@@ -315,7 +316,7 @@ class _LeaderRow extends ConsumerWidget {
               Text(name, style: t.bodyLarge?.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
               Text([
                 if (teamRole.trim().isNotEmpty) teamRole,
-                if (m['avg_response_hours'] != null) 'TAT ${_fmtHours(m['avg_response_hours'])}',
+                if (m['avg_response_hours'] != null) '${context.tr('TAT')} ${_fmtHours(m['avg_response_hours'])}',
               ].join('  ·  '), maxLines: 1, overflow: TextOverflow.ellipsis,
                   style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
             ]),
@@ -323,10 +324,10 @@ class _LeaderRow extends ConsumerWidget {
           Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
             Text(overall == null ? '—' : '${(num.tryParse('$overall') ?? 0).toStringAsFixed(0)}%',
                 style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: _statusColor(status))),
-            Text(status, style: t.bodySmall?.copyWith(color: _statusColor(status))),
+            Text(context.tr(status), style: t.bodySmall?.copyWith(color: _statusColor(status))),
           ]),
           IconButton(
-            tooltip: 'Set target',
+            tooltip: context.tr('Set target'),
             icon: const Icon(Icons.flag_outlined, size: 20),
             onPressed: () => _setTarget(context, ref),
           ),

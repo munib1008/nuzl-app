@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -23,15 +24,16 @@ String _date(dynamic v) {
   return d != null ? DateFormat('d MMM yyyy').format(d) : '';
 }
 
-(BadgeTone, String) _statusMeta(String s) => switch (s) {
-      'sent' => (BadgeTone.warning, 'Sent'),
-      'accepted' => (BadgeTone.success, 'Accepted'),
-      'paid' => (BadgeTone.success, 'Paid'),
-      'cancelled' => (BadgeTone.danger, 'Cancelled'),
-      _ => (BadgeTone.neutral, 'Draft'),
+(BadgeTone, String) _statusMeta(BuildContext context, String s) => switch (s) {
+      'sent' => (BadgeTone.warning, context.tr('Sent')),
+      'accepted' => (BadgeTone.success, context.tr('Accepted')),
+      'paid' => (BadgeTone.success, context.tr('Paid')),
+      'cancelled' => (BadgeTone.danger, context.tr('Cancelled')),
+      _ => (BadgeTone.neutral, context.tr('Draft')),
     };
 
-String _typeLabel(String t) => t == 'invoice' ? 'Invoice' : 'Quotation';
+String _typeLabel(BuildContext context, String t) =>
+    t == 'invoice' ? context.tr('Invoice') : context.tr('Quotation');
 
 /// Quotation & Invoice generator — create, track and export client documents.
 class InvoicingScreen extends ConsumerStatefulWidget {
@@ -48,11 +50,11 @@ class _InvoicingScreenState extends ConsumerState<InvoicingScreen> {
     final list = ref.watch(invoicingListProvider(_filter));
     return CrmScaffold(
       tab: CrmTab.invoicing,
-      title: 'Quotes & Invoices',
+      title: context.tr('Quotes & Invoices'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openForm(context, ref),
         icon: const Icon(Icons.add),
-        label: const Text('New'),
+        label: Text(context.tr('New')),
       ),
       body: Column(children: [
         Padding(
@@ -62,7 +64,7 @@ class _InvoicingScreenState extends ConsumerState<InvoicingScreen> {
               Padding(
                 padding: const EdgeInsets.only(right: AppSpacing.x8),
                 child: ChoiceChip(
-                  label: Text(f.$2),
+                  label: Text(context.tr(f.$2)),
                   selected: _filter == f.$1,
                   onSelected: (_) => setState(() => _filter = f.$1),
                 ),
@@ -77,11 +79,11 @@ class _InvoicingScreenState extends ConsumerState<InvoicingScreen> {
               onRetry: () => ref.invalidate(invoicingListProvider(_filter)),
               loading: const SkeletonList(),
               data: (docs) => docs.isEmpty
-                  ? ListView(children: const [
+                  ? ListView(children: [
                       EmptyState(
                         icon: Icons.request_quote_outlined,
-                        title: 'No documents yet',
-                        message: 'Create a quotation or invoice for a client — add line items and export a PDF.',
+                        title: context.tr('No documents yet'),
+                        message: context.tr('Create a quotation or invoice for a client — add line items and export a PDF.'),
                       ),
                     ])
                   : ListView(
@@ -106,7 +108,7 @@ class _DocCard extends ConsumerWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
     final type = '${d['doc_type'] ?? 'quote'}';
-    final (tone, label) = _statusMeta('${d['status'] ?? 'draft'}');
+    final (tone, label) = _statusMeta(context, '${d['status'] ?? 'draft'}');
     final cur = '${d['currency'] ?? 'AED'}';
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -123,7 +125,7 @@ class _DocCard extends ConsumerWidget {
                   color: type == 'invoice' ? AppColors.primaryTint : AppColors.accentGoldTint,
                   borderRadius: BorderRadius.circular(AppSpacing.rFull),
                 ),
-                child: Text(_typeLabel(type),
+                child: Text(_typeLabel(context, type),
                     style: t.labelSmall?.copyWith(
                         color: type == 'invoice' ? AppColors.primary : AppColors.accentGold,
                         fontWeight: FontWeight.w700)),
@@ -194,7 +196,7 @@ class _DocDetailSheetState extends ConsumerState<_DocDetailSheet> {
     final type = '${d['doc_type'] ?? 'quote'}';
     final cur = '${d['currency'] ?? 'AED'}';
     final items = (d['line_items'] as List? ?? const []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-    final (tone, label) = _statusMeta(_status);
+    final (tone, label) = _statusMeta(context, _status);
     return DraggableScrollableSheet(
       initialChildSize: 0.7,
       maxChildSize: 0.95,
@@ -205,7 +207,7 @@ class _DocDetailSheetState extends ConsumerState<_DocDetailSheet> {
         padding: const EdgeInsets.fromLTRB(AppSpacing.x20, 0, AppSpacing.x20, AppSpacing.x24),
         children: [
           Row(children: [
-            Expanded(child: Text('${_typeLabel(type)} · ${d['doc_no'] ?? ''}', style: t.titleMedium)),
+            Expanded(child: Text('${_typeLabel(context, type)} · ${d['doc_no'] ?? ''}', style: t.titleMedium)),
             StatusBadge(label, tone: tone),
           ]),
           const SizedBox(height: AppSpacing.x4),
@@ -233,14 +235,14 @@ class _DocDetailSheetState extends ConsumerState<_DocDetailSheet> {
               ]),
             ),
           const Divider(height: AppSpacing.x24),
-          _totalRow(context, 'Subtotal', _money(num.tryParse('${d['subtotal']}'), cur)),
+          _totalRow(context, context.tr('Subtotal'), _money(num.tryParse('${d['subtotal']}'), cur)),
           if ((num.tryParse('${d['discount']}') ?? 0) > 0)
-            _totalRow(context, 'Discount', '- ${_money(num.tryParse('${d['discount']}'), cur)}'),
-          _totalRow(context, 'VAT (${d['vat_rate']}%)', _money(num.tryParse('${d['vat_amount']}'), cur)),
-          _totalRow(context, 'Total', _money(num.tryParse('${d['total']}'), cur), bold: true),
+            _totalRow(context, context.tr('Discount'), '- ${_money(num.tryParse('${d['discount']}'), cur)}'),
+          _totalRow(context, '${context.tr('VAT')} (${d['vat_rate']}%)', _money(num.tryParse('${d['vat_amount']}'), cur)),
+          _totalRow(context, context.tr('Total'), _money(num.tryParse('${d['total']}'), cur), bold: true),
           if ('${d['notes'] ?? ''}'.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.x16),
-            Text('Notes', style: t.labelLarge),
+            Text(context.tr('Notes'), style: t.labelLarge),
             Text('${d['notes']}', style: t.bodyMedium),
           ],
           const SizedBox(height: AppSpacing.x20),
@@ -249,7 +251,7 @@ class _DocDetailSheetState extends ConsumerState<_DocDetailSheet> {
             FilledButton.icon(
               onPressed: () => exportInvoicePdf(context, d),
               icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
-              label: const Text('Export PDF'),
+              label: Text(context.tr('Export PDF')),
             ),
             OutlinedButton.icon(
               onPressed: () {
@@ -257,22 +259,22 @@ class _DocDetailSheetState extends ConsumerState<_DocDetailSheet> {
                 _openForm(context, ref, existing: d);
               },
               icon: const Icon(Icons.edit_outlined, size: 18),
-              label: const Text('Edit'),
+              label: Text(context.tr('Edit')),
             ),
             if (type == 'quote')
               OutlinedButton.icon(
                 onPressed: () => _convert(context, ref, '${d['id']}'),
                 icon: const Icon(Icons.swap_horiz, size: 18),
-                label: const Text('Convert to invoice'),
+                label: Text(context.tr('Convert to invoice')),
               ),
           ]),
           const SizedBox(height: AppSpacing.x12),
-          Text('Set status', style: t.labelLarge),
+          Text(context.tr('Set status'), style: t.labelLarge),
           const SizedBox(height: AppSpacing.x8),
           Wrap(spacing: AppSpacing.x8, children: [
             for (final s in const ['draft', 'sent', 'accepted', 'paid', 'cancelled'])
               ActionChip(
-                label: Text(_statusMeta(s).$2),
+                label: Text(_statusMeta(context, s).$2),
                 onPressed: _status == s ? null : () => _changeStatus(s),
               ),
           ]),
@@ -300,7 +302,7 @@ Future<void> _convert(BuildContext context, WidgetRef ref, String id) async {
     ref.invalidate(invoicingListProvider);
     if (context.mounted) {
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Invoice created from quotation')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Invoice created from quotation'))));
     }
   } catch (e) {
     if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -411,7 +413,7 @@ class _DocFormPageState extends ConsumerState<_DocFormPage> {
 
   Future<void> _save() async {
     if (_client.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Add a client name')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Add a client name'))));
       return;
     }
     setState(() => _saving = true);
@@ -459,57 +461,57 @@ class _DocFormPageState extends ConsumerState<_DocFormPage> {
     final t = Theme.of(context).textTheme;
     final cur = _currency.text.trim().isEmpty ? 'AED' : _currency.text.trim();
     return Scaffold(
-      appBar: AppBar(title: Text(widget.existing != null ? 'Edit document' : 'New document')),
+      appBar: AppBar(title: Text(widget.existing != null ? context.tr('Edit document') : context.tr('New document'))),
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.x16),
         children: [
           SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: 'quote', label: Text('Quotation'), icon: Icon(Icons.description_outlined)),
-              ButtonSegment(value: 'invoice', label: Text('Invoice'), icon: Icon(Icons.receipt_long_outlined)),
+            segments: [
+              ButtonSegment(value: 'quote', label: Text(context.tr('Quotation')), icon: const Icon(Icons.description_outlined)),
+              ButtonSegment(value: 'invoice', label: Text(context.tr('Invoice')), icon: const Icon(Icons.receipt_long_outlined)),
             ],
             selected: {_type},
             onSelectionChanged: (s) => setState(() => _type = s.first),
           ),
           const SizedBox(height: AppSpacing.x16),
-          Text('Client', style: t.titleSmall),
+          Text(context.tr('Client'), style: t.titleSmall),
           const SizedBox(height: AppSpacing.x8),
-          TextField(controller: _client, decoration: const InputDecoration(labelText: 'Client name *')),
+          TextField(controller: _client, decoration: InputDecoration(labelText: context.tr('Client name *'))),
           const SizedBox(height: AppSpacing.x8),
-          TextField(controller: _company, decoration: const InputDecoration(labelText: 'Company')),
+          TextField(controller: _company, decoration: InputDecoration(labelText: context.tr('Company'))),
           const SizedBox(height: AppSpacing.x8),
           Row(children: [
-            Expanded(child: TextField(controller: _email, keyboardType: TextInputType.emailAddress, decoration: const InputDecoration(labelText: 'Email'))),
+            Expanded(child: TextField(controller: _email, keyboardType: TextInputType.emailAddress, decoration: InputDecoration(labelText: context.tr('Email')))),
             const SizedBox(width: AppSpacing.x8),
-            Expanded(child: TextField(controller: _phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone'))),
+            Expanded(child: TextField(controller: _phone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.tr('Phone')))),
           ]),
           const SizedBox(height: AppSpacing.x8),
-          TextField(controller: _subject, decoration: const InputDecoration(labelText: 'Subject / reference')),
+          TextField(controller: _subject, decoration: InputDecoration(labelText: context.tr('Subject / reference'))),
           const SizedBox(height: AppSpacing.x20),
           Row(children: [
-            Text('Line items', style: t.titleSmall),
+            Text(context.tr('Line items'), style: t.titleSmall),
             const Spacer(),
             TextButton.icon(
               onPressed: () => setState(() => _lines.add(_LineCtl())),
               icon: const Icon(Icons.add, size: 18),
-              label: const Text('Add'),
+              label: Text(context.tr('Add')),
             ),
           ]),
           const SizedBox(height: AppSpacing.x4),
           for (int i = 0; i < _lines.length; i++) _lineEditor(i),
           const SizedBox(height: AppSpacing.x16),
           Row(children: [
-            Expanded(child: TextField(controller: _discount, keyboardType: TextInputType.number, onChanged: (_) => setState(() {}), decoration: InputDecoration(labelText: 'Discount ($cur)'))),
+            Expanded(child: TextField(controller: _discount, keyboardType: TextInputType.number, onChanged: (_) => setState(() {}), decoration: InputDecoration(labelText: '${context.tr('Discount')} ($cur)'))),
             const SizedBox(width: AppSpacing.x8),
-            Expanded(child: TextField(controller: _vat, keyboardType: TextInputType.number, onChanged: (_) => setState(() {}), decoration: const InputDecoration(labelText: 'VAT %'))),
+            Expanded(child: TextField(controller: _vat, keyboardType: TextInputType.number, onChanged: (_) => setState(() {}), decoration: InputDecoration(labelText: context.tr('VAT %')))),
             const SizedBox(width: AppSpacing.x8),
-            SizedBox(width: 90, child: TextField(controller: _currency, onChanged: (_) => setState(() {}), decoration: const InputDecoration(labelText: 'Currency'))),
+            SizedBox(width: 90, child: TextField(controller: _currency, onChanged: (_) => setState(() {}), decoration: InputDecoration(labelText: context.tr('Currency')))),
           ]),
           const SizedBox(height: AppSpacing.x12),
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.event_outlined),
-            title: Text(_dueDate == null ? 'No due date' : 'Due ${DateFormat.yMMMd().format(_dueDate!)}'),
+            title: Text(_dueDate == null ? context.tr('No due date') : '${context.tr('Due')} ${DateFormat.yMMMd().format(_dueDate!)}'),
             trailing: TextButton(
               onPressed: () async {
                 final now = DateTime.now();
@@ -521,15 +523,15 @@ class _DocFormPageState extends ConsumerState<_DocFormPage> {
                 );
                 if (picked != null) setState(() => _dueDate = picked);
               },
-              child: const Text('Pick date'),
+              child: Text(context.tr('Pick date')),
             ),
           ),
           const SizedBox(height: AppSpacing.x8),
-          TextField(controller: _notes, maxLines: 3, decoration: const InputDecoration(labelText: 'Notes / terms')),
+          TextField(controller: _notes, maxLines: 3, decoration: InputDecoration(labelText: context.tr('Notes / terms'))),
           const Divider(height: AppSpacing.x32),
-          _totRow('Subtotal', _money(_subtotal, cur)),
-          _totRow('VAT (${_vat.text.trim().isEmpty ? '0' : _vat.text.trim()}%)', _money(_vatAmount, cur)),
-          _totRow('Total', _money(_total, cur), bold: true),
+          _totRow(context.tr('Subtotal'), _money(_subtotal, cur)),
+          _totRow('${context.tr('VAT')} (${_vat.text.trim().isEmpty ? '0' : _vat.text.trim()}%)', _money(_vatAmount, cur)),
+          _totRow(context.tr('Total'), _money(_total, cur), bold: true),
           const SizedBox(height: AppSpacing.x20),
           SizedBox(
             width: double.infinity,
@@ -537,7 +539,7 @@ class _DocFormPageState extends ConsumerState<_DocFormPage> {
               onPressed: _saving ? null : _save,
               child: _saving
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text(widget.existing != null ? 'Save changes' : 'Create ${_typeLabel(_type).toLowerCase()}'),
+                  : Text(widget.existing != null ? context.tr('Save changes') : '${context.tr('Create')} ${_typeLabel(context, _type).toLowerCase()}'),
             ),
           ),
         ],
@@ -552,21 +554,21 @@ class _DocFormPageState extends ConsumerState<_DocFormPage> {
       child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
         Expanded(
           flex: 5,
-          child: TextField(controller: l.description, decoration: const InputDecoration(labelText: 'Description', isDense: true)),
+          child: TextField(controller: l.description, decoration: InputDecoration(labelText: context.tr('Description'), isDense: true)),
         ),
         const SizedBox(width: AppSpacing.x8),
         Expanded(
           flex: 2,
-          child: TextField(controller: l.qty, keyboardType: TextInputType.number, onChanged: (_) => setState(() {}), decoration: const InputDecoration(labelText: 'Qty', isDense: true)),
+          child: TextField(controller: l.qty, keyboardType: TextInputType.number, onChanged: (_) => setState(() {}), decoration: InputDecoration(labelText: context.tr('Qty'), isDense: true)),
         ),
         const SizedBox(width: AppSpacing.x8),
         Expanded(
           flex: 3,
-          child: TextField(controller: l.unitPrice, keyboardType: TextInputType.number, onChanged: (_) => setState(() {}), decoration: const InputDecoration(labelText: 'Unit', isDense: true)),
+          child: TextField(controller: l.unitPrice, keyboardType: TextInputType.number, onChanged: (_) => setState(() {}), decoration: InputDecoration(labelText: context.tr('Unit'), isDense: true)),
         ),
         IconButton(
           icon: const Icon(Icons.close, size: 18),
-          tooltip: 'Remove',
+          tooltip: context.tr('Remove'),
           onPressed: _lines.length == 1
               ? null
               : () => setState(() {
@@ -627,27 +629,27 @@ Future<void> exportInvoicePdf(BuildContext context, Map<String, dynamic> d) asyn
           ] else
             pw.Text(companyName.isNotEmpty ? companyName : 'NUZL',
                 style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold)),
-          pw.Text(_typeLabel(type).toUpperCase(), style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
+          pw.Text(_typeLabel(context, type).toUpperCase(), style: const pw.TextStyle(fontSize: 12, color: PdfColors.grey700)),
         ]),
         pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.end, children: [
           pw.Text('${d['doc_no'] ?? ''}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-          if (_date(d['issue_date']).isNotEmpty) pw.Text('Issued: ${_date(d['issue_date'])}'),
-          if (_date(d['due_date']).isNotEmpty) pw.Text('Due: ${_date(d['due_date'])}'),
-          pw.Text('Status: ${_statusMeta('${d['status'] ?? 'draft'}').$2}'),
+          if (_date(d['issue_date']).isNotEmpty) pw.Text('${context.tr('Issued')}: ${_date(d['issue_date'])}'),
+          if (_date(d['due_date']).isNotEmpty) pw.Text('${context.tr('Due')}: ${_date(d['due_date'])}'),
+          pw.Text('${context.tr('Status')}: ${_statusMeta(context, '${d['status'] ?? 'draft'}').$2}'),
         ]),
       ]),
       pw.SizedBox(height: 20),
-      pw.Text('Bill to', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+      pw.Text(context.tr('Bill to'), style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
       pw.Text('${d['client_name'] ?? ''}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 13)),
       for (final s in [d['client_company'], d['client_email'], d['client_phone']])
         if ('${s ?? ''}'.isNotEmpty) pw.Text('$s'),
       if ('${d['subject'] ?? ''}'.isNotEmpty) ...[
         pw.SizedBox(height: 6),
-        pw.Text('Subject: ${d['subject']}'),
+        pw.Text('${context.tr('Subject')}: ${d['subject']}'),
       ],
       pw.SizedBox(height: 18),
       pw.TableHelper.fromTextArray(
-        headers: const ['Description', 'Qty', 'Unit price', 'Amount'],
+        headers: [context.tr('Description'), context.tr('Qty'), context.tr('Unit price'), context.tr('Amount')],
         headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold),
         headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
         cellAlignments: {1: pw.Alignment.centerRight, 2: pw.Alignment.centerRight, 3: pw.Alignment.centerRight},
@@ -666,18 +668,18 @@ Future<void> exportInvoicePdf(BuildContext context, Map<String, dynamic> d) asyn
         child: pw.SizedBox(
           width: 240,
           child: pw.Column(children: [
-            tot('Subtotal', _money(num.tryParse('${d['subtotal']}'), cur)),
+            tot(context.tr('Subtotal'), _money(num.tryParse('${d['subtotal']}'), cur)),
             if ((num.tryParse('${d['discount']}') ?? 0) > 0)
-              tot('Discount', '- ${_money(num.tryParse('${d['discount']}'), cur)}'),
-            tot('VAT (${d['vat_rate']}%)', _money(num.tryParse('${d['vat_amount']}'), cur)),
+              tot(context.tr('Discount'), '- ${_money(num.tryParse('${d['discount']}'), cur)}'),
+            tot('${context.tr('VAT')} (${d['vat_rate']}%)', _money(num.tryParse('${d['vat_amount']}'), cur)),
             pw.Divider(),
-            tot('Total', _money(num.tryParse('${d['total']}'), cur), bold: true),
+            tot(context.tr('Total'), _money(num.tryParse('${d['total']}'), cur), bold: true),
           ]),
         ),
       ),
       if ('${d['notes'] ?? ''}'.isNotEmpty) ...[
         pw.SizedBox(height: 18),
-        pw.Text('Notes', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+        pw.Text(context.tr('Notes'), style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
         pw.Text('${d['notes']}'),
       ],
     ],
@@ -685,6 +687,6 @@ Future<void> exportInvoicePdf(BuildContext context, Map<String, dynamic> d) asyn
   try {
     await Printing.layoutPdf(onLayout: (format) async => pdf.save());
   } catch (e) {
-    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF export failed: $e')));
+    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('PDF export failed')}: $e')));
   }
 }

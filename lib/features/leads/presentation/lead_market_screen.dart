@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/payments/payments_service.dart';
 import '../../../core/theme/app_colors.dart';
@@ -59,15 +60,15 @@ class _LeadMarketScreenState extends ConsumerState<LeadMarketScreen> with Single
   Widget build(BuildContext context) {
     return CrmScaffold(
       tab: CrmTab.leadMarket,
-      title: 'Lead Market',
+      title: context.tr('Lead Market'),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _listLead,
         icon: const Icon(Icons.sell_outlined),
-        label: const Text('List a lead'),
+        label: Text(context.tr('List a lead')),
       ),
       body: ResponsiveCenter(
         child: Column(children: [
-          TabBar(controller: _tabs, tabs: const [Tab(text: 'Browse'), Tab(text: 'My claims')]),
+          TabBar(controller: _tabs, tabs: [Tab(text: context.tr('Browse')), Tab(text: context.tr('My claims'))]),
           Expanded(child: TabBarView(controller: _tabs, children: [_browse(), _claims()])),
         ]),
       ),
@@ -82,7 +83,7 @@ class _LeadMarketScreenState extends ConsumerState<LeadMarketScreen> with Single
         loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
         error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
         data: (list) => list.isEmpty
-            ? _empty('No leads on the market', 'Listed buyer leads from other members appear here to claim.')
+            ? _empty(context.tr('No leads on the market'), context.tr('Listed buyer leads from other members appear here to claim.'))
             : ListView.separated(
                 padding: const EdgeInsets.all(AppSpacing.x16),
                 itemCount: list.length,
@@ -101,7 +102,7 @@ class _LeadMarketScreenState extends ConsumerState<LeadMarketScreen> with Single
         loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
         error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
         data: (list) => list.isEmpty
-            ? _empty('No claimed leads', 'Leads you claim show their full contact details here.')
+            ? _empty(context.tr('No claimed leads'), context.tr('Leads you claim show their full contact details here.'))
             : ListView.separated(
                 padding: const EdgeInsets.all(AppSpacing.x16),
                 itemCount: list.length,
@@ -132,7 +133,7 @@ class _LeadMarketScreenState extends ConsumerState<LeadMarketScreen> with Single
     if (!mounted) return;
     final available = leads.map((e) => Map<String, dynamic>.from(e)).where((l) => l['is_listed'] != true).toList();
     if (available.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('You have no unlisted leads to put on the market.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('You have no unlisted leads to put on the market.'))));
       return;
     }
     String? leadId = available.first['id']?.toString();
@@ -140,7 +141,7 @@ class _LeadMarketScreenState extends ConsumerState<LeadMarketScreen> with Single
     final price = TextEditingController();
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'List a lead for sale',
+      title: context.tr('List a lead for sale'),
       maxWidth: 440,
       children: [
         StatefulBuilder(
@@ -148,25 +149,25 @@ class _LeadMarketScreenState extends ConsumerState<LeadMarketScreen> with Single
             DropdownButtonFormField<String>(
               initialValue: leadId,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Lead'),
+              decoration: InputDecoration(labelText: context.tr('Lead')),
               items: [
                 for (final l in available)
                   DropdownMenuItem(
                     value: l['id'].toString(),
-                    child: Text(_leadLabel(l), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    child: Text(_leadLabel(context, l), maxLines: 1, overflow: TextOverflow.ellipsis),
                   ),
               ],
               onChanged: (v) => setS(() => leadId = v),
             ),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price (AED)')),
+            TextField(controller: price, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Price (AED)'))),
             const SizedBox(height: AppSpacing.x12),
             Align(
               alignment: Alignment.centerLeft,
               child: SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(value: 'shared', label: Text('Shared'), icon: Icon(Icons.groups_outlined, size: 16)),
-                  ButtonSegment(value: 'exclusive', label: Text('Exclusive'), icon: Icon(Icons.lock_outline, size: 16)),
+                segments: [
+                  ButtonSegment(value: 'shared', label: Text(context.tr('Shared')), icon: const Icon(Icons.groups_outlined, size: 16)),
+                  ButtonSegment(value: 'exclusive', label: Text(context.tr('Exclusive')), icon: const Icon(Icons.lock_outline, size: 16)),
                 ],
                 selected: {exclusivity},
                 onSelectionChanged: (s) => setS(() => exclusivity = s.first),
@@ -176,8 +177,8 @@ class _LeadMarketScreenState extends ConsumerState<LeadMarketScreen> with Single
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('List')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('List'))),
       ],
     );
     if (ok != true || leadId == null) return;
@@ -187,19 +188,19 @@ class _LeadMarketScreenState extends ConsumerState<LeadMarketScreen> with Single
         'exclusivity': exclusivity,
       });
       ref.invalidate(leadMarketProvider);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lead listed on the market')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Lead listed on the market'))));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
-  String _leadLabel(Map<String, dynamic> l) {
+  String _leadLabel(BuildContext context, Map<String, dynamic> l) {
     final parts = [
       if ('${l['property_type'] ?? ''}'.isNotEmpty) '${l['property_type']}',
-      if ('${l['purpose'] ?? ''}'.isNotEmpty) 'for ${l['purpose']}',
+      if ('${l['purpose'] ?? ''}'.isNotEmpty) '${context.tr('for')} ${l['purpose']}',
       if (l['buyer_name'] != null) '· ${l['buyer_name']}',
     ];
-    return parts.isEmpty ? 'Lead' : parts.join(' ');
+    return parts.isEmpty ? context.tr('Lead') : parts.join(' ');
   }
 }
 
@@ -219,14 +220,14 @@ class _MarketCard extends ConsumerWidget {
     final specs = [
       if ('${m['community'] ?? ''}'.isNotEmpty) '${m['community']}',
       if ('${m['property_type'] ?? ''}'.isNotEmpty) '${m['property_type']}',
-      if ('${m['purpose'] ?? ''}'.isNotEmpty) 'for ${m['purpose']}',
+      if ('${m['purpose'] ?? ''}'.isNotEmpty) '${context.tr('for')} ${m['purpose']}',
     ].join(' · ');
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            StatusBadge(exclusive ? 'Exclusive' : 'Shared', tone: exclusive ? BadgeTone.gold : BadgeTone.neutral),
+            StatusBadge(context.tr(exclusive ? 'Exclusive' : 'Shared'), tone: exclusive ? BadgeTone.gold : BadgeTone.neutral),
             const Spacer(),
             if (price != null)
               Text(_aed.format(price), style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary)),
@@ -235,17 +236,17 @@ class _MarketCard extends ConsumerWidget {
           if (specs.isNotEmpty) Text(specs, style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
           if (budget[0] != null || budget[1] != null) ...[
             const SizedBox(height: 2),
-            Text('Budget ${_aed.format(budget[0] ?? budget[1])}${budget[1] != null && budget[0] != null ? ' – ${_aed.format(budget[1])}' : ''}',
+            Text('${context.tr('Budget')} ${_aed.format(budget[0] ?? budget[1])}${budget[1] != null && budget[0] != null ? ' – ${_aed.format(budget[1])}' : ''}',
                 style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ],
           const SizedBox(height: AppSpacing.x12),
           Row(children: [
-            Text(exclusive ? 'One buyer only' : '$claims ${claims == 1 ? 'buyer' : 'buyers'} so far',
+            Text(exclusive ? context.tr('One buyer only') : '$claims ${claims == 1 ? context.tr('buyer') : context.tr('buyers')} ${context.tr('so far')}',
                 style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const Spacer(),
             claimedByMe
-                ? const StatusBadge('Claimed', tone: BadgeTone.success)
-                : FilledButton(onPressed: () => _claim(context, ref), child: const Text('Claim lead')),
+                ? StatusBadge(context.tr('Claimed'), tone: BadgeTone.success)
+                : FilledButton(onPressed: () => _claim(context, ref), child: Text(context.tr('Claim lead'))),
           ]),
         ]),
       ),
@@ -258,7 +259,7 @@ class _MarketCard extends ConsumerWidget {
       ref.invalidate(leadMarketProvider);
       ref.invalidate(myLeadClaimsProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lead claimed — see it under My claims.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Lead claimed — see it under My claims.'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -281,15 +282,15 @@ class _ClaimCard extends ConsumerWidget {
     final specs = [
       if ('${m['community'] ?? ''}'.isNotEmpty) '${m['community']}',
       if ('${m['property_type'] ?? ''}'.isNotEmpty) '${m['property_type']}',
-      if ('${m['purpose'] ?? ''}'.isNotEmpty) 'for ${m['purpose']}',
+      if ('${m['purpose'] ?? ''}'.isNotEmpty) '${context.tr('for')} ${m['purpose']}',
     ].join(' · ');
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Expanded(child: Text('${m['buyer_name'] ?? 'Buyer'}', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700))),
-            StatusBadge(paid ? 'Paid' : 'Reserved', tone: paid ? BadgeTone.success : BadgeTone.warning),
+            Expanded(child: Text('${m['buyer_name'] ?? context.tr('Buyer')}', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700))),
+            StatusBadge(context.tr(paid ? 'Paid' : 'Reserved'), tone: paid ? BadgeTone.success : BadgeTone.warning),
           ]),
           if (specs.isNotEmpty) ...[
             const SizedBox(height: 2),
@@ -305,10 +306,10 @@ class _ClaimCard extends ConsumerWidget {
               TextButton.icon(
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: phone));
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Phone copied')));
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Phone copied'))));
                 },
                 icon: const Icon(Icons.copy, size: 15),
-                label: const Text('Copy'),
+                label: Text(context.tr('Copy')),
               ),
             ]),
           ],
@@ -319,7 +320,7 @@ class _ClaimCard extends ConsumerWidget {
               child: FilledButton.icon(
                 onPressed: () => startCheckout(context, ref, purpose: 'lead_claim', refId: '${m['id']}'),
                 icon: const Icon(Icons.lock_outline, size: 16),
-                label: Text(price != null ? 'Pay ${_aed.format(price)}' : 'Pay'),
+                label: Text(price != null ? '${context.tr('Pay')} ${_aed.format(price)}' : context.tr('Pay')),
               ),
             ),
           ],

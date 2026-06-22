@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -25,7 +26,7 @@ class CustomerDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(customerDetailProvider(id));
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Customer'),
+      appBar: NuzlAppBar(title: context.tr('Customer')),
       drawer: const NuzlDrawer(),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(customerDetailProvider(id)),
@@ -44,7 +45,7 @@ class CustomerDetailScreen extends ConsumerWidget {
     final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
     final c = Map<String, dynamic>.from(d['customer'] as Map? ?? const {});
     final props = (d['properties'] as List? ?? const []).map((e) => Map<String, dynamic>.from(e as Map)).toList();
-    final name = '${c['full_name'] ?? 'Customer'}';
+    final name = '${c['full_name'] ?? context.tr('Customer')}';
     final type = '${c['customer_type'] ?? ''}'.trim();
     final phone = '${c['phone'] ?? ''}'.trim();
     final email = '${c['email'] ?? ''}'.trim();
@@ -66,16 +67,16 @@ class CustomerDetailScreen extends ConsumerWidget {
         if (phone.isNotEmpty) _row(Icons.phone_outlined, phone, t, muted),
         if (email.isNotEmpty) _row(Icons.email_outlined, email, t, muted),
         const SizedBox(height: AppSpacing.x20),
-        Text('Properties (${props.length})', style: t.labelLarge),
+        Text('${context.tr('Properties')} (${props.length})', style: t.labelLarge),
         const SizedBox(height: AppSpacing.x8),
         if (props.isEmpty)
-          Text('No properties linked yet.', style: t.bodySmall?.copyWith(color: muted))
+          Text(context.tr('No properties linked yet.'), style: t.bodySmall?.copyWith(color: muted))
         else
           ...props.map((p) => Card(
                 margin: const EdgeInsets.only(bottom: AppSpacing.x8),
                 child: ListTile(
                   leading: const Icon(Icons.home_work_outlined),
-                  title: Text('${p['unit_no'] ?? p['property_type'] ?? 'Property'}'),
+                  title: Text('${p['unit_no'] ?? p['property_type'] ?? context.tr('Property')}'),
                   subtitle: Text([p['relationship'], p['property_type'], p['inventory_status']]
                       .where((e) => e != null && '$e'.isNotEmpty)
                       .join(' · ')),

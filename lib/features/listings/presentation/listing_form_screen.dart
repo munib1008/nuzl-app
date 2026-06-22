@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/upload_service.dart';
 import '../../../core/theme/app_colors.dart';
@@ -149,7 +150,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       if (url == null) throw Exception('the server returned no URL');
       setState(() => imageUrls.add(url));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Photo not uploaded: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('Photo not uploaded')}: $e')));
     } finally {
       if (mounted) setState(() => uploading = false);
     }
@@ -179,7 +180,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
               : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                   const Icon(Icons.add_a_photo_outlined, color: AppColors.textMuted),
                   const SizedBox(height: 4),
-                  Text('Add', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  Text(context.tr('Add'), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
                 ]),
         ),
       );
@@ -211,7 +212,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                 color: AppColors.primary.withValues(alpha: 0.9),
                 borderRadius: BorderRadius.circular(AppSpacing.rFull),
               ),
-              child: const Text('Cover', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
+              child: Text(context.tr('Cover'), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
             ),
           ),
       ]);
@@ -222,25 +223,25 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Auto-fill from a message'),
+        title: Text(context.tr('Auto-fill from a message')),
         content: SizedBox(
           // Cap at 420 on desktop, but never wider than a phone dialog can hold.
           width: MediaQuery.sizeOf(ctx).width - 80 < 420 ? MediaQuery.sizeOf(ctx).width - 80 : 420,
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Paste a WhatsApp-style property message — we’ll extract the details.',
-                style: TextStyle(fontSize: 13)),
+            Text(context.tr('Paste a WhatsApp-style property message — we’ll extract the details.'),
+                style: const TextStyle(fontSize: 13)),
             const SizedBox(height: AppSpacing.x12),
             TextField(
               controller: ctrl, autofocus: true, maxLines: 5,
-              decoration: const InputDecoration(
-                  hintText: 'e.g. Burj Crown 2BR 1066 sqft Canal View AED 3.1M',
-                  border: OutlineInputBorder()),
+              decoration: InputDecoration(
+                  hintText: context.tr('e.g. Burj Crown 2BR 1066 sqft Canal View AED 3.1M'),
+                  border: const OutlineInputBorder()),
             ),
           ]),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Extract')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Extract'))),
         ],
       ),
     );
@@ -270,12 +271,12 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(src == 'heuristic'
+            content: Text(context.tr(src == 'heuristic'
                 ? 'Filled what we could — please review the fields.'
-                : 'Filled from your message — review and adjust.')));
+                : 'Filled from your message — review and adjust.'))));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not parse: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('Could not parse')}: $e')));
     } finally {
       if (mounted) setState(() => aiBusy = false);
     }
@@ -288,24 +289,25 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
     if (!editing) {
       final pc = await ref.read(profileCompletionProvider.future).catchError((_) => <String, dynamic>{'complete': true});
       if (pc['complete'] != true) {
-        final missing = (pc['missing'] is List) ? (pc['missing'] as List).join(', ') : 'some fields';
         if (!mounted) return;
-        setState(() => error = 'Complete your profile ($missing) before posting — see Profile.');
+        final missing = (pc['missing'] is List) ? (pc['missing'] as List).join(', ') : context.tr('some fields');
+        setState(() => error = '${context.tr('Complete your profile')} ($missing) ${context.tr('before posting — see Profile.')}');
         return;
       }
     }
+    if (!mounted) return;
     // Validate all mandatory fields together and show a single, specific summary
     // (don't clear the form — entered data is preserved).
     final priceVal = double.tryParse(price.text.trim());
     final missing = <String>[
-      if (building.text.trim().isEmpty) 'Building name',
-      if (!editing && unitNo.text.trim().isEmpty) 'Unit number',
-      if (priceVal == null || priceVal <= 0) 'A valid price',
+      if (building.text.trim().isEmpty) context.tr('Building name'),
+      if (!editing && unitNo.text.trim().isEmpty) context.tr('Unit number'),
+      if (priceVal == null || priceVal <= 0) context.tr('A valid price'),
     ];
     if (missing.isNotEmpty) {
       final msg = missing.length == 1
-          ? '${missing.first} is required.'
-          : 'Please complete: ${missing.join(', ')}.';
+          ? '${missing.first} ${context.tr('is required.')}'
+          : '${context.tr('Please complete:')} ${missing.join(', ')}.';
       setState(() => error = msg);
       // Surface it above the pinned save bar too, so it's seen wherever the user
       // is scrolled — without clearing any entered data.
@@ -374,12 +376,12 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       final id = '${created?['id'] ?? widget.editId ?? ''}';
       final String msg;
       if (editing) {
-        msg = 'Your property has been updated.';
+        msg = context.tr('Your property has been updated.');
       } else if (created?['is_visible'] == false) {
         // Owner draft — pending a title deed before it goes public.
-        msg = 'Your property has been submitted and saved as a draft. Submit a title deed, then publish it to go live.';
+        msg = context.tr('Your property has been submitted and saved as a draft. Submit a title deed, then publish it to go live.');
       } else {
-        msg = 'Your property has been posted successfully and is now live.';
+        msg = context.tr('Your property has been posted successfully and is now live.');
       }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       context.go(id.isNotEmpty ? '/listings/$id' : '/properties');
@@ -398,7 +400,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
     final isOwner = user?.activeRole == 'owner';
     final ownerFullName = user?.fullName ?? '';
     return Scaffold(
-      appBar: NuzlAppBar(title: widget.editId != null ? 'Edit listing' : 'Add listing'),
+      appBar: NuzlAppBar(title: context.tr(widget.editId != null ? 'Edit listing' : 'Add listing')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: ListView(
@@ -410,8 +412,8 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                 color: AppColors.primaryTint,
                 child: ListTile(
                   leading: const Icon(Icons.auto_awesome, color: AppColors.primary),
-                  title: const Text('Auto-fill from a message'),
-                  subtitle: const Text('Paste a WhatsApp deal — we extract the details'),
+                  title: Text(context.tr('Auto-fill from a message')),
+                  subtitle: Text(context.tr('Paste a WhatsApp deal — we extract the details')),
                   trailing: aiBusy
                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.chevron_right),
@@ -421,10 +423,10 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
               const SizedBox(height: AppSpacing.x16),
             ],
             // Photos — at least 3 to publish a live listing. First photo is the cover.
-            Text('Photos', style: t.titleSmall),
+            Text(context.tr('Photos'), style: t.titleSmall),
             const SizedBox(height: 2),
             Text(
-              '${imageUrls.length} added · at least 3 to publish',
+              '${imageUrls.length} ${context.tr('added · at least 3 to publish')}',
               style: t.bodySmall?.copyWith(
                   color: imageUrls.length >= 3 ? AppColors.success : (dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ),
@@ -439,7 +441,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
             ),
             const SizedBox(height: AppSpacing.x16),
             DropdownButtonFormField<String>(
-              initialValue: propertyType, decoration: const InputDecoration(labelText: 'Property type'),
+              initialValue: propertyType, decoration: InputDecoration(labelText: context.tr('Property type')),
               items: const ['apartment','villa','townhouse','office','retail','warehouse','land']
                   .map((v) => DropdownMenuItem(value: v, child: Text(v[0].toUpperCase() + v.substring(1)))).toList(),
               onChanged: (v) => setState(() => propertyType = v ?? 'apartment'),
@@ -447,50 +449,50 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
             const SizedBox(height: AppSpacing.x12),
             FieldPair(
               DropdownButtonFormField<String>(
-                initialValue: purpose, decoration: const InputDecoration(labelText: 'Purpose'),
-                items: const [DropdownMenuItem(value: 'sale', child: Text('Sale')), DropdownMenuItem(value: 'rent', child: Text('Rent'))],
+                initialValue: purpose, decoration: InputDecoration(labelText: context.tr('Purpose')),
+                items: [DropdownMenuItem(value: 'sale', child: Text(context.tr('Sale'))), DropdownMenuItem(value: 'rent', child: Text(context.tr('Rent')))],
                 onChanged: (v) => setState(() => purpose = v ?? 'sale')),
               DropdownButtonFormField<String>(
-                initialValue: furnishing, decoration: const InputDecoration(labelText: 'Furnishing'),
-                items: const [
-                  DropdownMenuItem(value: 'unfurnished', child: Text('Unfurnished')),
-                  DropdownMenuItem(value: 'partly_furnished', child: Text('Partly furnished')),
-                  DropdownMenuItem(value: 'furnished', child: Text('Furnished')),
+                initialValue: furnishing, decoration: InputDecoration(labelText: context.tr('Furnishing')),
+                items: [
+                  DropdownMenuItem(value: 'unfurnished', child: Text(context.tr('Unfurnished'))),
+                  DropdownMenuItem(value: 'partly_furnished', child: Text(context.tr('Partly furnished'))),
+                  DropdownMenuItem(value: 'furnished', child: Text(context.tr('Furnished'))),
                 ],
                 onChanged: (v) => setState(() => furnishing = v ?? 'unfurnished')),
             ),
             const SizedBox(height: AppSpacing.x12),
-            TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price (AED)')),
+            TextField(controller: price, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Price (AED)'))),
             const SizedBox(height: AppSpacing.x12),
             Row(children: [
-              Expanded(child: TextField(controller: beds, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Bedrooms'))),
+              Expanded(child: TextField(controller: beds, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Bedrooms')))),
               const SizedBox(width: AppSpacing.x12),
-              Expanded(child: TextField(controller: baths, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Bathrooms'))),
+              Expanded(child: TextField(controller: baths, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Bathrooms')))),
               const SizedBox(width: AppSpacing.x12),
-              Expanded(child: TextField(controller: size, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Size (sqft)'))),
+              Expanded(child: TextField(controller: size, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Size (sqft)')))),
             ]),
             const SizedBox(height: AppSpacing.x12),
             TextField(
               controller: building,
-              decoration: const InputDecoration(labelText: 'Building name *', hintText: 'e.g. Marina Heights, Tower B'),
+              decoration: InputDecoration(labelText: context.tr('Building name *'), hintText: context.tr('e.g. Marina Heights, Tower B')),
             ),
             const SizedBox(height: AppSpacing.x12),
             TextField(
               controller: location,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                labelText: 'Location pin',
-                hintText: 'Paste a Google Maps link, or "25.0772, 55.1335"',
+                labelText: context.tr('Location pin'),
+                hintText: context.tr('Paste a Google Maps link, or "25.0772, 55.1335"'),
                 prefixIcon: const Icon(Icons.place_outlined),
                 helperText: _coords() != null
-                    ? 'Pinned at ${_coords()!.$1.toStringAsFixed(5)}, ${_coords()!.$2.toStringAsFixed(5)}'
-                    : 'Used for the map view',
+                    ? '${context.tr('Pinned at')} ${_coords()!.$1.toStringAsFixed(5)}, ${_coords()!.$2.toStringAsFixed(5)}'
+                    : context.tr('Used for the map view'),
                 helperStyle: _coords() != null ? const TextStyle(color: AppColors.success) : null,
               ),
             ),
             if (widget.editId == null) ...[
               const SizedBox(height: AppSpacing.x12),
-              TextField(controller: unitNo, decoration: const InputDecoration(labelText: 'Unit number *')),
+              TextField(controller: unitNo, decoration: InputDecoration(labelText: context.tr('Unit number *'))),
               const SizedBox(height: AppSpacing.x12),
               if (isOwner)
                 Container(
@@ -504,7 +506,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                     const SizedBox(width: AppSpacing.x8),
                     Expanded(
                       child: Text(
-                        'Listed as owner: ${ownerFullName.isEmpty ? 'you' : ownerFullName}',
+                        '${context.tr('Listed as owner')}: ${ownerFullName.isEmpty ? context.tr('you') : ownerFullName}',
                         style: t.bodySmall?.copyWith(color: AppColors.textMuted),
                       ),
                     ),
@@ -512,19 +514,19 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                 )
               else
                 Row(children: [
-                  Expanded(child: TextField(controller: ownerName, decoration: const InputDecoration(labelText: 'Owner name'))),
+                  Expanded(child: TextField(controller: ownerName, decoration: InputDecoration(labelText: context.tr('Owner name')))),
                   const SizedBox(width: AppSpacing.x12),
-                  Expanded(child: TextField(controller: ownerPhone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Owner phone'))),
+                  Expanded(child: TextField(controller: ownerPhone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.tr('Owner phone')))),
                 ]),
             ],
             const SizedBox(height: AppSpacing.x12),
-            TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'Description')),
+            TextField(controller: description, maxLines: 3, decoration: InputDecoration(labelText: context.tr('Description'))),
             const SizedBox(height: AppSpacing.x12),
             TextField(
               controller: permit,
-              decoration: const InputDecoration(
-                labelText: 'Permit number (Trakheesi / RERA)',
-                helperText: 'Required to publish a live listing',
+              decoration: InputDecoration(
+                labelText: context.tr('Permit number (Trakheesi / RERA)'),
+                helperText: context.tr('Required to publish a live listing'),
               ),
             ),
             const SizedBox(height: AppSpacing.x16),
@@ -536,22 +538,22 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                 tilePadding: EdgeInsets.zero,
                 childrenPadding: EdgeInsets.zero,
                 expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
-                title: Text('More details (optional)', style: t.titleSmall),
-                subtitle: Text('Developer info · highlights · incentives',
+                title: Text(context.tr('More details (optional)'), style: t.titleSmall),
+                subtitle: Text(context.tr('Developer info · highlights · incentives'),
                     style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 children: [
-            Text('Property details', style: t.titleSmall),
+            Text(context.tr('Property details'), style: t.titleSmall),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
-              Expanded(child: TextField(controller: developer, decoration: const InputDecoration(labelText: 'Developer', hintText: 'e.g. Emaar'))),
+              Expanded(child: TextField(controller: developer, decoration: InputDecoration(labelText: context.tr('Developer'), hintText: context.tr('e.g. Emaar')))),
               const SizedBox(width: AppSpacing.x12),
-              Expanded(child: TextField(controller: view, decoration: const InputDecoration(labelText: 'View', hintText: 'e.g. Marina'))),
+              Expanded(child: TextField(controller: view, decoration: InputDecoration(labelText: context.tr('View'), hintText: context.tr('e.g. Marina')))),
             ]),
             const SizedBox(height: AppSpacing.x12),
             Row(children: [
-              Expanded(child: TextField(controller: parking, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Parking spaces'))),
+              Expanded(child: TextField(controller: parking, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Parking spaces')))),
               const SizedBox(width: AppSpacing.x12),
-              Expanded(child: TextField(controller: serviceCharge, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Service charge (AED/sqft/yr)'))),
+              Expanded(child: TextField(controller: serviceCharge, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Service charge (AED/sqft/yr)')))),
             ]),
             const SizedBox(height: AppSpacing.x12),
             InkWell(
@@ -562,69 +564,69 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                   initialDate: handover ?? now,
                   firstDate: DateTime(now.year - 10),
                   lastDate: DateTime(now.year + 15),
-                  helpText: 'Handover date',
+                  helpText: context.tr('Handover date'),
                 );
                 if (d != null) setState(() => handover = d);
               },
               child: InputDecorator(
-                decoration: const InputDecoration(
-                    labelText: 'Handover date', suffixIcon: Icon(Icons.calendar_today_outlined, size: 18)),
+                decoration: InputDecoration(
+                    labelText: context.tr('Handover date'), suffixIcon: const Icon(Icons.calendar_today_outlined, size: 18)),
                 child: Text(
                   handover == null
-                      ? 'Select date (off-plan / ready)'
+                      ? context.tr('Select date (off-plan / ready)')
                       : '${handover!.year}-${handover!.month.toString().padLeft(2, '0')}-${handover!.day.toString().padLeft(2, '0')}',
                   style: TextStyle(color: handover == null ? Theme.of(context).hintColor : null),
                 ),
               ),
             ),
             const SizedBox(height: AppSpacing.x16),
-            Text('Highlights', style: t.titleSmall),
+            Text(context.tr('Highlights'), style: t.titleSmall),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Exclusive listing'),
+              title: Text(context.tr('Exclusive listing')),
               value: isExclusive,
               onChanged: (v) => setState(() => isExclusive = v),
             ),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: const Text('Hot deal'),
+              title: Text(context.tr('Hot deal')),
               value: isHotDeal,
               onChanged: (v) => setState(() => isHotDeal = v),
             ),
             TextField(
               controller: originalPrice,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Original price (AED) — optional',
-                helperText: 'If above the current price, shows a "Price reduced" ribbon',
+              decoration: InputDecoration(
+                labelText: context.tr('Original price (AED) — optional'),
+                helperText: context.tr('If above the current price, shows a "Price reduced" ribbon'),
               ),
             ),
             const SizedBox(height: AppSpacing.x16),
-            Text('Developer incentives', style: t.titleSmall),
+            Text(context.tr('Developer incentives'), style: t.titleSmall),
             const SizedBox(height: AppSpacing.x4),
-            Text('Fee waivers a developer covers — reflected in the buyer\'s mortgage estimate.',
+            Text(context.tr('Fee waivers a developer covers — reflected in the buyer\'s mortgage estimate.'),
                 style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const SizedBox(height: AppSpacing.x8),
             FieldPair(
               DropdownButtonFormField<double>(
                 initialValue: dldWaiver,
-                decoration: const InputDecoration(labelText: 'DLD fee waiver'),
-                items: const [
-                  DropdownMenuItem(value: 0.0, child: Text('None')),
-                  DropdownMenuItem(value: 25.0, child: Text('25% covered')),
-                  DropdownMenuItem(value: 50.0, child: Text('50% covered')),
-                  DropdownMenuItem(value: 75.0, child: Text('75% covered')),
-                  DropdownMenuItem(value: 100.0, child: Text('Full DLD waiver')),
+                decoration: InputDecoration(labelText: context.tr('DLD fee waiver')),
+                items: [
+                  DropdownMenuItem(value: 0.0, child: Text(context.tr('None'))),
+                  DropdownMenuItem(value: 25.0, child: Text(context.tr('25% covered'))),
+                  DropdownMenuItem(value: 50.0, child: Text(context.tr('50% covered'))),
+                  DropdownMenuItem(value: 75.0, child: Text(context.tr('75% covered'))),
+                  DropdownMenuItem(value: 100.0, child: Text(context.tr('Full DLD waiver'))),
                 ],
                 onChanged: (v) => setState(() => dldWaiver = v ?? 0),
               ),
               DropdownButtonFormField<double>(
                 initialValue: processingWaiver,
-                decoration: const InputDecoration(labelText: 'Processing fee waiver'),
-                items: const [
-                  DropdownMenuItem(value: 0.0, child: Text('None')),
-                  DropdownMenuItem(value: 50.0, child: Text('50% covered')),
-                  DropdownMenuItem(value: 100.0, child: Text('Fully covered')),
+                decoration: InputDecoration(labelText: context.tr('Processing fee waiver')),
+                items: [
+                  DropdownMenuItem(value: 0.0, child: Text(context.tr('None'))),
+                  DropdownMenuItem(value: 50.0, child: Text(context.tr('50% covered'))),
+                  DropdownMenuItem(value: 100.0, child: Text(context.tr('Fully covered'))),
                 ],
                 onChanged: (v) => setState(() => processingWaiver = v ?? 0),
               ),
@@ -632,13 +634,13 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
             const SizedBox(height: AppSpacing.x12),
             TextField(
               controller: incentiveNote,
-              decoration: const InputDecoration(
-                labelText: 'Other incentives — optional',
-                hintText: 'e.g. Service-charge waiver for 2 years, free furnishing',
+              decoration: InputDecoration(
+                labelText: context.tr('Other incentives — optional'),
+                hintText: context.tr('e.g. Service-charge waiver for 2 years, free furnishing'),
               ),
             ),
             const SizedBox(height: AppSpacing.x12),
-            Text('Offers list — shown as "Incentives & offers" on the property',
+            Text(context.tr('Offers list — shown as "Incentives & offers" on the property'),
                 style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const SizedBox(height: AppSpacing.x8),
             for (var i = 0; i < _incentives.length; i++)
@@ -650,16 +652,16 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                     child: DropdownButtonFormField<String>(
                       initialValue: _incentives[i].type,
                       isExpanded: true,
-                      decoration: const InputDecoration(labelText: 'Offer', isDense: true),
-                      items: const [
-                        DropdownMenuItem(value: 'cash_back', child: Text('Cash-back')),
-                        DropdownMenuItem(value: 'service_charge_holiday', child: Text('Service-charge holiday')),
-                        DropdownMenuItem(value: 'furniture', child: Text('Furniture allowance')),
-                        DropdownMenuItem(value: 'payment_plan', child: Text('Payment plan')),
-                        DropdownMenuItem(value: 'free_management', child: Text('Free management')),
-                        DropdownMenuItem(value: 'dld_waiver', child: Text('DLD waiver')),
-                        DropdownMenuItem(value: 'processing_waiver', child: Text('Processing waiver')),
-                        DropdownMenuItem(value: 'other', child: Text('Other')),
+                      decoration: InputDecoration(labelText: context.tr('Offer'), isDense: true),
+                      items: [
+                        DropdownMenuItem(value: 'cash_back', child: Text(context.tr('Cash-back'))),
+                        DropdownMenuItem(value: 'service_charge_holiday', child: Text(context.tr('Service-charge holiday'))),
+                        DropdownMenuItem(value: 'furniture', child: Text(context.tr('Furniture allowance'))),
+                        DropdownMenuItem(value: 'payment_plan', child: Text(context.tr('Payment plan'))),
+                        DropdownMenuItem(value: 'free_management', child: Text(context.tr('Free management'))),
+                        DropdownMenuItem(value: 'dld_waiver', child: Text(context.tr('DLD waiver'))),
+                        DropdownMenuItem(value: 'processing_waiver', child: Text(context.tr('Processing waiver'))),
+                        DropdownMenuItem(value: 'other', child: Text(context.tr('Other'))),
                       ],
                       onChanged: (v) => setState(() => _incentives[i].type = v ?? 'other'),
                     ),
@@ -672,11 +674,11 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                       keyboardType: _structuredIncentiveUnit(_incentives[i].type).isEmpty
                           ? TextInputType.text
                           : const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(labelText: _incFieldLabel(_incentives[i].type), isDense: true),
+                      decoration: InputDecoration(labelText: context.tr(_incFieldLabel(_incentives[i].type)), isDense: true),
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Remove',
+                    tooltip: context.tr('Remove'),
                     icon: const Icon(Icons.close, size: 18),
                     onPressed: () => setState(() => _incentives.removeAt(i).input.dispose()),
                   ),
@@ -687,18 +689,18 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
               child: TextButton.icon(
                 onPressed: () => setState(() => _incentives.add(_IncentiveInput())),
                 icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add an offer'),
+                label: Text(context.tr('Add an offer')),
               ),
             ),
                 ],
               ),
             ),
             const SizedBox(height: AppSpacing.x16),
-            Text('Amenities', style: t.titleSmall),
+            Text(context.tr('Amenities'), style: t.titleSmall),
             const SizedBox(height: AppSpacing.x8),
             ref.watch(amenitiesProvider).maybeWhen(
               data: (list) => list.isEmpty
-                  ? Text('No amenities available', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
+                  ? Text(context.tr('No amenities available'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Wrap(
                       spacing: AppSpacing.x8,
                       runSpacing: AppSpacing.x8,
@@ -732,7 +734,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       // primary action is never hidden behind it (and clears the home indicator).
       bottomNavigationBar: StickySaveBar(
         saving: saving,
-        label: widget.editId != null ? 'Save changes' : 'Add listing',
+        label: context.tr(widget.editId != null ? 'Save changes' : 'Add listing'),
         onPressed: _save,
       ),
     );

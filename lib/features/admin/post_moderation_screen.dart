@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -30,7 +31,7 @@ class PostModerationScreen extends ConsumerWidget {
     final reports = ref.watch(_reportsProvider);
     final t = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Post moderation'),
+      appBar: NuzlAppBar(title: context.tr('Post moderation')),
       drawer: const NuzlDrawer(),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -45,12 +46,12 @@ class PostModerationScreen extends ConsumerWidget {
               loading: () => const Padding(padding: EdgeInsets.all(40), child: Center(child: CircularProgressIndicator())),
               error: (e, _) => Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(friendlyError(e)))),
               data: (list) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Reported posts (${list.length})', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                Text('${context.tr('Reported posts')} (${list.length})', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                 const SizedBox(height: AppSpacing.x8),
                 if (list.isEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Text('No open reports.', style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+                    child: Text(context.tr('No open reports.'), style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
                   )
                 else
                   for (final r in list) _ReportCard(r),
@@ -84,7 +85,7 @@ class _PendingMarketing extends ConsumerWidget {
       data: (list) {
         if (list.isEmpty) return const SizedBox.shrink();
         return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Pending marketing posts (${list.length})', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          Text('${context.tr('Pending marketing posts')} (${list.length})', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: AppSpacing.x8),
           for (final m in list)
             Card(
@@ -92,20 +93,20 @@ class _PendingMarketing extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.x16),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${m['title'] ?? '(untitled)'}', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                  Text('${m['title'] ?? context.tr('(untitled)')}', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
                   if ('${m['body'] ?? ''}'.isNotEmpty)
                     Padding(padding: const EdgeInsets.only(top: 4), child: Text('${m['body']}', maxLines: 4, overflow: TextOverflow.ellipsis)),
                   const SizedBox(height: AppSpacing.x8),
                   Text([
                     if (m['company'] != null) '${m['company']}',
-                    if (m['author'] != null) 'by ${m['author']}',
+                    if (m['author'] != null) '${context.tr('by')} ${m['author']}',
                     if (m['kind'] != null) '${m['kind']}',
                   ].join('  ·  '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
                   const SizedBox(height: AppSpacing.x12),
                   Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                    TextButton(onPressed: () => _review(context, ref, '${m['id']}', false), child: const Text('Decline')),
+                    TextButton(onPressed: () => _review(context, ref, '${m['id']}', false), child: Text(context.tr('Decline'))),
                     const SizedBox(width: AppSpacing.x8),
-                    FilledButton(onPressed: () => _review(context, ref, '${m['id']}', true), child: const Text('Publish')),
+                    FilledButton(onPressed: () => _review(context, ref, '${m['id']}', true), child: Text(context.tr('Publish'))),
                   ]),
                 ]),
               ),
@@ -146,28 +147,28 @@ class _ReportCard extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(color: AppColors.danger.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-              child: Text('${r['reason'] ?? 'report'}',
+              child: Text('${r['reason'] ?? context.tr('report')}',
                   style: t.labelSmall?.copyWith(color: AppColors.danger, fontWeight: FontWeight.w700)),
             ),
             const Spacer(),
             if (when != null) Text(DateFormat.yMMMd().format(when), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
           ]),
           const SizedBox(height: AppSpacing.x8),
-          Text(body.isEmpty ? '(no text)' : body, maxLines: 4, overflow: TextOverflow.ellipsis, style: t.bodyMedium),
+          Text(body.isEmpty ? context.tr('(no text)') : body, maxLines: 4, overflow: TextOverflow.ellipsis, style: t.bodyMedium),
           const SizedBox(height: AppSpacing.x8),
           Text([
-            if (r['author'] != null) 'by ${r['author']}',
-            if (r['reporter'] != null) 'reported by ${r['reporter']}',
+            if (r['author'] != null) '${context.tr('by')} ${r['author']}',
+            if (r['reporter'] != null) '${context.tr('reported by')} ${r['reporter']}',
             if (r['post_kind'] != null) '${r['post_kind']}',
           ].join('  ·  '), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
           const SizedBox(height: AppSpacing.x12),
           Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-            TextButton(onPressed: () => _resolve(context, ref, 'dismiss'), child: const Text('Dismiss')),
+            TextButton(onPressed: () => _resolve(context, ref, 'dismiss'), child: Text(context.tr('Dismiss'))),
             const SizedBox(width: AppSpacing.x8),
             FilledButton(
               style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
               onPressed: () => _resolve(context, ref, 'remove'),
-              child: const Text('Remove post'),
+              child: Text(context.tr('Remove post')),
             ),
           ]),
         ]),

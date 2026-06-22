@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/async_view.dart';
@@ -30,7 +31,7 @@ class OpportunitiesScreen extends ConsumerWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
     return CrmScaffold(
       tab: CrmTab.pipeline,
-      title: 'CRM pipeline',
+      title: context.tr('CRM pipeline'),
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(opportunitiesProvider),
         child: AsyncView<List<Map<String, dynamic>>>(
@@ -39,11 +40,11 @@ class OpportunitiesScreen extends ConsumerWidget {
           loading: const SkeletonList(),
           data: (list) {
             if (list.isEmpty) {
-              return ListView(children: const [
+              return ListView(children: [
                 EmptyState(
                   icon: Icons.trending_up,
-                  title: 'No opportunities yet',
-                  message: 'Opportunities appear here as you qualify and progress your leads.',
+                  title: context.tr('No opportunities yet'),
+                  message: context.tr('Opportunities appear here as you qualify and progress your leads.'),
                 ),
               ]);
             }
@@ -54,14 +55,14 @@ class OpportunitiesScreen extends ConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
-                _summaryStrip(byStage, list.length, t, dark),
+                _summaryStrip(context, byStage, list.length, t, dark),
                 const SizedBox(height: AppSpacing.x16),
                 for (final s in oppStageOrder)
                   if (byStage[s]?.isNotEmpty == true) ...[
                     Padding(
                       padding: const EdgeInsets.only(top: AppSpacing.x8, bottom: AppSpacing.x8),
                       child: Row(children: [
-                        Text(oppStageLabels[s] ?? s, style: t.titleSmall),
+                        Text(context.tr(oppStageLabels[s] ?? s), style: t.titleSmall),
                         const SizedBox(width: AppSpacing.x8),
                         Text('${byStage[s]!.length}', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                       ]),
@@ -76,15 +77,15 @@ class OpportunitiesScreen extends ConsumerWidget {
     );
   }
 
-  Widget _summaryStrip(Map<String, List> byStage, int total, TextTheme t, bool dark) {
+  Widget _summaryStrip(BuildContext context, Map<String, List> byStage, int total, TextTheme t, bool dark) {
     final won = byStage['closed_won']?.length ?? 0;
     final lost = byStage['closed_lost']?.length ?? 0;
     final active = total - won - lost;
     final stats = <(String, String)>[
-      ('Total', '$total'),
-      ('Active', '$active'),
-      ('Won', '$won'),
-      ('Lost', '$lost'),
+      (context.tr('Total'), '$total'),
+      (context.tr('Active'), '$active'),
+      (context.tr('Won'), '$won'),
+      (context.tr('Lost'), '$lost'),
     ];
     return Card(
       child: Padding(
@@ -133,7 +134,7 @@ class _OppCard extends StatelessWidget {
                 color: isLead ? AppColors.primaryTint : AppColors.accentGoldTint,
                 borderRadius: BorderRadius.circular(AppSpacing.rFull),
               ),
-              child: Text(isLead ? 'Lead' : 'Viewing',
+              child: Text(context.tr(isLead ? 'Lead' : 'Viewing'),
                   style: t.labelSmall?.copyWith(
                       color: isLead ? AppColors.primary : AppColors.accentGold, fontWeight: FontWeight.w700)),
             ),
@@ -149,7 +150,7 @@ class _OppCard extends StatelessWidget {
               ]),
             ),
             const SizedBox(width: AppSpacing.x8),
-            StatusBadge(oppStageLabels['${o['stage']}'] ?? '${o['stage']}', tone: _stageTone('${o['stage']}')),
+            StatusBadge(context.tr(oppStageLabels['${o['stage']}'] ?? '${o['stage']}'), tone: _stageTone('${o['stage']}')),
           ]),
         ),
       ),
