@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
+import '../../core/i18n/app_localizations.dart';
+import '../../core/i18n/locale_provider.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/upload_service.dart';
 import '../../core/rbac/persona.dart';
@@ -11,6 +13,30 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/theme_mode_provider.dart';
 import '../../core/widgets/nuzl_logo.dart';
 import '../auth/application/auth_controller.dart';
+
+/// Language chooser — English / العربية, applied instantly across the app (RTL
+/// flips automatically for Arabic) and remembered on the device.
+Future<void> showLanguageChooser(BuildContext context, WidgetRef ref) async {
+  final current = ref.read(localeProvider)?.languageCode ?? 'en';
+  await showDialog<void>(
+    context: context,
+    builder: (ctx) => SimpleDialog(
+      title: Text(ctx.tr('choose_language')),
+      children: [
+        for (final opt in const [('en', 'English'), ('ar', 'العربية')])
+          ListTile(
+            leading: const Icon(Icons.language),
+            title: Text(opt.$2),
+            trailing: current == opt.$1 ? const Icon(Icons.check, color: AppColors.primary) : null,
+            onTap: () {
+              ref.read(localeProvider.notifier).set(Locale(opt.$1));
+              Navigator.pop(ctx);
+            },
+          ),
+      ],
+    ),
+  );
+}
 
 /// Unread notification badge (graceful: 0 on any error / missing permission).
 final unreadCountProvider = FutureProvider.autoDispose<int>((ref) async {
@@ -111,6 +137,8 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 context.go('/billing');
               case 'feedback':
                 showFeedbackDialog(context, ref, title);
+              case 'language':
+                showLanguageChooser(context, ref);
               case 'theme':
                 ref.read(themeModeProvider.notifier).toggle();
               case 'logout':
@@ -138,6 +166,12 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
                   leading: Icon(Icons.workspace_premium_outlined), title: Text('Plan & billing'), dense: true)),
               const PopupMenuItem(value: 'feedback', child: ListTile(
                   leading: Icon(Icons.bug_report_outlined), title: Text('Report an issue'), dense: true)),
+              PopupMenuItem(value: 'language', child: ListTile(
+                  leading: const Icon(Icons.language),
+                  title: Text(context.tr('language')),
+                  trailing: Text(ref.watch(localeProvider)?.languageCode == 'ar' ? 'العربية' : 'English',
+                      style: Theme.of(context).textTheme.bodySmall),
+                  dense: true)),
               PopupMenuItem(value: 'theme', child: ListTile(
                   leading: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
                   title: Text(isDark ? 'Light mode' : 'Dark mode'), dense: true)),
