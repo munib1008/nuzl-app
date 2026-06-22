@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/upload_service.dart';
 import '../../../core/rbac/persona.dart';
@@ -100,7 +101,7 @@ class _CategoryBar extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.only(right: AppSpacing.x8),
               child: ChoiceChip(
-                label: Text(c.$2),
+                label: Text(context.tr(c.$2)),
                 selected: selected == c.$1,
                 onSelected: (_) => ref.read(_feedCategoryProvider.notifier).state = c.$1,
               ),
@@ -131,13 +132,13 @@ class FeedScreen extends ConsumerWidget {
     final persona = ref.watch(personaProvider);
     final canPost = persona.canManageLeads || persona.canListProperty;
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Feed'),
+      appBar: NuzlAppBar(title: context.tr('Feed')),
       drawer: const NuzlDrawer(),
       floatingActionButton: canPost
           ? FloatingActionButton.extended(
               onPressed: () => openFeedComposer(context, ref, audience: 'public'),
               icon: const Icon(Icons.edit_outlined),
-              label: const Text('New post'),
+              label: Text(context.tr('New post')),
             )
           : null,
       body: body,
@@ -179,11 +180,11 @@ class _FeedBody extends ConsumerWidget {
                 return ListView(children: [
                   EmptyState(
                     icon: Icons.dynamic_feed_outlined,
-                    title: cat.isEmpty ? 'No posts yet' : 'Nothing in this category yet',
-                    message: cat.isEmpty
+                    title: context.tr(cat.isEmpty ? 'No posts yet' : 'Nothing in this category yet'),
+                    message: context.tr(cat.isEmpty
                         ? 'Share a market update or a success story to start the conversation.'
-                        : 'Be the first to post in this category.',
-                    actionLabel: canPost ? 'New post' : null,
+                        : 'Be the first to post in this category.'),
+                    actionLabel: canPost ? context.tr('New post') : null,
                     onAction: canPost ? () => openFeedComposer(context, ref, audience: scope) : null,
                   ),
                 ]);
@@ -220,22 +221,22 @@ Future<void> openFeedComposer(BuildContext context, WidgetRef ref, {required Str
   final mentions = <Map<String, dynamic>>[]; // {id, name}
   final ok = await AppDialog.show<bool>(
     context,
-    title: 'New post',
+    title: context.tr('New post'),
     maxWidth: 460,
     children: [
       StatefulBuilder(
         builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
           // Primary inputs first so they're visible the moment the sheet opens.
           TextField(controller: title, autofocus: true, textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(labelText: 'Title')),
+              decoration: InputDecoration(labelText: context.tr('Title'))),
           const SizedBox(height: AppSpacing.x8),
           TextField(controller: body, minLines: 2, maxLines: 4,
-              decoration: const InputDecoration(labelText: 'Share an update…')),
+              decoration: InputDecoration(labelText: context.tr('Share an update…'))),
           const SizedBox(height: AppSpacing.x8),
           DropdownButtonFormField<String>(
             initialValue: kind,
-            decoration: const InputDecoration(labelText: 'Category'),
-            items: kinds.map((k) => DropdownMenuItem(value: k.$1, child: Text(k.$2))).toList(),
+            decoration: InputDecoration(labelText: context.tr('Category')),
+            items: kinds.map((k) => DropdownMenuItem(value: k.$1, child: Text(context.tr(k.$2)))).toList(),
             onChanged: (v) => setS(() => kind = v ?? kinds.first.$1),
           ),
           const SizedBox(height: AppSpacing.x8),
@@ -260,11 +261,11 @@ Future<void> openFeedComposer(BuildContext context, WidgetRef ref, {required Str
                           if (url != null) {
                             setS(() => media.add(url));
                           } else if (ctx.mounted) {
-                            ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Photo upload failed — please try again')));
+                            ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ctx.tr('Photo upload failed — try again'))));
                           }
                         } catch (e) {
                           if (ctx.mounted) {
-                            ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Photo upload failed — ${friendlyError(e)}')));
+                            ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('${ctx.tr('Photo upload failed')} — ${friendlyError(e)}')));
                           }
                         } finally {
                           setS(() => uploading = false);
@@ -273,7 +274,7 @@ Future<void> openFeedComposer(BuildContext context, WidgetRef ref, {required Str
                 icon: uploading
                     ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.add_photo_alternate_outlined, size: 18),
-                label: Text(uploading ? 'Uploading…' : 'Photo'),
+                label: Text(context.tr(uploading ? 'Uploading…' : 'Photo')),
               ),
               OutlinedButton.icon(
                 onPressed: () async {
@@ -283,7 +284,7 @@ Future<void> openFeedComposer(BuildContext context, WidgetRef ref, {required Str
                   setS(() => mentions.add(picked));
                 },
                 icon: const Icon(Icons.alternate_email, size: 18),
-                label: const Text('Tag'),
+                label: Text(context.tr('Tag')),
               ),
             ]),
           ),
@@ -304,18 +305,18 @@ Future<void> openFeedComposer(BuildContext context, WidgetRef ref, {required Str
       ),
     ],
     actions: [
-      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+      TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
       FilledButton(
         onPressed: () {
           if (title.text.trim().isEmpty && body.text.trim().isEmpty) {
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
-              ..showSnackBar(const SnackBar(content: Text('Add a title or a few words to post.')));
+              ..showSnackBar(SnackBar(content: Text(context.tr('Add a title or a few words to post.'))));
             return;
           }
           Navigator.pop(context, true);
         },
-        child: const Text('Post'),
+        child: Text(context.tr('Post')),
       ),
     ],
   );
@@ -334,8 +335,8 @@ Future<void> openFeedComposer(BuildContext context, WidgetRef ref, {required Str
     // Refresh both surfaces (the family) so the new post shows wherever relevant.
     ref.invalidate(feedPostsProvider);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(
-          audience == 'company' ? 'Posted to your Community' : 'Posted — public marketing posts may be reviewed first')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr(
+          audience == 'company' ? 'Posted to your Community' : 'Posted — public marketing posts may be reviewed first'))));
     }
   } catch (e) {
     if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -364,29 +365,29 @@ Future<Map<String, dynamic>?> _pickUser(BuildContext context, WidgetRef ref) {
         }
 
         return AlertDialog(
-          title: const Text('Tag someone'),
+          title: Text(ctx.tr('Tag someone')),
           content: SizedBox(
             width: MediaQuery.sizeOf(ctx).width - 80 < 360 ? MediaQuery.sizeOf(ctx).width - 80 : 360,
             child: Column(mainAxisSize: MainAxisSize.min, children: [
               TextField(
                 controller: search,
                 autofocus: true,
-                decoration: const InputDecoration(hintText: 'Search by name…', prefixIcon: Icon(Icons.search)),
+                decoration: InputDecoration(hintText: ctx.tr('Search by name…'), prefixIcon: const Icon(Icons.search)),
                 onChanged: run,
               ),
               const SizedBox(height: AppSpacing.x8),
               ConstrainedBox(
                 constraints: const BoxConstraints(maxHeight: 280),
                 child: results.isEmpty
-                    ? const Padding(padding: EdgeInsets.all(16), child: Text('Type at least 2 letters to search'))
+                    ? Padding(padding: const EdgeInsets.all(16), child: Text(ctx.tr('Type at least 2 letters to search')))
                     : ListView(
                         shrinkWrap: true,
                         children: [
                           for (final u in results)
                             ListTile(
                               dense: true,
-                              leading: UserAvatar(name: '${u['full_name'] ?? 'User'}', url: '${u['avatar_url'] ?? ''}', radius: 16),
-                              title: Text('${u['full_name'] ?? 'User'}'),
+                              leading: UserAvatar(name: '${u['full_name'] ?? ctx.tr('User')}', url: '${u['avatar_url'] ?? ''}', radius: 16),
+                              title: Text('${u['full_name'] ?? ctx.tr('User')}'),
                               subtitle: u['role'] != null ? Text('${u['role']}') : null,
                               onTap: () => Navigator.pop(ctx, {'id': u['id'], 'name': u['full_name']}),
                             ),
@@ -395,7 +396,7 @@ Future<Map<String, dynamic>?> _pickUser(BuildContext context, WidgetRef ref) {
               ),
             ]),
           ),
-          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
+          actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(ctx.tr('Close')))],
         );
       },
     ),
@@ -448,7 +449,7 @@ class _PostCardState extends ConsumerState<_PostCard> {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final author = '${p['author'] ?? 'Member'}';
+    final author = '${p['author'] ?? context.tr('Member')}';
     final created = DateTime.tryParse('${p['created_at']}');
     final liked = _liked;
     final likeCount = _likeCount;
@@ -473,11 +474,11 @@ class _PostCardState extends ConsumerState<_PostCard> {
                     Text(DateFormat('d MMM · HH:mm').format(created), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ),
-              StatusBadge(label, tone: tone),
+              StatusBadge(context.tr(label), tone: tone),
               PopupMenuButton<String>(
                 icon: Icon(Icons.more_vert, size: 18, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                 onSelected: (v) { if (v == 'report') _report(context, ref); },
-                itemBuilder: (_) => const [PopupMenuItem(value: 'report', child: Text('Report post'))],
+                itemBuilder: (_) => [PopupMenuItem(value: 'report', child: Text(context.tr('Report post')))],
               ),
             ]),
             if (title.isNotEmpty) ...[
@@ -555,22 +556,22 @@ class _PostCardState extends ConsumerState<_PostCard> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => AlertDialog(
-          title: const Text('Report post'),
+          title: Text(context.tr('Report post')),
           content: DropdownButtonFormField<String>(
             initialValue: reason,
-            decoration: const InputDecoration(labelText: 'Reason'),
-            items: const [
-              DropdownMenuItem(value: 'spam', child: Text('Spam')),
-              DropdownMenuItem(value: 'inappropriate', child: Text('Inappropriate')),
-              DropdownMenuItem(value: 'misleading', child: Text('Misleading')),
-              DropdownMenuItem(value: 'duplicate', child: Text('Duplicate')),
-              DropdownMenuItem(value: 'other', child: Text('Other')),
+            decoration: InputDecoration(labelText: context.tr('Reason')),
+            items: [
+              DropdownMenuItem(value: 'spam', child: Text(context.tr('Spam'))),
+              DropdownMenuItem(value: 'inappropriate', child: Text(context.tr('Inappropriate'))),
+              DropdownMenuItem(value: 'misleading', child: Text(context.tr('Misleading'))),
+              DropdownMenuItem(value: 'duplicate', child: Text(context.tr('Duplicate'))),
+              DropdownMenuItem(value: 'other', child: Text(context.tr('Other'))),
             ],
             onChanged: (v) => setS(() => reason = v ?? 'spam'),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Report')),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Report'))),
           ],
         ),
       ),
@@ -579,7 +580,7 @@ class _PostCardState extends ConsumerState<_PostCard> {
     try {
       await ref.read(apiClientProvider).post('/posts/${p['id']}/report', body: {'reason': reason});
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reported — thank you')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Reported — thank you'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -641,7 +642,7 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
     if (text.isEmpty) return;
     final me = ref.read(authControllerProvider).user;
     final temp = <String, dynamic>{
-      'author': me?.fullName ?? 'You',
+      'author': me?.fullName ?? context.tr('You'),
       'author_avatar': me?.avatarUrl ?? '',
       'body': text,
     };
@@ -672,7 +673,7 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
             children: [
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.x16),
-                child: Text('Comments', style: Theme.of(context).textTheme.titleMedium),
+                child: Text(context.tr('Comments'), style: Theme.of(context).textTheme.titleMedium),
               ),
               const Divider(height: 1),
               Expanded(
@@ -682,13 +683,13 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                   data: (list) {
                     final all = [...list.map((e) => Map<String, dynamic>.from(e)), ..._optimistic];
                     return all.isEmpty
-                        ? const Center(child: Text('No comments yet. Be the first.'))
+                        ? Center(child: Text(context.tr('No comments yet. Be the first.')))
                         : ListView(
                             controller: scroll,
                             children: all.map((c) {
                               return ListTile(
-                                leading: UserAvatar(name: '${c['author'] ?? 'Member'}', url: '${c['author_avatar'] ?? ''}', radius: 16),
-                                title: Text('${c['author'] ?? 'Member'}'),
+                                leading: UserAvatar(name: '${c['author'] ?? context.tr('Member')}', url: '${c['author_avatar'] ?? ''}', radius: 16),
+                                title: Text('${c['author'] ?? context.tr('Member')}'),
                                 subtitle: Text('${c['body'] ?? ''}'),
                               );
                             }).toList(),
@@ -702,7 +703,7 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                   Expanded(
                     child: TextField(
                       controller: _input,
-                      decoration: const InputDecoration(hintText: 'Write a comment…'),
+                      decoration: InputDecoration(hintText: context.tr('Write a comment…')),
                       onSubmitted: (_) => _send(),
                     ),
                   ),
