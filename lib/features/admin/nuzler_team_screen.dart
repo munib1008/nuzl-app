@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -33,7 +34,7 @@ class NuzlerTeamScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final team = ref.watch(nuzlerTeamProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Nuzler team'),
+      appBar: NuzlAppBar(title: context.tr('Nuzler team')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: RefreshIndicator(
@@ -41,7 +42,7 @@ class NuzlerTeamScreen extends ConsumerWidget {
           child: team.when(
             loading: () => const Center(
                 child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text('$e'))]),
+            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (list) => list.isEmpty
                 ? ListView(children: const [SizedBox(height: 80), _Empty()])
                 : ListView.separated(
@@ -67,13 +68,14 @@ class _MemberTile extends ConsumerWidget {
           .patch('/admin/users/${m['id']}/designation', body: {'designation': slug});
       ref.invalidate(nuzlerTeamProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final name = '${m['full_name'] ?? m['email'] ?? 'Member'}';
     final email = '${m['email'] ?? ''}';
     final role = '${m['role'] ?? ''}';
@@ -97,7 +99,7 @@ class _MemberTile extends ConsumerWidget {
                 children: [
                   Text(name, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                   Text('$email${role.isNotEmpty ? ' · $role' : ''}',
-                      style: t.bodySmall?.copyWith(color: AppColors.textMuted),
+                      style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
@@ -108,15 +110,15 @@ class _MemberTile extends ConsumerWidget {
               child: DropdownButtonFormField<String?>(
                 initialValue: current,
                 isExpanded: true,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   isDense: true,
-                  labelText: 'Designation',
-                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  labelText: context.tr('Designation'),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                 ),
                 items: [
                   const DropdownMenuItem<String?>(value: null, child: Text('—')),
                   ...nuzlerDesignations.entries.map((e) =>
-                      DropdownMenuItem<String?>(value: e.key, child: Text(e.value, overflow: TextOverflow.ellipsis))),
+                      DropdownMenuItem<String?>(value: e.key, child: Text(context.tr(e.value), overflow: TextOverflow.ellipsis))),
                 ],
                 onChanged: (v) => _set(context, ref, v),
               ),
@@ -133,18 +135,19 @@ class _Empty extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.x32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.badge_outlined, size: 56, color: AppColors.textSubtle),
+            Icon(Icons.badge_outlined, size: 56, color: dark ? AppColors.dTextSubtle : AppColors.textSubtle),
             const SizedBox(height: AppSpacing.x16),
-            Text('No Nuzlers yet', style: t.titleMedium),
+            Text(context.tr('No Nuzlers yet'), style: t.titleMedium),
             const SizedBox(height: AppSpacing.x8),
-            Text('Platform staff (@nuzl.ae) appear here for designation assignment.',
-                textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: AppColors.textMuted)),
+            Text(context.tr('Platform staff (@nuzl.ae) appear here for designation assignment.'),
+                textAlign: TextAlign.center, style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ],
         ),
       ),

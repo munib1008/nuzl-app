@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/responsive.dart';
@@ -61,22 +61,32 @@ class FinancialsScreen extends ConsumerWidget {
     final props = ref.watch(_propsProvider);
     final selected = ref.watch(_selectedPropProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Financials'),
+      appBar: NuzlAppBar(title: context.tr('Financials')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: props.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) {
             final propMap = <String, String>{};
             for (final e in list) {
               final m = Map<String, dynamic>.from(e);
               final pid = '${m['property_id'] ?? m['id']}';
-              propMap.putIfAbsent(pid, () => '${m['community'] ?? 'Property'} · ${_money(m['price'])}');
+              // Show "Building name - Unit number" so the property is recognisable,
+              // not a generic "Property" label (owner #13).
+              propMap.putIfAbsent(pid, () {
+                final bn = '${m['building_name'] ?? ''}'.trim();
+                final un = '${m['unit_no'] ?? ''}'.trim();
+                final comm = '${m['community'] ?? ''}'.trim();
+                final name = bn.isNotEmpty
+                    ? (un.isNotEmpty ? '$bn - $un' : bn)
+                    : (un.isNotEmpty ? '${context.tr('Unit')} $un' : (comm.isNotEmpty ? comm : context.tr('Property')));
+                return '$name · ${_money(m['price'])}';
+              });
             }
             if (propMap.isEmpty) {
-              return const Center(
-                  child: Padding(padding: EdgeInsets.all(40), child: Text('No properties to report on yet.')));
+              return Center(
+                  child: Padding(padding: const EdgeInsets.all(40), child: Text(context.tr('No properties to report on yet.'))));
             }
             return ListView(
               padding: const EdgeInsets.all(AppSpacing.x16),
@@ -84,7 +94,7 @@ class FinancialsScreen extends ConsumerWidget {
                 DropdownButtonFormField<String>(
                   initialValue: selected,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Property'),
+                  decoration: InputDecoration(labelText: context.tr('Property')),
                   items: propMap.entries
                       .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, overflow: TextOverflow.ellipsis)))
                       .toList(),
@@ -92,9 +102,9 @@ class FinancialsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppSpacing.x16),
                 if (selected == null)
-                  const Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Center(child: Text('Pick a property to view its financials.')),
+                  Padding(
+                    padding: const EdgeInsets.all(40),
+                    child: Center(child: Text(context.tr('Pick a property to view its financials.'))),
                   )
                 else
                   _PropertyFinancials(propertyId: selected),
@@ -129,45 +139,45 @@ class _PropertyFinancials extends ConsumerWidget {
         const SizedBox(height: AppSpacing.x24),
         Row(
           children: [
-            Expanded(child: Text('Transactions', style: t.titleMedium)),
+            Expanded(child: Text(context.tr('Transactions'), style: t.titleMedium)),
             TextButton.icon(
               onPressed: () => _addTransaction(context, ref),
               icon: const Icon(Icons.add, size: 18),
-              label: const Text('Add'),
+              label: Text(context.tr('Add')),
             ),
           ],
         ),
         tx.maybeWhen(
           data: (list) => list.isEmpty
-              ? Text('No transactions.', style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor))
-              : Column(children: list.map((e) => _ledgerTile(Map<String, dynamic>.from(e), isTx: true)).toList()),
+              ? Text(context.tr('No transactions.'), style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor))
+              : Column(children: list.map((e) => _ledgerTile(context, Map<String, dynamic>.from(e), isTx: true)).toList()),
           orElse: () => const LinearProgressIndicator(),
         ),
         const SizedBox(height: AppSpacing.x16),
         Row(
           children: [
-            Expanded(child: Text('Ledger events', style: t.titleMedium)),
+            Expanded(child: Text(context.tr('Ledger events'), style: t.titleMedium)),
             TextButton.icon(
               onPressed: () => _addEvent(context, ref),
               icon: const Icon(Icons.add, size: 18),
-              label: const Text('Add'),
+              label: Text(context.tr('Add')),
             ),
           ],
         ),
         events.maybeWhen(
           data: (list) => list.isEmpty
-              ? Text('No ledger events.', style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor))
-              : Column(children: list.map((e) => _ledgerTile(Map<String, dynamic>.from(e), isTx: false)).toList()),
+              ? Text(context.tr('No ledger events.'), style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor))
+              : Column(children: list.map((e) => _ledgerTile(context, Map<String, dynamic>.from(e), isTx: false)).toList()),
           orElse: () => const LinearProgressIndicator(),
         ),
         const SizedBox(height: AppSpacing.x16),
-        Text('Money is append-only — corrections are new entries, never edits.',
+        Text(context.tr('Money is append-only — corrections are new entries, never edits.'),
             style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
       ],
     );
   }
 
-  Widget _ledgerTile(Map<String, dynamic> m, {required bool isTx}) {
+  Widget _ledgerTile(BuildContext context, Map<String, dynamic> m, {required bool isTx}) {
     final kind = isTx ? '${m['kind'] ?? ''}' : '${m['category'] ?? ''}';
     final sub = isTx ? '${m['category'] ?? ''}' : '${m['subtype'] ?? ''}';
     final date = DateTime.tryParse('${m[isTx ? 'occurred_on' : 'event_date']}');
@@ -190,32 +200,37 @@ class _PropertyFinancials extends ConsumerWidget {
     var kind = 'income';
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Add transaction',
+      title: context.tr('Add transaction'),
       maxWidth: 460,
       children: [
         StatefulBuilder(
           builder: (ctx, setS) => DropdownButtonFormField<String>(
             initialValue: kind,
-            decoration: const InputDecoration(labelText: 'Kind'),
-            items: const [
-              DropdownMenuItem(value: 'income', child: Text('Income')),
-              DropdownMenuItem(value: 'expense', child: Text('Expense')),
+            decoration: InputDecoration(labelText: context.tr('Kind')),
+            items: [
+              DropdownMenuItem(value: 'income', child: Text(context.tr('Income'))),
+              DropdownMenuItem(value: 'expense', child: Text(context.tr('Expense'))),
             ],
             onChanged: (v) => setS(() => kind = v ?? 'income'),
           ),
         ),
-        TextField(controller: category, decoration: const InputDecoration(labelText: 'Category')),
-        TextField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (AED)')),
-        TextField(controller: note, decoration: const InputDecoration(labelText: 'Note')),
+        TextField(controller: category, decoration: InputDecoration(labelText: context.tr('Category'))),
+        TextField(controller: amount, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Amount (AED)'))),
+        TextField(controller: note, decoration: InputDecoration(labelText: context.tr('Note'))),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Save'))),
       ],
     );
     if (ok != true) return;
     final amt = num.tryParse(amount.text.trim());
-    if (amt == null) return;
+    if (amt == null || amt <= 0) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Enter a valid amount (greater than 0).'))));
+      }
+      return;
+    }
     try {
       await ref.read(apiClientProvider).post('/properties/$propertyId/transactions', body: {
         'kind': kind,
@@ -226,7 +241,7 @@ class _PropertyFinancials extends ConsumerWidget {
       ref.invalidate(_txProvider(propertyId));
       ref.invalidate(_financialsProvider(propertyId));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -236,33 +251,38 @@ class _PropertyFinancials extends ConsumerWidget {
     var category = 'expense';
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Add ledger event',
+      title: context.tr('Add ledger event'),
       maxWidth: 460,
       children: [
         StatefulBuilder(
           builder: (ctx, setS) => DropdownButtonFormField<String>(
             initialValue: category,
-            decoration: const InputDecoration(labelText: 'Category'),
-            items: const [
-              DropdownMenuItem(value: 'acquisition', child: Text('Acquisition')),
-              DropdownMenuItem(value: 'expense', child: Text('Expense')),
-              DropdownMenuItem(value: 'income', child: Text('Income')),
-              DropdownMenuItem(value: 'loan', child: Text('Loan')),
+            decoration: InputDecoration(labelText: context.tr('Category')),
+            items: [
+              DropdownMenuItem(value: 'acquisition', child: Text(context.tr('Acquisition'))),
+              DropdownMenuItem(value: 'expense', child: Text(context.tr('Expense'))),
+              DropdownMenuItem(value: 'income', child: Text(context.tr('Income'))),
+              DropdownMenuItem(value: 'loan', child: Text(context.tr('Loan'))),
             ],
             onChanged: (v) => setS(() => category = v ?? 'expense'),
           ),
         ),
-        TextField(controller: subtype, decoration: const InputDecoration(labelText: 'Subtype')),
-        TextField(controller: amount, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Amount (AED)')),
+        TextField(controller: subtype, decoration: InputDecoration(labelText: context.tr('Subtype'))),
+        TextField(controller: amount, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Amount (AED)'))),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Save'))),
       ],
     );
     if (ok != true) return;
     final amt = num.tryParse(amount.text.trim());
-    if (amt == null) return;
+    if (amt == null || amt <= 0) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Enter a valid amount (greater than 0).'))));
+      }
+      return;
+    }
     try {
       await ref.read(apiClientProvider).post('/properties/$propertyId/events', body: {
         'category': category,
@@ -272,7 +292,7 @@ class _PropertyFinancials extends ConsumerWidget {
       ref.invalidate(_eventsProvider(propertyId));
       ref.invalidate(_financialsProvider(propertyId));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }
@@ -301,10 +321,10 @@ class _MortgageCard extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            const Icon(Icons.account_balance_outlined, size: 20, color: AppColors.primary),
+            Icon(Icons.account_balance_outlined, size: 20, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 8),
-            Expanded(child: Text('Mortgage', style: t.titleMedium)),
-            TextButton(onPressed: () => context.push('/mortgages'), child: const Text('Manage')),
+            Expanded(child: Text(context.tr('Mortgage'), style: t.titleMedium)),
+            TextButton(onPressed: () => context.push('/mortgages'), child: Text(context.tr('Manage'))),
           ]),
           m.when(
             loading: () => const Padding(padding: EdgeInsets.all(8), child: LinearProgressIndicator()),
@@ -312,7 +332,7 @@ class _MortgageCard extends ConsumerWidget {
             data: (list) => list.isEmpty
                 ? Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text('No mortgage linked. Add one under Mortgages and select this property.',
+                    child: Text(context.tr('No mortgage linked. Add one under Mortgages and select this property.'),
                         style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
                   )
                 : Column(children: list.map((e) => _MortgageRows(m: Map<String, dynamic>.from(e))).toList()),
@@ -337,13 +357,13 @@ class _MortgageRows extends StatelessWidget {
     final afterMonthly = proj['after_monthly'];
     final paid = num.tryParse('${m['progress_pct']}') ?? 0;
     final rows = <(String, String)>[
-      ('Lender', '${m['lender'] ?? m['label'] ?? '—'}'),
-      ('Outstanding', _money(m['outstanding'])),
-      ('Monthly payment', _money(proj['monthly_payment'])),
-      ('Rate', (fixedMonths != null && rateAfter != null)
-          ? '$rate% fixed $fixedMonths mo → then $rateAfter%'
+      (context.tr('Lender'), '${m['lender'] ?? m['label'] ?? '—'}'),
+      (context.tr('Outstanding'), _money(m['outstanding'])),
+      (context.tr('Monthly payment'), _money(proj['monthly_payment'])),
+      (context.tr('Rate'), (fixedMonths != null && rateAfter != null)
+          ? '$rate% ${context.tr('fixed')} $fixedMonths ${context.tr('mo')} → ${context.tr('then')} $rateAfter%'
           : '$rate%'),
-      if (afterMonthly != null) ('After fixed period', '${_money(afterMonthly)} / mo'),
+      if (afterMonthly != null) (context.tr('After fixed period'), '${_money(afterMonthly)} / ${context.tr('mo')}'),
     ];
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -363,11 +383,11 @@ class _MortgageRows extends StatelessWidget {
           child: LinearProgressIndicator(
               value: (paid / 100).clamp(0, 1).toDouble(),
               minHeight: 6,
-              backgroundColor: AppColors.surface,
-              color: AppColors.primary),
+              backgroundColor: Theme.of(context).dividerColor,
+              color: Theme.of(context).colorScheme.primary),
         ),
         const SizedBox(height: 2),
-        Text('${paid.toStringAsFixed(0)}% paid down',
+        Text('${paid.toStringAsFixed(0)}% ${context.tr('paid down')}',
             style: t.labelSmall?.copyWith(color: Theme.of(context).hintColor)),
       ]),
     );
@@ -383,11 +403,11 @@ class _SummaryCard extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final roi = summary['roi_pct'];
     final rows = <(String, String)>[
-      ('Acquisition cost', _money(summary['acquisition_cost'])),
-      ('Equity invested', _money(summary['equity_invested'])),
-      ('Annual income', _money(summary['annual_income'])),
-      ('Operating expenses', _money(summary['annual_operating_expenses'])),
-      ('Net annual cashflow', _money(summary['net_annual_cashflow'])),
+      (context.tr('Acquisition cost'), _money(summary['acquisition_cost'])),
+      (context.tr('Equity invested'), _money(summary['equity_invested'])),
+      (context.tr('Annual income'), _money(summary['annual_income'])),
+      (context.tr('Operating expenses'), _money(summary['annual_operating_expenses'])),
+      (context.tr('Net annual cashflow'), _money(summary['net_annual_cashflow'])),
       ('ROI', roi == null ? '—' : '${(num.tryParse('$roi') ?? 0).toStringAsFixed(1)}%'),
     ];
     return Card(
@@ -396,7 +416,7 @@ class _SummaryCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Summary', style: t.titleMedium),
+            Text(context.tr('Summary'), style: t.titleMedium),
             const SizedBox(height: AppSpacing.x8),
             ...rows.map((r) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
@@ -404,7 +424,7 @@ class _SummaryCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(r.$1, style: t.bodyMedium?.copyWith(color: Theme.of(context).hintColor)),
-                      Text(r.$2, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: AppColors.primary)),
+                      Text(r.$2, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
                     ],
                   ),
                 )),

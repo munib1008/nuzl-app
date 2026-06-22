@@ -16,6 +16,10 @@ final mortgagePaymentsProvider =
     FutureProvider.autoDispose.family<List<MortgagePayment>, String>((ref, id) async =>
         ref.read(mortgageRepositoryProvider).payments(id));
 
+final mortgageRateHistoryProvider =
+    FutureProvider.autoDispose.family<List<Map<String, dynamic>>, String>((ref, id) async =>
+        ref.read(mortgageRepositoryProvider).rateHistory(id));
+
 class MortgageRepository {
   MortgageRepository(this._api);
   final ApiClient _api;
@@ -42,4 +46,11 @@ class MortgageRepository {
 
   Future<void> addPayment(String id, Map<String, dynamic> body) =>
       _api.post('/mortgages/$id/payments', body: body);
+
+  Future<List<Map<String, dynamic>>> rateHistory(String id) async =>
+      ((await _api.get('/mortgages/$id/rate-changes')) as List)
+          .map((e) => Map<String, dynamic>.from(e)).toList();
+
+  Future<void> addRateChange(String id, double rate, String effectiveFromIso) =>
+      _api.post('/mortgages/$id/rate-changes', body: {'rate': rate, 'effective_from': effectiveFromIso});
 }

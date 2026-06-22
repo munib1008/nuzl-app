@@ -9,9 +9,10 @@ class Env {
     defaultValue: 'http://localhost:3000/api',
   );
 
-  // Supabase project (public values). Used by the API for storage uploads and
-  // the DB connection. Kept here for reference / optional direct-Supabase use.
-  // NOTE: you pasted two different project refs — confirm which is correct.
-  static const supabaseUrl = 'https://islwoaccgrwwchzavppn.supabase.co';
-  static const supabaseAnonKey = 'sb_publishable_1QzY4VVF_vWc9n6siAQAlg_GHUWANCZ';
+  // Supabase project (public values). The app talks to the NestJS API, not
+  // Supabase directly — these are kept for reference / optional direct use.
+  // Project: "nuzl testing" (ref xqdayltlwymckzkmnven). The API's DATABASE_URL /
+  // SUPABASE_URL must point at this same project.
+  static const supabaseUrl = 'https://xqdayltlwymckzkmnven.supabase.co';
+  static const supabaseAnonKey = 'sb_publishable_pJvVM-_mOfsUqjSVOa16JQ_jXdyTxvj';
 }

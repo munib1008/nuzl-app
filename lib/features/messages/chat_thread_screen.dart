@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
+import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../auth/application/auth_controller.dart';
@@ -49,7 +51,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       _input.clear();
       ref.invalidate(threadMessagesProvider(widget.id)); // refresh now, don't wait for the poll
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -58,6 +60,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
   @override
   Widget build(BuildContext context) {
     final myId = ref.watch(authControllerProvider).user?.id;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final header = ref.watch(threadHeaderProvider(widget.id));
     final messages = ref.watch(threadMessagesProvider(widget.id));
 
@@ -71,7 +74,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       ref.read(messagingRepositoryProvider).markRead(widget.id);
     });
 
-    final title = header.asData?.value.title ?? 'Conversation';
+    final title = header.asData?.value.title ?? context.tr('Conversation');
     return Scaffold(
       appBar: AppBar(
         // This route lives outside the shell, so on a deep-link / web refresh the
@@ -87,14 +90,14 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
             child: messages.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) =>
-                  Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+                  Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
               data: (list) => list.isEmpty
                   ? Center(
-                      child: Text('Say hello 👋',
+                      child: Text(context.tr('Say hello 👋'),
                           style: Theme.of(context)
                               .textTheme
                               .bodyMedium
-                              ?.copyWith(color: AppColors.textMuted)))
+                              ?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)))
                   : ListView.builder(
                       controller: _scroll,
                       padding: const EdgeInsets.all(AppSpacing.x16),
@@ -173,10 +176,10 @@ class _Composer extends StatelessWidget {
                 minLines: 1,
                 maxLines: 5,
                 textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  hintText: 'Message…',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(24))),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: InputDecoration(
+                  hintText: context.tr('Message…'),
+                  border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(24))),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   isDense: true,
                 ),
               ),

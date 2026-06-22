@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
-import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
+import '../../core/widgets/user_avatar.dart';
 import '../shell/app_shell.dart';
 
 /// Directory of verified members (users module). Search + filter by role.
@@ -28,12 +29,12 @@ class NetworkScreen extends ConsumerWidget {
     final role = ref.watch(_roleFilterProvider);
     final search = ref.watch(_searchProvider).toLowerCase();
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Network'),
+      appBar: NuzlAppBar(title: context.tr('Network')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: people.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) {
             final roles = <String>{
               'all',
@@ -53,8 +54,8 @@ class NetworkScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(AppSpacing.x16),
                   child: Column(children: [
                     TextField(
-                      decoration: const InputDecoration(
-                          prefixIcon: Icon(Icons.search), hintText: 'Search name or email'),
+                      decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.search), hintText: context.tr('Search name or email')),
                       onChanged: (v) => ref.read(_searchProvider.notifier).state = v,
                     ),
                     const SizedBox(height: AppSpacing.x8),
@@ -66,7 +67,7 @@ class NetworkScreen extends ConsumerWidget {
                           return Padding(
                             padding: const EdgeInsets.only(right: AppSpacing.x8),
                             child: ChoiceChip(
-                              label: Text(r == 'all' ? 'All' : _humanize(r)),
+                              label: Text(r == 'all' ? context.tr('All') : _humanize(r)),
                               selected: r == role,
                               onSelected: (_) => ref.read(_roleFilterProvider.notifier).state = r,
                             ),
@@ -78,21 +79,17 @@ class NetworkScreen extends ConsumerWidget {
                 ),
                 Expanded(
                   child: filtered.isEmpty
-                      ? const Center(child: Text('No people match.'))
+                      ? Center(child: Text(context.tr('No people match.')))
                       : ListView.separated(
                           padding: const EdgeInsets.all(AppSpacing.x16),
                           itemCount: filtered.length,
                           separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.x8),
                           itemBuilder: (_, i) {
                             final m = Map<String, dynamic>.from(filtered[i]);
-                            final name = '${m['full_name'] ?? 'Member'}';
+                            final name = '${m['full_name'] ?? context.tr('Member')}';
                             return Card(
                               child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: AppColors.primary,
-                                  child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?',
-                                      style: const TextStyle(color: Colors.white)),
-                                ),
+                                leading: UserAvatar(name: name, url: '${m['avatar_url'] ?? ''}'),
                                 title: Text(name),
                                 subtitle: Text([m['role'], m['email']]
                                     .where((x) => x != null && '$x'.isNotEmpty)

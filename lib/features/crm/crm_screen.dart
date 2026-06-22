@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/app_dialog.dart';
@@ -69,17 +70,17 @@ class CrmScreen extends ConsumerWidget {
     final filter = ref.watch(_statusFilter);
 
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'CRM'),
+      appBar: NuzlAppBar(title: context.tr('CRM')),
       drawer: const NuzlDrawer(),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/leads/new'),
         icon: const Icon(Icons.person_add_alt),
-        label: const Text('New lead'),
+        label: Text(context.tr('New lead')),
       ),
       body: ResponsiveCenter(
         child: leads.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (raw) {
             final all = raw.map((e) => Map<String, dynamic>.from(e)).toList();
             final items = filter == 'all' ? all : all.where((m) => '${m['status']}' == filter).toList();
@@ -89,17 +90,17 @@ class CrmScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(AppSpacing.x16),
                   child: DropdownButtonFormField<String>(
                     initialValue: filter,
-                    decoration: const InputDecoration(labelText: 'Status', prefixIcon: Icon(Icons.filter_list)),
+                    decoration: InputDecoration(labelText: context.tr('Status'), prefixIcon: const Icon(Icons.filter_list)),
                     items: [
-                      const DropdownMenuItem(value: 'all', child: Text('All leads')),
-                      ..._statuses.map((s) => DropdownMenuItem(value: s, child: Text(_humanize(s)))),
+                      DropdownMenuItem(value: 'all', child: Text(context.tr('All leads'))),
+                      ..._statuses.map((s) => DropdownMenuItem(value: s, child: Text(context.tr(_humanize(s))))),
                     ],
                     onChanged: (v) => ref.read(_statusFilter.notifier).state = v ?? 'all',
                   ),
                 ),
                 Expanded(
                   child: items.isEmpty
-                      ? const Center(child: Text('No leads in this stage.'))
+                      ? Center(child: Text(context.tr('No leads in this stage.')))
                       : ListView.separated(
                           padding: const EdgeInsets.all(AppSpacing.x16),
                           itemCount: items.length,
@@ -109,13 +110,13 @@ class CrmScreen extends ConsumerWidget {
                             final owner = usersById['${m['broker_id']}'] ?? '';
                             return Card(
                               child: ListTile(
-                                title: Text('${m['buyer_name'] ?? 'Unnamed buyer'}'),
+                                title: Text('${m['buyer_name'] ?? context.tr('Unnamed buyer')}'),
                                 subtitle: Text([
-                                  _humanize('${m['lead_category'] ?? 'general'}'),
+                                  context.tr(_humanize('${m['lead_category'] ?? 'general'}')),
                                   if (m['community'] != null) '${m['community']}',
-                                  if (owner.isNotEmpty) 'Owner: $owner',
+                                  if (owner.isNotEmpty) '${context.tr('Owner')}: $owner',
                                 ].join('  ·  ')),
-                                trailing: StatusBadge(_humanize('${m['status'] ?? 'new'}'), tone: _tone('${m['status'] ?? 'new'}')),
+                                trailing: StatusBadge(context.tr(_humanize('${m['status'] ?? 'new'}')), tone: _tone('${m['status'] ?? 'new'}')),
                                 onTap: () => _showLead(context, ref, m, users),
                               ),
                             );
@@ -150,10 +151,10 @@ class CrmScreen extends ConsumerWidget {
               controller: scroll,
               padding: const EdgeInsets.all(AppSpacing.x16),
               children: [
-                Text('${lead['buyer_name'] ?? 'Unnamed buyer'}', style: Theme.of(ctx).textTheme.titleLarge),
+                Text('${lead['buyer_name'] ?? ctx.tr('Unnamed buyer')}', style: Theme.of(ctx).textTheme.titleLarge),
                 const SizedBox(height: AppSpacing.x4),
                 Text([
-                  if (lead['buyer_type'] != null) _humanize('${lead['buyer_type']}'),
+                  if (lead['buyer_type'] != null) ctx.tr(_humanize('${lead['buyer_type']}')),
                   if (lead['purpose'] != null) '${lead['purpose']}',
                   if (budget != null) budget,
                 ].join('  ·  '), style: Theme.of(ctx).textTheme.bodyMedium),
@@ -163,52 +164,52 @@ class CrmScreen extends ConsumerWidget {
                 Wrap(spacing: AppSpacing.x8, runSpacing: AppSpacing.x8, children: [
                   FilledButton.tonalIcon(
                       onPressed: () => _setStatus(ctx, r, id, 'qualified'),
-                      icon: const Icon(Icons.verified_outlined, size: 18), label: const Text('Qualify')),
+                      icon: const Icon(Icons.verified_outlined, size: 18), label: Text(ctx.tr('Qualify'))),
                   FilledButton.tonalIcon(
                       onPressed: () => _setStatus(ctx, r, id, 'lost'),
-                      icon: const Icon(Icons.cancel_outlined, size: 18), label: const Text('Unqualify')),
+                      icon: const Icon(Icons.cancel_outlined, size: 18), label: Text(ctx.tr('Unqualify'))),
                   FilledButton.tonalIcon(
                       onPressed: () => _transfer(ctx, r, id, users),
-                      icon: const Icon(Icons.swap_horiz, size: 18), label: const Text('Assign')),
+                      icon: const Icon(Icons.swap_horiz, size: 18), label: Text(ctx.tr('Assign'))),
                   FilledButton.tonalIcon(
                       onPressed: () => _convert(ctx, r, lead),
-                      icon: const Icon(Icons.person_add_alt, size: 18), label: const Text('Convert')),
+                      icon: const Icon(Icons.person_add_alt, size: 18), label: Text(ctx.tr('Convert'))),
                   FilledButton.tonalIcon(
                       onPressed: () => _findMatches(ctx, r, id),
-                      icon: const Icon(Icons.auto_awesome_outlined, size: 18), label: const Text('Match')),
+                      icon: const Icon(Icons.auto_awesome_outlined, size: 18), label: Text(ctx.tr('Match'))),
                   FilledButton.tonalIcon(
                       onPressed: () => _logActivity(ctx, r, id),
-                      icon: const Icon(Icons.add_comment_outlined, size: 18), label: const Text('Log')),
+                      icon: const Icon(Icons.add_comment_outlined, size: 18), label: Text(ctx.tr('Log'))),
                 ]),
                 const SizedBox(height: AppSpacing.x20),
 
-                Text('Lead status', style: Theme.of(ctx).textTheme.titleSmall),
+                Text(ctx.tr('Lead status'), style: Theme.of(ctx).textTheme.titleSmall),
                 const SizedBox(height: AppSpacing.x8),
                 DropdownButtonFormField<String>(
                   initialValue: _categories.contains('${lead['lead_category']}') ? '${lead['lead_category']}' : 'general',
-                  decoration: const InputDecoration(labelText: 'Classification'),
-                  items: _categories.map((s) => DropdownMenuItem(value: s, child: Text(_humanize(s)))).toList(),
+                  decoration: InputDecoration(labelText: ctx.tr('Classification')),
+                  items: _categories.map((s) => DropdownMenuItem(value: s, child: Text(ctx.tr(_humanize(s))))).toList(),
                   onChanged: (v) { if (v != null) _setCategory(ctx, r, id, v); },
                 ),
                 const SizedBox(height: AppSpacing.x16),
 
-                Text('Set stage', style: Theme.of(ctx).textTheme.titleSmall),
+                Text(ctx.tr('Set stage'), style: Theme.of(ctx).textTheme.titleSmall),
                 const SizedBox(height: AppSpacing.x8),
                 DropdownButtonFormField<String>(
                   initialValue: _statuses.contains('${lead['status']}') ? '${lead['status']}' : null,
-                  decoration: const InputDecoration(labelText: 'Stage'),
-                  items: _statuses.map((s) => DropdownMenuItem(value: s, child: Text(_humanize(s)))).toList(),
+                  decoration: InputDecoration(labelText: ctx.tr('Stage')),
+                  items: _statuses.map((s) => DropdownMenuItem(value: s, child: Text(ctx.tr(_humanize(s))))).toList(),
                   onChanged: (v) { if (v != null) _setStatus(ctx, r, id, v); },
                 ),
                 const SizedBox(height: AppSpacing.x20),
 
-                Text('Ownership history', style: Theme.of(ctx).textTheme.titleSmall),
+                Text(ctx.tr('Ownership history'), style: Theme.of(ctx).textTheme.titleSmall),
                 const SizedBox(height: AppSpacing.x8),
                 history.when(
                   loading: () => const Padding(padding: EdgeInsets.all(12), child: LinearProgressIndicator()),
-                  error: (e, _) => const Text('No history.'),
+                  error: (e, _) => Text(ctx.tr('No history.')),
                   data: (list) => list.isEmpty
-                      ? Text('No transfers yet.', style: TextStyle(color: Theme.of(ctx).hintColor))
+                      ? Text(ctx.tr('No transfers yet.'), style: TextStyle(color: Theme.of(ctx).hintColor))
                       : Column(
                           children: list.map((e) {
                             final h = Map<String, dynamic>.from(e);
@@ -239,10 +240,10 @@ class CrmScreen extends ConsumerWidget {
       await ref.read(apiClientProvider).patch('/buyer-requirements/$id/status', body: {'status': status});
       ref.invalidate(crmLeadsProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lead marked ${_humanize(status)}')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('Lead marked')} ${context.tr(_humanize(status))}')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -251,10 +252,10 @@ class CrmScreen extends ConsumerWidget {
       await ref.read(apiClientProvider).patch('/buyer-requirements/$id/category', body: {'lead_category': category});
       ref.invalidate(crmLeadsProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lead marked ${_humanize(category)}')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('Lead marked')} ${context.tr(_humanize(category))}')));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -262,24 +263,24 @@ class CrmScreen extends ConsumerWidget {
     String? toUser;
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Assign to agent',
+      title: context.tr('Assign to agent'),
       children: [
         StatefulBuilder(
           builder: (ctx, setS) => DropdownButtonFormField<String>(
             initialValue: toUser,
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Agent'),
+            decoration: InputDecoration(labelText: context.tr('Agent')),
             items: users.map((u) {
               final m = Map<String, dynamic>.from(u);
-              return DropdownMenuItem(value: '${m['id']}', child: Text('${m['full_name'] ?? m['email'] ?? 'User'}'));
+              return DropdownMenuItem(value: '${m['id']}', child: Text('${m['full_name'] ?? m['email'] ?? context.tr('User')}'));
             }).toList(),
             onChanged: (v) => setS(() => toUser = v),
           ),
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Assign')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Assign'))),
       ],
     );
     if (ok != true || toUser == null) return;
@@ -287,9 +288,9 @@ class CrmScreen extends ConsumerWidget {
       await ref.read(apiClientProvider).post('/buyer-requirements/$id/transfer', body: {'to_user': toUser});
       ref.invalidate(crmLeadsProvider);
       ref.invalidate(_ownershipProvider(id));
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lead reassigned')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Lead reassigned'))));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -302,10 +303,10 @@ class CrmScreen extends ConsumerWidget {
       });
       ref.invalidate(crmLeadsProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lead converted to customer')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Lead converted to customer'))));
       }
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -316,11 +317,11 @@ class CrmScreen extends ConsumerWidget {
       if (!context.mounted) return;
       await AppDialog.show<void>(
         context,
-        title: '${matches.length} matching listings',
+        title: '${matches.length} ${context.tr('matching listings')}',
         maxWidth: 460,
         children: [
           if (matches.isEmpty)
-            const Text('No strong matches yet.')
+            Text(context.tr('No strong matches yet.'))
           else
             ...matches.take(6).map((e) {
               final m = Map<String, dynamic>.from(e);
@@ -328,14 +329,14 @@ class CrmScreen extends ConsumerWidget {
               return ListTile(
                 dense: true,
                 leading: CircleAvatar(radius: 14, child: Text('$score', style: const TextStyle(fontSize: 11))),
-                title: Text('Listing ${'${m['listing_id'] ?? ''}'.split('-').first}'),
+                title: Text('${context.tr('Listing')} ${'${m['listing_id'] ?? ''}'.split('-').first}'),
               );
             }),
         ],
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Close')))],
       );
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 
@@ -344,29 +345,29 @@ class CrmScreen extends ConsumerWidget {
     var type = 'call';
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Log activity',
+      title: context.tr('Log activity'),
       children: [
         StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
             DropdownButtonFormField<String>(
               initialValue: type,
-              decoration: const InputDecoration(labelText: 'Type'),
-              items: const [
-                DropdownMenuItem(value: 'call', child: Text('Call')),
-                DropdownMenuItem(value: 'message', child: Text('Message')),
-                DropdownMenuItem(value: 'viewing', child: Text('Viewing')),
-                DropdownMenuItem(value: 'follow_up', child: Text('Follow up')),
-                DropdownMenuItem(value: 'note', child: Text('Note')),
+              decoration: InputDecoration(labelText: context.tr('Type')),
+              items: [
+                DropdownMenuItem(value: 'call', child: Text(context.tr('Call'))),
+                DropdownMenuItem(value: 'message', child: Text(context.tr('Message'))),
+                DropdownMenuItem(value: 'viewing', child: Text(context.tr('Viewing'))),
+                DropdownMenuItem(value: 'follow_up', child: Text(context.tr('Follow up'))),
+                DropdownMenuItem(value: 'note', child: Text(context.tr('Note'))),
               ],
               onChanged: (v) => setS(() => type = v ?? 'call'),
             ),
-            TextField(controller: note, decoration: const InputDecoration(labelText: 'Note'), maxLines: 2),
+            TextField(controller: note, decoration: InputDecoration(labelText: context.tr('Note')), maxLines: 2),
           ]),
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Save'))),
       ],
     );
     if (ok != true) return;
@@ -376,9 +377,9 @@ class CrmScreen extends ConsumerWidget {
         'requirement_id': id,
         if (note.text.trim().isNotEmpty) 'note': note.text.trim(),
       });
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Activity logged')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Activity logged'))));
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

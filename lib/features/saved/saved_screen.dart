@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/skeleton_loader.dart';
 import '../../core/widgets/responsive.dart';
 import '../shell/app_shell.dart';
 
@@ -36,13 +39,19 @@ class SaveListingButton extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final saved = ref.watch(savedIdsProvider).maybeWhen(data: (s) => s.contains(listingId), orElse: () => false);
     return IconButton(
-      tooltip: saved ? 'Saved' : 'Save',
-      icon: Icon(saved ? Icons.bookmark : Icons.bookmark_border, color: saved ? AppColors.primary : null),
+      tooltip: context.tr(saved ? 'Saved' : 'Save'),
+      icon: Icon(saved ? Icons.bookmark : Icons.bookmark_border,
+          color: saved ? Theme.of(context).colorScheme.primary : null),
       onPressed: () async {
         try {
           await _toggleSaved(ref, listingId);
+          if (context.mounted) {
+            ScaffoldMessenger.of(context)
+              ..hideCurrentSnackBar()
+              ..showSnackBar(SnackBar(content: Text(context.tr(saved ? 'Removed from saved' : 'Saved'))));
+          }
         } catch (e) {
-          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+          if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
         }
       },
     );
@@ -56,9 +65,9 @@ class SavedScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final saved = ref.watch(savedListingsProvider);
     return Scaffold(
-      appBar: NuzlAppBar(title: 'Saved', actions: [
+      appBar: NuzlAppBar(title: context.tr('Saved'), actions: [
         IconButton(
-          tooltip: 'Saved searches',
+          tooltip: context.tr('Saved searches'),
           icon: const Icon(Icons.saved_search),
           onPressed: () => context.push('/saved-searches'),
         ),
@@ -71,13 +80,16 @@ class SavedScreen extends ConsumerWidget {
         },
         child: ResponsiveCenter(
           child: saved.when(
-            loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text('$e')))]),
+            loading: () => const SkeletonList(),
+            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Center(child: Text(friendlyError(e))))]),
             data: (list) => list.isEmpty
-                ? ListView(children: const [
-                    Padding(
-                      padding: EdgeInsets.all(48),
-                      child: Center(child: Text('No saved properties yet.\nTap the bookmark on a listing to save it.', textAlign: TextAlign.center)),
+                ? ListView(children: [
+                    EmptyState(
+                      icon: Icons.bookmark_border,
+                      title: context.tr('No saved properties yet'),
+                      message: context.tr('Tap the bookmark on any listing to save it here for quick access.'),
+                      actionLabel: context.tr('Browse properties'),
+                      onAction: () => context.go('/properties'),
                     ),
                   ])
                 : ListView.separated(
@@ -100,6 +112,7 @@ class _SavedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final id = '${m['id']}';
     final price = num.tryParse('${m['price']}') ?? 0;
     final money = price > 0 ? NumberFormat.currency(symbol: 'AED ', decimalDigits: 0).format(price) : '';
@@ -107,7 +120,7 @@ class _SavedCard extends StatelessWidget {
     final type = '${m['property_type'] ?? ''}'.replaceAll('_', ' ');
     final community = '${m['community'] ?? ''}';
     final cover = '${m['cover_image'] ?? ''}';
-    final title = '$beds$type'.trim().isEmpty ? 'Property' : '$beds$type';
+    final title = '$beds$type'.trim().isEmpty ? context.tr('Property') : '$beds$type';
     return Card(
       child: InkWell(
         onTap: () => context.go('/listings/$id'),
@@ -129,9 +142,9 @@ class _SavedCard extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(title, style: t.titleSmall),
                 if (community.isNotEmpty)
-                  Text(community, style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  Text(community, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 if (money.isNotEmpty)
-                  Text(money, style: t.titleMedium?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
+                  Text(money, style: t.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w700)),
               ]),
             ),
             SaveListingButton(listingId: id),

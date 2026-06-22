@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/widgets/responsive.dart';
-import '../../shell/app_shell.dart';
+import '../../crm/crm_scaffold.dart';
 
 final dealsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
   try {
@@ -22,26 +25,23 @@ class DealsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final deals = ref.watch(dealsProvider);
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
-    return Scaffold(
-      appBar: const NuzlAppBar(title: 'Deals'),
-      drawer: const NuzlDrawer(),
+    return CrmScaffold(
+      tab: CrmTab.deals,
+      title: context.tr('Deals'),
       body: ResponsiveCenter(
         child: RefreshIndicator(
           onRefresh: () async => ref.refresh(dealsProvider.future),
           child: deals.when(
-            loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text('$e'))]),
+            loading: () => const SkeletonList(),
+            error: (e, _) => ListView(children: [Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))]),
             data: (list) => list.isEmpty
-                ? ListView(children: [Padding(
-                    padding: const EdgeInsets.all(40),
-                    child: Column(children: [
-                      Icon(Icons.handshake_outlined, size: 44, color: Theme.of(context).hintColor),
-                      const SizedBox(height: 12),
-                      const Text('No deals yet', textAlign: TextAlign.center),
-                      const SizedBox(height: 4),
-                      Text('Deals appear here when an offer is accepted.',
-                          textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).hintColor)),
-                    ]))])
+                ? ListView(children: [
+                    EmptyState(
+                      icon: Icons.handshake_outlined,
+                      title: context.tr('No deals yet'),
+                      message: context.tr('Deals appear here when an offer is accepted.'),
+                    ),
+                  ])
                 : ListView.separated(
                     padding: const EdgeInsets.all(AppSpacing.x16),
                     itemCount: list.length,
@@ -49,11 +49,45 @@ class DealsScreen extends ConsumerWidget {
                     itemBuilder: (_, i) {
                       final d = Map<String, dynamic>.from(list[i]);
                       final stage = (d['stage'] ?? 'lead').toString();
-                      return Card(child: ListTile(
-                        title: Text(d['listing_price'] != null ? aed.format(num.tryParse('${d['listing_price']}') ?? 0) : 'Deal'),
-                        subtitle: Text('Commission: ${d['commission_amount'] ?? '—'}'),
-                        trailing: _StageChip(stage: stage),
-                        onTap: () => _changeStage(context, ref, d['id'].toString(), stage),
+                      final id = d['id'].toString();
+                      final commAmt = num.tryParse('${d['commission_amount']}');
+                      final split = (d['commission_split'] ?? '').toString();
+                      final agreed = num.tryParse('${d['agreed_amount']}');
+                      final price = agreed ?? num.tryParse('${d['listing_price']}');
+                      return Card(child: Padding(
+                        padding: const EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x12, AppSpacing.x8, AppSpacing.x8),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Row(children: [
+                            Expanded(child: Text(price != null ? aed.format(price) : context.tr('Deal'),
+                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
+                            _StageChip(stage: stage),
+                          ]),
+                          const SizedBox(height: AppSpacing.x8),
+                          Row(children: [
+                            Icon(Icons.payments_outlined, size: 16, color: Theme.of(context).hintColor),
+                            const SizedBox(width: 6),
+                            Expanded(child: Text.rich(TextSpan(children: [
+                              TextSpan(text: '${context.tr('Commission')}  '),
+                              TextSpan(
+                                text: commAmt != null ? aed.format(commAmt) : context.tr('Not set'),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: commAmt != null ? AppColors.success : Theme.of(context).hintColor)),
+                              if (split.isNotEmpty) TextSpan(text: '   ·   ${context.tr('split')} $split'),
+                            ]), style: TextStyle(fontSize: 13, color: Theme.of(context).textTheme.bodyMedium?.color))),
+                          ]),
+                          const SizedBox(height: AppSpacing.x4),
+                          Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                            TextButton.icon(
+                              onPressed: () => _editCommission(context, ref, id, commAmt, split),
+                              icon: const Icon(Icons.edit_outlined, size: 16),
+                              label: Text(context.tr('Commission'))),
+                            TextButton.icon(
+                              onPressed: () => _changeStage(context, ref, id, stage),
+                              icon: const Icon(Icons.swap_horiz, size: 16),
+                              label: Text(context.tr('Stage'))),
+                          ]),
+                        ]),
                       ));
                     }),
           ),
@@ -66,7 +100,7 @@ class DealsScreen extends ConsumerWidget {
     final picked = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(child: ListView(shrinkWrap: true, children: [
-        const Padding(padding: EdgeInsets.all(16), child: Text('Move deal to stage', style: TextStyle(fontWeight: FontWeight.w600))),
+        Padding(padding: const EdgeInsets.all(16), child: Text(context.tr('Move deal to stage'), style: const TextStyle(fontWeight: FontWeight.w600))),
         ..._stages.map((s) => ListTile(
           title: Text(s[0].toUpperCase() + s.substring(1)),
           trailing: s == current ? const Icon(Icons.check, color: AppColors.primary) : null,
@@ -79,7 +113,47 @@ class DealsScreen extends ConsumerWidget {
       await ref.read(apiClientProvider).patch('/deals/$id/stage', body: {'stage': picked});
       ref.invalidate(dealsProvider);
     } catch (e) {
-      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$e')));
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  Future<void> _editCommission(BuildContext context, WidgetRef ref, String id, num? amount, String split) async {
+    final amtCtrl = TextEditingController(text: amount != null ? '$amount' : '');
+    final splitCtrl = TextEditingController(text: split);
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.tr('Edit commission')),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(
+            controller: amtCtrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(labelText: context.tr('Commission amount (AED)'), prefixText: 'AED '),
+          ),
+          const SizedBox(height: AppSpacing.x12),
+          TextField(
+            controller: splitCtrl,
+            decoration: InputDecoration(
+              labelText: context.tr('Split'), hintText: context.tr('e.g. 50% / 50%')),
+          ),
+        ]),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Save'))),
+        ],
+      ),
+    );
+    if (saved != true) return;
+    final amtText = amtCtrl.text.trim();
+    final body = <String, dynamic>{
+      'commission_amount': amtText.isEmpty ? null : num.tryParse(amtText),
+      'commission_split': splitCtrl.text.trim().isEmpty ? null : splitCtrl.text.trim(),
+    };
+    try {
+      await ref.read(apiClientProvider).patch('/deals/$id', body: body);
+      ref.invalidate(dealsProvider);
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
     }
   }
 }

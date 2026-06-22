@@ -19,9 +19,13 @@ class AuthRepository {
     return _persist(data);
   }
 
-  Future<AppUser> register(String email, String password, String fullName) async {
-    final data = await _api.post(Api.register,
-        body: {'email': email, 'password': password, 'full_name': fullName});
+  Future<AppUser> register(String email, String password, String fullName, {String? referralCode}) async {
+    final data = await _api.post(Api.register, body: {
+      'email': email,
+      'password': password,
+      'full_name': fullName,
+      if (referralCode != null && referralCode.isNotEmpty) 'referral_code': referralCode,
+    });
     return _persist(data);
   }
 

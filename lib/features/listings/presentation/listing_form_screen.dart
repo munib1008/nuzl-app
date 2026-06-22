@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/network/upload_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/field_pair.dart';
 import '../../../core/widgets/responsive.dart';
 import '../../../core/widgets/sticky_save_bar.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../profile/presentation/profile_completion_banner.dart';
 import '../../shell/app_shell.dart';
 import '../data/listings_repository.dart' show listingsProvider, amenitiesProvider;
 import 'listings_screen.dart' show listingsRawProvider;
@@ -39,11 +42,24 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   final permit = TextEditingController();
   final building = TextEditingController();
   final location = TextEditingController(); // a Google Maps link or "lat, lng"
+  final originalPrice = TextEditingController();
+  final developer = TextEditingController();
+  final view = TextEditingController();
+  final parking = TextEditingController();
+  final serviceCharge = TextEditingController();
+  final incentiveNote = TextEditingController();
+  double dldWaiver = 0; // % of the 4% DLD the developer covers
+  double processingWaiver = 0; // % of the processing fee covered
+  final List<_IncentiveInput> _incentives = []; // structured "Incentives & offers"
+  DateTime? handover;
   final Set<int> selectedAmenities = {};
 
   final List<String> imageUrls = []; // uploaded photo URLs (first = cover)
   bool uploading = false;
   bool saving = false;
+  bool aiBusy = false;
+  bool isExclusive = false;
+  bool isHotDeal = false;
   String? error;
 
   @override
@@ -64,6 +80,29 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       description.text = '${m['description'] ?? ''}';
       permit.text = '${m['permit_number'] ?? ''}';
       building.text = '${m['building_name'] ?? ''}';
+      isExclusive = m['is_exclusive'] == true;
+      isHotDeal = m['is_hot_deal'] == true;
+      if (m['original_price'] != null) originalPrice.text = '${m['original_price']}';
+      developer.text = '${m['developer'] ?? ''}';
+      view.text = '${m['view'] ?? ''}';
+      parking.text = m['parking'] != null ? '${m['parking']}' : '';
+      serviceCharge.text = m['service_charge'] != null ? '${m['service_charge']}' : '';
+      dldWaiver = (num.tryParse('${m['dld_waiver_pct'] ?? 0}') ?? 0).toDouble();
+      processingWaiver = (num.tryParse('${m['processing_waiver_pct'] ?? 0}') ?? 0).toDouble();
+      incentiveNote.text = '${m['incentive_note'] ?? ''}';
+      final inc = m['incentives'];
+      if (inc is List) {
+        for (final it in inc) {
+          if (it is Map) {
+            final r = _IncentiveInput(type: '${it['type'] ?? 'cash_back'}');
+            r.input.text = _structuredIncentiveUnit(r.type).isEmpty
+                ? '${it['label'] ?? ''}'
+                : '${it['value'] ?? ''}';
+            _incentives.add(r);
+          }
+        }
+      }
+      handover = DateTime.tryParse('${m['handover_date'] ?? ''}');
       final lat = m['latitude'], lng = m['longitude'];
       if (lat != null && lng != null) location.text = '$lat, $lng';
       final imgs = m['images'];
@@ -90,7 +129,13 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   void dispose() {
     price.dispose(); beds.dispose(); baths.dispose(); size.dispose(); unitNo.dispose();
     ownerName.dispose(); ownerPhone.dispose(); description.dispose(); permit.dispose();
-    building.dispose(); location.dispose(); super.dispose();
+    building.dispose(); location.dispose(); originalPrice.dispose();
+    developer.dispose(); view.dispose(); parking.dispose(); serviceCharge.dispose();
+    incentiveNote.dispose();
+    for (final r in _incentives) {
+      r.input.dispose();
+    }
+    super.dispose();
   }
 
   /// Pick + upload one photo, appended to the gallery. Compressed (1280px/q60)
@@ -105,7 +150,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       if (url == null) throw Exception('the server returned no URL');
       setState(() => imageUrls.add(url));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Photo not uploaded: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('Photo not uploaded')}: $e')));
     } finally {
       if (mounted) setState(() => uploading = false);
     }
@@ -135,7 +180,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
               : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                   const Icon(Icons.add_a_photo_outlined, color: AppColors.textMuted),
                   const SizedBox(height: 4),
-                  Text('Add', style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+                  Text(context.tr('Add'), style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
                 ]),
         ),
       );
@@ -167,25 +212,141 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                 color: AppColors.primary.withValues(alpha: 0.9),
                 borderRadius: BorderRadius.circular(AppSpacing.rFull),
               ),
-              child: const Text('Cover', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
+              child: Text(context.tr('Cover'), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
             ),
           ),
       ]);
 
+  /// AI Deal Assistant — paste a WhatsApp-style blurb and pre-fill the form.
+  Future<void> _aiFill() async {
+    final ctrl = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.tr('Auto-fill from a message')),
+        content: SizedBox(
+          // Cap at 420 on desktop, but never wider than a phone dialog can hold.
+          width: MediaQuery.sizeOf(ctx).width - 80 < 420 ? MediaQuery.sizeOf(ctx).width - 80 : 420,
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(context.tr('Paste a WhatsApp-style property message — we’ll extract the details.'),
+                style: const TextStyle(fontSize: 13)),
+            const SizedBox(height: AppSpacing.x12),
+            TextField(
+              controller: ctrl, autofocus: true, maxLines: 5,
+              decoration: InputDecoration(
+                  hintText: context.tr('e.g. Burj Crown 2BR 1066 sqft Canal View AED 3.1M'),
+                  border: const OutlineInputBorder()),
+            ),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Extract'))),
+        ],
+      ),
+    );
+    if (ok != true || ctrl.text.trim().isEmpty || !mounted) return;
+    setState(() => aiBusy = true);
+    try {
+      final res = await ref.read(apiClientProvider).post('/deal-assistant/parse', body: {'text': ctrl.text.trim()});
+      final d = (res is Map && res['draft'] is Map) ? Map<String, dynamic>.from(res['draft']) : <String, dynamic>{};
+      final src = res is Map ? '${res['source'] ?? ''}' : '';
+      setState(() {
+        if (d['building_name'] != null) building.text = '${d['building_name']}';
+        if (d['unit_no'] != null) unitNo.text = '${d['unit_no']}';
+        if (d['price'] is num) price.text = (d['price'] as num).toStringAsFixed(0);
+        if (d['bedrooms'] != null) beds.text = '${d['bedrooms']}';
+        if (d['bathrooms'] != null) baths.text = '${d['bathrooms']}';
+        if (d['size_sqft'] is num) size.text = (d['size_sqft'] as num).toStringAsFixed(0);
+        const types = ['apartment', 'villa', 'townhouse', 'office', 'retail', 'warehouse', 'land'];
+        if (types.contains('${d['property_type']}')) propertyType = '${d['property_type']}';
+        if (d['purpose'] == 'rent' || d['purpose'] == 'sale') purpose = '${d['purpose']}';
+        // Fold view / community / status into the description if it's still empty.
+        final extra = [
+          if (d['view'] != null) '${d['view']}',
+          if (d['community'] != null) '${d['community']}',
+          if (d['status'] != null) 'Status: ${d['status']}',
+        ].where((s) => s.isNotEmpty).join(' · ');
+        if (extra.isNotEmpty && description.text.trim().isEmpty) description.text = extra;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(context.tr(src == 'heuristic'
+                ? 'Filled what we could — please review the fields.'
+                : 'Filled from your message — review and adjust.'))));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('Could not parse')}: $e')));
+    } finally {
+      if (mounted) setState(() => aiBusy = false);
+    }
+  }
+
   Future<void> _save() async {
-    setState(() { saving = true; error = null; });
     final editing = widget.editId != null;
+    final messenger = ScaffoldMessenger.of(context); // captured before any await
+    // Profile-completion gate (#15): a complete profile is required to post a new listing.
+    if (!editing) {
+      final pc = await ref.read(profileCompletionProvider.future).catchError((_) => <String, dynamic>{'complete': true});
+      if (pc['complete'] != true) {
+        if (!mounted) return;
+        final missing = (pc['missing'] is List) ? (pc['missing'] as List).join(', ') : context.tr('some fields');
+        setState(() => error = '${context.tr('Complete your profile')} ($missing) ${context.tr('before posting — see Profile.')}');
+        return;
+      }
+    }
+    if (!mounted) return;
+    // Validate all mandatory fields together and show a single, specific summary
+    // (don't clear the form — entered data is preserved).
+    final priceVal = double.tryParse(price.text.trim());
+    final missing = <String>[
+      if (building.text.trim().isEmpty) context.tr('Building name'),
+      if (!editing && unitNo.text.trim().isEmpty) context.tr('Unit number'),
+      if (priceVal == null || priceVal <= 0) context.tr('A valid price'),
+    ];
+    if (missing.isNotEmpty) {
+      final msg = missing.length == 1
+          ? '${missing.first} ${context.tr('is required.')}'
+          : '${context.tr('Please complete:')} ${missing.join(', ')}.';
+      setState(() => error = msg);
+      // Surface it above the pinned save bar too, so it's seen wherever the user
+      // is scrolled — without clearing any entered data.
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(msg)));
+      return;
+    }
+    setState(() { saving = true; error = null; });
     final coords = _coords();
     final body = <String, dynamic>{
       'property_type': propertyType,
       'purpose': purpose,
       'furnishing': furnishing,
-      'price': double.tryParse(price.text) ?? 0,
+      'price': priceVal,
       'bedrooms': int.tryParse(beds.text),
       'bathrooms': int.tryParse(baths.text),
       'size_sqft': double.tryParse(size.text),
       'description': description.text.trim(),
       'building_name': building.text.trim(),
+      'is_exclusive': isExclusive,
+      'is_hot_deal': isHotDeal,
+      if (originalPrice.text.trim().isNotEmpty) 'original_price': double.tryParse(originalPrice.text.trim()),
+      if (developer.text.trim().isNotEmpty) 'developer': developer.text.trim(),
+      if (view.text.trim().isNotEmpty) 'view': view.text.trim(),
+      if (parking.text.trim().isNotEmpty) 'parking': int.tryParse(parking.text.trim()),
+      if (serviceCharge.text.trim().isNotEmpty) 'service_charge': double.tryParse(serviceCharge.text.trim()),
+      'dld_waiver_pct': dldWaiver,
+      'processing_waiver_pct': processingWaiver,
+      if (incentiveNote.text.trim().isNotEmpty) 'incentive_note': incentiveNote.text.trim(),
+      'incentives': [
+        for (final r in _incentives.where((r) => r.input.text.trim().isNotEmpty))
+          if (_structuredIncentiveUnit(r.type).isEmpty)
+            {'type': r.type, 'label': r.input.text.trim()}
+          else
+            {'type': r.type, 'value': double.tryParse(r.input.text.trim()), 'unit': _structuredIncentiveUnit(r.type)},
+      ],
+      if (handover != null)
+        'handover_date': '${handover!.year}-${handover!.month.toString().padLeft(2, '0')}-${handover!.day.toString().padLeft(2, '0')}',
       'amenities': selectedAmenities.toList(),
       if (permit.text.trim().isNotEmpty) 'permit_number': permit.text.trim(),
       if (coords != null) 'latitude': coords.$1,
@@ -211,17 +372,19 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       ref.invalidate(listingsProvider);
       ref.invalidate(listingsRawProvider);
       if (!mounted) return;
-      // An owner's new listing is a draft until a title deed is submitted + published;
-      // take them straight to the listing so they can do that (it won't show in the
-      // public browse yet, only under "My listings").
-      if (!editing && created?['is_visible'] == false && created?['id'] != null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Saved as a draft — submit a title deed, then publish it to go live.')));
-        context.go('/listings/${created!['id']}');
+      // Always land on the item's detail page after submit (consistent workflow).
+      final id = '${created?['id'] ?? widget.editId ?? ''}';
+      final String msg;
+      if (editing) {
+        msg = context.tr('Your property has been updated.');
+      } else if (created?['is_visible'] == false) {
+        // Owner draft — pending a title deed before it goes public.
+        msg = context.tr('Your property has been submitted and saved as a draft. Submit a title deed, then publish it to go live.');
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(editing ? 'Listing updated' : 'Listing added')));
-        context.go('/properties');
+        msg = context.tr('Your property has been posted successfully and is now live.');
       }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      context.go(id.isNotEmpty ? '/listings/$id' : '/properties');
     } catch (e) {
       setState(() => error = e.toString());
     } finally {
@@ -232,23 +395,40 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
     final user = ref.watch(authControllerProvider).user;
     final isOwner = user?.activeRole == 'owner';
     final ownerFullName = user?.fullName ?? '';
     return Scaffold(
-      appBar: NuzlAppBar(title: widget.editId != null ? 'Edit listing' : 'Add listing'),
+      appBar: NuzlAppBar(title: context.tr(widget.editId != null ? 'Edit listing' : 'Add listing')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.x16),
           children: [
+            // AI Deal Assistant — paste a message to auto-fill (create only).
+            if (widget.editId == null) ...[
+              Card(
+                color: AppColors.primaryTint,
+                child: ListTile(
+                  leading: const Icon(Icons.auto_awesome, color: AppColors.primary),
+                  title: Text(context.tr('Auto-fill from a message')),
+                  subtitle: Text(context.tr('Paste a WhatsApp deal — we extract the details')),
+                  trailing: aiBusy
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.chevron_right),
+                  onTap: aiBusy ? null : _aiFill,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.x16),
+            ],
             // Photos — at least 3 to publish a live listing. First photo is the cover.
-            Text('Photos', style: t.titleSmall),
+            Text(context.tr('Photos'), style: t.titleSmall),
             const SizedBox(height: 2),
             Text(
-              '${imageUrls.length} added · at least 3 to publish',
+              '${imageUrls.length} ${context.tr('added · at least 3 to publish')}',
               style: t.bodySmall?.copyWith(
-                  color: imageUrls.length >= 3 ? AppColors.success : AppColors.textMuted),
+                  color: imageUrls.length >= 3 ? AppColors.success : (dark ? AppColors.dTextMuted : AppColors.textMuted)),
             ),
             const SizedBox(height: AppSpacing.x8),
             Wrap(
@@ -261,59 +441,58 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
             ),
             const SizedBox(height: AppSpacing.x16),
             DropdownButtonFormField<String>(
-              initialValue: propertyType, decoration: const InputDecoration(labelText: 'Property type'),
+              initialValue: propertyType, decoration: InputDecoration(labelText: context.tr('Property type')),
               items: const ['apartment','villa','townhouse','office','retail','warehouse','land']
                   .map((v) => DropdownMenuItem(value: v, child: Text(v[0].toUpperCase() + v.substring(1)))).toList(),
               onChanged: (v) => setState(() => propertyType = v ?? 'apartment'),
             ),
             const SizedBox(height: AppSpacing.x12),
-            Row(children: [
-              Expanded(child: DropdownButtonFormField<String>(
-                initialValue: purpose, decoration: const InputDecoration(labelText: 'Purpose'),
-                items: const [DropdownMenuItem(value: 'sale', child: Text('Sale')), DropdownMenuItem(value: 'rent', child: Text('Rent'))],
-                onChanged: (v) => setState(() => purpose = v ?? 'sale'))),
-              const SizedBox(width: AppSpacing.x12),
-              Expanded(child: DropdownButtonFormField<String>(
-                initialValue: furnishing, decoration: const InputDecoration(labelText: 'Furnishing'),
-                items: const [
-                  DropdownMenuItem(value: 'unfurnished', child: Text('Unfurnished')),
-                  DropdownMenuItem(value: 'partly_furnished', child: Text('Partly furnished')),
-                  DropdownMenuItem(value: 'furnished', child: Text('Furnished')),
+            FieldPair(
+              DropdownButtonFormField<String>(
+                initialValue: purpose, decoration: InputDecoration(labelText: context.tr('Purpose')),
+                items: [DropdownMenuItem(value: 'sale', child: Text(context.tr('Sale'))), DropdownMenuItem(value: 'rent', child: Text(context.tr('Rent')))],
+                onChanged: (v) => setState(() => purpose = v ?? 'sale')),
+              DropdownButtonFormField<String>(
+                initialValue: furnishing, decoration: InputDecoration(labelText: context.tr('Furnishing')),
+                items: [
+                  DropdownMenuItem(value: 'unfurnished', child: Text(context.tr('Unfurnished'))),
+                  DropdownMenuItem(value: 'partly_furnished', child: Text(context.tr('Partly furnished'))),
+                  DropdownMenuItem(value: 'furnished', child: Text(context.tr('Furnished'))),
                 ],
-                onChanged: (v) => setState(() => furnishing = v ?? 'unfurnished'))),
-            ]),
+                onChanged: (v) => setState(() => furnishing = v ?? 'unfurnished')),
+            ),
             const SizedBox(height: AppSpacing.x12),
-            TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price (AED)')),
+            TextField(controller: price, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Price (AED)'))),
             const SizedBox(height: AppSpacing.x12),
             Row(children: [
-              Expanded(child: TextField(controller: beds, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Bedrooms'))),
+              Expanded(child: TextField(controller: beds, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Bedrooms')))),
               const SizedBox(width: AppSpacing.x12),
-              Expanded(child: TextField(controller: baths, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Bathrooms'))),
+              Expanded(child: TextField(controller: baths, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Bathrooms')))),
               const SizedBox(width: AppSpacing.x12),
-              Expanded(child: TextField(controller: size, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Size (sqft)'))),
+              Expanded(child: TextField(controller: size, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Size (sqft)')))),
             ]),
             const SizedBox(height: AppSpacing.x12),
             TextField(
               controller: building,
-              decoration: const InputDecoration(labelText: 'Building name', hintText: 'e.g. Marina Heights, Tower B'),
+              decoration: InputDecoration(labelText: context.tr('Building name *'), hintText: context.tr('e.g. Marina Heights, Tower B')),
             ),
             const SizedBox(height: AppSpacing.x12),
             TextField(
               controller: location,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                labelText: 'Location pin',
-                hintText: 'Paste a Google Maps link, or "25.0772, 55.1335"',
+                labelText: context.tr('Location pin'),
+                hintText: context.tr('Paste a Google Maps link, or "25.0772, 55.1335"'),
                 prefixIcon: const Icon(Icons.place_outlined),
                 helperText: _coords() != null
-                    ? 'Pinned at ${_coords()!.$1.toStringAsFixed(5)}, ${_coords()!.$2.toStringAsFixed(5)}'
-                    : 'Used for the map view',
+                    ? '${context.tr('Pinned at')} ${_coords()!.$1.toStringAsFixed(5)}, ${_coords()!.$2.toStringAsFixed(5)}'
+                    : context.tr('Used for the map view'),
                 helperStyle: _coords() != null ? const TextStyle(color: AppColors.success) : null,
               ),
             ),
             if (widget.editId == null) ...[
               const SizedBox(height: AppSpacing.x12),
-              TextField(controller: unitNo, decoration: const InputDecoration(labelText: 'Unit number')),
+              TextField(controller: unitNo, decoration: InputDecoration(labelText: context.tr('Unit number *'))),
               const SizedBox(height: AppSpacing.x12),
               if (isOwner)
                 Container(
@@ -327,7 +506,7 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                     const SizedBox(width: AppSpacing.x8),
                     Expanded(
                       child: Text(
-                        'Listed as owner: ${ownerFullName.isEmpty ? 'you' : ownerFullName}',
+                        '${context.tr('Listed as owner')}: ${ownerFullName.isEmpty ? context.tr('you') : ownerFullName}',
                         style: t.bodySmall?.copyWith(color: AppColors.textMuted),
                       ),
                     ),
@@ -335,27 +514,193 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
                 )
               else
                 Row(children: [
-                  Expanded(child: TextField(controller: ownerName, decoration: const InputDecoration(labelText: 'Owner name'))),
+                  Expanded(child: TextField(controller: ownerName, decoration: InputDecoration(labelText: context.tr('Owner name')))),
                   const SizedBox(width: AppSpacing.x12),
-                  Expanded(child: TextField(controller: ownerPhone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Owner phone'))),
+                  Expanded(child: TextField(controller: ownerPhone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.tr('Owner phone')))),
                 ]),
             ],
             const SizedBox(height: AppSpacing.x12),
-            TextField(controller: description, maxLines: 3, decoration: const InputDecoration(labelText: 'Description')),
+            TextField(controller: description, maxLines: 3, decoration: InputDecoration(labelText: context.tr('Description'))),
             const SizedBox(height: AppSpacing.x12),
             TextField(
               controller: permit,
-              decoration: const InputDecoration(
-                labelText: 'Permit number (Trakheesi / RERA)',
-                helperText: 'Required to publish a live listing',
+              decoration: InputDecoration(
+                labelText: context.tr('Permit number (Trakheesi / RERA)'),
+                helperText: context.tr('Required to publish a live listing'),
               ),
             ),
             const SizedBox(height: AppSpacing.x16),
-            Text('Amenities', style: t.titleSmall),
+            // Optional enrichments collapsed by default so the form isn't
+            // overwhelming — the essentials above are all that's needed to post.
+            Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: EdgeInsets.zero,
+                expandedCrossAxisAlignment: CrossAxisAlignment.stretch,
+                title: Text(context.tr('More details (optional)'), style: t.titleSmall),
+                subtitle: Text(context.tr('Developer info · highlights · incentives'),
+                    style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                children: [
+            Text(context.tr('Property details'), style: t.titleSmall),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(child: TextField(controller: developer, decoration: InputDecoration(labelText: context.tr('Developer'), hintText: context.tr('e.g. Emaar')))),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(child: TextField(controller: view, decoration: InputDecoration(labelText: context.tr('View'), hintText: context.tr('e.g. Marina')))),
+            ]),
+            const SizedBox(height: AppSpacing.x12),
+            Row(children: [
+              Expanded(child: TextField(controller: parking, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Parking spaces')))),
+              const SizedBox(width: AppSpacing.x12),
+              Expanded(child: TextField(controller: serviceCharge, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Service charge (AED/sqft/yr)')))),
+            ]),
+            const SizedBox(height: AppSpacing.x12),
+            InkWell(
+              onTap: () async {
+                final now = DateTime.now();
+                final d = await showDatePicker(
+                  context: context,
+                  initialDate: handover ?? now,
+                  firstDate: DateTime(now.year - 10),
+                  lastDate: DateTime(now.year + 15),
+                  helpText: context.tr('Handover date'),
+                );
+                if (d != null) setState(() => handover = d);
+              },
+              child: InputDecorator(
+                decoration: InputDecoration(
+                    labelText: context.tr('Handover date'), suffixIcon: const Icon(Icons.calendar_today_outlined, size: 18)),
+                child: Text(
+                  handover == null
+                      ? context.tr('Select date (off-plan / ready)')
+                      : '${handover!.year}-${handover!.month.toString().padLeft(2, '0')}-${handover!.day.toString().padLeft(2, '0')}',
+                  style: TextStyle(color: handover == null ? Theme.of(context).hintColor : null),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x16),
+            Text(context.tr('Highlights'), style: t.titleSmall),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(context.tr('Exclusive listing')),
+              value: isExclusive,
+              onChanged: (v) => setState(() => isExclusive = v),
+            ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(context.tr('Hot deal')),
+              value: isHotDeal,
+              onChanged: (v) => setState(() => isHotDeal = v),
+            ),
+            TextField(
+              controller: originalPrice,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: context.tr('Original price (AED) — optional'),
+                helperText: context.tr('If above the current price, shows a "Price reduced" ribbon'),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x16),
+            Text(context.tr('Developer incentives'), style: t.titleSmall),
+            const SizedBox(height: AppSpacing.x4),
+            Text(context.tr('Fee waivers a developer covers — reflected in the buyer\'s mortgage estimate.'),
+                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+            const SizedBox(height: AppSpacing.x8),
+            FieldPair(
+              DropdownButtonFormField<double>(
+                initialValue: dldWaiver,
+                decoration: InputDecoration(labelText: context.tr('DLD fee waiver')),
+                items: [
+                  DropdownMenuItem(value: 0.0, child: Text(context.tr('None'))),
+                  DropdownMenuItem(value: 25.0, child: Text(context.tr('25% covered'))),
+                  DropdownMenuItem(value: 50.0, child: Text(context.tr('50% covered'))),
+                  DropdownMenuItem(value: 75.0, child: Text(context.tr('75% covered'))),
+                  DropdownMenuItem(value: 100.0, child: Text(context.tr('Full DLD waiver'))),
+                ],
+                onChanged: (v) => setState(() => dldWaiver = v ?? 0),
+              ),
+              DropdownButtonFormField<double>(
+                initialValue: processingWaiver,
+                decoration: InputDecoration(labelText: context.tr('Processing fee waiver')),
+                items: [
+                  DropdownMenuItem(value: 0.0, child: Text(context.tr('None'))),
+                  DropdownMenuItem(value: 50.0, child: Text(context.tr('50% covered'))),
+                  DropdownMenuItem(value: 100.0, child: Text(context.tr('Fully covered'))),
+                ],
+                onChanged: (v) => setState(() => processingWaiver = v ?? 0),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            TextField(
+              controller: incentiveNote,
+              decoration: InputDecoration(
+                labelText: context.tr('Other incentives — optional'),
+                hintText: context.tr('e.g. Service-charge waiver for 2 years, free furnishing'),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            Text(context.tr('Offers list — shown as "Incentives & offers" on the property'),
+                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+            const SizedBox(height: AppSpacing.x8),
+            for (var i = 0; i < _incentives.length; i++)
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.x8),
+                child: Row(children: [
+                  Expanded(
+                    flex: 3,
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _incentives[i].type,
+                      isExpanded: true,
+                      decoration: InputDecoration(labelText: context.tr('Offer'), isDense: true),
+                      items: [
+                        DropdownMenuItem(value: 'cash_back', child: Text(context.tr('Cash-back'))),
+                        DropdownMenuItem(value: 'service_charge_holiday', child: Text(context.tr('Service-charge holiday'))),
+                        DropdownMenuItem(value: 'furniture', child: Text(context.tr('Furniture allowance'))),
+                        DropdownMenuItem(value: 'payment_plan', child: Text(context.tr('Payment plan'))),
+                        DropdownMenuItem(value: 'free_management', child: Text(context.tr('Free management'))),
+                        DropdownMenuItem(value: 'dld_waiver', child: Text(context.tr('DLD waiver'))),
+                        DropdownMenuItem(value: 'processing_waiver', child: Text(context.tr('Processing waiver'))),
+                        DropdownMenuItem(value: 'other', child: Text(context.tr('Other'))),
+                      ],
+                      onChanged: (v) => setState(() => _incentives[i].type = v ?? 'other'),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.x8),
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      controller: _incentives[i].input,
+                      keyboardType: _structuredIncentiveUnit(_incentives[i].type).isEmpty
+                          ? TextInputType.text
+                          : const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(labelText: context.tr(_incFieldLabel(_incentives[i].type)), isDense: true),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: context.tr('Remove'),
+                    icon: const Icon(Icons.close, size: 18),
+                    onPressed: () => setState(() => _incentives.removeAt(i).input.dispose()),
+                  ),
+                ]),
+              ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: () => setState(() => _incentives.add(_IncentiveInput())),
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(context.tr('Add an offer')),
+              ),
+            ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.x16),
+            Text(context.tr('Amenities'), style: t.titleSmall),
             const SizedBox(height: AppSpacing.x8),
             ref.watch(amenitiesProvider).maybeWhen(
               data: (list) => list.isEmpty
-                  ? Text('No amenities available', style: t.bodySmall?.copyWith(color: AppColors.textMuted))
+                  ? Text(context.tr('No amenities available'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                   : Wrap(
                       spacing: AppSpacing.x8,
                       runSpacing: AppSpacing.x8,
@@ -389,9 +734,48 @@ class _ListingFormScreenState extends ConsumerState<ListingFormScreen> {
       // primary action is never hidden behind it (and clears the home indicator).
       bottomNavigationBar: StickySaveBar(
         saving: saving,
-        label: widget.editId != null ? 'Save changes' : 'Add listing',
+        label: context.tr(widget.editId != null ? 'Save changes' : 'Add listing'),
         onPressed: _save,
       ),
     );
+  }
+}
+
+/// One editable row in the structured "Offers list" — a type + a single input
+/// that's a numeric value (for %/AED/months offers) or free text (for the rest).
+class _IncentiveInput {
+  _IncentiveInput({this.type = 'cash_back'});
+  String type;
+  final input = TextEditingController();
+}
+
+/// The unit an offer's value is measured in (drives parsing + the field label).
+/// Empty = the input is free text (e.g. a payment-plan description).
+String _structuredIncentiveUnit(String type) {
+  switch (type) {
+    case 'dld_waiver':
+    case 'processing_waiver':
+      return 'percent';
+    case 'cash_back':
+    case 'furniture':
+      return 'aed';
+    case 'service_charge_holiday':
+    case 'free_management':
+      return 'months';
+    default:
+      return '';
+  }
+}
+
+String _incFieldLabel(String type) {
+  switch (_structuredIncentiveUnit(type)) {
+    case 'percent':
+      return 'Percent (%)';
+    case 'aed':
+      return 'Amount (AED)';
+    case 'months':
+      return 'Months';
+    default:
+      return 'Details';
   }
 }

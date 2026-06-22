@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/async_view.dart';
 import '../../../core/widgets/empty_state.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 import '../data/mortgage_repository.dart';
 import '../domain/mortgage.dart';
+import '../domain/finance_type.dart';
 import '../../shell/app_shell.dart';
 
 /// INSIDE tracker — list of the user's saved mortgages + progress.
@@ -17,9 +20,9 @@ class MortgageListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final mortgages = ref.watch(mortgagesProvider);
     return Scaffold(
-      appBar: NuzlAppBar(title: 'Mortgages', actions: [
+      appBar: NuzlAppBar(title: context.tr('Mortgages'), actions: [
         IconButton(
-          tooltip: 'Calculator',
+          tooltip: context.tr('Calculator'),
           icon: const Icon(Icons.calculate_outlined),
           onPressed: () => context.push('/calculator'),
         ),
@@ -28,20 +31,21 @@ class MortgageListScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push('/mortgages/new'),
         icon: const Icon(Icons.add),
-        label: const Text('Track a mortgage'),
+        label: Text(context.tr('Track a mortgage')),
       ),
       body: RefreshIndicator(
         onRefresh: () async => ref.refresh(mortgagesProvider.future),
         child: AsyncView<List<Mortgage>>(
           value: mortgages,
           onRetry: () => ref.refresh(mortgagesProvider),
+          loading: const SkeletonList(),
           data: (items) {
             if (items.isEmpty) {
               return EmptyState(
                 icon: Icons.account_balance_outlined,
-                title: 'No mortgages tracked',
-                message: 'Add a mortgage to log payments and watch the balance fall.',
-                actionLabel: 'Track a mortgage',
+                title: context.tr('No mortgages tracked'),
+                message: context.tr('Add a mortgage to log payments and watch the balance fall.'),
+                actionLabel: context.tr('Track a mortgage'),
                 onAction: () => context.push('/mortgages/new'),
               );
             }
@@ -66,6 +70,7 @@ class _MortgageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
+    final isCash = isCashPurchase(m.financeType);
     final paid = m.outstanding != null && m.principal > 0
         ? (1 - (m.outstanding! / m.principal)).clamp(0, 1).toDouble()
         : 0.0;
@@ -77,21 +82,26 @@ class _MortgageCard extends StatelessWidget {
           padding: const EdgeInsets.all(AppSpacing.x16),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Expanded(child: Text(m.label ?? m.lender ?? 'Mortgage', style: t.titleMedium)),
-              Text('${m.interestRate}%', style: t.bodySmall),
+              Expanded(child: Text(m.label ?? m.lender ?? context.tr('Mortgage'), style: t.titleMedium)),
+              if (!isCash && m.interestRate > 0) Text('${m.interestRate}%', style: t.bodySmall),
             ]),
-            const SizedBox(height: AppSpacing.x4),
-            Text('${aed.format(m.monthlyPayment ?? 0)} / month  ·  ${(m.termMonths / 12).round()} yrs',
-                style: t.bodyMedium),
-            const SizedBox(height: AppSpacing.x12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppSpacing.rFull),
-              child: LinearProgressIndicator(
-                  value: paid, minHeight: 6, backgroundColor: Theme.of(context).dividerColor),
-            ),
-            const SizedBox(height: AppSpacing.x4),
-            Text('${(paid * 100).toStringAsFixed(1)}% paid  ·  ${aed.format(m.outstanding ?? m.principal)} left',
-                style: t.bodySmall),
+            const SizedBox(height: 2),
+            Text(financeTypeLabel(m.financeType),
+                style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
+            if (!isCash) ...[
+              const SizedBox(height: AppSpacing.x4),
+              Text('${aed.format(m.monthlyPayment ?? 0)} / ${context.tr('month')}  ·  ${(m.termMonths / 12).round()} ${context.tr('yrs')}',
+                  style: t.bodyMedium),
+              const SizedBox(height: AppSpacing.x12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppSpacing.rFull),
+                child: LinearProgressIndicator(
+                    value: paid, minHeight: 6, backgroundColor: Theme.of(context).dividerColor),
+              ),
+              const SizedBox(height: AppSpacing.x4),
+              Text('${(paid * 100).toStringAsFixed(1)}% ${context.tr('paid')}  ·  ${aed.format(m.outstanding ?? m.principal)} ${context.tr('left')}',
+                  style: t.bodySmall),
+            ],
           ]),
         ),
       ),
