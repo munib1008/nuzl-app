@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -39,7 +40,7 @@ class MarketplaceItemScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final item = ref.watch(_itemProvider(id));
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Details'),
+      appBar: NuzlAppBar(title: context.tr('Details')),
       drawer: const NuzlDrawer(),
       body: item.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -55,9 +56,9 @@ class MarketplaceItemScreen extends ConsumerWidget {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.search_off, size: 44, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
           const SizedBox(height: AppSpacing.x12),
-          const Text('This item is no longer available.'),
+          Text(context.tr('This item is no longer available.')),
           const SizedBox(height: AppSpacing.x16),
-          FilledButton(onPressed: () => context.go('/marketplace'), child: const Text('Back to marketplace')),
+          FilledButton(onPressed: () => context.go('/marketplace'), child: Text(context.tr('Back to marketplace'))),
         ]),
       );
   }
@@ -144,7 +145,7 @@ class _Detail extends ConsumerWidget {
                     const Icon(Icons.hourglass_top, size: 16, color: AppColors.accentGold),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text('Pending approval — visible only to you until your company is verified, then it publishes automatically.',
+                      child: Text(context.tr('Pending approval — visible only to you until your company is verified, then it publishes automatically.'),
                           style: t.bodySmall?.copyWith(color: AppColors.accentGold, fontWeight: FontWeight.w600)),
                     ),
                   ]),
@@ -170,7 +171,7 @@ class _Detail extends ConsumerWidget {
                   for (var i = 1; i <= 5; i++)
                     Icon(i <= rating.round() ? Icons.star : Icons.star_border, size: 16, color: AppColors.accentGold),
                   const SizedBox(width: 6),
-                  Text('${rating.toStringAsFixed(1)} · $reviewCount review${reviewCount == 1 ? '' : 's'}',
+                  Text('${rating.toStringAsFixed(1)} · $reviewCount ${context.tr(reviewCount == 1 ? 'review' : 'reviews')}',
                       style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ],
@@ -183,13 +184,13 @@ class _Detail extends ConsumerWidget {
                 Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(isProduct ? Icons.local_shipping_outlined : Icons.schedule, size: 15, color: AppColors.success),
                   const SizedBox(width: 4),
-                  Text(isProduct ? '~$delivery-day delivery' : '~$delivery-day lead time',
+                  Text('~$delivery ${context.tr(isProduct ? 'day delivery' : 'day lead time')}',
                       style: t.bodyMedium?.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
                 ]),
               ],
               if (desc.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.x20),
-                Text('About', style: t.titleMedium),
+                Text(context.tr('About'), style: t.titleMedium),
                 const SizedBox(height: AppSpacing.x8),
                 Text(desc, style: t.bodyMedium?.copyWith(height: 1.5)),
               ],
@@ -198,7 +199,7 @@ class _Detail extends ConsumerWidget {
                 Row(children: [
                   Icon(Icons.inventory_2_outlined, size: 16, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                   const SizedBox(width: 6),
-                  Text('Minimum order: ${m['moq']}',
+                  Text('${context.tr('Minimum order')}: ${m['moq']}',
                       style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ],
@@ -207,7 +208,7 @@ class _Detail extends ConsumerWidget {
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Icon(Icons.place_outlined, size: 16, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                   const SizedBox(width: 6),
-                  Expanded(child: Text('Coverage: ${m['coverage_areas']}', maxLines: 2, overflow: TextOverflow.ellipsis,
+                  Expanded(child: Text('${context.tr('Coverage')}: ${m['coverage_areas']}', maxLines: 2, overflow: TextOverflow.ellipsis,
                       style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
                 ]),
               ],
@@ -218,7 +219,7 @@ class _Detail extends ConsumerWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => launchUrl(Uri.parse('${m['brochure_url']}'), webOnlyWindowName: '_blank'),
                     icon: const Icon(Icons.description_outlined, size: 18),
-                    label: const Text('Download brochure'),
+                    label: Text(context.tr('Download brochure')),
                   ),
                 ),
               ],
@@ -227,17 +228,17 @@ class _Detail extends ConsumerWidget {
                 Row(children: [
                   Icon(Icons.support_agent_outlined, size: 16, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                   const SizedBox(width: 6),
-                  Text('Sales contact: $contact', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                  Text('${context.tr('Sales contact')}: $contact', style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ],
               const SizedBox(height: AppSpacing.x24),
-              Text('Reviews', style: t.titleMedium),
+              Text(context.tr('Reviews'), style: t.titleMedium),
               const SizedBox(height: AppSpacing.x8),
               reviews.when(
                 loading: () => const LinearProgressIndicator(),
-                error: (_, __) => Text('Couldn’t load reviews.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+                error: (_, __) => Text(context.tr('Couldn’t load reviews.'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 data: (list) => list.isEmpty
-                    ? Text('No reviews yet. Be the first after your order completes.',
+                    ? Text(context.tr('No reviews yet. Be the first after your order completes.'),
                         style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
                     : Column(children: list.map((r) => _ReviewRow(Map<String, dynamic>.from(r))).toList()),
               ),
@@ -246,14 +247,14 @@ class _Detail extends ConsumerWidget {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => _order(context, ref, quote: true),
-                    child: const Text('Request quote'),
+                    child: Text(context.tr('Request quote')),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.x12),
                 Expanded(
                   child: FilledButton(
                     onPressed: () => isProduct ? addToCart(context, ref, id) : _order(context, ref),
-                    child: Text(isProduct ? 'Add to cart' : 'Book'),
+                    child: Text(context.tr(isProduct ? 'Add to cart' : 'Book')),
                   ),
                 ),
               ]),
@@ -296,10 +297,10 @@ class _Detail extends ConsumerWidget {
       ref.invalidate(marketplaceProvider('${m['kind'] ?? 'service'}'));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(quote
+          content: Text(context.tr(quote
               ? 'Quotation requested — track it in Orders.'
-              : (scheduledAt != null ? 'Service booked — track it in Orders.' : 'Order placed — track it in Orders.')),
-          action: SnackBarAction(label: 'View', onPressed: () => context.go('/orders')),
+              : (scheduledAt != null ? 'Service booked — track it in Orders.' : 'Order placed — track it in Orders.'))),
+          action: SnackBarAction(label: context.tr('View'), onPressed: () => context.go('/orders')),
         ));
       }
     } catch (e) {
@@ -333,7 +334,7 @@ class _ReviewRow extends StatelessWidget {
             Icon(i <= rating ? Icons.star : Icons.star_border, size: 13, color: AppColors.accentGold),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(name.isEmpty ? 'Customer' : name,
+            child: Text(name.isEmpty ? context.tr('Customer') : name,
                 style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
           ),
           if (when.isNotEmpty) Text(when, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
@@ -344,7 +345,7 @@ class _ReviewRow extends StatelessWidget {
         ],
         if (recommend == true || recommend == false) ...[
           const SizedBox(height: 4),
-          Text(recommend == true ? '👍 Recommends' : '👎 Doesn’t recommend',
+          Text(recommend == true ? '👍 ${context.tr('Recommends')}' : '👎 ${context.tr('Doesn’t recommend')}',
               style: t.bodySmall?.copyWith(
                   color: recommend == true ? AppColors.success : (dark ? AppColors.dTextMuted : AppColors.textMuted),
                   fontWeight: FontWeight.w600)),
@@ -369,7 +370,7 @@ class _ReviewRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppSpacing.rMd),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Provider response', style: t.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+              Text(context.tr('Provider response'), style: t.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 2),
               Text(providerReply, style: t.bodySmall),
             ]),
