@@ -2,13 +2,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
 
 /// Per-kind status flows (mirror the API). 'cancelled' is terminal, reachable from any.
-const productFlow = ['received', 'processing', 'dispatched', 'out_for_delivery', 'delivered', 'returned'];
+const productFlow = ['received', 'processing', 'packed', 'dispatched', 'out_for_delivery', 'delivered', 'returned'];
 const serviceFlow = ['requested', 'assigned', 'scheduled', 'on_route', 'in_progress', 'completed', 'closed'];
 
 const orderStatusLabels = <String, String>{
   'received': 'Received',
   'processing': 'Processing',
-  'dispatched': 'Dispatched',
+  'packed': 'Packed',
+  'dispatched': 'Shipped',
+  'pending_payment': 'Pending payment',
+  'paid': 'Paid',
   'out_for_delivery': 'Out for delivery',
   'delivered': 'Delivered',
   'returned': 'Returned',

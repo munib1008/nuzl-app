@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -129,14 +130,24 @@ class CartScreen extends ConsumerWidget {
     );
     if (ok != true) return;
     try {
+      final origin = Uri.base.origin;
+      final ret = origin.isEmpty ? 'https://nuzl.app' : origin;
       final res = await ref.read(apiClientProvider).post('/marketplace/cart/checkout', body: {
         'delivery_address': delivery.text.trim(),
         'billing_address': billing.text.trim(),
         'contact_phone': phone.text.trim(),
         'payment_method': method,
         'delivery_notes': notes.text.trim(),
+        'success_url': '$ret/#/orders',
+        'cancel_url': '$ret/#/cart',
       });
       ref.invalidate(cartProvider);
+      // Card payment (Stripe configured) → redirect to the hosted checkout.
+      final url = (res is Map) ? res['url'] : null;
+      if (url != null && '$url'.isNotEmpty) {
+        await launchUrl(Uri.parse('$url'), webOnlyWindowName: '_self');
+        return;
+      }
       final count = (res is Map) ? (int.tryParse('${res['count'] ?? 0}') ?? 0) : 0;
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
