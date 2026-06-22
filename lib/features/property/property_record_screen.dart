@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/upload_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -1525,7 +1526,7 @@ class _ServiceHistoryCard extends ConsumerWidget {
           ]),
         ),
         const SizedBox(width: AppSpacing.x8),
-        Text(orderStatusLabels[status] ?? status,
+        Text(context.tr(orderStatusLabels[status] ?? status),
             style: t.labelSmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w700)),
       ]),
     );

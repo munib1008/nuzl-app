@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/upload_service.dart';
 import '../messages/data/messaging_repository.dart';
@@ -31,14 +32,14 @@ class OrdersScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return const DefaultTabController(
+    return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: NuzlAppBar(title: 'Orders'),
-        drawer: NuzlDrawer(),
+        appBar: NuzlAppBar(title: context.tr('Orders')),
+        drawer: const NuzlDrawer(),
         body: Column(children: [
-          Material(child: TabBar(tabs: [Tab(text: 'My orders'), Tab(text: 'Incoming')])),
-          Expanded(child: TabBarView(children: [_OrdersList(mine: true), _OrdersList(mine: false)])),
+          Material(child: TabBar(tabs: [Tab(text: context.tr('My orders')), Tab(text: context.tr('Incoming'))])),
+          const Expanded(child: TabBarView(children: [_OrdersList(mine: true), _OrdersList(mine: false)])),
         ]),
       ),
     );
@@ -64,11 +65,11 @@ class _OrdersList extends ConsumerWidget {
             return ListView(children: [
               EmptyState(
                 icon: Icons.receipt_long_outlined,
-                title: mine ? 'No orders yet' : 'No incoming orders',
-                message: mine
+                title: context.tr(mine ? 'No orders yet' : 'No incoming orders'),
+                message: context.tr(mine
                     ? 'Orders you place in the marketplace will appear here.'
-                    : 'Orders from buyers will appear here once they purchase.',
-                actionLabel: mine ? 'Browse marketplace' : null,
+                    : 'Orders from buyers will appear here once they purchase.'),
+                actionLabel: mine ? context.tr('Browse marketplace') : null,
                 onAction: mine ? () => context.go('/marketplace') : null,
               ),
             ]);
@@ -501,10 +502,10 @@ class _OrderCard extends ConsumerWidget {
             const SizedBox(width: AppSpacing.x8),
             Expanded(child: Text(title, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis)),
             if (disputed) ...[
-              const StatusBadge('Disputed', tone: BadgeTone.danger),
+              StatusBadge(context.tr('Disputed'), tone: BadgeTone.danger),
               const SizedBox(width: 4),
             ],
-            StatusBadge(orderStatusLabels[status] ?? status, tone: _statusTone(status)),
+            StatusBadge(context.tr(orderStatusLabels[status] ?? status), tone: _statusTone(status)),
           ]),
           if (counterpart.isNotEmpty || price != null || created != null) ...[
             const SizedBox(height: 4),
@@ -524,7 +525,7 @@ class _OrderCard extends ConsumerWidget {
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  '${mine ? 'Scheduled' : 'Requested'}: ${DateFormat('EEE d MMM · h:mm a').format(scheduledAt)}',
+                  '${context.tr(mine ? 'Scheduled' : 'Requested')}: ${DateFormat('EEE d MMM · h:mm a').format(scheduledAt)}',
                   style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
                 ),
               ),
@@ -537,7 +538,7 @@ class _OrderCard extends ConsumerWidget {
             Wrap(spacing: 6, runSpacing: 4, children: [
               for (var i = 0; i < flow.length; i++)
                 Text(
-                  orderStatusLabels[flow[i]] ?? flow[i],
+                  context.tr(orderStatusLabels[flow[i]] ?? flow[i]),
                   style: t.bodySmall?.copyWith(
                     color: i <= curIdx && curIdx >= 0
                         ? Theme.of(context).colorScheme.primary
@@ -557,7 +558,7 @@ class _OrderCard extends ConsumerWidget {
                   Icon(Icons.circle, size: 6, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: 6),
                   Expanded(
-                    child: Text(_trackLine(h),
+                    child: Text(_trackLine(context, h),
                         style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                   ),
                 ]),
@@ -628,33 +629,33 @@ class _OrderCard extends ConsumerWidget {
               OutlinedButton.icon(
                 onPressed: () => _schedule(context, ref),
                 icon: const Icon(Icons.event_outlined, size: 16),
-                label: Text(scheduledAt == null ? 'Set time' : 'Reschedule'),
+                label: Text(context.tr(scheduledAt == null ? 'Set time' : 'Reschedule')),
               ),
             if (!mine && next != null && status != 'quote_requested' && status != 'quoted')
               FilledButton(
                 onPressed: () => _patch(context, ref, next),
-                child: Text('Mark ${orderStatusLabels[next] ?? next}'),
+                child: Text('${context.tr('Mark')} ${context.tr(orderStatusLabels[next] ?? next)}'),
               ),
             if (mine && providerId.isNotEmpty)
               OutlinedButton.icon(
                 onPressed: () => _message(context, ref, providerId),
                 icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                label: const Text('Message'),
+                label: Text(context.tr('Message')),
               ),
             // Provider: reply to a customer review (once).
             if (!mine && rating != null && '${o['provider_reply'] ?? ''}'.trim().isEmpty)
-              OutlinedButton(onPressed: () => _reviewReply(context, ref), child: const Text('Reply to review')),
+              OutlinedButton(onPressed: () => _reviewReply(context, ref), child: Text(context.tr('Reply to review'))),
             if (mine && orderIsRateable(status) && rating == null)
               OutlinedButton.icon(
                 onPressed: () => _rate(context, ref),
                 icon: const Icon(Icons.star_outline, size: 16),
-                label: const Text('Rate'),
+                label: Text(context.tr('Rate')),
               ),
             if (mine && !orderIsTerminal(status) && !disputed && status != 'quote_requested' && status != 'quoted')
-              OutlinedButton(onPressed: () => _dispute(context, ref), child: const Text('Dispute')),
+              OutlinedButton(onPressed: () => _dispute(context, ref), child: Text(context.tr('Dispute'))),
             // Generic cancel — for the customer on a 'quoted' order, Decline covers it.
             if (!orderIsTerminal(status) && !(mine && status == 'quoted'))
-              OutlinedButton(onPressed: () => _patch(context, ref, 'cancelled'), child: const Text('Cancel')),
+              OutlinedButton(onPressed: () => _patch(context, ref, 'cancelled'), child: Text(context.tr('Cancel'))),
           ]),
         ]),
       ),
@@ -663,9 +664,9 @@ class _OrderCard extends ConsumerWidget {
 }
 
 /// One tracking-timeline line: "Status · 3 Jun, 2:00 PM".
-String _trackLine(Map<String, dynamic> h) {
+String _trackLine(BuildContext context, Map<String, dynamic> h) {
   final s = '${h['status'] ?? ''}';
   final at = DateTime.tryParse('${h['at'] ?? ''}');
-  final label = orderStatusLabels[s] ?? s;
+  final label = context.tr(orderStatusLabels[s] ?? s);
   return at != null ? '$label · ${DateFormat('d MMM, h:mm a').format(at)}' : label;
 }
