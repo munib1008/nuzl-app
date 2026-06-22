@@ -511,4 +511,22 @@ const Map<String, String> kAr = {
   'sqft': 'قدم²',
   'yr': 'سنة',
   'View details': 'عرض التفاصيل',
+  // ── Saved searches ──
+  'Save': 'حفظ',
+  'Delete': 'حذف',
+  'Save this search': 'حفظ هذا البحث',
+  'Save search': 'حفظ البحث',
+  'Name (optional)': 'الاسم (اختياري)',
+  'e.g. 2BR in JVC under 1.5M': 'مثال: غرفتان في JVC بأقل من 1.5 مليون',
+  'We’ll alert you when a new listing matches these filters.': 'سننبّهك عند توفّر قائمة جديدة تطابق عوامل التصفية هذه.',
+  'Search saved — we’ll alert you on new matches.': 'تم حفظ البحث — سننبّهك عند وجود مطابقات جديدة.',
+  'Saved-search alerts': 'تنبيهات البحث المحفوظ',
+  'New matches': 'مطابقات جديدة',
+  'Your saved searches': 'عمليات بحثك المحفوظة',
+  'No saved searches yet': 'لا توجد عمليات بحث محفوظة بعد',
+  'Use “Save search” on the Properties screen to get alerts on new matches.':
+      'استخدم «حفظ البحث» في شاشة العقارات لتلقّي تنبيهات عند المطابقات الجديدة.',
+  'Delete saved search?': 'حذف البحث المحفوظ؟',
+  'You will stop receiving alerts for it.': 'ستتوقف عن تلقّي التنبيهات الخاصة به.',
+  'Any property': 'أي عقار',
 };

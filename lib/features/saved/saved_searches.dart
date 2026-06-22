@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
 import '../../core/theme/app_colors.dart';
@@ -55,7 +56,7 @@ class SaveSearchAction extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return IconButton(
-      tooltip: 'Save this search',
+      tooltip: context.tr('Save this search'),
       icon: const Icon(Icons.bookmark_add_outlined),
       onPressed: () => _save(context, ref),
     );
@@ -66,23 +67,23 @@ class SaveSearchAction extends ConsumerWidget {
     final nameCtrl = TextEditingController();
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Save search',
+      title: context.tr('Save search'),
       children: [
         TextField(
           controller: nameCtrl,
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Name (optional)',
-            hintText: 'e.g. 2BR in JVC under 1.5M',
+          decoration: InputDecoration(
+            labelText: context.tr('Name (optional)'),
+            hintText: context.tr('e.g. 2BR in JVC under 1.5M'),
           ),
         ),
         const SizedBox(height: AppSpacing.x12),
-        Text('We’ll alert you when a new listing matches these filters.',
+        Text(context.tr('We’ll alert you when a new listing matches these filters.'),
             style: TextStyle(color: dark ? AppColors.dTextMuted : AppColors.textMuted, fontSize: 12)),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Save')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
+        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(context.tr('Save'))),
       ],
     );
     if (ok != true) return;
@@ -95,7 +96,7 @@ class SaveSearchAction extends ConsumerWidget {
       await _createSavedSearch(ref, body);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Search saved — we’ll alert you on new matches.')));
+            SnackBar(content: Text(context.tr('Search saved — we’ll alert you on new matches.'))));
       }
     } catch (e) {
       if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
@@ -113,7 +114,7 @@ class SavedSearchAlertsBell extends ConsumerWidget {
         .maybeWhen(data: (m) => _asInt(m['unread']), orElse: () => 0);
     return Stack(alignment: Alignment.center, children: [
       IconButton(
-        tooltip: 'Saved-search alerts',
+        tooltip: context.tr('Saved-search alerts'),
         icon: const Icon(Icons.saved_search),
         onPressed: () => context.push('/saved-searches'),
       ),
@@ -159,7 +160,7 @@ class _SavedSearchesScreenState extends ConsumerState<SavedSearchesScreen> {
     final alerts = ref.watch(savedSearchAlertsProvider);
 
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Saved searches'),
+      appBar: NuzlAppBar(title: context.tr('Saved searches')),
       drawer: const NuzlDrawer(),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -179,7 +180,7 @@ class _SavedSearchesScreenState extends ConsumerState<SavedSearchesScreen> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('New matches', style: t.titleMedium),
+                      Text(context.tr('New matches'), style: t.titleMedium),
                       const SizedBox(height: AppSpacing.x8),
                       ...items.map((e) => _AlertCard(Map<String, dynamic>.from(e))),
                       const SizedBox(height: AppSpacing.x20),
@@ -189,7 +190,7 @@ class _SavedSearchesScreenState extends ConsumerState<SavedSearchesScreen> {
                 orElse: () => const SizedBox.shrink(),
               ),
               // ── Saved searches ───────────────────────────────────
-              Text('Your saved searches', style: t.titleMedium),
+              Text(context.tr('Your saved searches'), style: t.titleMedium),
               const SizedBox(height: AppSpacing.x8),
               searches.when(
                 loading: () => const Padding(
@@ -198,9 +199,9 @@ class _SavedSearchesScreenState extends ConsumerState<SavedSearchesScreen> {
                 data: (list) => list.isEmpty
                     ? EmptyState(
                         icon: Icons.saved_search,
-                        title: 'No saved searches yet',
-                        message: 'Use “Save search” on the Properties screen to get alerts on new matches.',
-                        actionLabel: 'Browse properties',
+                        title: context.tr('No saved searches yet'),
+                        message: context.tr('Use “Save search” on the Properties screen to get alerts on new matches.'),
+                        actionLabel: context.tr('Browse properties'),
                         onAction: () => context.go('/properties'),
                       )
                     : Column(
@@ -223,11 +224,11 @@ class _SavedSearchesScreenState extends ConsumerState<SavedSearchesScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete saved search?'),
-        content: const Text('You will stop receiving alerts for it.'),
+        title: Text(context.tr('Delete saved search?')),
+        content: Text(context.tr('You will stop receiving alerts for it.')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Delete')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Delete'))),
         ],
       ),
     );
@@ -253,10 +254,10 @@ class _SearchTile extends StatelessWidget {
     return Card(
       child: ListTile(
         leading: Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
-        title: Text(name.isEmpty ? _summary(m) : name, style: t.titleSmall),
-        subtitle: name.isEmpty ? null : Text(_summary(m), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+        title: Text(name.isEmpty ? _summary(context, m) : name, style: t.titleSmall),
+        subtitle: name.isEmpty ? null : Text(_summary(context, m), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
         trailing: IconButton(
-          tooltip: 'Delete',
+          tooltip: context.tr('Delete'),
           icon: const Icon(Icons.delete_outline, color: AppColors.danger),
           onPressed: onDelete,
         ),
@@ -264,15 +265,15 @@ class _SearchTile extends StatelessWidget {
     );
   }
 
-  static String _summary(Map<String, dynamic> m) {
+  static String _summary(BuildContext context, Map<String, dynamic> m) {
     final money = NumberFormat.compact();
     final parts = <String>[];
-    if (m['purpose'] != null) parts.add('${m['purpose']}' == 'rent' ? 'For rent' : 'For sale');
+    if (m['purpose'] != null) parts.add(context.tr('${m['purpose']}' == 'rent' ? 'For rent' : 'For sale'));
     if (m['property_type'] != null) parts.add(_cap('${m['property_type']}'));
-    if (m['min_bedrooms'] != null) parts.add('${m['min_bedrooms']}+ BR');
+    if (m['min_bedrooms'] != null) parts.add('${m['min_bedrooms']}+ ${context.tr('BR')}');
     if (m['min_price'] != null) parts.add('≥ AED ${money.format(num.tryParse('${m['min_price']}') ?? 0)}');
     if (m['max_price'] != null) parts.add('≤ AED ${money.format(num.tryParse('${m['max_price']}') ?? 0)}');
-    return parts.isEmpty ? 'Any property' : parts.join(' · ');
+    return parts.isEmpty ? context.tr('Any property') : parts.join(' · ');
   }
 }
 
@@ -291,7 +292,7 @@ class _AlertCard extends StatelessWidget {
     final type = '${m['property_type'] ?? ''}'.replaceAll('_', ' ');
     final community = '${m['community'] ?? ''}';
     final cover = '${m['cover_image'] ?? ''}';
-    final title = '$beds$type'.trim().isEmpty ? 'Property' : '$beds$type';
+    final title = '$beds$type'.trim().isEmpty ? context.tr('Property') : '$beds$type';
     return Card(
       child: InkWell(
         onTap: () => context.push('/listings/$id'),
