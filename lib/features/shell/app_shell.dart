@@ -152,20 +152,20 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
               PopupMenuItem(
                 enabled: false,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(user?.fullName ?? 'Account', style: Theme.of(context).textTheme.titleSmall),
+                  Text(user?.fullName ?? context.tr('Account'), style: Theme.of(context).textTheme.titleSmall),
                   Text(user?.email ?? '', style: Theme.of(context).textTheme.bodySmall),
                 ]),
               ),
               const PopupMenuDivider(),
-              const PopupMenuItem(value: 'profile', child: ListTile(
-                  leading: Icon(Icons.person_outline), title: Text('Profile & settings'), dense: true)),
-              const PopupMenuItem(value: 'rewards', child: ListTile(
-                  leading: Icon(Icons.card_giftcard, color: AppColors.accentGold),
-                  title: Text('Rewards & referrals'), dense: true)),
-              const PopupMenuItem(value: 'billing', child: ListTile(
-                  leading: Icon(Icons.workspace_premium_outlined), title: Text('Plan & billing'), dense: true)),
-              const PopupMenuItem(value: 'feedback', child: ListTile(
-                  leading: Icon(Icons.bug_report_outlined), title: Text('Report an issue'), dense: true)),
+              PopupMenuItem(value: 'profile', child: ListTile(
+                  leading: const Icon(Icons.person_outline), title: Text(context.tr('Profile & settings')), dense: true)),
+              PopupMenuItem(value: 'rewards', child: ListTile(
+                  leading: const Icon(Icons.card_giftcard, color: AppColors.accentGold),
+                  title: Text(context.tr('Rewards & referrals')), dense: true)),
+              PopupMenuItem(value: 'billing', child: ListTile(
+                  leading: const Icon(Icons.workspace_premium_outlined), title: Text(context.tr('Plan & billing')), dense: true)),
+              PopupMenuItem(value: 'feedback', child: ListTile(
+                  leading: const Icon(Icons.bug_report_outlined), title: Text(context.tr('Report an issue')), dense: true)),
               PopupMenuItem(value: 'language', child: ListTile(
                   leading: const Icon(Icons.language),
                   title: Text(context.tr('language')),
@@ -174,11 +174,11 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
                   dense: true)),
               PopupMenuItem(value: 'theme', child: ListTile(
                   leading: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
-                  title: Text(isDark ? 'Light mode' : 'Dark mode'), dense: true)),
+                  title: Text(context.tr(isDark ? 'Light mode' : 'Dark mode')), dense: true)),
               const PopupMenuDivider(),
-              const PopupMenuItem(value: 'logout', child: ListTile(
-                  leading: Icon(Icons.logout, color: AppColors.danger),
-                  title: Text('Logout'), dense: true)),
+              PopupMenuItem(value: 'logout', child: ListTile(
+                  leading: const Icon(Icons.logout, color: AppColors.danger),
+                  title: Text(context.tr('Logout')), dense: true)),
             ];
           },
           child: Padding(
@@ -735,7 +735,7 @@ class NuzlBottomNav extends ConsumerWidget {
             : NavigationDestinationLabelBehavior.alwaysShow,
         onDestinationSelected: (i) => context.go(items[i].route),
         destinations: items
-            .map((it) => NavigationDestination(icon: Icon(it.icon), label: _shortNavLabel(it.label)))
+            .map((it) => NavigationDestination(icon: Icon(it.icon), label: context.tr(_shortNavLabel(it.label))))
             .toList(),
       ),
     );
@@ -792,7 +792,7 @@ class NuzlSidebarBody extends ConsumerWidget {
                 child: ListTile(
                   dense: true,
                   leading: Icon(it.icon, size: 20, color: selected ? navActive : muted),
-                  title: Text(it.label, style: TextStyle(
+                  title: Text(context.tr(it.label), style: TextStyle(
                       color: selected ? onSurface : muted,
                       fontWeight: selected ? FontWeight.w600 : FontWeight.w500)),
                   onTap: () => go(it.route),
