@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
@@ -31,7 +32,7 @@ class CartScreen extends ConsumerWidget {
     final async = ref.watch(cartProvider);
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Cart'),
+      appBar: NuzlAppBar(title: context.tr('Cart')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: RefreshIndicator(
@@ -45,9 +46,9 @@ class CartScreen extends ConsumerWidget {
                 return ListView(children: [
                   EmptyState(
                     icon: Icons.shopping_cart_outlined,
-                    title: 'Your cart is empty',
-                    message: 'Add products from the marketplace to check out in one go.',
-                    actionLabel: 'Browse marketplace',
+                    title: context.tr('Your cart is empty'),
+                    message: context.tr('Add products from the marketplace to check out in one go.'),
+                    actionLabel: context.tr('Browse marketplace'),
                     onAction: () => context.go('/marketplace'),
                   ),
                 ]);
@@ -59,7 +60,7 @@ class CartScreen extends ConsumerWidget {
                   for (final raw in items) _CartTile(Map<String, dynamic>.from(raw as Map)),
                   const SizedBox(height: AppSpacing.x16),
                   Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                    Text('Subtotal', style: Theme.of(context).textTheme.titleMedium),
+                    Text(context.tr('Subtotal'), style: Theme.of(context).textTheme.titleMedium),
                     Text(aed.format(subtotal),
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
                   ]),
@@ -69,7 +70,7 @@ class CartScreen extends ConsumerWidget {
                     child: FilledButton.icon(
                       onPressed: () => _checkout(context, ref),
                       icon: const Icon(Icons.lock_outline, size: 18),
-                      label: const Text('Checkout'),
+                      label: Text(context.tr('Checkout')),
                     ),
                   ),
                 ],
@@ -89,42 +90,42 @@ class CartScreen extends ConsumerWidget {
     var method = 'cod';
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'Checkout',
+      title: context.tr('Checkout'),
       maxWidth: 460,
       children: [
         StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: delivery, maxLines: 2, decoration: const InputDecoration(labelText: 'Delivery address *')),
+            TextField(controller: delivery, maxLines: 2, decoration: InputDecoration(labelText: context.tr('Delivery address *'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Contact number *')),
+            TextField(controller: phone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.tr('Contact number *'))),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: billing, maxLines: 2, decoration: const InputDecoration(labelText: 'Billing address (optional)')),
+            TextField(controller: billing, maxLines: 2, decoration: InputDecoration(labelText: context.tr('Billing address (optional)'))),
             const SizedBox(height: AppSpacing.x8),
             DropdownButtonFormField<String>(
               initialValue: method,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Payment method'),
-              items: [for (final m in _paymentMethods) DropdownMenuItem(value: m.$1, child: Text(m.$2))],
+              decoration: InputDecoration(labelText: context.tr('Payment method')),
+              items: [for (final m in _paymentMethods) DropdownMenuItem(value: m.$1, child: Text(context.tr(m.$2)))],
               onChanged: (v) => setS(() => method = v ?? 'cod'),
             ),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: notes, maxLines: 2, decoration: const InputDecoration(labelText: 'Delivery notes (optional)')),
+            TextField(controller: notes, maxLines: 2, decoration: InputDecoration(labelText: context.tr('Delivery notes (optional)'))),
           ]),
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
         FilledButton(
           onPressed: () {
             if (delivery.text.trim().isEmpty || phone.text.trim().isEmpty) {
               ScaffoldMessenger.of(context)
                 ..hideCurrentSnackBar()
-                ..showSnackBar(const SnackBar(content: Text('Add a delivery address and contact number.')));
+                ..showSnackBar(SnackBar(content: Text(context.tr('Add a delivery address and contact number.'))));
               return;
             }
             Navigator.pop(context, true);
           },
-          child: const Text('Place order'),
+          child: Text(context.tr('Place order')),
         ),
       ],
     );
@@ -150,9 +151,10 @@ class CartScreen extends ConsumerWidget {
       }
       final count = (res is Map) ? (int.tryParse('${res['count'] ?? 0}') ?? 0) : 0;
       if (context.mounted) {
+        final placed = '${context.tr('Order placed')} — $count ${context.tr(count == 1 ? 'item' : 'items')}. ${context.tr('Track it in Orders.')}';
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Order placed — $count item${count == 1 ? '' : 's'}. Track it in Orders.'),
-          action: SnackBarAction(label: 'View', onPressed: () => context.go('/orders')),
+          content: Text(placed),
+          action: SnackBarAction(label: context.tr('View'), onPressed: () => context.go('/orders')),
         ));
         context.go('/orders');
       }
@@ -207,7 +209,7 @@ class _CartTile extends ConsumerWidget {
           ),
           IconButton(
             visualDensity: VisualDensity.compact,
-            tooltip: 'Remove',
+            tooltip: context.tr('Remove'),
             icon: const Icon(Icons.delete_outline, size: 20),
             onPressed: () => _remove(ref, id),
           ),
