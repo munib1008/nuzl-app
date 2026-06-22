@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/util/mortgage_math.dart';
 import '../../auth/application/auth_controller.dart';
@@ -42,9 +43,9 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
     final signedIn = ref.watch(authControllerProvider).isAuthenticated;
     return Scaffold(
       appBar: signedIn
-          ? const NuzlAppBar(title: 'Mortgage calculator')
+          ? NuzlAppBar(title: context.tr('Mortgage calculator'))
           : AppBar(
-              title: const Text('Calculator'),
+              title: Text(context.tr('Calculator')),
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () => context.canPop() ? context.pop() : context.go('/'),
@@ -72,7 +73,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
           child: Padding(
             padding: const EdgeInsets.all(AppSpacing.x20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Estimated monthly payment',
+              Text(context.tr('Estimated monthly payment'),
                   style: t.bodySmall?.copyWith(color: Colors.white70)),
               const SizedBox(height: AppSpacing.x4),
               Text(_aed.format(monthly), style: t.displayLarge?.copyWith(color: Colors.white)),
@@ -98,7 +99,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
           padding: const EdgeInsets.all(AppSpacing.x16),
           child: Column(children: [
             _row('Loan amount', _aed.format(loan), t),
-            _row('Term', '$years years ($months payments)', t),
+            _row('Term', '$years ${context.tr('years')} ($months ${context.tr('payments')})', t),
             _row('Total of payments', _aed.format(totalPaid), t),
             _row('Total interest', _aed.format(totalInterest), t),
           ]),
@@ -108,12 +109,12 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
           if (ref.watch(authControllerProvider).isAuthenticated)
             FilledButton(
               onPressed: () => context.go('/mortgages'),
-              child: const Text('Track real payments'),
+              child: Text(context.tr('Track real payments')),
             )
           else
             FilledButton(
               onPressed: () => context.go('/register'),
-              child: const Text('Sign up to track real payments'),
+              child: Text(context.tr('Sign up to track real payments')),
             ),
         ],
       ],
@@ -122,7 +123,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
 
   Widget _miniStat(String label, String value, TextTheme t) => Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: t.bodySmall?.copyWith(color: Colors.white70)),
+          Text(context.tr(label), style: t.bodySmall?.copyWith(color: Colors.white70)),
           Text(value, style: t.titleMedium?.copyWith(color: Colors.white)),
         ]),
       );
@@ -130,7 +131,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
   Widget _row(String k, String v, TextTheme t) => Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(k, style: t.bodyMedium), Text(v, style: t.titleMedium),
+          Text(context.tr(k), style: t.bodyMedium), Text(v, style: t.titleMedium),
         ]),
       );
 
@@ -139,7 +140,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
     final t = Theme.of(context).textTheme;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: t.bodyMedium),
+        Text(context.tr(label), style: t.bodyMedium),
         // Tap the value to type an exact number (the slider only moves in steps).
         InkWell(
           borderRadius: BorderRadius.circular(AppSpacing.rSm),
@@ -172,21 +173,21 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
     final result = await showDialog<double>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Enter $title'),
+        title: Text('${context.tr('Enter')} ${context.tr(title)}'),
         content: TextField(
           controller: ctrl,
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
-            helperText: 'From ${_bound(min, decimals)} to ${_bound(max, decimals)}',
+            helperText: '${context.tr('From')} ${_bound(min, decimals)} ${context.tr('to')} ${_bound(max, decimals)}',
           ),
           onSubmitted: (_) => Navigator.pop(ctx, double.tryParse(ctrl.text.trim())),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('Cancel'))),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, double.tryParse(ctrl.text.trim())),
-            child: const Text('Set'),
+            child: Text(context.tr('Set')),
           ),
         ],
       ),
