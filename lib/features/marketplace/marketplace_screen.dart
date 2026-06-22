@@ -43,14 +43,7 @@ class MarketplaceScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: NuzlAppBar(title: 'Marketplace', actions: [
-          IconButton(
-            tooltip: 'My orders',
-            icon: const Icon(Icons.receipt_long_outlined),
-            onPressed: () => context.push('/orders'),
-          ),
-          const CartButton(),
-        ]),
+        appBar: const NuzlAppBar(title: 'Marketplace', actions: [MarketplaceActions()]),
         drawer: const NuzlDrawer(),
         floatingActionButton: canAdd
             ? FloatingActionButton.extended(

@@ -19,20 +19,41 @@ final cartCountProvider = FutureProvider.autoDispose<int>((ref) async {
   return int.tryParse('${c['count'] ?? 0}') ?? 0;
 });
 
-/// App-bar cart icon with a live item-count badge → opens the cart.
-class CartButton extends ConsumerWidget {
-  const CartButton({super.key});
+/// One consolidated marketplace menu (app bar): Cart + My orders under a single
+/// bucket, with a live cart-count badge on the icon.
+class MarketplaceActions extends ConsumerWidget {
+  const MarketplaceActions({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final count = ref.watch(cartCountProvider).asData?.value ?? 0;
-    return IconButton(
-      tooltip: 'Cart',
-      onPressed: () => context.push('/cart'),
+    return PopupMenuButton<String>(
+      tooltip: 'Cart & orders',
       icon: Badge(
         isLabelVisible: count > 0,
         label: Text('$count'),
-        child: const Icon(Icons.shopping_cart_outlined),
+        child: const Icon(Icons.shopping_bag_outlined),
       ),
+      onSelected: (v) => context.push(v == 'cart' ? '/cart' : '/orders'),
+      itemBuilder: (_) => [
+        PopupMenuItem<String>(
+          value: 'cart',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.shopping_cart_outlined),
+            title: Text(count > 0 ? 'Cart ($count)' : 'Cart'),
+          ),
+        ),
+        const PopupMenuItem<String>(
+          value: 'orders',
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.receipt_long_outlined),
+            title: Text('My orders'),
+          ),
+        ),
+      ],
     );
   }
 }
