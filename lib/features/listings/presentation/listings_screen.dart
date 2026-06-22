@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/rbac/persona.dart';
 import '../../../core/theme/app_colors.dart';
@@ -63,22 +64,22 @@ class ListingsScreen extends ConsumerWidget {
     final dark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: NuzlAppBar(title: 'Properties', actions: [
+      appBar: NuzlAppBar(title: context.tr('Properties'), actions: [
         // Quick access to the viewings the user has booked / scheduled.
         IconButton(
-          tooltip: 'Viewings booked',
+          tooltip: context.tr('Viewings booked'),
           icon: const Icon(Icons.event_available_outlined),
           onPressed: () => context.push('/viewings'),
         ),
         // Saved lives inside Properties (combined nav) — bookmark opens it.
         IconButton(
-          tooltip: 'Saved',
+          tooltip: context.tr('Saved'),
           icon: const Icon(Icons.bookmark_outline),
           onPressed: () => context.push('/saved'),
         ),
         if (canList)
           IconButton(
-            tooltip: 'Import properties',
+            tooltip: context.tr('Import properties'),
             icon: const Icon(Icons.upload_file_outlined),
             onPressed: () => context.push('/properties/import'),
           ),
@@ -99,7 +100,7 @@ class ListingsScreen extends ConsumerWidget {
           ? FloatingActionButton.extended(
               onPressed: () => context.push('/properties/new'),
               icon: const Icon(Icons.add),
-              label: const Text('New listing'),
+              label: Text(context.tr('New listing')),
             )
           : null,
       body: RefreshIndicator(
@@ -208,10 +209,10 @@ class ListingsScreen extends ConsumerWidget {
                             child: Column(children: [
                               Icon(Icons.search_off_outlined, size: 40, color: dark ? AppColors.dTextMuted : AppColors.textMuted),
                               const SizedBox(height: AppSpacing.x8),
-                              Text('No properties match your filters',
+                              Text(context.tr('No properties match your filters'),
                                   style: t.titleMedium, textAlign: TextAlign.center),
                               const SizedBox(height: 4),
-                              Text('Try a higher budget, a wider area, or fewer bedrooms.',
+                              Text(context.tr('Try a higher budget, a wider area, or fewer bedrooms.'),
                                   textAlign: TextAlign.center, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
                               if (filtersActive) ...[
                                 const SizedBox(height: AppSpacing.x12),
@@ -226,7 +227,7 @@ class ListingsScreen extends ConsumerWidget {
                                     ref.read(_fMine.notifier).state = false;
                                   },
                                   icon: const Icon(Icons.refresh, size: 18),
-                                  label: const Text('Clear filters'),
+                                  label: Text(context.tr('Clear filters')),
                                 ),
                               ],
                             ]),
@@ -234,7 +235,7 @@ class ListingsScreen extends ConsumerWidget {
                         ),
                         if (all.isNotEmpty) ...[
                           const SizedBox(height: AppSpacing.x8),
-                          Text('Recommended', style: t.titleMedium),
+                          Text(context.tr('Recommended'), style: t.titleMedium),
                           const SizedBox(height: AppSpacing.x8),
                           grid(all.take(6).toList()),
                         ],
@@ -315,9 +316,9 @@ class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
   }
 
   String _sortLabel(String sort, bool budgetOn) {
-    if (sort == 'price_asc') return 'Price: low to high';
-    if (sort == 'price_desc') return 'Price: high to low';
-    return budgetOn ? 'Most affordable' : 'Newest';
+    if (sort == 'price_asc') return context.tr('Price: low to high');
+    if (sort == 'price_desc') return context.tr('Price: high to low');
+    return budgetOn ? context.tr('Most affordable') : context.tr('Newest');
   }
 
   // Filters tucked behind "More filters" (min price, area, my listings).
@@ -362,7 +363,7 @@ class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
         onChanged: (v) => ref.read(listingsSearchProvider.notifier).state = v,
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
-          hintText: 'Search area, building or ref (e.g. NUZL-DXB-90012)',
+          hintText: context.tr('Search area, building or ref (e.g. NUZL-DXB-90012)'),
           prefixIcon: const Icon(Icons.search, size: 20),
           suffixIcon: q.isEmpty
               ? null
@@ -451,7 +452,7 @@ class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
       Row(children: [
         Expanded(
           child: Text(
-            '${widget.resultCount} ${widget.resultCount == 1 ? 'Result' : 'Results'} · Sorted by ${_sortLabel(sort, budgetOn)}',
+            '${widget.resultCount} ${context.tr(widget.resultCount == 1 ? 'Result' : 'Results')} · ${context.tr('Sorted by')} ${_sortLabel(sort, budgetOn)}',
             style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
@@ -459,7 +460,7 @@ class _DiscoveryHeaderState extends ConsumerState<_DiscoveryHeader> {
           TextButton.icon(
             onPressed: _clear,
             icon: const Icon(Icons.close, size: 16),
-            label: const Text('Clear'),
+            label: Text(context.tr('Clear')),
             style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
           ),
       ]),
@@ -528,7 +529,7 @@ class _GoalSegmented extends StatelessWidget {
                     ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 4, offset: const Offset(0, 1))]
                     : null,
               ),
-              child: Text(_labels[i],
+              child: Text(context.tr(_labels[i]),
                   style: t.bodySmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: i == active ? primary : (dark ? AppColors.dTextMuted : AppColors.textMuted))),
@@ -565,7 +566,7 @@ class _MoreFiltersButton extends StatelessWidget {
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(Icons.tune, size: 16, color: on ? primary : null),
             const SizedBox(width: 6),
-            Text(on ? 'Filters · $count' : 'Filters',
+            Text(on ? '${context.tr('Filters')} · $count' : context.tr('Filters'),
                 style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: on ? primary : null)),
           ]),
         ),
@@ -585,9 +586,9 @@ class _MoreFiltersSheet extends ConsumerWidget {
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 4, 20, 20 + MediaQuery.of(context).viewInsets.bottom),
       child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('More filters', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+        Text(context.tr('More filters'), style: t.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
         const SizedBox(height: AppSpacing.x16),
-        Text('Minimum price', style: t.labelLarge),
+        Text(context.tr('Minimum price'), style: t.labelLarge),
         const SizedBox(height: 6),
         _Drop<double?>(
           label: 'Min price',
@@ -603,7 +604,7 @@ class _MoreFiltersSheet extends ConsumerWidget {
           onChanged: (v) => ref.read(_fPriceMin.notifier).state = v,
         ),
         const SizedBox(height: AppSpacing.x16),
-        Text('Area', style: t.labelLarge),
+        Text(context.tr('Area'), style: t.labelLarge),
         const SizedBox(height: 6),
         _Drop<String?>(
           label: 'Any area',
@@ -615,7 +616,7 @@ class _MoreFiltersSheet extends ConsumerWidget {
           const SizedBox(height: AppSpacing.x16),
           SwitchListTile.adaptive(
             contentPadding: EdgeInsets.zero,
-            title: Text('My listings only', style: t.bodyMedium),
+            title: Text(context.tr('My listings only'), style: t.bodyMedium),
             value: ref.watch(_fMine),
             onChanged: (v) => ref.read(_fMine.notifier).state = v,
           ),
@@ -628,10 +629,10 @@ class _MoreFiltersSheet extends ConsumerWidget {
               ref.read(_fArea.notifier).state = null;
               ref.read(_fMine.notifier).state = false;
             },
-            child: const Text('Reset'),
+            child: Text(context.tr('Reset')),
           ),
           const Spacer(),
-          FilledButton(onPressed: () => Navigator.pop(context), child: const Text('Show results')),
+          FilledButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('Show results'))),
         ]),
       ]),
     );
@@ -670,13 +671,13 @@ class _BudgetBar extends StatelessWidget {
               chip(Row(mainAxisSize: MainAxisSize.min, children: [
                 const Icon(Icons.check_circle, size: 14, color: AppColors.success),
                 const SizedBox(width: 4),
-                Text('Budget match', style: t.labelMedium?.copyWith(color: AppColors.success, fontWeight: FontWeight.w700)),
+                Text(context.tr('Budget match'), style: t.labelMedium?.copyWith(color: AppColors.success, fontWeight: FontWeight.w700)),
               ]), color: AppColors.success),
               const SizedBox(width: 6),
-              chip(Text('Up to ${aed.format(budget)}',
+              chip(Text('${context.tr('Up to')} ${aed.format(budget)}',
                   style: t.labelMedium?.copyWith(color: primary, fontWeight: FontWeight.w700))),
               const SizedBox(width: 6),
-              chip(Text(resultCount == 1 ? '1 result' : '$resultCount results',
+              chip(Text(resultCount == 1 ? '1 ${context.tr('result')}' : '$resultCount ${context.tr('results')}',
                   style: t.labelMedium?.copyWith(color: primary, fontWeight: FontWeight.w700))),
             ]),
           ),
@@ -684,7 +685,7 @@ class _BudgetBar extends StatelessWidget {
         TextButton(
           onPressed: onClear,
           style: TextButton.styleFrom(visualDensity: VisualDensity.compact, padding: const EdgeInsets.symmetric(horizontal: 8)),
-          child: const Text('Clear'),
+          child: Text(context.tr('Clear')),
         ),
       ]),
     );
@@ -724,8 +725,8 @@ class _Drop<T> extends StatelessWidget {
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontWeight: FontWeight.w600, color: on ? primary : Theme.of(context).textTheme.bodyMedium?.color),
           borderRadius: BorderRadius.circular(AppSpacing.rMd),
-          hint: Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
-          items: items.map((it) => DropdownMenuItem<T>(value: it.$1, child: Text(it.$2))).toList(),
+          hint: Text(context.tr(label), style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+          items: items.map((it) => DropdownMenuItem<T>(value: it.$1, child: Text(context.tr(it.$2)))).toList(),
           onChanged: onChanged,
         ),
       ),
@@ -780,12 +781,12 @@ class _ListingCard extends StatelessWidget {
         Row(children: [
           const Icon(Icons.verified_outlined, size: 13, color: AppColors.success),
           const SizedBox(width: 4),
-          Text('Finance-eligible', style: t.labelSmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w700)),
+          Text(context.tr('Finance-eligible'), style: t.labelSmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w700)),
         ]),
         const SizedBox(height: 4),
         Row(children: [
-          Expanded(child: line('Down (20%)', aed.format(down))),
-          Expanded(child: line('Est. monthly', '${aed.format(monthly)}/mo')),
+          Expanded(child: line(context.tr('Down (20%)'), aed.format(down))),
+          Expanded(child: line(context.tr('Est. monthly'), '${aed.format(monthly)}/${context.tr('mo')}')),
         ]),
       ]),
     );
@@ -810,11 +811,11 @@ class _ListingCard extends StatelessWidget {
     final score = num.tryParse('${l['agent_score'] ?? ''}');
     final draft = l['is_visible'] == false;
     final title = building.isNotEmpty
-        ? (unit.isNotEmpty ? '$building · Unit $unit' : building)
-        : (ptype.isNotEmpty ? _cap(ptype) : 'Property');
+        ? (unit.isNotEmpty ? '$building · ${context.tr('Unit')} $unit' : building)
+        : (ptype.isNotEmpty ? _cap(ptype) : context.tr('Property'));
     final beds = '${l['bedrooms'] ?? '-'}';
     final baths = '${l['bathrooms'] ?? '-'}';
-    final sqft = l['size_sqft'] != null ? '${(num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0)} sqft' : null;
+    final sqft = l['size_sqft'] != null ? '${(num.tryParse('${l['size_sqft']}') ?? 0).toStringAsFixed(0)} ${context.tr('sqft')}' : null;
     final highlights = <String>[
       if ('${l['furnishing'] ?? ''}'.trim().isNotEmpty) _cap('${l['furnishing']}'),
       if ('${l['view'] ?? ''}'.trim().isNotEmpty) '${l['view']}',
@@ -850,7 +851,7 @@ class _ListingCard extends StatelessWidget {
                 ),
                 // Trust ribbons (Verified / New / Exclusive / Hot / Price reduced) — top-left.
                 if (draft)
-                  Positioned(left: 8, top: 8, child: _pill('Draft', AppColors.warning, t))
+                  Positioned(left: 8, top: 8, child: _pill(context.tr('Draft'), AppColors.warning, t))
                 else
                   Positioned(left: 8, top: 8, right: 56, child: ListingRibbons(listing: l)),
                 // Save (top-right) — published only.
@@ -895,7 +896,7 @@ class _ListingCard extends StatelessWidget {
                             style: t.bodySmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
                             maxLines: 1, overflow: TextOverflow.ellipsis),
                       ),
-                      _pill(isRent ? 'For rent' : 'For sale', isRent ? AppColors.info : AppColors.primary, t),
+                      _pill(context.tr(isRent ? 'For rent' : 'For sale'), isRent ? AppColors.info : AppColors.primary, t),
                     ]),
                   ),
                 ),
@@ -907,7 +908,7 @@ class _ListingCard extends StatelessWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
                   Expanded(
-                    child: Text('$money${isRent ? ' / yr' : ''}',
+                    child: Text('$money${isRent ? ' / ${context.tr('yr')}' : ''}',
                         style: t.titleLarge?.copyWith(
                             fontSize: 21, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.primary),
                         maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -989,7 +990,7 @@ class _ListingCard extends StatelessWidget {
                   child: OutlinedButton(
                     onPressed: () => context.push('/listings/${l['id']}'),
                     style: OutlinedButton.styleFrom(visualDensity: VisualDensity.compact),
-                    child: const Text('View details'),
+                    child: Text(context.tr('View details')),
                   ),
                 ),
               ]),
