@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_spacing.dart';
 import '../reports/lead_analytics_screen.dart';
 import '../reports/reports_screen.dart';
@@ -25,9 +26,9 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
         Padding(
           padding: const EdgeInsets.fromLTRB(AppSpacing.x16, AppSpacing.x12, AppSpacing.x16, AppSpacing.x8),
           child: SegmentedButton<int>(
-            segments: const [
-              ButtonSegment(value: 0, label: Text('Analytics'), icon: Icon(Icons.query_stats_outlined)),
-              ButtonSegment(value: 1, label: Text('Reports'), icon: Icon(Icons.insights_outlined)),
+            segments: [
+              ButtonSegment(value: 0, label: Text(context.tr('Analytics')), icon: const Icon(Icons.query_stats_outlined)),
+              ButtonSegment(value: 1, label: Text(context.tr('Reports')), icon: const Icon(Icons.insights_outlined)),
             ],
             selected: {_i},
             showSelectedIcon: false,

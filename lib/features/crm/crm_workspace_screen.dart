@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/async_view.dart';
@@ -30,7 +31,7 @@ class CrmWorkspaceScreen extends ConsumerWidget {
             children: [
               _Kpis(list: list),
               const SizedBox(height: AppSpacing.x20),
-              Text('Workspace', style: Theme.of(context).textTheme.titleSmall),
+              Text(context.tr('Workspace'), style: Theme.of(context).textTheme.titleSmall),
               const SizedBox(height: AppSpacing.x12),
               const _SectionGrid(),
             ],
@@ -98,7 +99,7 @@ class _Kpis extends StatelessWidget {
                       children: [
                         Text(s.value, style: t.displaySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                         const SizedBox(height: AppSpacing.x4),
-                        Text(s.label, style: t.bodySmall?.copyWith(color: muted), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Text(context.tr(s.label), style: t.bodySmall?.copyWith(color: muted), maxLines: 1, overflow: TextOverflow.ellipsis),
                       ],
                     ),
                   ),
@@ -163,8 +164,8 @@ class _SectionGrid extends StatelessWidget {
                     const SizedBox(width: AppSpacing.x12),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
-                        Text(d.label, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        Text(blurbs[d.tab] ?? '', style: t.bodySmall?.copyWith(color: muted), maxLines: 2, overflow: TextOverflow.ellipsis),
+                        Text(context.tr(d.label), style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Text(blurbs[d.tab] == null ? '' : context.tr(blurbs[d.tab]!), style: t.bodySmall?.copyWith(color: muted), maxLines: 2, overflow: TextOverflow.ellipsis),
                       ]),
                     ),
                     Icon(Icons.chevron_right, size: 18, color: muted),

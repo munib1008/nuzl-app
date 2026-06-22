@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../shell/app_shell.dart';
@@ -66,7 +67,7 @@ class CrmScaffold extends StatelessWidget {
     final loc = GoRouterState.of(context).matchedLocation;
     final inCrm = loc == '/crm' || loc.startsWith('/crm/');
     return Scaffold(
-      appBar: NuzlAppBar(title: inCrm ? 'CRM' : title, actions: actions),
+      appBar: NuzlAppBar(title: context.tr(inCrm ? 'CRM' : title), actions: actions),
       drawer: const NuzlDrawer(),
       floatingActionButton: floatingActionButton,
       // On the CRM overview the Workspace launchpad cards already list every
@@ -100,14 +101,14 @@ class CrmTabStrip extends StatelessWidget {
         Row(children: [
           InkWell(
             onTap: () => context.go('/crm'),
-            child: Text('CRM', style: t.bodySmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
+            child: Text(context.tr('CRM'), style: t.bodySmall?.copyWith(color: AppColors.primary, fontWeight: FontWeight.w600)),
           ),
           if (active != CrmTab.overview) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
               child: Icon(Icons.chevron_right, size: 14, color: muted),
             ),
-            Text(crmTabDef(active).label, style: t.bodySmall?.copyWith(color: muted)),
+            Text(context.tr(crmTabDef(active).label), style: t.bodySmall?.copyWith(color: muted)),
           ],
         ]),
         const SizedBox(height: AppSpacing.x4),
@@ -133,7 +134,7 @@ class CrmTabStrip extends StatelessWidget {
                   child: Row(children: [
                     Icon(d.icon, size: 16, color: selected ? AppColors.primary : muted),
                     const SizedBox(width: 6),
-                    Text(d.label,
+                    Text(context.tr(d.label),
                         style: t.bodyMedium?.copyWith(
                           color: selected ? AppColors.primary : muted,
                           fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
