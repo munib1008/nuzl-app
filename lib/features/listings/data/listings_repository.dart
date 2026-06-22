@@ -8,6 +8,16 @@ final listingsRepositoryProvider = Provider((ref) => ListingsRepository(ref.read
 final listingsProvider = FutureProvider.autoDispose<List<Listing>>((ref) async =>
     ref.read(listingsRepositoryProvider).fetch());
 
+/// Amenity catalog for the listing form / filters. Graceful: [] pre-migration.
+final amenitiesProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  try {
+    final d = await ref.read(apiClientProvider).get(Api.amenities);
+    return d is List ? d : [];
+  } catch (_) {
+    return [];
+  }
+});
+
 class ListingsRepository {
   ListingsRepository(this._api);
   final ApiClient _api;

@@ -50,7 +50,7 @@ class InfoPage extends StatelessWidget {
                 InkWell(onTap: () => context.go('/'), child: const NuzlLogo(size: 36, color: Colors.white)),
                 const SizedBox(height: AppSpacing.x40),
                 Text(c.$1, style: GoogleFonts.poppins(
-                    fontSize: 36, fontWeight: FontWeight.w700, color: Colors.white)),
+                    fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white)),
                 const SizedBox(height: AppSpacing.x16),
                 Text(c.$2, style: t.bodyLarge?.copyWith(color: AppColors.dTextMuted, height: 1.6)),
                 const SizedBox(height: AppSpacing.x32),

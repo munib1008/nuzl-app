@@ -19,9 +19,13 @@ class AuthRepository {
     return _persist(data);
   }
 
-  Future<AppUser> register(String email, String password, String fullName) async {
-    final data = await _api.post(Api.register,
-        body: {'email': email, 'password': password, 'full_name': fullName});
+  Future<AppUser> register(String email, String password, String fullName, {String? referralCode}) async {
+    final data = await _api.post(Api.register, body: {
+      'email': email,
+      'password': password,
+      'full_name': fullName,
+      if (referralCode != null && referralCode.isNotEmpty) 'referral_code': referralCode,
+    });
     return _persist(data);
   }
 
@@ -44,6 +48,21 @@ class AuthRepository {
 
   Future<void> resetPassword(String token, String password) async {
     await _api.post(Api.resetPassword, body: {'token': token, 'password': password});
+  }
+
+  /// Cancel a pending account deletion (within the 14-day grace window).
+  Future<void> reactivate() async {
+    await _api.post('/users/me/reactivate');
+  }
+
+  /// Switch the active role (multi-role accounts, UAT #3).
+  Future<void> switchActiveRole(String role) async {
+    await _api.patch('/users/me/roles/active', body: {'role': role});
+  }
+
+  /// Set the account's primary role once at signup.
+  Future<void> setPrimaryRole(String role) async {
+    await _api.post('/users/me/primary-role', body: {'role': role});
   }
 
   Future<void> logout() => _storage.clear();

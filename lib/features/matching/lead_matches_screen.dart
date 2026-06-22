@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/network/api_client.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/responsive.dart';
@@ -35,16 +36,16 @@ class LeadMatchesScreen extends ConsumerWidget {
     final leads = ref.watch(_leadsProvider);
     final selected = ref.watch(_selectedLeadProvider);
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Lead Matches'),
+      appBar: NuzlAppBar(title: context.tr('Lead Matches')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: leads.when(
           loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
           data: (list) {
             if (list.isEmpty) {
-              return const Center(
-                  child: Padding(padding: EdgeInsets.all(40), child: Text('No leads to match. Add a lead first.')));
+              return Center(
+                  child: Padding(padding: const EdgeInsets.all(40), child: Text(context.tr('No leads to match. Add a lead first.'))));
             }
             return Column(
               children: [
@@ -53,22 +54,22 @@ class LeadMatchesScreen extends ConsumerWidget {
                   child: DropdownButtonFormField<String>(
                     initialValue: selected,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Select a lead'),
+                    decoration: InputDecoration(labelText: context.tr('Select a lead')),
                     items: list.map((e) {
                       final m = Map<String, dynamic>.from(e);
-                      return DropdownMenuItem(value: '${m['id']}', child: Text('${m['buyer_name'] ?? 'Lead'}'));
+                      return DropdownMenuItem(value: '${m['id']}', child: Text('${m['buyer_name'] ?? context.tr('Lead')}'));
                     }).toList(),
                     onChanged: (v) => ref.read(_selectedLeadProvider.notifier).state = v,
                   ),
                 ),
                 Expanded(
                   child: selected == null
-                      ? const Center(child: Text('Pick a lead to see suggested listings.'))
+                      ? Center(child: Text(context.tr('Pick a lead to see suggested listings.')))
                       : ref.watch(_matchesProvider(selected)).when(
                           loading: () => const Center(child: CircularProgressIndicator()),
-                          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text('$e'))),
+                          error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(friendlyError(e)))),
                           data: (matches) => matches.isEmpty
-                              ? const Center(child: Text('No strong matches yet.'))
+                              ? Center(child: Text(context.tr('No strong matches yet.')))
                               : ListView.separated(
                                   padding: const EdgeInsets.all(AppSpacing.x16),
                                   itemCount: matches.length,
@@ -80,8 +81,8 @@ class LeadMatchesScreen extends ConsumerWidget {
                                     return Card(
                                       child: ListTile(
                                         leading: _ScoreBadge(score: score),
-                                        title: Text('Listing ${id.split('-').first}'),
-                                        subtitle: Text(_reason(m['reason'])),
+                                        title: Text('${context.tr('Listing')} ${id.split('-').first}'),
+                                        subtitle: Text(_reason(context, m['reason'])),
                                       ),
                                     );
                                   },
@@ -97,10 +98,10 @@ class LeadMatchesScreen extends ConsumerWidget {
   }
 }
 
-String _reason(dynamic r) {
+String _reason(BuildContext context, dynamic r) {
   if (r is String && r.isNotEmpty) return r;
   if (r is Map) return r.entries.take(3).map((e) => '${e.key}: ${e.value}').join('  ·  ');
-  return 'Rule-based match';
+  return context.tr('Rule-based match');
 }
 
 class _ScoreBadge extends StatelessWidget {

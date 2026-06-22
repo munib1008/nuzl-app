@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/network/api_client.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/rbac/persona.dart';
+import '../auth/application/auth_controller.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/widgets/multi_select_field.dart';
@@ -27,20 +29,62 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final company = TextEditingController(); // agency / agency name
   final orn = TextEditingController(); // trade licence / ORN
 
-  // Step 2 — contact + expertise
+  // Company step (org roles) — join an existing company or create a new one.
+  String _companyChoice = ''; // '' | join | create
+  final _companySearch = TextEditingController();
+  List<Map<String, dynamic>> _companyResults = [];
+  bool _searching = false;
+  String? _joinedOrgName;
+  bool _companyCreated = false;
+  String _bizType = 'agency';
+  final _coCity = TextEditingController();
+  final _coCountry = TextEditingController(text: 'United Arab Emirates');
+  final _coPhone = TextEditingController();
+  final _coEmail = TextEditingController();
+  final _coWebsite = TextEditingController();
+  final _coDesc = TextEditingController();
+
+  // Step 3 — contact + expertise
   final phone = TextEditingController();
   final whatsapp = TextEditingController();
   final areas = <String>{};
   final languages = <String>{};
   final specialties = <String>{};
 
+  // One PRIMARY role (UAT #3). The last three are company-based: picking one
+  // takes you straight to "Create company" with the matching business type, and
+  // the company sets up the role + workspace for you.
   static const _roleOptions = [
-    ('agency', 'Agency'),
-    ('agent', 'Agent'),
     ('owner', 'Owner'),
-    ('investor', 'Investor'),
-    ('buyer', 'Customer'),
+    ('tenant', 'Tenant'),
+    ('agent', 'Agent'),
+    ('salesperson', 'Salesperson'),
+    ('lead', 'Customer'),
+    ('developer', 'Developer'),
+    ('agency', 'Real estate agency'),
+    ('provider', 'Service provider'),
+    ('supplier', 'Supplier'),
   ];
+
+  /// Company-based roles → the business type their "Create company" step starts on.
+  static const _companyRoleBiz = {
+    'agency': 'agency',
+    'provider': 'maintenance',
+    'supplier': 'supplier',
+  };
+
+  /// Icon + one-line description per goal (role value), for the goal cards.
+  static const _goalMeta = <String, (IconData, String)>{
+    'owner': (Icons.home_work_outlined, 'Track ownership, leases & maintenance'),
+    'tenant': (Icons.vpn_key_outlined, 'My tenancy, rent & maintenance'),
+    'agent': (Icons.handshake_outlined, 'List & sell, CRM, leads & deals'),
+    'salesperson': (Icons.badge_outlined, 'Pipeline, leads & quotations'),
+    'lead': (Icons.search, 'Buy, rent or just browse'),
+    'developer': (Icons.domain_outlined, 'Projects, inventory & handover'),
+    'agency': (Icons.business_outlined, 'Run a brokerage company'),
+    'provider': (Icons.build_outlined, 'Maintenance, cleaning, fit-out'),
+    'supplier': (Icons.inventory_2_outlined, 'Furniture, materials, hardware'),
+  };
   static const _emirates = ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Fujairah', 'Umm Al Quwain', 'Al Ain'];
   static const _langs = ['English', 'Arabic', 'Hindi', 'Urdu', 'Tagalog', 'Malayalam', 'Tamil', 'French', 'Russian', 'Chinese'];
   static const _specs = ['Villas', 'Apartments', 'Penthouses', 'Townhouses', 'Commercial', 'Off-Plan', 'Luxury', 'Investment', 'Short Term Rentals', 'Holiday Homes'];
@@ -50,14 +94,34 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     reraBrn.dispose();
     company.dispose();
     orn.dispose();
+    _companySearch.dispose();
+    _coCity.dispose();
+    _coCountry.dispose();
+    _coPhone.dispose();
+    _coEmail.dispose();
+    _coWebsite.dispose();
+    _coDesc.dispose();
     phone.dispose();
     whatsapp.dispose();
     super.dispose();
   }
 
-  /// Real-estate professionals (agency/agent) get the pro-only fields; everyone
-  /// else (customer/owner/investor) completes without "areas you cover".
-  bool get _isPro => role == 'agency' || role == 'agent';
+  /// Agent / Salesperson / Developer can name the organization they work with.
+  bool get _isOrg => const ['salesperson', 'developer'].contains(role);
+
+  /// Company-based roles created via the company step (agency / service / supplier).
+  bool get _isCompanyRole => _companyRoleBiz.containsKey(role);
+
+  /// Org-affiliated roles get the company-association step (join or create).
+  bool get _needsCompany => _isOrg || _isCompanyRole;
+
+  /// The visible steps — the company step only appears for org-affiliated roles.
+  List<Widget Function(TextTheme)> get _stepBuilders =>
+      [_roleStep, if (_needsCompany) _companyStep, _contactStep];
+
+  /// Professionals get the "areas / specialties" fields; consumers
+  /// (owner/tenant/customer) complete without them.
+  bool get _isPro => const ['agent', 'salesperson', 'developer'].contains(role);
 
   Future<void> _finish() async {
     if (role != null) {
@@ -71,7 +135,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       'languages': languages.toList(),
       'specialties': specialties.toList(),
     };
-    if (role == 'agency') {
+    if (_isOrg) {
       body['company'] = company.text.trim();
       if (orn.text.trim().isNotEmpty) body['rera_brn'] = orn.text.trim();
     } else if (role == 'agent') {
@@ -80,6 +144,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     }
     try {
       await ref.read(apiClientProvider).patch('/users/me', body: body);
+      // Persist the primary role server-side (UAT #3) so it survives devices.
+      // Company-based roles are granted by creating the company (don't double-set).
+      if (role != null && !_isCompanyRole) {
+        await ref.read(authControllerProvider.notifier).setPrimaryRole(role!);
+      }
     } catch (_) {/* non-blocking: continue to dashboard */}
     if (mounted) context.go('/dashboard');
   }
@@ -98,17 +167,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 const SizedBox(height: AppSpacing.x16),
                 const Center(child: NuzlLogo(size: 44, showWordmark: false)),
                 const SizedBox(height: AppSpacing.x12),
-                Center(child: Text('Welcome to nuzl', style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.w700))),
+                Center(child: Text(context.tr('Welcome to nuzl'), style: GoogleFonts.manrope(fontSize: 22, fontWeight: FontWeight.w700))),
                 Center(
-                    child: Text("Let's set up your profile to get started",
-                        style: t.bodyMedium?.copyWith(color: AppColors.textMuted))),
+                    child: Text(context.tr("Let's set up your profile to get started"),
+                        style: t.bodyMedium?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted))),
                 const SizedBox(height: AppSpacing.x20),
-                _Stepper(step: step),
+                _Stepper(step: step, count: _stepBuilders.length),
                 const SizedBox(height: AppSpacing.x24),
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(AppSpacing.x20),
-                    child: step == 0 ? _roleStep(t) : _contactStep(t),
+                    child: _stepBuilders[step.clamp(0, _stepBuilders.length - 1)](t),
                   ),
                 ),
               ],
@@ -119,52 +188,103 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
+  /// A tappable goal card (icon + label + description). Selecting it sets the
+  /// role and, for company-based goals, pre-arms the company step.
+  Widget _goalCard(TextTheme t, String value, String label) {
+    final selected = role == value;
+    final meta = _goalMeta[value];
+    final accent = Theme.of(context).colorScheme.primary;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return SizedBox(
+      width: 158,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSpacing.rLg),
+        onTap: () => setState(() {
+          role = value;
+          final biz = _companyRoleBiz[value];
+          if (biz != null) {
+            _companyChoice = 'create';
+            _bizType = biz;
+          }
+        }),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.all(AppSpacing.x12),
+          decoration: BoxDecoration(
+            color: selected ? accent.withValues(alpha: 0.10) : Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(AppSpacing.rLg),
+            border: Border.all(
+                color: selected ? accent : Theme.of(context).dividerColor, width: selected ? 1.5 : 1),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            Icon(meta?.$1 ?? Icons.badge_outlined, size: 22, color: selected ? accent : (dark ? AppColors.dTextMuted : AppColors.textMuted)),
+            const SizedBox(height: AppSpacing.x8),
+            Text(context.tr(label),
+                style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: selected ? accent : null)),
+            const SizedBox(height: 2),
+            Text(meta?.$2 == null ? '' : context.tr(meta!.$2),
+                style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted), maxLines: 2, overflow: TextOverflow.ellipsis),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget _roleStep(TextTheme t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('What best describes you?', style: t.titleLarge),
-        Text('Choose your role in the UAE real estate market',
-            style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+        Text(context.tr('What brings you to NUZL?'), style: t.titleLarge),
+        Text(context.tr('Pick your main goal — you stay a Customer and can add more roles later.'),
+            style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
         const SizedBox(height: AppSpacing.x16),
-        DropdownButtonFormField<String>(
-          initialValue: role,
-          decoration: const InputDecoration(labelText: 'I am a…', prefixIcon: Icon(Icons.badge_outlined)),
-          items: _roleOptions
-              .map((r) => DropdownMenuItem(value: r.$1, child: Text(r.$2)))
-              .toList(),
-          onChanged: (v) => setState(() => role = v),
+        Wrap(
+          spacing: AppSpacing.x12,
+          runSpacing: AppSpacing.x12,
+          children: [for (final r in _roleOptions) _goalCard(t, r.$1, r.$2)],
         ),
+        if (_isCompanyRole) ...[
+          const SizedBox(height: AppSpacing.x12),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.x12),
+            decoration: BoxDecoration(
+              color: AppColors.primaryTint,
+              borderRadius: BorderRadius.circular(AppSpacing.rMd),
+            ),
+            child: Row(children: [
+              const Icon(Icons.info_outline, size: 18, color: AppColors.primary),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(
+                child: Text("${context.tr("Next, set up your company — that's all it takes to start as a")} ${context.tr(_roleOptions.firstWhere((r) => r.$1 == role).$2).toLowerCase()}.",
+                    style: t.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
+              ),
+            ]),
+          ),
+        ],
         if (role == 'agent') ...[
           const SizedBox(height: AppSpacing.x12),
           DropdownButtonFormField<String>(
             initialValue: agentType,
-            decoration: const InputDecoration(labelText: 'Agent type'),
-            items: const [
-              DropdownMenuItem(value: 'freelancer', child: Text('Freelancer')),
-              DropdownMenuItem(value: 'agency_agent', child: Text('Agency Agent')),
+            decoration: InputDecoration(labelText: context.tr('Agent type')),
+            items: [
+              DropdownMenuItem(value: 'freelancer', child: Text(context.tr('Freelancer'))),
+              DropdownMenuItem(value: 'agency_agent', child: Text(context.tr('Agency Agent'))),
             ],
             onChanged: (v) => setState(() => agentType = v ?? 'freelancer'),
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('RERA registered?'),
+            title: Text(context.tr('RERA registered?')),
             value: reraRegistered,
             activeThumbColor: AppColors.primary,
             onChanged: (v) => setState(() => reraRegistered = v),
           ),
           if (reraRegistered)
-            TextField(controller: reraBrn, decoration: const InputDecoration(labelText: 'RERA BRN')),
+            TextField(controller: reraBrn, decoration: InputDecoration(labelText: context.tr('RERA BRN'))),
           if (agentType == 'agency_agent') ...[
             const SizedBox(height: AppSpacing.x12),
-            TextField(controller: company, decoration: const InputDecoration(labelText: 'Agency name')),
+            TextField(controller: company, decoration: InputDecoration(labelText: context.tr('Agency name'))),
           ],
-        ],
-        if (role == 'agency') ...[
-          const SizedBox(height: AppSpacing.x12),
-          TextField(controller: company, decoration: const InputDecoration(labelText: 'Company name')),
-          const SizedBox(height: AppSpacing.x12),
-          TextField(controller: orn, decoration: const InputDecoration(labelText: 'Trade licence / ORN')),
         ],
         const SizedBox(height: AppSpacing.x20),
         _nav(onNext: role == null ? null : () => setState(() => step = 1)),
@@ -172,20 +292,208 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
+  // ── Company association step (join an existing company or create a new one) ──
+  Widget _companyStep(TextTheme t) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(context.tr('Your company'), style: t.titleLarge),
+      Text(context.tr('Do you belong to a company?'), style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
+      const SizedBox(height: AppSpacing.x12),
+      Row(children: [
+        Expanded(child: _choiceTile('join', Icons.search, context.tr('Join existing'))),
+        const SizedBox(width: AppSpacing.x8),
+        Expanded(child: _choiceTile('create', Icons.add_business_outlined, context.tr('Create new'))),
+      ]),
+      if (_companyChoice == 'join') ...[const SizedBox(height: AppSpacing.x16), _joinUi(t)],
+      if (_companyChoice == 'create') ...[const SizedBox(height: AppSpacing.x16), _createUi(t)],
+      const SizedBox(height: AppSpacing.x20),
+      _nav(
+        onBack: () => setState(() => step = 0),
+        nextLabel: _companyChoice == '' ? context.tr('Skip for now') : context.tr('Continue'),
+        onNext: _companyNext,
+      ),
+    ]);
+  }
+
+  Widget _choiceTile(String value, IconData icon, String label) {
+    final selected = _companyChoice == value;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppSpacing.rMd),
+      onTap: () => setState(() => _companyChoice = value),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.x16),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary.withValues(alpha: 0.08) : null,
+          border: Border.all(color: selected ? AppColors.primary : Theme.of(context).dividerColor, width: selected ? 1.5 : 1),
+          borderRadius: BorderRadius.circular(AppSpacing.rMd),
+        ),
+        child: Column(children: [
+          Icon(icon, color: selected ? Theme.of(context).colorScheme.primary : (dark ? AppColors.dTextMuted : AppColors.textMuted)),
+          const SizedBox(height: 6),
+          Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: selected ? Theme.of(context).colorScheme.primary : null)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _joinUi(TextTheme t) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Expanded(
+          child: TextField(
+            controller: _companySearch,
+            decoration: InputDecoration(labelText: context.tr('Company name or trade license')),
+            onSubmitted: (_) => _searchCompanies(),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.x8),
+        FilledButton(
+          onPressed: _searching ? null : _searchCompanies,
+          child: _searching
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              : Text(context.tr('Search')),
+        ),
+      ]),
+      if (_joinedOrgName != null)
+        Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.x8),
+          child: Text('${context.tr('Request sent to')} $_joinedOrgName — ${context.tr('pending the owner’s approval. You can continue.')}',
+              style: const TextStyle(color: AppColors.success)),
+        ),
+      for (final o in _companyResults)
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text('${o['name']}'),
+          subtitle: Text([
+            if ('${o['org_type'] ?? ''}'.isNotEmpty) _cap('${o['org_type']}'),
+            if (o['verification_status'] == 'verified') context.tr('Verified'),
+          ].join(' · ')),
+          trailing: TextButton(onPressed: () => _requestJoin(o), child: Text(context.tr('Request'))),
+        ),
+    ]);
+  }
+
+  Widget _createUi(TextTheme t) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      TextField(controller: company, decoration: InputDecoration(labelText: context.tr('Company name *'))),
+      const SizedBox(height: AppSpacing.x8),
+      DropdownButtonFormField<String>(
+        initialValue: _bizType,
+        decoration: InputDecoration(labelText: context.tr('Business type *')),
+        items: [
+          DropdownMenuItem(value: 'agency', child: Text(context.tr('Real estate agency'))),
+          DropdownMenuItem(value: 'developer', child: Text(context.tr('Developer'))),
+          DropdownMenuItem(value: 'maintenance', child: Text(context.tr('Service provider'))),
+          DropdownMenuItem(value: 'supplier', child: Text(context.tr('Product supplier'))),
+        ],
+        onChanged: (v) => setState(() => _bizType = v ?? 'agency'),
+      ),
+      const SizedBox(height: AppSpacing.x8),
+      TextField(controller: orn, decoration: InputDecoration(labelText: context.tr('Trade license'))),
+      const SizedBox(height: AppSpacing.x8),
+      Row(children: [
+        Expanded(child: TextField(controller: _coCity, decoration: InputDecoration(labelText: context.tr('City')))),
+        const SizedBox(width: AppSpacing.x8),
+        Expanded(child: TextField(controller: _coCountry, decoration: InputDecoration(labelText: context.tr('Country')))),
+      ]),
+      const SizedBox(height: AppSpacing.x8),
+      Row(children: [
+        Expanded(child: TextField(controller: _coPhone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.tr('Contact phone')))),
+        const SizedBox(width: AppSpacing.x8),
+        Expanded(child: TextField(controller: _coEmail, keyboardType: TextInputType.emailAddress, decoration: InputDecoration(labelText: context.tr('Contact email')))),
+      ]),
+      const SizedBox(height: AppSpacing.x8),
+      TextField(controller: _coWebsite, decoration: InputDecoration(labelText: context.tr('Website'))),
+      const SizedBox(height: AppSpacing.x8),
+      TextField(controller: _coDesc, maxLines: 2, decoration: InputDecoration(labelText: context.tr('Company description'))),
+      const SizedBox(height: AppSpacing.x12),
+      if (_companyCreated)
+        Text(context.tr('Company created ✓ Submit it for verification later to publish publicly.'),
+            style: const TextStyle(color: AppColors.success))
+      else
+        FilledButton.icon(
+          onPressed: _createCompany,
+          icon: const Icon(Icons.add_business_outlined, size: 18),
+          label: Text(context.tr('Create company')),
+        ),
+    ]);
+  }
+
+  Future<void> _searchCompanies() async {
+    final q = _companySearch.text.trim();
+    if (q.length < 2) return;
+    setState(() => _searching = true);
+    try {
+      final d = await ref.read(apiClientProvider).get('/organizations/search', query: {'q': q});
+      if (mounted) {
+        setState(() => _companyResults =
+            d is List ? d.map((e) => Map<String, dynamic>.from(e as Map)).toList() : []);
+      }
+    } catch (_) {
+      /* non-blocking */
+    } finally {
+      if (mounted) setState(() => _searching = false);
+    }
+  }
+
+  Future<void> _requestJoin(Map<String, dynamic> o) async {
+    try {
+      await ref.read(apiClientProvider).post('/organizations/${o['id']}/join-request', body: {});
+      if (mounted) setState(() => _joinedOrgName = '${o['name']}');
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  Future<void> _createCompany() async {
+    if (company.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('Company name is required.'))));
+      return;
+    }
+    try {
+      await ref.read(apiClientProvider).post('/organizations/mine', body: {
+        'name': company.text.trim(),
+        'org_type': _bizType,
+        'trade_license': orn.text.trim().isEmpty ? null : orn.text.trim(),
+        'phone': _coPhone.text.trim().isEmpty ? null : _coPhone.text.trim(),
+        'email': _coEmail.text.trim().isEmpty ? null : _coEmail.text.trim(),
+        'website': _coWebsite.text.trim().isEmpty ? null : _coWebsite.text.trim(),
+        'city': _coCity.text.trim().isEmpty ? null : _coCity.text.trim(),
+        'country': _coCountry.text.trim().isEmpty ? null : _coCountry.text.trim(),
+        'about': _coDesc.text.trim().isEmpty ? null : _coDesc.text.trim(),
+      });
+      // Creating a company grants the matching role server-side — refresh the
+      // session so the new role + workspace is active immediately.
+      await ref.read(authControllerProvider.notifier).bootstrap();
+      if (mounted) setState(() => _companyCreated = true);
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+
+  /// Auto-create the company on Continue if the user filled the form but didn't
+  /// press Create, then advance to the contact step.
+  Future<void> _companyNext() async {
+    if (_companyChoice == 'create' && !_companyCreated && company.text.trim().isNotEmpty) {
+      await _createCompany();
+    }
+    if (mounted) setState(() => step = _stepBuilders.length - 1);
+  }
+
   Widget _contactStep(TextTheme t) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Contact & expertise', style: t.titleLarge),
-        Text('Help others find and connect with you',
-            style: t.bodySmall?.copyWith(color: AppColors.textMuted)),
+        Text(context.tr('Contact & expertise'), style: t.titleLarge),
+        Text(context.tr('Help others find and connect with you'),
+            style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
         const SizedBox(height: AppSpacing.x16),
-        TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone number', hintText: '+971 …')),
+        TextField(controller: phone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.tr('Phone number'), hintText: '+971 …')),
         const SizedBox(height: AppSpacing.x12),
-        TextField(controller: whatsapp, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'WhatsApp number', hintText: '+971 …')),
+        TextField(controller: whatsapp, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.tr('WhatsApp number'), hintText: '+971 …')),
         const SizedBox(height: AppSpacing.x8),
         MultiSelectField(
-          label: 'Languages you speak',
+          label: context.tr('Languages you speak'),
           icon: Icons.translate_outlined,
           options: _langs,
           selected: languages,
@@ -195,7 +503,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         ),
         if (_isPro) ...[
           MultiSelectField(
-            label: 'Areas you cover',
+            label: context.tr('Areas you cover'),
             icon: Icons.map_outlined,
             options: _emirates,
             selected: areas,
@@ -204,7 +512,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               ..addAll(v)),
           ),
           MultiSelectField(
-            label: 'Property specialties',
+            label: context.tr('Property specialties'),
             icon: Icons.star_outline,
             options: _specs,
             selected: specialties,
@@ -215,19 +523,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         ],
         const SizedBox(height: AppSpacing.x12),
         _nav(
-          onBack: () => setState(() => step = 0),
-          nextLabel: 'Complete setup',
+          onBack: () => setState(() => step -= 1),
+          nextLabel: context.tr('Complete setup'),
           onNext: _finish,
         ),
       ],
     );
   }
 
-  Widget _nav({VoidCallback? onBack, VoidCallback? onNext, String nextLabel = 'Continue'}) {
+  String _cap(String s) {
+    final x = s.replaceAll('_', ' ').trim();
+    return x.isEmpty ? x : '${x[0].toUpperCase()}${x.substring(1)}';
+  }
+
+  Widget _nav({VoidCallback? onBack, VoidCallback? onNext, String? nextLabel}) {
     final next = FilledButton(
       onPressed: onNext,
       style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-      child: Text(nextLabel),
+      child: Text(nextLabel ?? context.tr('Continue')),
     );
     // Full-width primary action so "Continue" / "Complete setup" is unmissable.
     if (onBack == null) return SizedBox(width: double.infinity, child: next);
@@ -236,7 +549,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         child: OutlinedButton(
           onPressed: onBack,
           style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-          child: const Text('Back'),
+          child: Text(context.tr('Back')),
         ),
       ),
       const SizedBox(width: AppSpacing.x12),
@@ -246,13 +559,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 }
 
 class _Stepper extends StatelessWidget {
-  const _Stepper({required this.step});
+  const _Stepper({required this.step, this.count = 2});
   final int step;
+  final int count;
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(2, (i) {
+      children: List.generate(count, (i) {
         final done = i <= step;
         return Row(children: [
           CircleAvatar(
@@ -264,7 +578,7 @@ class _Stepper extends StatelessWidget {
                     : Text('${i + 1}', style: const TextStyle(color: Colors.white, fontSize: 12)))
                 : Text('${i + 1}', style: TextStyle(color: Theme.of(context).hintColor, fontSize: 12)),
           ),
-          if (i < 1)
+          if (i < count - 1)
             Container(width: 40, height: 2, color: i < step ? AppColors.primary : Theme.of(context).dividerColor),
         ]);
       }),

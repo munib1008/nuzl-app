@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/network/api_client.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/async_view.dart';
+import '../domain/finance_type.dart';
 import '../data/mortgage_repository.dart';
 
 /// Mortgage detail: progress summary + payment history + log a payment.
@@ -16,11 +19,11 @@ class MortgageDetailScreen extends ConsumerWidget {
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
     final t = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('Mortgage')),
+      appBar: AppBar(title: Text(context.tr('Mortgage'))),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _logPayment(context, ref),
         icon: const Icon(Icons.add),
-        label: const Text('Log payment'),
+        label: Text(context.tr('Log payment')),
       ),
       body: AsyncView<Map<String, dynamic>>(
         value: detail,
@@ -28,17 +31,48 @@ class MortgageDetailScreen extends ConsumerWidget {
         data: (d) {
           final s = Map<String, dynamic>.from(d['summary'] ?? {});
           final m = Map<String, dynamic>.from(d['mortgage'] ?? {});
+          final isl = isIslamicFinance('${m['finance_type'] ?? ''}');
+          final rateValid = DateTime.tryParse('${m['rate_valid_until'] ?? ''}');
           double n(v) => v is num ? v.toDouble() : double.tryParse('$v') ?? 0;
           final progress = (n(s['progress_pct']) / 100).clamp(0, 1).toDouble();
+          // Next installment date: first installment + (payments made) months.
+          final firstInst = DateTime.tryParse('${m['first_installment_date'] ?? m['start_date'] ?? ''}');
+          final paidCount = n(s['payments_made']).round();
+          final remainingTerm = n(s['remaining_term']).round();
+          final nextPay = (firstInst != null && remainingTerm > 0)
+              ? DateTime(firstInst.year, firstInst.month + paidCount, firstInst.day)
+              : null;
+          final insRenewal = DateTime.tryParse('${s['insurance_renewal_date'] ?? ''}');
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.x16),
             children: [
-              Text(m['label'] ?? m['lender'] ?? 'Mortgage', style: t.headlineSmall),
+              Text(m['label'] ?? m['lender'] ?? context.tr('Mortgage'), style: t.headlineSmall),
+              const SizedBox(height: 2),
+              Text([
+                financeTypeLabel('${m['finance_type'] ?? ''}'),
+                if ('${m['lender'] ?? ''}'.trim().isNotEmpty) '${m['lender']}',
+              ].join('  ·  '), style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
+              const SizedBox(height: AppSpacing.x16),
+              // This month — simplified at-a-glance view (#17).
+              Card(child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.x16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(context.tr(isl ? 'Rental due this month' : 'Due this month'), style: t.bodyMedium),
+                  const SizedBox(height: 2),
+                  Text(aed.format(n(s['current_month_payment'] ?? s['monthly_payment'])), style: t.headlineMedium),
+                  const SizedBox(height: AppSpacing.x12),
+                  Row(children: [
+                    Expanded(child: _stat('${n(s['progress_pct']).toStringAsFixed(0)}%', context.tr('paid off'), t)),
+                    Expanded(child: _stat(_term(context, _intv(s['remaining_term'])), context.tr('remaining'), t)),
+                    Expanded(child: _stat(aed.format(n(s['outstanding'])), context.tr('outstanding'), t)),
+                  ]),
+                ]),
+              )),
               const SizedBox(height: AppSpacing.x16),
               Card(child: Padding(
                 padding: const EdgeInsets.all(AppSpacing.x16),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${n(s['progress_pct']).toStringAsFixed(1)}% paid off', style: t.titleLarge),
+                  Text('${n(s['progress_pct']).toStringAsFixed(1)}% ${context.tr('paid off')}', style: t.titleLarge),
                   const SizedBox(height: AppSpacing.x8),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(AppSpacing.rFull),
@@ -46,18 +80,58 @@ class MortgageDetailScreen extends ConsumerWidget {
                         backgroundColor: Theme.of(context).dividerColor),
                   ),
                   const SizedBox(height: AppSpacing.x16),
-                  _row('Outstanding', aed.format(n(s['outstanding'])), t),
-                  _row('Monthly payment', aed.format(n(s['monthly_payment'])), t),
-                  _row('Principal paid', aed.format(n(s['principal_paid'])), t),
-                  _row('Interest paid', aed.format(n(s['interest_paid'])), t),
-                  _row('Payments made', '${s['payments_made'] ?? 0}', t),
-                  _row('Projected total interest', aed.format(n(s['projected_total_interest'])), t),
+                  _row(context.tr(isl ? 'Outstanding (fixed rental balance)' : 'Outstanding'), aed.format(n(s['outstanding'])), t),
+                  _row(context.tr(isl ? 'Profit rate' : 'Interest rate'),
+                      '${n(m['interest_rate']).toStringAsFixed(2)}%'
+                      '${rateValid != null ? ' · ${context.tr('to')} ${DateFormat.yMMMd().format(rateValid)}' : ''}', t),
+                  _row(context.tr(isl ? 'Monthly rental' : 'Monthly payment'), aed.format(n(s['monthly_payment'])), t),
+                  if (nextPay != null)
+                    _row(context.tr(isl ? 'Next rental due' : 'Next payment due'), DateFormat.yMMMd().format(nextPay), t),
+                  if (insRenewal != null)
+                    _row(context.tr(isl ? 'Takaful renewal' : 'Insurance renewal'), DateFormat.yMMMd().format(insRenewal), t),
+                  _row(context.tr(isl ? 'Fixed rental paid' : 'Principal paid'), aed.format(n(s['principal_paid'])), t),
+                  _row(context.tr(isl ? 'Variable rental (profit) paid' : 'Interest paid'), aed.format(n(s['interest_paid'])), t),
+                  _row(context.tr(isl ? 'Rentals paid' : 'Payments made'), '${s['payments_made'] ?? 0}', t),
+                  _row(context.tr(isl ? 'Projected total profit' : 'Projected total interest'), aed.format(n(s['projected_total_interest'])), t),
                 ]),
               )),
+              if (n(s['total_project_value']) > 0 || n(s['down_payment']) > 0) ...[
+                const SizedBox(height: AppSpacing.x16),
+                Card(child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.x16),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(context.tr('Purchase & financing'), style: t.titleMedium),
+                    const SizedBox(height: AppSpacing.x8),
+                    if (n(s['total_project_value']) > 0) _row(context.tr('Total project value'), aed.format(n(s['total_project_value'])), t),
+                    if (n(s['dld_charges']) > 0) _row(context.tr('DLD charges'), aed.format(n(s['dld_charges'])), t),
+                    if (n(s['processing_fees']) > 0) _row(context.tr('Processing fees'), aed.format(n(s['processing_fees'])), t),
+                    if (n(s['registration_fees']) > 0) _row(context.tr('Registration fees'), aed.format(n(s['registration_fees'])), t),
+                    if (n(s['down_payment']) > 0) _row(context.tr('Down payment'), aed.format(n(s['down_payment'])), t),
+                    if (s['down_payment_splits'] is List)
+                      ...(s['down_payment_splits'] as List).map((sp) {
+                        final mp = Map<String, dynamic>.from(sp as Map);
+                        return Padding(
+                          padding: const EdgeInsets.only(left: AppSpacing.x16),
+                          child: _row('• ${mp['label'] ?? context.tr('Split')}', aed.format(n(mp['amount'])), t),
+                        );
+                      }),
+                    _row(context.tr(isl ? 'Finance amount' : 'Loan amount'), aed.format(n(m['principal'])), t),
+                    _row(context.tr(isl ? 'Ijarah period' : 'Term'), _term(context, _intv(s['term_months'])), t),
+                    if (n(s['insurance_monthly']) > 0)
+                      _row(context.tr(isl ? 'Takaful (per month)' : 'Insurance (per month)'), aed.format(n(s['insurance_monthly'])), t),
+                  ]),
+                )),
+              ],
+              if (n(s['term_months']) > 0 && n(s['monthly_payment']) > 0) ...[
+                const SizedBox(height: AppSpacing.x24),
+                _PaymentSchedule(m: m, s: s, isl: isl),
+              ],
               const SizedBox(height: AppSpacing.x24),
-              Text('Payment history', style: t.titleMedium),
+              _RateHistory(id: id, isl: isl),
+              const SizedBox(height: AppSpacing.x24),
+              Text(context.tr(isl ? 'Rental history' : 'Payment history'), style: t.titleMedium),
               const SizedBox(height: AppSpacing.x8),
-              _PaymentList(id: id),
+              _PaymentList(id: id, isl: isl),
             ],
           );
         },
@@ -68,58 +142,268 @@ class MortgageDetailScreen extends ConsumerWidget {
   Widget _row(String k, String v, TextTheme t) => Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4),
         child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(k, style: t.bodyMedium), Text(v, style: t.titleMedium),
+          Flexible(child: Text(k, style: t.bodyMedium)), Text(v, style: t.titleMedium),
         ]),
       );
 
+  Widget _stat(String value, String label, TextTheme t) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value, style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(label, style: t.bodySmall),
+        ],
+      );
+
+  int _intv(dynamic v) => v is int ? v : int.tryParse('$v') ?? 0;
+
+  /// Human term: "8 mo", "3y", "3y 2m".
+  String _term(BuildContext context, int months) {
+    if (months <= 0) return context.tr('Done');
+    if (months < 12) return '$months ${context.tr('mo')}';
+    final y = months ~/ 12, m = months % 12;
+    return m == 0 ? '${y}${context.tr('y')}' : '${y}${context.tr('y')} ${m}${context.tr('m')}';
+  }
+
   Future<void> _logPayment(BuildContext context, WidgetRef ref) async {
-    final ctrl = TextEditingController();
-    final amount = await showDialog<double>(
+    // Relabel the split fields to match an Islamic statement when applicable.
+    final d = ref.read(mortgageDetailProvider(id)).asData?.value;
+    final isl = d?['mortgage'] is Map && isIslamicFinance('${(d!['mortgage'] as Map)['finance_type'] ?? ''}');
+    final amount = TextEditingController();
+    final principal = TextEditingController();
+    final profit = TextEditingController();
+    final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Log a payment'),
-        content: TextField(
-          controller: ctrl, keyboardType: TextInputType.number, autofocus: true,
-          decoration: const InputDecoration(hintText: 'Amount (AED)'),
+        title: Text(context.tr(isl ? 'Log a rental payment' : 'Log a payment')),
+        content: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            TextField(
+              controller: amount, autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(labelText: context.tr('Amount (AED)'), prefixText: 'AED '),
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            Text(
+              context.tr(isl
+                  ? 'Optional: enter the Fixed + Variable rental split exactly as your statement shows, to keep the balance accurate.'
+                  : 'Optional: enter the principal / interest split from your statement to keep the balance accurate.'),
+              style: Theme.of(ctx).textTheme.bodySmall,
+            ),
+            const SizedBox(height: AppSpacing.x8),
+            Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: principal,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                      labelText: context.tr(isl ? 'Fixed rental' : 'Principal'), prefixText: 'AED ', isDense: true),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.x8),
+              Expanded(
+                child: TextField(
+                  controller: profit,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                      labelText: context.tr(isl ? 'Variable rental' : 'Interest'), prefixText: 'AED ', isDense: true),
+                ),
+              ),
+            ]),
+          ]),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, double.tryParse(ctrl.text)),
-            child: const Text('Save'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Save'))),
         ],
       ),
     );
-    if (amount == null || amount <= 0) return;
-    await ref.read(mortgageRepositoryProvider).addPayment(id, {'amount': amount});
+    if (ok != true) return;
+    final amt = double.tryParse(amount.text.trim());
+    if (amt == null || amt <= 0) return;
+    final body = <String, dynamic>{'amount': amt};
+    final pr = double.tryParse(principal.text.trim());
+    final pf = double.tryParse(profit.text.trim());
+    if (pr != null) body['principal_part'] = pr;
+    if (pf != null) body['interest_part'] = pf;
+    await ref.read(mortgageRepositoryProvider).addPayment(id, body);
     ref.invalidate(mortgageDetailProvider(id));
     ref.invalidate(mortgagePaymentsProvider(id));
     ref.invalidate(mortgagesProvider);
   }
 }
 
-class _PaymentList extends ConsumerWidget {
-  const _PaymentList({required this.id});
+/// Variable-rate reset history + an add action (mortgage owner only).
+class _RateHistory extends ConsumerWidget {
+  const _RateHistory({required this.id, required this.isl});
   final String id;
+  final bool isl;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hist = ref.watch(mortgageRateHistoryProvider(id));
+    final t = Theme.of(context).textTheme;
+    final muted = Theme.of(context).hintColor;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Text(context.tr(isl ? 'Profit rate history' : 'Interest rate history'), style: t.titleMedium),
+        const Spacer(),
+        TextButton.icon(
+          onPressed: () => _add(context, ref),
+          icon: const Icon(Icons.add, size: 18),
+          label: Text(context.tr('Add')),
+        ),
+      ]),
+      const SizedBox(height: AppSpacing.x8),
+      hist.when(
+        loading: () => const LinearProgressIndicator(),
+        error: (e, _) => Text('$e', style: t.bodySmall),
+        data: (list) => list.isEmpty
+            ? Text(context.tr('No rate changes logged yet.'), style: t.bodySmall?.copyWith(color: muted))
+            : Column(children: [
+                for (final r in list)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.x4),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Text('${(num.tryParse('${r['rate']}') ?? 0).toStringAsFixed(2)}%', style: t.titleSmall),
+                      Text(_fmt('${r['effective_from']}'), style: t.bodySmall?.copyWith(color: muted)),
+                    ]),
+                  ),
+              ]),
+      ),
+    ]);
+  }
+
+  String _fmt(String iso) {
+    final dt = DateTime.tryParse(iso);
+    return dt == null ? iso : DateFormat.yMMMd().format(dt);
+  }
+
+  Future<void> _add(BuildContext context, WidgetRef ref) async {
+    final rateCtrl = TextEditingController();
+    var picked = DateTime.now();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Text(context.tr(isl ? 'Add profit rate change' : 'Add interest rate change')),
+          content: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+              controller: rateCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(labelText: context.tr('Rate (% / yr)')),
+            ),
+            const SizedBox(height: AppSpacing.x12),
+            InkWell(
+              onTap: () async {
+                final d = await showDatePicker(
+                    context: ctx, initialDate: picked, firstDate: DateTime(2000), lastDate: DateTime(2100));
+                if (d != null) setLocal(() => picked = d);
+              },
+              child: InputDecorator(
+                decoration: InputDecoration(labelText: context.tr('Effective from')),
+                child: Text(DateFormat.yMMMd().format(picked)),
+              ),
+            ),
+          ]),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('Cancel'))),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('Save'))),
+          ],
+        ),
+      ),
+    );
+    if (ok != true) return;
+    final rate = double.tryParse(rateCtrl.text.trim());
+    if (rate == null) return;
+    try {
+      await ref.read(mortgageRepositoryProvider).addRateChange(id, rate, DateFormat('yyyy-MM-dd').format(picked));
+      ref.invalidate(mortgageRateHistoryProvider(id));
+      ref.invalidate(mortgageDetailProvider(id));
+    } catch (e) {
+      if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
+    }
+  }
+}
+
+/// Forward-looking installment schedule (Month | Due | Amount | Status), generated
+/// client-side from the finance terms. Rows up to the paid count show as Paid; the
+/// rest are Pending. Windowed to ~12 rows around the current position.
+class _PaymentSchedule extends StatelessWidget {
+  const _PaymentSchedule({required this.m, required this.s, required this.isl});
+  final Map<String, dynamic> m;
+  final Map<String, dynamic> s;
+  final bool isl;
+
+  double _n(dynamic v) => v is num ? v.toDouble() : double.tryParse('$v') ?? 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
+    final term = _n(s['term_months']).round();
+    final monthly = _n(s['monthly_payment']);
+    final paid = _n(s['payments_made']).round();
+    final first = DateTime.tryParse('${m['first_installment_date'] ?? m['start_date'] ?? ''}') ?? DateTime.now();
+    // Window: keep ~12 rows, biased to show a couple already-paid then upcoming.
+    const window = 12;
+    var start = (paid - 2).clamp(0, term > window ? term - window : 0);
+    final end = (start + window).clamp(0, term);
+    final rows = <Widget>[];
+    for (var i = start + 1; i <= end; i++) {
+      final due = DateTime(first.year, first.month + (i - 1), first.day);
+      final isPaid = i <= paid;
+      rows.add(Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(children: [
+          SizedBox(width: 88, child: Text(DateFormat('MMM yyyy').format(due), style: t.bodyMedium)),
+          Expanded(child: Text(aed.format(monthly), style: t.bodyMedium)),
+          Text(context.tr(isPaid ? 'Paid' : 'Pending'),
+              style: t.bodySmall?.copyWith(
+                  color: isPaid ? Theme.of(context).colorScheme.primary : Theme.of(context).hintColor,
+                  fontWeight: isPaid ? FontWeight.w700 : FontWeight.w400)),
+        ]),
+      ));
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(context.tr(isl ? 'Rental schedule' : 'Payment schedule'), style: t.titleMedium),
+        Text('$paid ${context.tr('of')} $term ${context.tr('paid')}', style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
+      ]),
+      const SizedBox(height: AppSpacing.x4),
+      ...rows,
+      if (end < term)
+        Padding(
+          padding: const EdgeInsets.only(top: AppSpacing.x4),
+          child: Text('… ${term - end} ${context.tr('more')}', style: t.bodySmall?.copyWith(color: Theme.of(context).hintColor)),
+        ),
+    ]);
+  }
+}
+
+class _PaymentList extends ConsumerWidget {
+  const _PaymentList({required this.id, this.isl = false});
+  final String id;
+  final bool isl;
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final payments = ref.watch(mortgagePaymentsProvider(id));
     final aed = NumberFormat.currency(symbol: 'AED ', decimalDigits: 0);
     final t = Theme.of(context).textTheme;
+    final principalWord = context.tr(isl ? 'fixed' : 'principal');
+    final interestWord = context.tr(isl ? 'variable' : 'interest');
     return payments.when(
       loading: () => const Padding(padding: EdgeInsets.all(AppSpacing.x16), child: LinearProgressIndicator()),
       error: (e, _) => Text('$e', style: t.bodySmall),
       data: (list) {
-        if (list.isEmpty) return Text('No payments logged yet.', style: t.bodySmall);
+        if (list.isEmpty) return Text(context.tr(isl ? 'No rentals logged yet.' : 'No payments logged yet.'), style: t.bodySmall);
         return Column(
           children: list.map((p) => ListTile(
             contentPadding: EdgeInsets.zero,
             title: Text(aed.format(p.amount), style: t.titleMedium),
             subtitle: Text([
               if (p.paidOn != null) DateFormat.yMMMd().format(p.paidOn!),
-              if (p.principalPart != null) 'principal ${aed.format(p.principalPart)}',
-              if (p.interestPart != null) 'interest ${aed.format(p.interestPart)}',
+              if (p.principalPart != null) '$principalWord ${aed.format(p.principalPart)}',
+              if (p.interestPart != null) '$interestWord ${aed.format(p.interestPart)}',
             ].join('  ·  '), style: t.bodySmall),
           )).toList(),
         );
