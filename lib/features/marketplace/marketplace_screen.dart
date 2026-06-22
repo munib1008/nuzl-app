@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/data/geo.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/upload_service.dart';
 import '../../core/rbac/persona.dart';
@@ -43,18 +44,18 @@ class MarketplaceScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: const NuzlAppBar(title: 'Marketplace', actions: [MarketplaceActions()]),
+        appBar: NuzlAppBar(title: context.tr('Marketplace'), actions: const [MarketplaceActions()]),
         drawer: const NuzlDrawer(),
         floatingActionButton: canAdd
             ? FloatingActionButton.extended(
                 onPressed: () => _addDialog(context, ref),
                 icon: const Icon(Icons.add),
-                label: const Text('List item'),
+                label: Text(context.tr('List item')),
               )
             : null,
-        body: const Column(children: [
-          Material(child: TabBar(tabs: [Tab(text: 'Services'), Tab(text: 'Products')])),
-          Expanded(
+        body: Column(children: [
+          Material(child: TabBar(tabs: [Tab(text: context.tr('Services')), Tab(text: context.tr('Products'))])),
+          const Expanded(
             child: TabBarView(children: [
               _MarketList(kind: 'service'),
               _MarketList(kind: 'product'),
@@ -97,29 +98,29 @@ class MarketplaceScreen extends ConsumerWidget {
     if (!context.mounted) return;
     final ok = await AppDialog.show<bool>(
       context,
-      title: 'List a service / product',
+      title: context.tr('List a service / product'),
       maxWidth: 460,
       children: [
         StatefulBuilder(
           builder: (ctx, setS) => Column(mainAxisSize: MainAxisSize.min, children: [
             DropdownButtonFormField<String>(
               initialValue: kind,
-              decoration: const InputDecoration(labelText: 'Type'),
-              items: const [
-                DropdownMenuItem(value: 'service', child: Text('Service')),
-                DropdownMenuItem(value: 'product', child: Text('Product')),
+              decoration: InputDecoration(labelText: context.tr('Type')),
+              items: [
+                DropdownMenuItem(value: 'service', child: Text(context.tr('Service'))),
+                DropdownMenuItem(value: 'product', child: Text(context.tr('Product'))),
               ],
               // Switching kind invalidates the chosen category/subcategory.
               onChanged: (v) => setS(() { kind = v ?? 'service'; category = null; subcategory = null; }),
             ),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: title, decoration: const InputDecoration(labelText: 'Title')),
+            TextField(controller: title, decoration: InputDecoration(labelText: context.tr('Title'))),
             const SizedBox(height: AppSpacing.x8),
             DropdownButtonFormField<String>(
               key: ValueKey('cat-$kind'),
               initialValue: category,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Category'),
+              decoration: InputDecoration(labelText: context.tr('Category')),
               items: [
                 for (final c in MarketplaceTaxonomy.categories(kind))
                   DropdownMenuItem(value: c, child: Text(c)),
@@ -131,7 +132,7 @@ class MarketplaceScreen extends ConsumerWidget {
               key: ValueKey('sub-$kind-$category'),
               initialValue: subcategory,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Subcategory'),
+              decoration: InputDecoration(labelText: context.tr('Subcategory')),
               items: [
                 for (final s in MarketplaceTaxonomy.subcategories(kind, category))
                   DropdownMenuItem(value: s, child: Text(s)),
@@ -139,12 +140,12 @@ class MarketplaceScreen extends ConsumerWidget {
               onChanged: category == null ? null : (v) => setS(() => subcategory = v),
             ),
             const SizedBox(height: AppSpacing.x8),
-            TextField(controller: desc, maxLines: 2, decoration: const InputDecoration(labelText: 'Description')),
+            TextField(controller: desc, maxLines: 2, decoration: InputDecoration(labelText: context.tr('Description'))),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
-              Expanded(child: TextField(controller: price, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Price (AED)'))),
+              Expanded(child: TextField(controller: price, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Price (AED)')))),
               const SizedBox(width: AppSpacing.x8),
-              Expanded(child: TextField(controller: unit, decoration: const InputDecoration(labelText: 'Unit', hintText: 'each / from'))),
+              Expanded(child: TextField(controller: unit, decoration: InputDecoration(labelText: context.tr('Unit'), hintText: context.tr('each / from')))),
             ]),
             const SizedBox(height: AppSpacing.x8),
             Row(children: [
@@ -152,14 +153,14 @@ class MarketplaceScreen extends ConsumerWidget {
                 child: TextField(
                     controller: delivery,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Lead time (days)', hintText: 'e.g. 3')),
+                    decoration: InputDecoration(labelText: context.tr('Lead time (days)'), hintText: context.tr('e.g. 3'))),
               ),
               const SizedBox(width: AppSpacing.x8),
               Expanded(
                 child: DropdownButtonFormField<String>(
                   initialValue: assignedSalesId,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Sales contact *'),
+                  decoration: InputDecoration(labelText: context.tr('Sales contact *')),
                   items: [
                     for (final m in team)
                       DropdownMenuItem(value: '${m['id']}', child: Text('${m['full_name'] ?? 'Member'}', overflow: TextOverflow.ellipsis)),
@@ -172,19 +173,19 @@ class MarketplaceScreen extends ConsumerWidget {
             // Catalogue depth (§1): MOQ for products, coverage areas for services.
             if (kind == 'product')
               TextField(controller: moq, keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Min. order qty (MOQ)', hintText: 'e.g. 10'))
+                  decoration: InputDecoration(labelText: context.tr('Min. order qty (MOQ)'), hintText: context.tr('e.g. 10')))
             else ...[
               DropdownButtonFormField<String>(
                 initialValue: coverageCountry,
                 isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Country *'),
-                items: [for (final c in _gccCountries) DropdownMenuItem(value: c, child: Text(c))],
+                decoration: InputDecoration(labelText: context.tr('Country *')),
+                items: [for (final c in _gccCountries) DropdownMenuItem(value: c, child: Text(context.tr(c)))],
                 onChanged: (v) => setS(() { coverageCountry = v ?? coverageCountry; coverageCities.clear(); }),
               ),
               const SizedBox(height: AppSpacing.x8),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Coverage areas', style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppColors.textMuted)),
+                child: Text(context.tr('Coverage areas'), style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppColors.textMuted)),
               ),
               Wrap(spacing: 6, children: [
                 for (final city in (kCitiesByCountry[coverageCountry] ?? const <String>[]))
@@ -197,12 +198,12 @@ class MarketplaceScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.x8),
               DropdownButtonFormField<String>(
                 initialValue: serviceRadius,
-                decoration: const InputDecoration(labelText: 'Service radius'),
-                items: const [
-                  DropdownMenuItem(value: 'country', child: Text('Entire country')),
-                  DropdownMenuItem(value: 'cities', child: Text('Selected cities only')),
-                  DropdownMenuItem(value: '50km', child: Text('Within 50 km')),
-                  DropdownMenuItem(value: '100km', child: Text('Within 100 km')),
+                decoration: InputDecoration(labelText: context.tr('Service radius')),
+                items: [
+                  DropdownMenuItem(value: 'country', child: Text(context.tr('Entire country'))),
+                  DropdownMenuItem(value: 'cities', child: Text(context.tr('Selected cities only'))),
+                  DropdownMenuItem(value: '50km', child: Text(context.tr('Within 50 km'))),
+                  DropdownMenuItem(value: '100km', child: Text(context.tr('Within 100 km'))),
                 ],
                 onChanged: (v) => setS(() => serviceRadius = v),
               ),
@@ -210,13 +211,13 @@ class MarketplaceScreen extends ConsumerWidget {
               // Working hours — customer bookings are constrained to these.
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Working days', style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppColors.textMuted)),
+                child: Text(context.tr('Working days'), style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: AppColors.textMuted)),
               ),
               const SizedBox(height: 4),
               Wrap(spacing: 6, children: [
                 for (var i = 1; i <= 7; i++)
                   FilterChip(
-                    label: Text(const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i - 1]),
+                    label: Text(context.tr(const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i - 1])),
                     selected: workDays.contains(i),
                     onSelected: (s) => setS(() => s ? workDays.add(i) : workDays.remove(i)),
                   ),
@@ -226,32 +227,32 @@ class MarketplaceScreen extends ConsumerWidget {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () async {
-                      final picked = await showTimePicker(context: ctx, initialTime: workStart, helpText: 'Opening time');
+                      final picked = await showTimePicker(context: ctx, initialTime: workStart, helpText: context.tr('Opening time'));
                       if (picked != null) setS(() => workStart = picked);
                     },
-                    child: Text('Opens ${workStart.format(ctx)}'),
+                    child: Text('${context.tr('Opens')} ${workStart.format(ctx)}'),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.x8),
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () async {
-                      final picked = await showTimePicker(context: ctx, initialTime: workEnd, helpText: 'Closing time');
+                      final picked = await showTimePicker(context: ctx, initialTime: workEnd, helpText: context.tr('Closing time'));
                       if (picked != null) setS(() => workEnd = picked);
                     },
-                    child: Text('Closes ${workEnd.format(ctx)}'),
+                    child: Text('${context.tr('Closes')} ${workEnd.format(ctx)}'),
                   ),
                 ),
               ]),
               const SizedBox(height: AppSpacing.x8),
               DropdownButtonFormField<int>(
                 initialValue: slotMinutes,
-                decoration: const InputDecoration(labelText: 'Booking slot length'),
-                items: const [
-                  DropdownMenuItem(value: 30, child: Text('30 minutes')),
-                  DropdownMenuItem(value: 60, child: Text('1 hour')),
-                  DropdownMenuItem(value: 90, child: Text('1.5 hours')),
-                  DropdownMenuItem(value: 120, child: Text('2 hours')),
+                decoration: InputDecoration(labelText: context.tr('Booking slot length')),
+                items: [
+                  DropdownMenuItem(value: 30, child: Text(context.tr('30 minutes'))),
+                  DropdownMenuItem(value: 60, child: Text(context.tr('1 hour'))),
+                  DropdownMenuItem(value: 90, child: Text(context.tr('1.5 hours'))),
+                  DropdownMenuItem(value: 120, child: Text(context.tr('2 hours'))),
                 ],
                 onChanged: (v) => setS(() => slotMinutes = v ?? 60),
               ),
@@ -280,10 +281,10 @@ class MarketplaceScreen extends ConsumerWidget {
                             if (url != null) {
                               setS(() => photos.add(url));
                             } else if (ctx.mounted) {
-                              ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Photo upload failed — try again')));
+                              ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ctx.tr('Photo upload failed — try again'))));
                             }
                           } catch (e) {
-                            if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Photo upload failed — ${friendlyError(e)}')));
+                            if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('${ctx.tr('Photo upload failed')} — ${friendlyError(e)}')));
                           } finally {
                             setS(() => uploadingPhoto = false);
                           }
@@ -291,7 +292,7 @@ class MarketplaceScreen extends ConsumerWidget {
                   icon: uploadingPhoto
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.add_photo_alternate_outlined, size: 18),
-                  label: Text(uploadingPhoto ? 'Uploading…' : (photos.isEmpty ? 'Add photo' : 'Add another')),
+                  label: Text(context.tr(uploadingPhoto ? 'Uploading…' : (photos.isEmpty ? 'Add photo' : 'Add another'))),
                 ),
               ]),
             ),
@@ -299,24 +300,24 @@ class MarketplaceScreen extends ConsumerWidget {
         ),
       ],
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(context.tr('Cancel'))),
         FilledButton(
           // Validate BEFORE closing so the form (and the user's input) stays put
           // on failure instead of being discarded.
           onPressed: () {
             final missing = <String>[
-              if (title.text.trim().isEmpty) 'a title',
-              if (category == null) 'a category',
+              if (title.text.trim().isEmpty) context.tr('a title'),
+              if (category == null) context.tr('a category'),
             ];
             if (missing.isNotEmpty) {
               ScaffoldMessenger.of(context)
                 ..hideCurrentSnackBar()
-                ..showSnackBar(SnackBar(content: Text('Please add ${missing.join(' and ')}.')));
+                ..showSnackBar(SnackBar(content: Text('${context.tr('Please add')} ${missing.join(' ${context.tr('and')} ')}.')));
               return;
             }
             Navigator.pop(context, true);
           },
-          child: const Text('List'),
+          child: Text(context.tr('List')),
         ),
       ],
     );
@@ -348,14 +349,13 @@ class MarketplaceScreen extends ConsumerWidget {
       ref.invalidate(marketplaceProvider(kind));
       final draft = res is Map && res['is_active'] == false;
       final id = res is Map ? '${res['id'] ?? ''}' : '';
-      final noun = kind == 'product' ? 'product' : 'service';
       if (context.mounted) {
         // Consistent post-submit workflow: confirm (live vs sent-for-approval) and
         // land on the new item's detail page.
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(draft
-              ? 'Your $noun has been submitted and sent for approval. You’ll be notified once it’s approved and published.'
-              : 'Your $noun has been posted successfully and is now live.'),
+          content: Text(context.tr(draft
+              ? 'Your listing has been submitted and sent for approval. You’ll be notified once it’s approved and published.'
+              : 'Your listing has been posted successfully and is now live.')),
         ));
         if (id.isNotEmpty) context.push('/marketplace/$id');
       }
@@ -417,7 +417,7 @@ class _MarketListState extends ConsumerState<_MarketList> {
               TextField(
                 onChanged: (v) => setState(() => _q = v),
                 decoration: InputDecoration(
-                  hintText: 'Search ${widget.kind == 'product' ? 'products' : 'services'}, suppliers…',
+                  hintText: context.tr(widget.kind == 'product' ? 'Search products, suppliers…' : 'Search services, suppliers…'),
                   prefixIcon: const Icon(Icons.search),
                   isDense: true,
                 ),
@@ -426,7 +426,7 @@ class _MarketListState extends ConsumerState<_MarketList> {
                 const SizedBox(height: AppSpacing.x12),
                 Wrap(spacing: 8, runSpacing: 8, children: [
                   ChoiceChip(
-                      label: const Text('All'),
+                      label: Text(context.tr('All')),
                       selected: _cat == null,
                       onSelected: (_) => setState(() => _cat = null)),
                   for (final c in cats)
@@ -441,7 +441,7 @@ class _MarketListState extends ConsumerState<_MarketList> {
                 Padding(
                   padding: const EdgeInsets.all(40),
                   child: Center(
-                      child: Text(all.isEmpty ? 'Nothing here yet.' : 'No matches — try a different search or category.',
+                      child: Text(context.tr(all.isEmpty ? 'Nothing here yet.' : 'No matches — try a different search or category.'),
                           style: t.bodyMedium?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))),
                 )
               else
@@ -502,7 +502,7 @@ class _ItemCard extends ConsumerWidget {
             if (category.isNotEmpty)
               Positioned(top: 8, left: 8, child: StatusBadge(category, tone: BadgeTone.neutral)),
             if (!isActive)
-              const Positioned(top: 8, right: 8, child: StatusBadge('Draft', tone: BadgeTone.warning)),
+              Positioned(top: 8, right: 8, child: StatusBadge(context.tr('Draft'), tone: BadgeTone.warning)),
           ]),
           Padding(
             padding: const EdgeInsets.all(AppSpacing.x12),
@@ -557,7 +557,7 @@ class _ItemCard extends ConsumerWidget {
                 Row(mainAxisSize: MainAxisSize.min, children: [
                   Icon(isProduct ? Icons.local_shipping_outlined : Icons.schedule, size: 13, color: AppColors.success),
                   const SizedBox(width: 4),
-                  Text(isProduct ? '~$delivery-day delivery' : '~$delivery-day lead time',
+                  Text('~$delivery ${context.tr(isProduct ? 'day delivery' : 'day lead time')}',
                       style: t.bodySmall?.copyWith(color: AppColors.success, fontWeight: FontWeight.w600)),
                 ]),
               ],
@@ -567,7 +567,7 @@ class _ItemCard extends ConsumerWidget {
                   child: OutlinedButton(
                     onPressed: () => _order(context, ref, quote: true),
                     style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(36), padding: EdgeInsets.zero),
-                    child: const Text('Quote'),
+                    child: Text(context.tr('Quote')),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.x8),
@@ -575,7 +575,7 @@ class _ItemCard extends ConsumerWidget {
                   child: FilledButton(
                     onPressed: () => isProduct ? addToCart(context, ref, '${m['id']}') : _order(context, ref),
                     style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(36), padding: EdgeInsets.zero),
-                    child: Text(isProduct ? 'Add' : 'Book'),
+                    child: Text(context.tr(isProduct ? 'Add' : 'Book')),
                   ),
                 ),
               ]),
@@ -618,10 +618,10 @@ class _ItemCard extends ConsumerWidget {
       });
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(quote
+          content: Text(context.tr(quote
               ? 'Quotation requested — track it in Orders.'
-              : (scheduledAt != null ? 'Service booked — track it in Orders.' : 'Order placed — track it in Orders.')),
-          action: SnackBarAction(label: 'View', onPressed: () => context.go('/orders')),
+              : (scheduledAt != null ? 'Service booked — track it in Orders.' : 'Order placed — track it in Orders.'))),
+          action: SnackBarAction(label: context.tr('View'), onPressed: () => context.go('/orders')),
         ));
       }
     } catch (e) {
