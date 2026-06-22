@@ -288,7 +288,19 @@ class _StickyTopBar extends ConsumerWidget {
                             onPressed: () => onNav?.call(l.$2),
                             child: Text(context.tr(l.$1),
                                 style: GoogleFonts.poppins(color: _onBg(context), fontWeight: FontWeight.w500)),
-                          ),
+                          )
+                      else
+                        // Narrow screens: collapse the section links under a
+                        // hamburger so the toggle + Sign in + Join stay on one row.
+                        PopupMenuButton<String>(
+                          tooltip: context.tr('Menu'),
+                          icon: Icon(Icons.menu, color: _onBg(context)),
+                          onSelected: (id) => onNav?.call(id),
+                          itemBuilder: (_) => [
+                            for (final l in _nav)
+                              PopupMenuItem<String>(value: l.$2, child: Text(context.tr(l.$1))),
+                          ],
+                        ),
                       IconButton(
                         tooltip: context.tr('Toggle light / dark'),
                         icon: Icon(_isDark(context) ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
