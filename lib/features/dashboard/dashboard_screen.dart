@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/network/api_client.dart';
 import '../../core/rbac/persona.dart';
 import '../../core/theme/app_colors.dart';
@@ -129,7 +130,7 @@ class DashboardScreen extends ConsumerWidget {
     final isBuyer = persona == Persona.buyer;
     final overview = _overviewCard(persona, data.asData?.value ?? {});
     final hour = DateTime.now().hour;
-    final greet = hour < 12 ? 'Good morning' : (hour < 17 ? 'Good afternoon' : 'Good evening');
+    final greet = context.tr(hour < 12 ? 'Good morning' : (hour < 17 ? 'Good afternoon' : 'Good evening'));
     final gutter = wide ? AppSpacing.x32 : AppSpacing.x20;
 
     return Scaffold(
@@ -149,7 +150,7 @@ class DashboardScreen extends ConsumerWidget {
             Text('$greet${user?.fullName.isNotEmpty == true ? ', ${user!.fullName.split(' ').first}' : ''}',
                 style: t.headlineSmall),
             const SizedBox(height: 2),
-            Text(isBuyer ? 'Discover and track your next property.' : "Here's what's happening today.",
+            Text(context.tr(isBuyer ? 'Discover and track your next property.' : "Here's what's happening today."),
                 style: t.bodyMedium?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
             // Property search lives in the Properties tab (single search surface) —
             // the dashboard is for tracking, not discovery.
@@ -370,7 +371,7 @@ class _KpiCard extends StatelessWidget {
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(card.label, style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+            Text(context.tr(card.label), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
             const SizedBox(height: 6),
             Text(card.value, style: t.headlineMedium?.copyWith(fontWeight: FontWeight.w700)),
           ]),
@@ -421,7 +422,7 @@ class _PanelCard extends StatelessWidget {
       context,
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Expanded(child: Text(title, style: t.titleMedium)),
+          Expanded(child: Text(context.tr(title), style: t.titleMedium)),
           if (action != null) action!,
         ]),
         const SizedBox(height: AppSpacing.x12),
@@ -445,10 +446,10 @@ class _SalesCard extends ConsumerWidget {
         height: 140,
         child: async.when(
           loading: () => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-          error: (_, __) => _empty(t, dark),
+          error: (_, __) => _empty(context, t, dark),
           data: (series) {
             final hasData = series.length >= 2 && series.any((v) => v > 0);
-            if (!hasData) return _empty(t, dark);
+            if (!hasData) return _empty(context, t, dark);
             final secondary = series.map((v) => v * 0.82).toList();
             return Stack(children: [
               Positioned.fill(child: CustomPaint(painter: _SparkPainter(secondary, AppColors.secondary))),
@@ -460,12 +461,12 @@ class _SalesCard extends ConsumerWidget {
     );
   }
 
-  Widget _empty(TextTheme t, bool dark) => Center(
+  Widget _empty(BuildContext context, TextTheme t, bool dark) => Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.show_chart, size: 28, color: dark ? AppColors.dTextMuted : AppColors.textSubtle),
           const SizedBox(height: AppSpacing.x8),
-          Text('No sales recorded yet', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
-          Text('Closed deals will chart here.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textSubtle)),
+          Text(context.tr('No sales recorded yet'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted)),
+          Text(context.tr('Closed deals will chart here.'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textSubtle)),
         ]),
       );
 }
@@ -543,7 +544,7 @@ class _PortfolioPerformanceState extends ConsumerState<_PortfolioPerformance> {
     final aed = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
 
     final header = Row(children: [
-      Expanded(child: Text('Portfolio Performance', style: t.titleMedium)),
+      Expanded(child: Text(context.tr('Portfolio Performance'), style: t.titleMedium)),
       _SegToggle(annual: _annual, onChanged: (v) => setState(() { _annual = v; _sel = null; })),
     ]);
     Widget card(Widget body) => Card(child: Padding(padding: const EdgeInsets.all(AppSpacing.x16), child: body));
@@ -555,12 +556,12 @@ class _PortfolioPerformanceState extends ConsumerState<_PortfolioPerformance> {
         Center(child: Column(children: [
           Icon(Icons.show_chart, size: 36, color: muted),
           const SizedBox(height: AppSpacing.x8),
-          Text('No financial data yet', style: t.titleSmall),
+          Text(context.tr('No financial data yet'), style: t.titleSmall),
           const SizedBox(height: 4),
-          Text('Add a property and log income/expenses to start tracking performance.',
+          Text(context.tr('Add a property and log income/expenses to start tracking performance.'),
               textAlign: TextAlign.center, style: t.bodySmall?.copyWith(color: muted)),
           const SizedBox(height: AppSpacing.x12),
-          OutlinedButton(onPressed: () => context.go('/financials'), child: const Text('Open financials')),
+          OutlinedButton(onPressed: () => context.go('/financials'), child: Text(context.tr('Open financials'))),
         ])),
         const SizedBox(height: AppSpacing.x8),
       ]));
@@ -585,7 +586,7 @@ class _PortfolioPerformanceState extends ConsumerState<_PortfolioPerformance> {
           _legendDot(AppColors.accentGold, '${selPt.roi.toStringAsFixed(1)}%'),
         ])
       else
-        Text('Drag across the chart to inspect a period', style: t.bodySmall?.copyWith(color: muted)),
+        Text(context.tr('Drag across the chart to inspect a period'), style: t.bodySmall?.copyWith(color: muted)),
       const SizedBox(height: AppSpacing.x8),
       LayoutBuilder(builder: (ctx, c) {
         void select(double dx) {
@@ -609,15 +610,15 @@ class _PortfolioPerformanceState extends ConsumerState<_PortfolioPerformance> {
       }),
       const SizedBox(height: AppSpacing.x8),
       Wrap(spacing: AppSpacing.x16, children: [
-        _legendDot(AppColors.success, 'Income'),
-        _legendDot(AppColors.danger, 'Expense'),
-        _legendDot(AppColors.accentGold, 'ROI'),
+        _legendDot(AppColors.success, context.tr('Income')),
+        _legendDot(AppColors.danger, context.tr('Expense')),
+        _legendDot(AppColors.accentGold, context.tr('ROI')),
       ]),
       const Divider(height: AppSpacing.x24),
-      _RoiLine(label: 'Total income', value: aed.format(totalInc)),
-      _RoiLine(label: 'Total expenses', value: aed.format(totalExp)),
-      _RoiLine(label: 'Net profit', value: aed.format(totalInc - totalExp)),
-      _RoiLine(label: 'Average ROI', value: '${avgRoi.toStringAsFixed(1)}%'),
+      _RoiLine(label: context.tr('Total income'), value: aed.format(totalInc)),
+      _RoiLine(label: context.tr('Total expenses'), value: aed.format(totalExp)),
+      _RoiLine(label: context.tr('Net profit'), value: aed.format(totalInc - totalExp)),
+      _RoiLine(label: context.tr('Average ROI'), value: '${avgRoi.toStringAsFixed(1)}%'),
     ]));
   }
 }
@@ -646,8 +647,8 @@ class _SegToggle extends StatelessWidget {
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(color: AppColors.surface2, borderRadius: BorderRadius.circular(AppSpacing.rFull)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        seg('Monthly', !annual, () => onChanged(false)),
-        seg('Annual', annual, () => onChanged(true)),
+        seg(context.tr('Monthly'), !annual, () => onChanged(false)),
+        seg(context.tr('Annual'), annual, () => onChanged(true)),
       ]),
     );
   }
@@ -789,10 +790,10 @@ class _ActivityCard extends ConsumerWidget {
     final acts = ref.watch(_activityProvider);
     return _PanelCard(
       title: 'Recent activity',
-      action: TextButton(onPressed: () => context.go('/notifications'), child: const Text('View all')),
+      action: TextButton(onPressed: () => context.go('/notifications'), child: Text(context.tr('View all'))),
       child: acts.maybeWhen(
         data: (list) => list.isEmpty
-            ? Text('No recent activity.', style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
+            ? Text(context.tr('No recent activity.'), style: t.bodySmall?.copyWith(color: dark ? AppColors.dTextMuted : AppColors.textMuted))
             : Column(
                 children: list.map((e) {
                   final m = Map<String, dynamic>.from(e);
@@ -830,13 +831,13 @@ class _RecentProperties extends ConsumerWidget {
       context,
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Expanded(child: Text('Recent properties', style: t.titleMedium)),
-          TextButton(onPressed: () => context.go('/properties'), child: const Text('Browse all')),
+          Expanded(child: Text(context.tr('Recent properties'), style: t.titleMedium)),
+          TextButton(onPressed: () => context.go('/properties'), child: Text(context.tr('Browse all'))),
         ]),
         const SizedBox(height: AppSpacing.x12),
         listings.maybeWhen(
           data: (list) => list.isEmpty
-              ? Text('No listings yet.', style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted))
+              ? Text(context.tr('No listings yet.'), style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted))
               : SizedBox(
                   height: 210,
                   child: ListView.separated(
@@ -868,20 +869,20 @@ class _DeveloperProjects extends ConsumerWidget {
       context,
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Expanded(child: Text('Your projects', style: t.titleMedium)),
-          TextButton(onPressed: () => context.go('/projects'), child: const Text('View all')),
+          Expanded(child: Text(context.tr('Your projects'), style: t.titleMedium)),
+          TextButton(onPressed: () => context.go('/projects'), child: Text(context.tr('View all'))),
         ]),
         const SizedBox(height: AppSpacing.x12),
         projects.maybeWhen(
           data: (list) => list.isEmpty
               ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('No projects yet — create your first development to start managing inventory and sales.',
+                  Text(context.tr('No projects yet — create your first development to start managing inventory and sales.'),
                       style: t.bodySmall?.copyWith(color: muted)),
                   const SizedBox(height: AppSpacing.x12),
                   FilledButton.icon(
                     onPressed: () => context.go('/projects'),
                     icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Create a project'),
+                    label: Text(context.tr('Create a project')),
                   ),
                 ])
               : SizedBox(
@@ -934,14 +935,14 @@ class _ProjectMiniCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                         color: statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(AppSpacing.rFull)),
-                    child: Text(label, style: t.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.w700)),
+                    child: Text(context.tr(label), style: t.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.w700)),
                   ),
                 ]),
                 const SizedBox(height: AppSpacing.x12),
                 Text('${p['name'] ?? 'Project'}',
                     style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700), maxLines: 2, overflow: TextOverflow.ellipsis),
                 const Spacer(),
-                Text('$units units · $available available', style: t.bodySmall?.copyWith(color: muted)),
+                Text('$units ${context.tr('units')} · $available ${context.tr('available')}', style: t.bodySmall?.copyWith(color: muted)),
               ]),
             ),
           ),
@@ -999,7 +1000,7 @@ class _PropertyMiniCard extends StatelessWidget {
                 ),
                 Positioned(
                   top: 8, left: 8,
-                  child: StatusBadge(isRent ? 'For Rent' : 'For Sale', tone: isRent ? BadgeTone.warning : BadgeTone.success),
+                  child: StatusBadge(context.tr(isRent ? 'For Rent' : 'For Sale'), tone: isRent ? BadgeTone.warning : BadgeTone.success),
                 ),
               ]),
               Padding(
@@ -1104,7 +1105,7 @@ class _QuickActions extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 dense: true,
                 leading: Icon(a.$2, color: Theme.of(context).colorScheme.primary, size: 20),
-                title: Text(a.$1),
+                title: Text(context.tr(a.$1)),
                 trailing: const Icon(Icons.chevron_right, size: 18),
                 onTap: () => context.go(a.$3),
               ))
@@ -1148,7 +1149,7 @@ class _OwnerCockpit extends ConsumerWidget {
     final docs = Map<String, dynamic>.from(d['documents'] ?? {});
     final agents = (d['agents'] is List) ? List.from(d['agents']) : const [];
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Portfolio activity', style: t.titleMedium),
+      Text(context.tr('Portfolio activity'), style: t.titleMedium),
       const SizedBox(height: AppSpacing.x12),
       _statCard(context, 'Properties', [
         ('Total', '${_ci(props['total'])}'),
@@ -1170,7 +1171,7 @@ class _OwnerCockpit extends ConsumerWidget {
       ], t, muted, onTap: () => context.go('/documents')),
       if (agents.isNotEmpty) ...[
         const SizedBox(height: AppSpacing.x20),
-        Text('Agents working your properties', style: t.titleMedium),
+        Text(context.tr('Agents working your properties'), style: t.titleMedium),
         const SizedBox(height: AppSpacing.x8),
         for (final a in agents) _agentRow(context, Map<String, dynamic>.from(a), t, muted),
       ],
@@ -1184,7 +1185,7 @@ class _OwnerCockpit extends ConsumerWidget {
         padding: const EdgeInsets.all(AppSpacing.x16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Text(title, style: t.titleSmall),
+            Text(context.tr(title), style: t.titleSmall),
             if (onTap != null) ...[const Spacer(), Icon(Icons.chevron_right, size: 18, color: muted)],
           ]),
           const SizedBox(height: AppSpacing.x12),
@@ -1192,7 +1193,7 @@ class _OwnerCockpit extends ConsumerWidget {
             for (final s in stats)
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(s.$2, style: t.titleLarge),
-                Text(s.$1, style: t.bodySmall?.copyWith(color: muted)),
+                Text(context.tr(s.$1), style: t.bodySmall?.copyWith(color: muted)),
               ]),
           ]),
         ]),
@@ -1218,12 +1219,12 @@ class _OwnerCockpit extends ConsumerWidget {
           const SizedBox(width: AppSpacing.x12),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('${a['name'] ?? 'Agent'}', style: t.titleSmall),
+              Text('${a['name'] ?? context.tr('Agent')}', style: t.titleSmall),
               Text([
-                '${_ci(a['viewings'])} viewings',
-                '${_ci(a['scheduled'])} scheduled',
-                '${_ci(a['closed_won'])} won',
-                'resp ${_fmtResp(_ci(a['avg_response_secs']))}',
+                '${_ci(a['viewings'])} ${context.tr('viewings')}',
+                '${_ci(a['scheduled'])} ${context.tr('scheduled')}',
+                '${_ci(a['closed_won'])} ${context.tr('won')}',
+                '${context.tr('resp')} ${_fmtResp(_ci(a['avg_response_secs']))}',
               ].join('  ·  '), style: t.bodySmall?.copyWith(color: muted)),
             ]),
           ),
@@ -1241,7 +1242,7 @@ class _DeletionBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = Theme.of(context).textTheme;
-    final when = deletionAt != null ? DateFormat('d MMM y').format(deletionAt!) : 'soon';
+    final when = deletionAt != null ? DateFormat('d MMM y').format(deletionAt!) : context.tr('soon');
     return Container(
       padding: const EdgeInsets.all(AppSpacing.x12),
       decoration: BoxDecoration(
@@ -1254,9 +1255,9 @@ class _DeletionBanner extends ConsumerWidget {
         const SizedBox(width: AppSpacing.x12),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Account scheduled for deletion',
+            Text(context.tr('Account scheduled for deletion'),
                 style: t.titleSmall?.copyWith(color: AppColors.danger, fontWeight: FontWeight.w700)),
-            Text('Your account will be permanently deleted on $when. Reactivate to cancel.',
+            Text('${context.tr('Your account will be permanently deleted on')} $when. ${context.tr('Reactivate to cancel.')}',
                 style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ]),
         ),
@@ -1267,13 +1268,13 @@ class _DeletionBanner extends ConsumerWidget {
               await ref.read(authControllerProvider.notifier).reactivate();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Account reactivated — welcome back!')));
+                    SnackBar(content: Text(context.tr('Account reactivated — welcome back!'))));
               }
             } catch (e) {
               if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyError(e))));
             }
           },
-          child: const Text('Reactivate'),
+          child: Text(context.tr('Reactivate')),
         ),
       ]),
     );
@@ -1295,10 +1296,10 @@ class _BuyerCta extends StatelessWidget {
         boxShadow: AppShadows.card,
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Find your next property',
+        Text(context.tr('Find your next property'),
             style: t.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
         const SizedBox(height: AppSpacing.x4),
-        Text('Search by community, building, budget or travel time.',
+        Text(context.tr('Search by community, building, budget or travel time.'),
             style: t.bodyMedium?.copyWith(color: Colors.white)),
         const SizedBox(height: AppSpacing.x12),
         // Search-bar affordance — tapping opens the properties search.
@@ -1312,7 +1313,7 @@ class _BuyerCta extends StatelessWidget {
               const Icon(Icons.search, color: AppColors.primary, size: 20),
               const SizedBox(width: AppSpacing.x8),
               Expanded(
-                child: Text('Search by community, building, budget or yield…',
+                child: Text(context.tr('Search by community, building, budget or yield…'),
                     style: t.bodyMedium?.copyWith(color: AppColors.textMuted),
                     maxLines: 1, overflow: TextOverflow.ellipsis),
               ),
@@ -1345,8 +1346,8 @@ Widget _stripEmpty(BuildContext context,
   final muted = dark ? AppColors.dTextMuted : AppColors.textMuted;
   return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
     Row(children: [
-      Expanded(child: Text(title, style: t.titleMedium)),
-      if (actionLabel != null) TextButton(onPressed: onAction, child: Text(actionLabel)),
+      Expanded(child: Text(context.tr(title), style: t.titleMedium)),
+      if (actionLabel != null) TextButton(onPressed: onAction, child: Text(context.tr(actionLabel))),
     ]),
     const SizedBox(height: AppSpacing.x8),
     Container(
@@ -1356,7 +1357,7 @@ Widget _stripEmpty(BuildContext context,
       child: Row(children: [
         Icon(icon, size: 22, color: muted),
         const SizedBox(width: AppSpacing.x12),
-        Expanded(child: Text(message, style: t.bodySmall?.copyWith(color: muted))),
+        Expanded(child: Text(context.tr(message), style: t.bodySmall?.copyWith(color: muted))),
       ]),
     ),
     const SizedBox(height: AppSpacing.x24),
@@ -1381,7 +1382,7 @@ class _MarketplaceStrip extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: AppSpacing.x12),
-            Text(label, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+            Text(context.tr(label), style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
             const SizedBox(height: AppSpacing.x8),
             SizedBox(
               height: 132,
@@ -1396,8 +1397,8 @@ class _MarketplaceStrip extends ConsumerWidget {
         );
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        Expanded(child: Text('From the marketplace', style: t.titleMedium)),
-        TextButton(onPressed: () => context.go('/marketplace'), child: const Text('Browse all')),
+        Expanded(child: Text(context.tr('From the marketplace'), style: t.titleMedium)),
+        TextButton(onPressed: () => context.go('/marketplace'), child: Text(context.tr('Browse all'))),
       ]),
       if (services.isNotEmpty) group('Services', services, Icons.handyman_outlined),
       if (products.isNotEmpty) group('Products', products, Icons.inventory_2_outlined),
@@ -1467,9 +1468,9 @@ class _RecommendedProperties extends ConsumerWidget {
         final aed = NumberFormat.compactCurrency(symbol: 'AED ', decimalDigits: 0);
         return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
-            Text('Recommended for you', style: t.titleMedium),
+            Text(context.tr('Recommended for you'), style: t.titleMedium),
             const Spacer(),
-            TextButton(onPressed: () => context.go('/properties'), child: const Text('See all')),
+            TextButton(onPressed: () => context.go('/properties'), child: Text(context.tr('See all'))),
           ]),
           const SizedBox(height: AppSpacing.x8),
           SizedBox(
@@ -1530,7 +1531,7 @@ class _RecCard extends StatelessWidget {
                       style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted),
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 2),
-                  Text('$beds BR  ·  ${isRent ? 'For rent' : 'For sale'}',
+                  Text('$beds ${context.tr('BR')}  ·  ${context.tr(isRent ? 'For rent' : 'For sale')}',
                       style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
                 ]),
               ),
@@ -1564,7 +1565,7 @@ class _MarketIntelligence extends ConsumerWidget {
                 Row(children: [
                   Icon(Icons.insights_outlined, size: 18, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: AppSpacing.x8),
-                  Text('Market intelligence', style: t.titleMedium),
+                  Text(context.tr('Market intelligence'), style: t.titleMedium),
                 ]),
                 const SizedBox(height: AppSpacing.x8),
                 for (final r in top) _IntelRow(r: r, aed: aed),
@@ -1586,7 +1587,7 @@ class _IntelRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final name = '${r['community'] ?? 'Community'}';
+    final name = '${r['community'] ?? context.tr('Community')}';
     final price = num.tryParse('${r['avg_asking_price'] ?? ''}');
     final listings = int.tryParse('${r['active_listings'] ?? 0}') ?? 0;
     final trend = num.tryParse('${r['rental_trend_pct'] ?? ''}');
@@ -1597,7 +1598,7 @@ class _IntelRow extends StatelessWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(name, style: t.bodyMedium?.copyWith(fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
-            Text('$listings active listing${listings == 1 ? '' : 's'}',
+            Text('$listings ${context.tr(listings == 1 ? 'active listing' : 'active listings')}',
                 style: t.bodySmall?.copyWith(color: Theme.of(context).brightness == Brightness.dark ? AppColors.dTextMuted : AppColors.textMuted)),
           ]),
         ),
@@ -1608,7 +1609,7 @@ class _IntelRow extends StatelessWidget {
             Row(mainAxisSize: MainAxisSize.min, children: [
               Icon(up ? Icons.arrow_upward : Icons.arrow_downward, size: 12,
                   color: up ? AppColors.success : AppColors.danger),
-              Text('${trend.abs().toStringAsFixed(1)}% rent',
+              Text('${trend.abs().toStringAsFixed(1)}% ${context.tr('rent')}',
                   style: t.bodySmall?.copyWith(color: up ? AppColors.success : AppColors.danger)),
             ]),
         ]),
@@ -1630,7 +1631,7 @@ class _ToolsList extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 dense: true,
                 leading: Icon(tool.$2, color: Theme.of(context).colorScheme.primary, size: 20),
-                title: Text(tool.$1),
+                title: Text(context.tr(tool.$1)),
                 trailing: const Icon(Icons.chevron_right, size: 18),
                 onTap: () => context.go(tool.$3),
               ))
