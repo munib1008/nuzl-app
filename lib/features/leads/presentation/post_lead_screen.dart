@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/i18n/app_localizations.dart';
 import '../../../core/network/api_client.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/responsive.dart';
@@ -34,11 +35,11 @@ class _PostLeadScreenState extends ConsumerState<PostLeadScreen> {
   void dispose() { name.dispose(); phone.dispose(); minBudget.dispose(); maxBudget.dispose(); propertyType.dispose(); super.dispose(); }
 
   String? _validate() {
-    if (name.text.trim().isEmpty) return 'Enter the buyer / client name.';
-    if (phone.text.trim().isEmpty) return 'Enter a contact phone number.';
+    if (name.text.trim().isEmpty) return context.tr('Enter the buyer / client name.');
+    if (phone.text.trim().isEmpty) return context.tr('Enter a contact phone number.');
     final mn = double.tryParse(minBudget.text.trim());
     final mx = double.tryParse(maxBudget.text.trim());
-    if (mn != null && mx != null && mx < mn) return 'Max budget cannot be less than min budget.';
+    if (mn != null && mx != null && mx < mn) return context.tr('Max budget cannot be less than min budget.');
     return null;
   }
 
@@ -64,7 +65,7 @@ class _PostLeadScreenState extends ConsumerState<PostLeadScreen> {
       if (mounted) {
         // Consistent post-submit workflow: confirm + land on the new lead's detail.
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Your lead has been created successfully.')));
+            SnackBar(content: Text(context.tr('Your lead has been created successfully.'))));
         context.go(id.isNotEmpty ? '/leads/$id' : '/leads');
       }
     } catch (e) {
@@ -77,65 +78,65 @@ class _PostLeadScreenState extends ConsumerState<PostLeadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const NuzlAppBar(title: 'Post a lead'),
+      appBar: NuzlAppBar(title: context.tr('Post a lead')),
       drawer: const NuzlDrawer(),
       body: ResponsiveCenter(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.x16),
           children: [
-            TextField(controller: name, decoration: const InputDecoration(labelText: 'Buyer / client name *')),
+            TextField(controller: name, decoration: InputDecoration(labelText: context.tr('Buyer / client name *'))),
             const SizedBox(height: AppSpacing.x12),
-            TextField(controller: phone, keyboardType: TextInputType.phone, decoration: const InputDecoration(labelText: 'Phone *', hintText: '+971 …')),
+            TextField(controller: phone, keyboardType: TextInputType.phone, decoration: InputDecoration(labelText: context.tr('Phone *'), hintText: '+971 …')),
             const SizedBox(height: AppSpacing.x12),
             DropdownButtonFormField<String>(
               initialValue: buyerType,
-              decoration: const InputDecoration(labelText: 'Buyer type'),
-              items: const [
-                DropdownMenuItem(value: 'end_user', child: Text('End user')),
-                DropdownMenuItem(value: 'investor', child: Text('Investor')),
+              decoration: InputDecoration(labelText: context.tr('Buyer type')),
+              items: [
+                DropdownMenuItem(value: 'end_user', child: Text(context.tr('End user'))),
+                DropdownMenuItem(value: 'investor', child: Text(context.tr('Investor'))),
               ],
               onChanged: (v) => setState(() => buyerType = v ?? 'end_user'),
             ),
             const SizedBox(height: AppSpacing.x12),
             DropdownButtonFormField<String>(
               initialValue: category,
-              decoration: const InputDecoration(labelText: 'Lead status', prefixIcon: Icon(Icons.flag_outlined)),
-              items: const [
-                DropdownMenuItem(value: 'general', child: Text('General')),
-                DropdownMenuItem(value: 'potential', child: Text('Potential')),
-                DropdownMenuItem(value: 'qualified', child: Text('Qualified')),
+              decoration: InputDecoration(labelText: context.tr('Lead status'), prefixIcon: const Icon(Icons.flag_outlined)),
+              items: [
+                DropdownMenuItem(value: 'general', child: Text(context.tr('General'))),
+                DropdownMenuItem(value: 'potential', child: Text(context.tr('Potential'))),
+                DropdownMenuItem(value: 'qualified', child: Text(context.tr('Qualified'))),
               ],
               onChanged: (v) => setState(() => category = v ?? 'general'),
             ),
             const SizedBox(height: AppSpacing.x12),
             DropdownButtonFormField<String>(
               initialValue: purpose,
-              decoration: const InputDecoration(labelText: 'Purpose'),
-              items: const [
-                DropdownMenuItem(value: 'sale', child: Text('Buy / Sale')),
-                DropdownMenuItem(value: 'rent', child: Text('Rent')),
+              decoration: InputDecoration(labelText: context.tr('Purpose')),
+              items: [
+                DropdownMenuItem(value: 'sale', child: Text(context.tr('Buy / Sale'))),
+                DropdownMenuItem(value: 'rent', child: Text(context.tr('Rent'))),
               ],
               onChanged: (v) => setState(() => purpose = v ?? 'sale'),
             ),
             const SizedBox(height: AppSpacing.x12),
-            TextField(controller: propertyType, decoration: const InputDecoration(labelText: 'Property type', hintText: 'Apartment, Villa, …')),
+            TextField(controller: propertyType, decoration: InputDecoration(labelText: context.tr('Property type'), hintText: context.tr('Apartment, Villa, …'))),
             const SizedBox(height: AppSpacing.x12),
             Row(children: [
-              Expanded(child: TextField(controller: minBudget, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Min budget (AED)'))),
+              Expanded(child: TextField(controller: minBudget, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Min budget (AED)')))),
               const SizedBox(width: AppSpacing.x12),
-              Expanded(child: TextField(controller: maxBudget, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Max budget (AED)'))),
+              Expanded(child: TextField(controller: maxBudget, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: context.tr('Max budget (AED)')))),
             ]),
             const SizedBox(height: AppSpacing.x12),
             DropdownButtonFormField<int>(
               initialValue: beds,
-              decoration: const InputDecoration(labelText: 'Bedrooms'),
-              items: const [
-                DropdownMenuItem(value: null, child: Text('Any')),
-                DropdownMenuItem(value: 0, child: Text('Studio')),
-                DropdownMenuItem(value: 1, child: Text('1')),
-                DropdownMenuItem(value: 2, child: Text('2')),
-                DropdownMenuItem(value: 3, child: Text('3')),
-                DropdownMenuItem(value: 4, child: Text('4+')),
+              decoration: InputDecoration(labelText: context.tr('Bedrooms')),
+              items: [
+                DropdownMenuItem(value: null, child: Text(context.tr('Any'))),
+                DropdownMenuItem(value: 0, child: Text(context.tr('Studio'))),
+                const DropdownMenuItem(value: 1, child: Text('1')),
+                const DropdownMenuItem(value: 2, child: Text('2')),
+                const DropdownMenuItem(value: 3, child: Text('3')),
+                const DropdownMenuItem(value: 4, child: Text('4+')),
               ],
               onChanged: (v) => setState(() => beds = v),
             ),
@@ -146,7 +147,7 @@ class _PostLeadScreenState extends ConsumerState<PostLeadScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: StickySaveBar(saving: saving, label: 'Post lead', onPressed: _save),
+      bottomNavigationBar: StickySaveBar(saving: saving, label: context.tr('Post lead'), onPressed: _save),
     );
   }
 }
