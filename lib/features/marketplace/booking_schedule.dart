@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/i18n/app_localizations.dart';
 import '../../core/theme/app_spacing.dart';
 
 /// Result of the booking sheet: the chosen slot + optional notes + property.
@@ -18,13 +19,13 @@ Future<DateTime?> pickServiceSchedule(BuildContext context) async {
     initialDate: DateTime(now.year, now.month, now.day).add(const Duration(days: 1)),
     firstDate: DateTime(now.year, now.month, now.day),
     lastDate: now.add(const Duration(days: 365)),
-    helpText: 'Preferred service date',
+    helpText: context.tr('Preferred service date'),
   );
   if (date == null || !context.mounted) return null;
   final time = await showTimePicker(
     context: context,
     initialTime: const TimeOfDay(hour: 9, minute: 0),
-    helpText: 'Preferred start time',
+    helpText: context.tr('Preferred start time'),
   );
   if (time == null) return null;
   return DateTime(date.year, date.month, date.day, time.hour, time.minute);
@@ -131,7 +132,7 @@ class _BookingSheetState extends State<_BookingSheet> {
     final community = '${p['community'] ?? ''}'.trim();
     final type = '${p['property_type'] ?? ''}'.trim();
     final joined = [type, community].where((s) => s.isNotEmpty).join(' · ');
-    return joined.isEmpty ? 'Property' : joined;
+    return joined.isEmpty ? context.tr('Property') : joined;
   }
 
   Future<void> _pickDate() async {
@@ -142,7 +143,7 @@ class _BookingSheetState extends State<_BookingSheet> {
       firstDate: DateTime(now.year, now.month, now.day),
       lastDate: now.add(const Duration(days: 365)),
       selectableDayPredicate: (d) => _days.contains(d.weekday),
-      helpText: 'Service date',
+      helpText: context.tr('Service date'),
     );
     if (picked != null) {
       setState(() {
@@ -159,8 +160,8 @@ class _BookingSheetState extends State<_BookingSheet> {
     final slots = _slots();
     final d = _date;
     final dateLabel = d == null
-        ? 'Pick a date'
-        : '${const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d.weekday - 1]} '
+        ? context.tr('Pick a date')
+        : '${context.tr(const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d.weekday - 1])} '
             '${d.day}/${d.month}/${d.year}';
     return Padding(
       padding: EdgeInsets.only(
@@ -171,7 +172,7 @@ class _BookingSheetState extends State<_BookingSheet> {
       ),
       child: SingleChildScrollView(
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Book service', style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          Text(context.tr('Book service'), style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: AppSpacing.x12),
           OutlinedButton.icon(
             onPressed: _pickDate,
@@ -179,7 +180,7 @@ class _BookingSheetState extends State<_BookingSheet> {
             label: Text(dateLabel),
           ),
           const SizedBox(height: AppSpacing.x12),
-          Text('Available times', style: t.bodySmall?.copyWith(color: muted)),
+          Text(context.tr('Available times'), style: t.bodySmall?.copyWith(color: muted)),
           const SizedBox(height: AppSpacing.x8),
           Wrap(
             spacing: 8,
@@ -195,7 +196,7 @@ class _BookingSheetState extends State<_BookingSheet> {
           ),
           if (slots.where((m) => !_isPast(m)).isEmpty) ...[
             const SizedBox(height: AppSpacing.x8),
-            Text('No slots left on this day — pick another date.',
+            Text(context.tr('No slots left on this day — pick another date.'),
                 style: t.bodySmall?.copyWith(color: muted)),
           ],
           if (widget.properties.isNotEmpty) ...[
@@ -203,9 +204,9 @@ class _BookingSheetState extends State<_BookingSheet> {
             DropdownButtonFormField<String?>(
               initialValue: _propertyId,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'For property (optional)'),
+              decoration: InputDecoration(labelText: context.tr('For property (optional)')),
               items: [
-                const DropdownMenuItem<String?>(value: null, child: Text('No specific property')),
+                DropdownMenuItem<String?>(value: null, child: Text(context.tr('No specific property'))),
                 for (final p in widget.properties)
                   DropdownMenuItem<String?>(
                     value: '${p['id']}',
@@ -219,7 +220,7 @@ class _BookingSheetState extends State<_BookingSheet> {
           TextField(
             controller: _note,
             maxLines: 2,
-            decoration: const InputDecoration(labelText: 'Notes for the provider (optional)'),
+            decoration: InputDecoration(labelText: context.tr('Notes for the provider (optional)')),
           ),
           const SizedBox(height: AppSpacing.x16),
           SizedBox(
@@ -235,7 +236,7 @@ class _BookingSheetState extends State<_BookingSheet> {
                               propertyId: _propertyId));
                     }
                   : null,
-              child: const Text('Confirm booking'),
+              child: Text(context.tr('Confirm booking')),
             ),
           ),
           const SizedBox(height: AppSpacing.x8),

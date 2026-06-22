@@ -306,4 +306,17 @@ const Map<String, String> kAr = {
   'Recommends': 'يوصي به',
   'Doesn’t recommend': 'لا يوصي به',
   'Provider response': 'رد مقدّم الخدمة',
+  // ── Service booking sheet ──
+  'Preferred service date': 'تاريخ الخدمة المفضّل',
+  'Preferred start time': 'وقت البدء المفضّل',
+  'Service date': 'تاريخ الخدمة',
+  'Property': 'عقار',
+  'Pick a date': 'اختر تاريخًا',
+  'Book service': 'حجز الخدمة',
+  'Available times': 'الأوقات المتاحة',
+  'No slots left on this day — pick another date.': 'لا توجد مواعيد متبقية في هذا اليوم — اختر تاريخًا آخر.',
+  'For property (optional)': 'لعقار (اختياري)',
+  'No specific property': 'بدون عقار محدد',
+  'Notes for the provider (optional)': 'ملاحظات لمقدّم الخدمة (اختياري)',
+  'Confirm booking': 'تأكيد الحجز',
 };
