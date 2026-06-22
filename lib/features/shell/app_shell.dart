@@ -45,8 +45,12 @@ class NuzlAppBar extends ConsumerWidget implements PreferredSizeWidget {
       scrolledUnderElevation: 0,
       shape: Border(bottom: BorderSide(color: Theme.of(context).dividerColor, width: 0.5)),
       automaticallyImplyLeading: false,
+      // Wide: the sidebar handles primary nav, but a pushed/nested page (2nd+
+      // level) still needs a back arrow; primary pages keep a flush title (null).
       leading: MediaQuery.sizeOf(context).width >= 1000
-          ? null
+          ? (context.canPop()
+              ? IconButton(tooltip: 'Back', icon: const Icon(Icons.arrow_back), onPressed: () => context.pop())
+              : null)
           : Builder(
               builder: (ctx) {
                 final canBack = ctx.canPop();
